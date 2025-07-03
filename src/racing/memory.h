@@ -48,7 +48,7 @@ void move_segment_table_to_dmem(void);
 void initialize_memory_pool(uintptr_t, uintptr_t);
 void* decompress_segments(u8*, u8*);
 void* allocate_memory(size_t);
-void* load_data(uintptr_t, uintptr_t);
+void* load_data(uintptr_t, uintptr_t, uintptr_t);
 void func_802A7D54(s32, s32);
 
 void main_pool_init(uintptr_t, uintptr_t);
@@ -64,7 +64,6 @@ struct AllocOnlyPool* alloc_only_pool_init(uintptr_t, uintptr_t);
 uintptr_t func_802A82AC(s32);
 uintptr_t func_802A8348(s32, s32, s32);
 u8* dma_textures(u8*, u32, u32);
-uintptr_t MIO0_0F(u8*, uintptr_t, uintptr_t);
 void func_802A8844(void);
 void unpack_lights(Gfx*, u8*, s8);
 void unpack_displaylist(Gfx*, u8*, s8);

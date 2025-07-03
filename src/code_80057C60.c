@@ -2742,8 +2742,14 @@ void func_8005D1F4(s32 arg0) {
     }
 }
 
+extern u8 *ROVING_SEG3_BUF;
+
+extern u8 __attribute__((aligned(32))) OTHER_BUF[0x21000];
+
 // Appears to load GP Mode race staging balloons and kart shadows.
 void func_8005D290(void) {
+	ROVING_SEG3_BUF = OTHER_BUF;
+
     D_8018D488 = dma_textures(gTexture69C80C, 0x400, 0x400);
     D_8018D474 = dma_textures(gTextureKartShadow, 0x1000, 0x1000);
     D_8018D420 = dma_textures(gTexture69B03C, 0x100, 0x100);

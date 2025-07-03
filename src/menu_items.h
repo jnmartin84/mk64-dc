@@ -637,7 +637,9 @@ void func_800AF4DC(MenuItem*);
 void func_800AF740(MenuItem*);
 
 // This really, really shouldn't be in this header file, but I don't know where else to put it
+#if 0
 void rmonPrintf(const char*, ...);
+#endif
 void tkmk00decode(u32*, u8*, u16*, s32);
 
 /* File specific defines */

@@ -1286,6 +1286,9 @@ s32 func_80091D74(void) {
     if (!(gControllerOne->button & START_BUTTON)) {
         return 0;
     }
+
+    return 0;
+#if 0
     osPfsIsPlug(&gSIEventMesgQueue, &sp67);
     if (sp67 & 1) {
         if (osPfsInit(&gSIEventMesgQueue, &gControllerPak1FileHandle, 0)) {
@@ -1308,6 +1311,7 @@ s32 func_80091D74(void) {
     }
     gControllerPak1NumPagesFree >>= 8;
     return 1;
+#endif
 }
 
 void func_80091EE4(void) {
@@ -2686,12 +2690,16 @@ Gfx* func_80095BD0(Gfx* displayListHead, u8* arg1, f32 arg2, f32 arg3, u32 arg4,
         goto func_80095BD0_label1;
     }
     sp28 = &gGfxPool->mtxEffect[gMatrixEffectCount];
+#if 0
     if (gMatrixEffectCount < 0) {
         rmonPrintf("effectcount < 0 !!!!!!(kawano)\n");
     }
+#endif
     goto func_80095BD0_label2;
 func_80095BD0_label1:
+#if 0
     rmonPrintf("MAX effectcount(760) over!!!!(kawano)\n");
+#endif
     return displayListHead;
 func_80095BD0_label2:
     func_80095AE0((void*) sp28, arg2, arg3, arg6, arg7);
@@ -2909,7 +2917,7 @@ Gfx* func_800963F0(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, f32 arg4, 
     return displayListHead;
 }
 
-extern u8 D_0B002A00[];
+static u8 *D_0B002A00 = 0x0B002A00; 
 /**
  *
  * This function is responsible for drawing a near unnoticeable static pattern
@@ -9676,6 +9684,7 @@ void func_800AA2EC(MenuItem* arg0) {
 
             if (gControllerPak1State != 0) {
                 var_t1 = 0;
+#if 0
                 switch (osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName,
                                       (u8*) gExtCode, &gControllerPak1FileNote)) {
                     case 5:
@@ -9691,6 +9700,7 @@ void func_800AA2EC(MenuItem* arg0) {
                         gControllerPak1State = 0;
                         break;
                 }
+#endif
             }
             if (var_t1 == 0) {
                 if (gControllerPak1State == 0) {
@@ -9698,6 +9708,7 @@ void func_800AA2EC(MenuItem* arg0) {
                         arg0->state = 2;
                         break;
                     }
+#if 0
                     temp_v0 = osPfsInit(&gSIEventMesgQueue, &gControllerPak1FileHandle, 0);
                     if (temp_v0 != 0) {
                         switch (temp_v0) {
@@ -9717,6 +9728,7 @@ void func_800AA2EC(MenuItem* arg0) {
                     } else {
                         gControllerPak1State = 1;
                     }
+
                     if (osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName,
                                       (u8*) gExtCode, &gControllerPak1FileNote) == 0) {
                         arg0->state = 1;
@@ -9731,6 +9743,7 @@ void func_800AA2EC(MenuItem* arg0) {
                         arg0->state = 3;
                         break;
                     }
+#endif
                     gControllerPak1NumPagesFree = (s32) gControllerPak1NumPagesFree >> 8;
                 }
                 if (gControllerPak1MaxWriteableFiles >= gControllerPak1NumFilesUsed) {
@@ -11107,6 +11120,7 @@ void func_800AD2E8(MenuItem* arg0) {
                     }
                 }
                 if (gControllerOne->buttonPressed & 0x9000) {
+#if 0
                     if (arg0->state == 0x0000000A) {
                         var_v1 = 0;
                         if (arg0->paramf < 4.2) {
@@ -11186,7 +11200,9 @@ void func_800AD2E8(MenuItem* arg0) {
                             arg0->state = 0x0000000E;
                             play_sound2(SOUND_MENU_FILE_NOT_FOUND);
                         }
-                    } else {
+                    } else
+#endif                    
+                    {
                         arg0->param1 = arg0->state;
                         gTimeTrialsResultCursorSelection = arg0->state;
                         arg0->state = 0x0000001E;
@@ -11313,6 +11329,7 @@ void func_800AD2E8(MenuItem* arg0) {
             break;
         case 25:
             if (arg0->param1 == 1) {
+#if 0
                 if (osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName, (u8*) gExtCode,
                                   &gControllerPak1FileNote) != 0) {
                     arg0->state = 0x0000001A;
@@ -11324,6 +11341,11 @@ void func_800AD2E8(MenuItem* arg0) {
                     play_sound2(SOUND_MENU_FILE_NOT_FOUND);
                     return;
                 }
+#else
+                arg0->state = 0x0000001A;
+                play_sound2(SOUND_MENU_FILE_NOT_FOUND);
+                return;
+#endif
             }
             arg0->param1++;
             if (arg0->param1 >= 2) {
@@ -11518,6 +11540,7 @@ void func_800AE218(MenuItem* arg0) {
                         }
                         if (gControllerPak1State != 0) {
                             var_v1 = 0;
+#if 0
                             switch (osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName,
                                                   (u8*) gExtCode, &gControllerPak1FileNote)) { /* switch 3; irregular */
                                 case PFS_ERR_INVALID:                                          /* switch 3 */
@@ -11534,6 +11557,7 @@ void func_800AE218(MenuItem* arg0) {
                                     gControllerPak1State = 0;
                                     break;
                             }
+#endif
                         }
                         if (var_v1 != 0) {
                             play_sound2(SOUND_MENU_SELECT);
@@ -11570,6 +11594,7 @@ void func_800AE218(MenuItem* arg0) {
                                 play_sound2(SOUND_MENU_FILE_NOT_FOUND);
                                 return;
                             }
+#if 0
                             if (osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName,
                                               (u8*) gExtCode, &gControllerPak1FileNote) == 0) {
                                 func_800B6708();
@@ -11577,6 +11602,7 @@ void func_800AE218(MenuItem* arg0) {
                                 play_sound2(SOUND_MENU_SELECT);
                                 return;
                             }
+#endif
                         }
                         if (gControllerPak1MaxWriteableFiles >= gControllerPak1NumFilesUsed) {
                             arg0->state = 0x00000018;
@@ -11710,6 +11736,7 @@ void func_800AE218(MenuItem* arg0) {
             break;
         case 40:
             if (arg0->param1 == 1) {
+#if 0
                 if (osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName, (u8*) gExtCode,
                                   &gControllerPak1FileNote) != 0) {
                     arg0->state = 0x00000029;
@@ -11721,6 +11748,11 @@ void func_800AE218(MenuItem* arg0) {
                     play_sound2(SOUND_MENU_FILE_NOT_FOUND);
                     return;
                 }
+#else
+                arg0->state = 0x00000029;
+                play_sound2(SOUND_MENU_FILE_NOT_FOUND);
+                return;
+#endif
             }
             arg0->param1++;
             if (arg0->param1 >= 2) {

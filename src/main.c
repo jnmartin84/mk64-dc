@@ -1,6 +1,27 @@
 #ifndef GCC
 #define D_800DC510_AS_U16
 #endif
+#include <kos.h>
+#undef CONT_C
+#undef CONT_B
+#undef CONT_A
+#undef CONT_START
+#undef CONT_DPAD_UP
+#undef CONT_DPAD_DOWN
+#undef CONT_DPAD_LEFT
+#undef CONT_DPAD_RIGHT
+#undef CONT_Z
+#undef CONT_Y
+#undef CONT_X
+#undef CONT_D
+#undef CONT_DPAD2_UP
+#undef CONT_DPAD2_DOWN
+#undef CONT_DPAD2_LEFT
+#undef CONT_DPAD2_RIGHT
+#undef bool
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include <ultra64.h>
 #include <PR/os.h>
 #include <PR/ucode.h>
@@ -39,6 +60,13 @@
 #include <debug.h>
 #include "crash_screen.h"
 #include "buffers/gfx_output_buffer.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+char *fnpre;
+const void *__kos_romdisk;
 
 void func_80091B78(void);
 void audio_init(void);
@@ -81,7 +109,6 @@ UNUSED Player* gPlayerThreeCopy = &gPlayers[2];
 UNUSED Player* gPlayerFourCopy = &gPlayers[3];
 
 UNUSED s32 D_800FD850[3];
-struct GfxPool gGfxPools[2];
 struct GfxPool* gGfxPool;
 
 UNUSED s32 gfxPool_padding; // is this necessary?
@@ -193,53 +220,327 @@ s16 sNumVBlanks = 0;
 UNUSED s16 D_800DC590 = 0;
 f32 gVBlankTimer = 0.0f;
 f32 gCourseTimer = 0.0f;
+int inited = 0;
 
-void create_thread(OSThread* thread, OSId id, void (*entry)(void*), void* arg, void* sp, OSPri pri) {
-    thread->next = NULL;
-    thread->queue = NULL;
-    osCreateThread(thread, id, entry, arg, sp, pri);
+#include "gfx/gfx_pc.h"
+#include "gfx/gfx_opengl.h"
+#include "gfx/gfx_glx.h"
+#include "gfx/gfx_dc.h"
+
+extern struct GfxWindowManagerAPI gfx_glx;
+extern struct GfxRenderingAPI gfx_opengl_api;
+static struct GfxWindowManagerAPI *wm_api = &gfx_dc;
+static struct GfxRenderingAPI *rendering_api = &gfx_opengl_api;
+
+extern void gfx_run(Gfx *commands);
+
+extern void thread5_game_loop(void *arg);
+
+void game_loop_one_iteration(void) {
+//StartAudioFrame();
+    gfx_start_frame();
+
+    func_800CB2C4();
+
+    //printf("after func_800CB2C4\n");
+    // Update the gamestate if it has changed (racing, menus, credits, etc.).
+    if (gGamestateNext != gGamestate) {
+        gGamestate = gGamestateNext;
+        update_gamestate();
+  //      printf("after updategamestate\n");
+    }
+//    profiler_log_thread5_time(THREAD5_START);
+    config_gfx_pool();
+   // printf("after config gfx pool\n");
+    read_controllers();
+    //printf("after read controler\n");
+    game_state_handler();
+    //printf("after game state\n");
+    end_master_display_list();
+    //printf("after end master dl\n");
+    display_and_vsync();
+    //printf("after dispandvsync\n");
+    gfx_end_frame();
+//EndAudioFrame();
+
+//    printf("audio frame shit\n");
+  //  printf("end iteration\n");
 }
+
+void send_display_list(struct SPTask *spTask) {
+
+    if (!inited) {
+
+        return;
+
+    }
+    gfx_run((Gfx *)spTask->task.t.data_ptr);
+//	usleep(300000);
+
+}
+#if 0
+void produce_one_frame(void) {
+    gfx_start_frame();
+    game_loop_one_iteration();
+    gfx_end_frame();
+}
+#endif
+
+uint16_t __attribute__((aligned(32))) fb[3][4];
+
+void create_thread(UNUSED OSThread* thread, UNUSED OSId id, void (*entry)(void*), void* arg, void* sp, OSPri pri) {
+    kthread_attr_t main_attr;
+    main_attr.create_detached = 1;
+	main_attr.stack_size = STACKSIZE;
+	main_attr.stack_ptr = sp;
+	main_attr.prio = pri;
+	main_attr.label = "thread";
+    thd_create_ex(&main_attr, entry, arg);
+}
+
+// mio0encode
+s32 func_80040174(UNUSED void*, UNUSED s32, UNUSED s32) {
+	return -1;
+}
+
+s32 mio0encode(UNUSED s32, UNUSED s32, UNUSED s32) {
+	return -1;
+}
+
+u8 *_audio_banksSegmentRomStart;
+u8 *_audio_tablesSegmentRomStart;
+u8 *_instrument_setsSegmentRomStart;
+u8 *_sequencesSegmentRomStart;
+
+//extern void init_all_sounds(void);
+void _AudioInit(void);
+
+__used void __stack_chk_fail(void) {
+    unsigned int pr = (unsigned int)arch_get_ret_addr();
+    printf("Stack smashed at PR=0x%08x\n", pr);
+    printf("Successfully detected stack corruption!\n");
+    exit(EXIT_SUCCESS);
+}
+#if 0
+/* Callback function used to handle a breakpoint request. */
+static bool on_break(const ubc_breakpoint_t *bp,
+                     const irq_context_t *ctx,
+                     void *ud) {
+    /* Don't warn about unused bp */
+    (void)bp;
+
+
+    /* Print the location of the program counter when the breakpoint
+       IRQ was signaled (minus 2 if we're breaking AFTER instruction
+       execution!) */
+    printf("\tBREAKPOINT HIT! [PC = %x]\n", (unsigned)CONTEXT_PC(*ctx) - 2);
+
+    /* Userdata pointer used to hold a boolean used as the return value, which
+       dictates whether a breakpoint persists or is removed after being
+       handled. */
+    return (bool)ud;
+}
+    #endif
+
+void setup_audio_data(void) {
+    char texfn[256];
+    u8 *AUDIOBANKS_BUF = memalign(32,79936);
+    if (!AUDIOBANKS_BUF) printf("can't malloc banks\n");
+    u8 *AUDIOTABLES_BUF = memalign(32,2409664);
+    if (!AUDIOTABLES_BUF) printf("can't malloc tables\n");
+    u8 *INSTRUMENT_SETS_BUF = memalign(32,256);
+    if (!INSTRUMENT_SETS_BUF) printf("can't malloc instruments\n");
+    u8 *SEQUENCES_BUF = memalign(32,143728);
+    if (!SEQUENCES_BUF) printf("can't malloc sequences\n");
+
+    // load sound data
+    {
+        sprintf(texfn, "%s/dc_data/audiobanks.bin", fnpre);
+        FILE* file = fopen(texfn, "rb");
+        if (!file) {
+            perror("fopen");
+            printf("\n");
+            while(1){}
+            exit(-1);
+        }
+
+        fseek(file, 0, SEEK_END);
+        long filesize = ftell(file);
+        printf("audiobanks is %ld @ %08x\n", filesize, (uintptr_t)AUDIOBANKS_BUF);
+        rewind(file);
+
+        long toread = filesize;
+        long didread = 0;
+
+        while (didread < toread) {
+            long rv = fread(&AUDIOBANKS_BUF[didread], 1, toread - didread, file);
+
+            if (rv == -1) {
+                printf("FILE IS FUCKED\n");
+            printf("\n");
+            while(1){}
+                exit(-1);
+            }
+        printf("writing %08x size %ld\n", (uintptr_t)&AUDIOBANKS_BUF[didread], rv);
+
+            toread -= rv;
+            didread += rv;
+        }
+
+        fclose(file);
+        _audio_banksSegmentRomStart = AUDIOBANKS_BUF;
+    }
+
+
+    {
+        sprintf(texfn, "%s/dc_data/audiotables.bin", fnpre);
+        FILE* file = fopen(texfn, "rb");
+        if (!file) {
+            perror("fopen");
+            printf("\n");
+            while(1){}
+            exit(-1);
+        }
+
+        fseek(file, 0, SEEK_END);
+        long filesize = ftell(file);
+        printf("audiotables is %ld @ %08x\n", filesize, (uintptr_t)AUDIOTABLES_BUF);
+        rewind(file);
+
+        long toread = filesize;
+        long didread = 0;
+
+        while (didread < toread) {
+            long rv = fread(&AUDIOTABLES_BUF[didread], 1, toread - didread, file);
+            if (rv == -1) {
+                printf("FILE IS FUCKED\n");
+            printf("\n");
+            while(1){}
+                exit(-1);
+            }
+        printf("writing %08x size %ld\n", (uintptr_t)&AUDIOTABLES_BUF[didread], rv);
+            toread -= rv;
+            didread += rv;
+        }
+
+        fclose(file);
+        _audio_tablesSegmentRomStart = AUDIOTABLES_BUF;
+    }
+
+
+    {
+        sprintf(texfn, "%s/dc_data/instrument_sets.bin", fnpre);
+        FILE* file = fopen(texfn, "rb");
+        if (!file) {
+            perror("fopen");
+            printf("\n");
+            while(1){}
+            exit(-1);
+        }
+
+        fseek(file, 0, SEEK_END);
+        long filesize = ftell(file);
+        printf("instrument_sets is %ld @ %08x\n", filesize, (uintptr_t)INSTRUMENT_SETS_BUF);
+        rewind(file);
+
+        long toread = filesize;
+        long didread = 0;
+
+        while (didread < toread) {
+            long rv = fread(&INSTRUMENT_SETS_BUF[didread], 1, toread - didread, file);
+            if (rv == -1) {
+                printf("FILE IS FUCKED\n");
+            printf("\n");
+            while(1){}
+                exit(-1);
+            }
+         printf("writing %08x size %ld\n", (uintptr_t)&INSTRUMENT_SETS_BUF[didread], rv);
+           toread -= rv;
+            didread += rv;
+        }
+
+        fclose(file);
+        _instrument_setsSegmentRomStart = INSTRUMENT_SETS_BUF;
+    }
+    {
+        sprintf(texfn, "%s/dc_data/sequences.bin", fnpre);
+        FILE* file = fopen(texfn, "rb");
+        if (!file) {
+            perror("fopen");
+            printf("\n");
+            while(1){}
+            exit(-1);
+        }
+
+        fseek(file, 0, SEEK_END);
+        long filesize = ftell(file);
+        printf("sequences is %ld @ %08x\n", filesize, (uintptr_t)SEQUENCES_BUF);
+        rewind(file);
+
+        long toread = filesize;
+        long didread = 0;
+
+        while (didread < toread) {
+            long rv = fread(&SEQUENCES_BUF[didread], 1, toread - didread, file);
+            if (rv == -1) {
+                printf("FILE IS FUCKED\n");
+            printf("\n");
+            while(1){}
+                exit(-1);
+            }
+                    printf("writing %08x size %ld\n", (uintptr_t)&SEQUENCES_BUF[didread], rv);
+
+            toread -= rv;
+            didread += rv;
+        }
+
+        fclose(file);
+        _sequencesSegmentRomStart = SEQUENCES_BUF;
+    }
+
+#if 0
+//    _AudioInit();
+    audio_init();
+    sound_init();
+
+    //init_all_sounds();
+//    create_thread(&gAudioThread,4,&thread4_audio,NULL,&gAudioThreadStack,10);
+#endif
+}
+s32 osAppNmiBuffer[16];
 void isPrintfInit(void);
-void main_func(void) {
-#ifdef VERSION_EU
-    osTvType = TV_TYPE_PAL;
-#endif
-    osInitialize();
-#ifdef DEBUG
-    isPrintfInit(); // init osSyncPrintf
-#endif
-    create_thread(&gIdleThread, 1, &thread1_idle, NULL, gIdleThreadStack + ARRAY_COUNT(gIdleThreadStack), 100);
-    osStartThread(&gIdleThread);
-}
+int main(UNUSED int argc, UNUSED char **argv) {
+    thd_set_hz(120);
+    wasSoftReset = (s16)0;
+    gPhysicalFramebuffers[0] = fb[0];//(u16*) &gFramebuffer0;
+    gPhysicalFramebuffers[1] = fb[1];//(u16*) &gFramebuffer1;
+    gPhysicalFramebuffers[2] = fb[2];//(u16*) &gFramebuffer2;
 
-/**
- * Initialize hardware, start main thread, then idle.
- */
-void thread1_idle(void* arg) {
-    osCreateViManager(OS_PRIORITY_VIMGR);
-#ifdef VERSION_EU
-    osViSetMode(&osViModeTable[OS_VI_PAL_LAN1]);
-#else // VERSION_US
-    if (osTvType == TV_TYPE_NTSC) {
-        osViSetMode(&osViModeTable[OS_VI_NTSC_LAN1]);
+    //file_t *test = /pc/dc_data/common_data.bin
+    FILE* fntest = fopen("/pc/dc_data/common_data.bin", "rb");
+    if (NULL == fntest) {
+        fntest = fopen("/cd/dc_data/common_data.bin", "rb");
+        if (NULL == fntest) {
+            printf("Cant load from /pc or /cd");
+             printf("\n");
+            while(1){}
+           exit(-1);
+        } else {
+            dbgio_printf("using /cd for assets\n");
+            fnpre = "/cd";
+        }
     } else {
-        osViSetMode(&osViModeTable[OS_VI_MPAL_LAN1]);
+        dbgio_printf("using /pc for assets\n");
+        fnpre = "/pc";
     }
-#endif
-    osViBlack(true);
-    osViSetSpecialFeatures(OS_VI_GAMMA_OFF);
-    osCreatePiManager(OS_PRIORITY_PIMGR, &gPIMesgQueue, gPIMesgBuf, ARRAY_COUNT(gPIMesgBuf));
-    wasSoftReset = (s16) osResetType;
-    create_debug_thread();
-    start_debug_thread();
-    create_thread(&gVideoThread, 3, &thread3_video, arg, gVideoThreadStack + ARRAY_COUNT(gVideoThreadStack), 100);
-    osStartThread(&gVideoThread);
-    osSetThreadPri(NULL, 0);
 
-    // Halt
-    while (true) {
-        ;
-    }
+    fclose(fntest);
+
+    setup_audio_data();
+
+    thread5_game_loop(NULL);
+
+    return 0;
 }
 
 void setup_mesg_queues(void) {
@@ -267,65 +568,209 @@ void start_sptask(s32 taskType) {
  * Loads F3DEX or F3DLX based on the number of players
  **/
 void create_gfx_task_structure(void) {
+	//printf(__func__);
+	//printf("\n");
+	
+#if 1
     gGfxSPTask->msgqueue = &gGfxVblankQueue;
     gGfxSPTask->msg = (OSMesg) 2;
     gGfxSPTask->task.t.type = M_GFXTASK;
     gGfxSPTask->task.t.flags = OS_TASK_DP_WAIT;
-    gGfxSPTask->task.t.ucode_boot = rspF3DBootStart;
-    gGfxSPTask->task.t.ucode_boot_size = ((u8*) rspF3DBootEnd - (u8*) rspF3DBootStart);
+    gGfxSPTask->task.t.ucode_boot = NULL;//rspF3DBootStart;
+    gGfxSPTask->task.t.ucode_boot_size = 0;//((u8*) rspF3DBootEnd - (u8*) rspF3DBootStart);
     // The split-screen multiplayer racing state uses F3DLX which has a simple subpixel calculation.
     // Singleplayer race mode and all other game states use F3DEX.
     // http://n64devkit.square7.ch/n64man/ucode/gspF3DEX.htm
     if (gGamestate != RACING || gPlayerCountSelection1 == 1) {
-        gGfxSPTask->task.t.ucode = gspF3DEXTextStart;
-        gGfxSPTask->task.t.ucode_data = gspF3DEXDataStart;
+        gGfxSPTask->task.t.ucode = NULL;//gspF3DEXTextStart;
+        gGfxSPTask->task.t.ucode_data = NULL;//gspF3DEXDataStart;
     } else {
-        gGfxSPTask->task.t.ucode = gspF3DLXTextStart;
-        gGfxSPTask->task.t.ucode_data = gspF3DLXDataStart;
+        gGfxSPTask->task.t.ucode = NULL;//gspF3DLXTextStart;
+        gGfxSPTask->task.t.ucode_data = NULL;//gspF3DLXDataStart;
     }
     gGfxSPTask->task.t.flags = 0;
     gGfxSPTask->task.t.flags = OS_TASK_DP_WAIT;
     gGfxSPTask->task.t.ucode_size = SP_UCODE_SIZE;
     gGfxSPTask->task.t.ucode_data_size = SP_UCODE_DATA_SIZE;
-    gGfxSPTask->task.t.dram_stack = (u64*) &gGfxSPTaskStack;
+    gGfxSPTask->task.t.dram_stack = NULL;//(u64*) &gGfxSPTaskStack;
     gGfxSPTask->task.t.dram_stack_size = SP_DRAM_STACK_SIZE8;
-    gGfxSPTask->task.t.output_buff = (u64*) &gGfxSPTaskOutputBuffer;
-    gGfxSPTask->task.t.output_buff_size = (u64*) ((u8*) gGfxSPTaskOutputBuffer + sizeof(gGfxSPTaskOutputBuffer));
+//    gGfxSPTask->task.t.output_buff = (u64*) &gGfxSPTaskOutputBuffer;
+//    gGfxSPTask->task.t.output_buff_size = (u64*) ((u8*) gGfxSPTaskOutputBuffer + sizeof(gGfxSPTaskOutputBuffer));
     gGfxSPTask->task.t.data_ptr = (u64*) gGfxPool->gfxPool;
     gGfxSPTask->task.t.data_size = (gDisplayListHead - gGfxPool->gfxPool) * sizeof(Gfx);
-    func_8008C214();
-    gGfxSPTask->task.t.yield_data_ptr = (u64*) &gGfxSPTaskYieldBuffer;
+    //func_8008C214();
+    gGfxSPTask->task.t.yield_data_ptr = NULL;//(u64*) &gGfxSPTaskYieldBuffer;
     gGfxSPTask->task.t.yield_data_size = OS_YIELD_DATA_SIZE;
+#endif
+// ???
+//func_8008C214();
 }
+int held;
+int sd_x,sd_y;
 
 void init_controllers(void) {
+	//printf(__func__);
+	//printf("\n");
+	held = 0;	
     osCreateMesgQueue(&gSIEventMesgQueue, &gSIEventMesgBuf[0], ARRAY_COUNT(gSIEventMesgBuf));
     osSetEventMesg(OS_EVENT_SI, &gSIEventMesgQueue, (OSMesg) 0x33333333);
-    osContInit(&gSIEventMesgQueue, &gControllerBits, gControllerStatuses);
-    if ((gControllerBits & 1) == 0) {
-        sIsController1Unplugged = true;
-    } else {
-        sIsController1Unplugged = false;
-    }
+//    osContInit(&gSIEventMesgQueue, &gControllerBits, gControllerStatuses);
+gControllerBits = 1;
+    //if ((gControllerBits & 1) == 0) {
+      //  sIsController1Unplugged = 1;
+    //} else {
+        sIsController1Unplugged = 0;
+    //}
 }
 
+#if 1
+//extern int player_index;
+
+#define N64_CONT_A 0x8000
+#define N64_CONT_B 0x4000
+#define N64_CONT_G 0x2000
+#define N64_CONT_START 0x1000
+#define N64_CONT_UP 0x0800
+#define N64_CONT_DOWN 0x0400
+#define N64_CONT_LEFT 0x0200
+#define N64_CONT_RIGHT 0x0100
+#define N64_CONT_L 0x0020
+#define N64_CONT_R 0x0010
+#define N64_CONT_E 0x0008
+#define N64_CONT_D 0x0004
+#define N64_CONT_C 0x0002
+#define N64_CONT_F 0x0001
+
+/* Nintendo's official button names */
+#undef A_BUTTON 
+#undef B_BUTTON
+#undef L_TRIG
+#undef R_TRIG
+#undef Z_TRIG
+#undef START_BUTTON
+#undef U_JPAD
+#undef L_JPAD
+#undef R_JPAD
+#undef D_JPAD
+#undef U_CBUTTONS
+#undef L_CBUTTONS
+#undef R_CBUTTONS
+#undef D_CBUTTONS
+
+#define A_BUTTON N64_CONT_A
+#define B_BUTTON N64_CONT_B
+#define L_TRIG N64_CONT_L
+#define R_TRIG N64_CONT_R
+#define Z_TRIG N64_CONT_G
+#define START_BUTTON N64_CONT_START
+#define U_JPAD N64_CONT_UP
+#define L_JPAD N64_CONT_LEFT
+#define R_JPAD N64_CONT_RIGHT
+#define D_JPAD N64_CONT_DOWN
+#define U_CBUTTONS N64_CONT_E
+#define L_CBUTTONS N64_CONT_C
+#define R_CBUTTONS N64_CONT_F
+#define D_CBUTTONS N64_CONT_D
+#endif
+
+#undef CONT_C
+#undef CONT_B
+#undef CONT_A
+#undef CONT_START
+#undef CONT_DPAD_UP
+#undef CONT_DPAD_DOWN
+#undef CONT_DPAD_LEFT
+#undef CONT_DPAD_RIGHT
+#undef CONT_Z
+#undef CONT_Y
+#undef CONT_X
+#undef CONT_D
+#undef CONT_DPAD2_UP
+#undef CONT_DPAD2_DOWN
+#undef CONT_DPAD2_LEFT
+#undef CONT_DPAD2_RIGHT
+
+
+#define CONT_C              (1<<0)      /**< \brief C button Mask. */
+#define CONT_B              (1<<1)      /**< \brief B button Mask. */
+#define CONT_A              (1<<2)      /**< \brief A button Mask. */
+#define CONT_START          (1<<3)      /**< \brief Start button Mask. */
+#define CONT_DPAD_UP        (1<<4)      /**< \brief Main Dpad Up button Mask. */
+#define CONT_DPAD_DOWN      (1<<5)      /**< \brief Main Dpad Down button Mask. */
+#define CONT_DPAD_LEFT      (1<<6)      /**< \brief Main Dpad Left button Mask. */
+#define CONT_DPAD_RIGHT     (1<<7)      /**< \brief Main Dpad right button Mask. */
+#define CONT_Z              (1<<8)      /**< \brief Z button Mask. */
+#define CONT_Y              (1<<9)      /**< \brief Y button Mask. */
+#define CONT_X              (1<<10)     /**< \brief X button Mask. */
+#define CONT_D              (1<<11)     /**< \brief D button Mask. */
+#define CONT_DPAD2_UP       (1<<12)     /**< \brief Secondary Dpad Up button Mask. */
+#define CONT_DPAD2_DOWN     (1<<13)     /**< \brief Secondary Dpad Down button Mask. */
+#define CONT_DPAD2_LEFT     (1<<14)     /**< \brief Secondary Dpad Left button Mask. */
+#define CONT_DPAD2_RIGHT    (1<<15)     /**< \brief Secondary Dpad Right button Mask. */
+
+u16 ucheld;
+u16 stick;
 void update_controller(s32 index) {
-    struct Controller* controller = &gControllers[index];
-    u16 stick;
-
-    if (sIsController1Unplugged) {
+	struct Controller* controller = &gControllers[index];
+    maple_device_t *cont;
+    cont_state_t *state;
+ucheld = 0; stick = 0;
+//printf("update_controller(%d)\n",index);
+    if (index > 3)//player_index)
         return;
-    }
+    cont = maple_enum_type(index, MAPLE_FUNC_CONTROLLER);
+    if (!cont)
+        return;
+    state = maple_dev_status(cont);
 
-    controller->rawStickX = gControllerPads[index].stick_x;
-    controller->rawStickY = gControllerPads[index].stick_y;
+if ((state->buttons & CONT_START) && state->ltrig && state->rtrig)
+		exit(0);
 
-    if ((gControllerPads[index].button & 4) != 0) {
-        gControllerPads[index].button |= Z_TRIG;
-    }
-    controller->buttonPressed = gControllerPads[index].button & (gControllerPads[index].button ^ controller->button);
-    controller->buttonDepressed = controller->button & (gControllerPads[index].button ^ controller->button);
-    controller->button = gControllerPads[index].button;
+    const char stickH =state->joyx;
+    const char stickV = 0xff-((uint8_t)(state->joyy));
+//    const uint32_t magnitude_sq = (uint32_t)(stickH * stickH) + (uint32_t)(stickV * stickV);
+  //  if (magnitude_sq > (uint32_t)(6*6)) { //configDeadzone * configDeadzone)) {
+        controller->rawStickX = ((float)stickH/127)*80;
+        controller->rawStickY = ((float)stickV/127)*80;
+    //}
+
+    if (state->buttons & CONT_START)
+        ucheld |= 0x1000;//START_BUTTON;
+    if (state->buttons & CONT_X)
+        ucheld |= 0x0001;//C_RIGHT
+    if (state->buttons & CONT_Y)
+        ucheld |= 0x0008;//C_UP
+    if (state->buttons & CONT_B)
+        ucheld |= 0x4000;//B_BUTTON;
+//    if (state->rtrig && state->buttons & CONT_A)
+//        ucheld |= 0x0020;//L_TRIG;
+//    else {
+    if (state->rtrig)
+        ucheld |= 0x0010;//R_TRIG;
+    if (state->buttons & CONT_A)
+        ucheld |= 0x8000;//A_BUTTON;
+//    }
+    if (state->ltrig)
+        ucheld |= 0x2000;//Z_TRIG;
+    if (state->buttons & CONT_DPAD_UP)
+        ucheld |= 0x0800;//U_CBUTTONS;
+    if (state->buttons & CONT_DPAD_DOWN)
+        ucheld |= 0x0400;//D_CBUTTONS;
+    if (state->buttons & CONT_DPAD_LEFT)
+        ucheld |= 0x0200;//L_CBUTTONS;
+    if (state->buttons & CONT_DPAD_RIGHT)
+        ucheld |= 0x0100;//R_CBUTTONS;
+
+//    if ((ucheld & 4) != 0)
+  //      ucheld |= Z_TRIG;
+
+    controller->buttonPressed = ucheld & (ucheld ^ controller->button);
+    controller->buttonDepressed = controller->button & (ucheld ^ controller->button);
+    controller->button = ucheld;
+
+//printf("PRESSED %08x\n", controller->buttonPressed);
+//printf("DEPRESSED %08x\n", controller->buttonDepressed);
+//printf("BUTTON %08x\n", controller->button);
 
     stick = 0;
     if (controller->rawStickX < -50) {
@@ -340,17 +785,61 @@ void update_controller(s32 index) {
     if (controller->rawStickY > 50) {
         stick |= U_JPAD;
     }
+//printf("STICK %08x\n", stick);
     controller->stickPressed = stick & (stick ^ controller->stickDirection);
     controller->stickDepressed = controller->stickDirection & (stick ^ controller->stickDirection);
     controller->stickDirection = stick;
+
+//    if (sIsController1Unplugged) {
+  //      return;
+    //}
+#if 0
+	int ucheld = (held >> 16) & 0x0000FFFF;
+////printf("GET SOME FUCKING BUTTONS %08x\n", held);
+    controller->rawStickX = sd_x;//gControllerPads[index].stick_x;
+    controller->rawStickY = sd_y;//gControllerPads[index].stick_y;
+
+    if ((ucheld & 4) != 0) {
+        ucheld |= Z_TRIG;
+    }
+    controller->buttonPressed = ucheld & (ucheld ^ controller->button);
+    controller->buttonDepressed = controller->button & (ucheld ^ controller->button);
+    controller->button = ucheld;
+
+//printf("PRESSED %08x\n", controller->buttonPressed);
+//printf("DEPRESSED %08x\n", controller->buttonDepressed);
+//printf("BUTTON %08x\n", controller->button);
+
+    stick = 0;
+    if (controller->rawStickX < -50) {
+        stick |= L_JPAD;
+    }
+    if (controller->rawStickX > 50) {
+        stick |= R_JPAD;
+    }
+    if (controller->rawStickY < -50) {
+        stick |= D_JPAD;
+    }
+    if (controller->rawStickY > 50) {
+        stick |= U_JPAD;
+    }
+	//printf("STICK %08x\n", stick);
+    controller->stickPressed = stick & (stick ^ controller->stickDirection);
+    controller->stickDepressed = controller->stickDirection & (stick ^ controller->stickDirection);
+    controller->stickDirection = stick;
+#endif
 }
 
 void read_controllers(void) {
     OSMesg msg;
 
-    osContStartReadData(&gSIEventMesgQueue);
+//	printf(__func__);
+//	printf("\n");
+
+//FIXME controller shit
+//    osContStartReadData(&gSIEventMesgQueue);
     osRecvMesg(&gSIEventMesgQueue, &msg, OS_MESG_BLOCK);
-    osContGetReadData(gControllerPads);
+//    osContGetReadData(gControllerPads);
     update_controller(0);
     update_controller(1);
     update_controller(2);
@@ -384,6 +873,7 @@ void dispatch_audio_sptask(struct SPTask* spTask) {
 }
 
 void exec_display_list(struct SPTask* spTask) {
+	send_display_list(&gGfxPool->spTask);
     osWritebackDCacheAll();
     spTask->state = SPTASK_STATE_NOT_STARTED;
     if (sCurrentDisplaySPTask == NULL) {
@@ -477,88 +967,628 @@ void display_and_vsync(void) {
     gGlobalTimer++;
 }
 
-void init_segment_ending_sequences(void) {
-    bzero((void*) SEG_ENDING, SEG_ENDING_SIZE);
-    osWritebackDCacheAll();
-    dma_copy((u8*) SEG_ENDING, (u8*) SEG_ENDING_ROM_START, SEG_ENDING_ROM_SIZE);
-    osInvalICache((void*) SEG_ENDING, SEG_ENDING_SIZE);
-    osInvalDCache((void*) SEG_ENDING, SEG_ENDING_SIZE);
-}
-
-void init_segment_racing(void) {
-    bzero((void*) SEG_RACING, SEG_RACING_SIZE);
-    osWritebackDCacheAll();
-    dma_copy((u8*) SEG_RACING, (u8*) SEG_RACING_ROM_START, SEG_RACING_ROM_SIZE);
-    osInvalICache((void*) SEG_RACING, SEG_RACING_SIZE);
-    osInvalDCache((void*) SEG_RACING, SEG_RACING_SIZE);
-}
-
 void dma_copy(u8* dest, u8* romAddr, size_t size) {
-
-    osInvalDCache(dest, size);
-    while (size > 0x100) {
-        osPiStartDma(&gDmaIoMesg, 0, 0, (uintptr_t) romAddr, dest, 0x100, &gDmaMesgQueue);
-        osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, 1);
-        size -= 0x100;
-        romAddr += 0x100;
-        dest += 0x100;
-    }
-    if (size != 0) {
-        osPiStartDma(&gDmaIoMesg, 0, 0, (uintptr_t) romAddr, dest, size, &gDmaMesgQueue);
-        osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, 1);
-    }
+    memcpy(segmented_to_virtual(dest), segmented_to_virtual(romAddr), size);
 }
+
+extern u8 __attribute__((aligned(32))) SEG2_BUF[47688];
+extern u8 __attribute__((aligned(32))) COMMON_BUF[184664];
+extern u16 common_texture_minimap_kart_toad[];
+extern u16 common_texture_minimap_kart_luigi[];
+extern u16 common_texture_minimap_kart_peach[];
+extern u16 common_texture_minimap_kart_donkey_kong[];
+extern u16 common_texture_minimap_finish_line[];
+extern u16 common_texture_minimap_kart_mario[];
+extern u16 common_texture_minimap_kart_wario[];
+extern u16 common_texture_minimap_kart_yoshi[];
+extern u16 common_texture_minimap_kart_bowser[];
+extern u16 common_texture_minimap_progress_dot[];
+extern u16 common_tlut_bomb[];
+extern u16 common_tlut_player_emblem[];
+extern u16 common_tlut_finish_line_banner[];
+extern u16 common_tlut_trees_import[];
+extern u16 common_texture_hud_total_time[];
+extern u16 common_texture_hud_time[];
+extern u16 common_texture_hud_normal_digit[];
+extern u16 common_texture_banana[];
+extern u16 common_texture_flat_banana[];
+extern u16 common_tlut_green_shell[];
+extern u16 common_tlut_blue_shell[];
+extern u16 common_texture_hud_123[];
+extern u16 common_texture_hud_lap[];
+extern u16 common_texture_hud_123[];
+extern u16 common_texture_hud_lap_time[];
+extern u16 common_texture_hud_lap_1_on_3[];
+extern u16 common_texture_hud_lap_2_on_3[];
+extern u16 common_texture_hud_lap_3_on_3[];
+extern u16 common_tlut_portrait_mario[];
+extern u16 common_tlut_portrait_luigi[];
+extern u16 common_tlut_portrait_wario[];
+extern u16 common_tlut_portrait_peach[];
+extern u16 common_tlut_portrait_toad[];
+extern u16 common_tlut_portrait_yoshi[];
+extern u16 common_tlut_portrait_bowser[];
+extern u16 common_tlut_portrait_donkey_kong[];
+extern u16 common_tlut_portrait_bomb_kart_and_question_mark[];
+extern u8 D_0D02AA58[];
+extern u8 common_texture_portrait_mario[];
+extern u8 common_texture_portrait_luigi[];
+extern u8 common_texture_portrait_wario[];
+extern u8 common_texture_portrait_peach[];
+extern u8 common_texture_portrait_toad[];
+extern u8 common_texture_portrait_yoshi[];
+extern u8 common_texture_portrait_bowser[];
+extern u8 common_texture_portrait_donkey_kong[];
+extern u8 common_texture_item_box_question_mark[];
+extern u16 common_texture_particle_leaf[];
+extern u16 common_tlut_item_window_none[];
+
+extern u16 common_tlut_item_window_banana[];
+
+extern u16 common_tlut_item_window_banana_bunch[];
+
+extern u16 common_tlut_item_window_mushroom[];
+
+extern u16 common_tlut_item_window_double_mushroom[];
+
+extern u16 common_tlut_item_window_triple_mushroom[];
+
+extern u16 common_tlut_item_window_super_mushroom[];
+
+extern u16 common_tlut_item_window_blue_shell[];
+
+extern u16 common_tlut_item_window_boo[];
+
+extern u16 common_tlut_item_window_green_shell[];
+extern u16 common_tlut_item_window_triple_green_shell[];
+extern u16 common_tlut_item_window_red_shell[];
+
+extern u16 common_tlut_item_window_triple_red_shell[];
+
+extern u16 common_tlut_item_window_star[];
+extern u16 common_tlut_item_window_thunder_bolt[];
+
+extern u16 common_tlut_item_window_fake_item_box[];
+extern u16 common_tlut_lakitu_countdown[][256];
+extern u16 common_tlut_lakitu_checkered_flag[];
+extern u16 common_tlut_lakitu_second_lap[];
+extern u16 common_tlut_lakitu_reverse[];
+extern u16 common_tlut_lakitu_final_lap[];
+extern u16 common_tlut_lakitu_fishing[];
+extern u16 l_common_texture_minimap_kart_mario[][64];
+int sgm_run = 0;
 
 /**
  * Setup main segments and framebuffers.
  */
 void setup_game_memory(void) {
-    UNUSED u32 pad[2];
-    ptrdiff_t commonCourseDataSize; // Compressed mio0 size
-    uintptr_t textureSegSize;
-    ptrdiff_t textureSegStart;
-    uintptr_t allocatedMemory;
-    UNUSED s32 unknown_padding;
-
-    init_segment_racing();
-    gHeapEndPtr = SEG_RACING;
-    set_segment_base_addr(0, (void*) SEG_START);
-
-    // Memory pool size of 0xAB630
-    initialize_memory_pool(MEMORY_POOL_START, MEMORY_POOL_END);
-
+    set_segment_base_addr(0, 0x8c010000);
     func_80000BEC();
-
-    // Initialize trig tables segment
-    osInvalDCache((void*) TRIG_TABLES, TRIG_TABLES_SIZE);
-    osPiStartDma(&gDmaIoMesg, 0, 0, TRIG_TABLES_ROM_START, (void*) TRIG_TABLES, TRIG_TABLES_SIZE, &gDmaMesgQueue);
-    osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
-
-    set_segment_base_addr(2, (void*) load_data(SEG_DATA_START, SEG_DATA_END));
-
-    commonCourseDataSize = COMMON_TEXTURES_SIZE;
-    commonCourseDataSize = ALIGN16(commonCourseDataSize);
-
-#ifdef AVOID_UB
-    textureSegStart = (ptrdiff_t) SEG_RACING - commonCourseDataSize;
+    memset(SEG2_BUF, 0, sizeof(SEG2_BUF));
+    memset(COMMON_BUF, 0, sizeof(COMMON_BUF));
+    set_segment_base_addr(2, (void*) load_data(SEG_DATA_START, SEG_DATA_END, SEG2_BUF));
+    char texfn[256];
+#if 1
+    sprintf(texfn, "%s/dc_data/common_data.bin", fnpre);
 #else
-    textureSegStart = SEG_RACING - commonCourseDataSize;
+    sprintf(texfn, "/cd/dc_data/common_data.bin");
 #endif
-    osPiStartDma(&gDmaIoMesg, 0, 0, COMMON_TEXTURES_ROM_START, (void*) textureSegStart, commonCourseDataSize,
-                 &gDmaMesgQueue);
-    osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
 
-    textureSegSize = *(uintptr_t*) (textureSegStart + 4);
-    textureSegSize = ALIGN16(textureSegSize);
-    allocatedMemory = gNextFreeMemoryAddress;
-    mio0decode((u8*) textureSegStart, (u8*) allocatedMemory);
-    set_segment_base_addr(0xD, (void*) allocatedMemory);
+    FILE* file = fopen(texfn, "rb");
+    if (!file) {
+        perror("fopen");
+        exit(-1);
+    }
 
-    gNextFreeMemoryAddress += textureSegSize;
+    fseek(file, 0, SEEK_END);
+    long filesize = ftell(file);
+    printf("common data is %d\n", filesize);
+    rewind(file);
 
+    long toread = filesize;
+    long didread = 0;
+
+    while (didread < toread) {
+        long rv = fread(&COMMON_BUF[didread], 1, toread - didread, file);
+        if (rv == -1) {
+            printf("FILE IS FUCKED\n");
+            exit(-1);
+        }
+        toread -= rv;
+        didread += rv;
+    }
+
+    fclose(file);
+
+    set_segment_base_addr(0xD, (void*) COMMON_BUF);
     // Common course data does not get reloaded when the race state resets.
-    // Therefore, only reset the memory ptr to after the common course data.
-    gFreeMemoryResetAnchor = gNextFreeMemoryAddress;
+    if (!sgm_run) {
+    extern u16 l_d_course_rainbow_road_static_tluts[][256];
+
+    u16* tlut_ptr = (u16*) segmented_to_virtual(l_d_course_rainbow_road_static_tluts[0]);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+#if 1
+        tlut_ptr = (u16*) segmented_to_virtual(l_d_course_rainbow_road_static_tluts[1]);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+        tlut_ptr = (u16*) segmented_to_virtual(l_d_course_rainbow_road_static_tluts[2]);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+        tlut_ptr = (u16*) segmented_to_virtual(l_d_course_rainbow_road_static_tluts[3]);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+        tlut_ptr = (u16*) segmented_to_virtual(l_d_course_rainbow_road_static_tluts[4]);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+        tlut_ptr = (u16*) segmented_to_virtual(l_d_course_rainbow_road_static_tluts[5]);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+        tlut_ptr = (u16*) segmented_to_virtual(l_d_course_rainbow_road_static_tluts[6]);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+#endif
+        // a whole bunch of stuff I have to endian-swap
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_player_emblem);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_texture_particle_leaf);
+        for (int i = 0; i < 32*16; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_bomb);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_lakitu_countdown);
+        for (int i = 0; i < 768; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_lakitu_checkered_flag);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_lakitu_final_lap);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_lakitu_fishing);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_lakitu_reverse);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_lakitu_second_lap);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_texture_hud_lap_time);
+        for (int i = 0; i < 32 * 16; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_texture_hud_total_time);
+        for (int i = 0; i < 32 * 16; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_texture_hud_time);
+        for (int i = 0; i < 512; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_texture_hud_normal_digit);
+        for (int i = 0; i < 1664; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_texture_hud_123);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_texture_hud_lap);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_texture_hud_lap_1_on_3);
+        for (int i = 0; i < 512; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_texture_hud_lap_2_on_3);
+        for (int i = 0; i < 512; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_texture_hud_lap_3_on_3);
+        for (int i = 0; i < 512; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        // 32*64
+        tlut_ptr = (u16*) segmented_to_virtual(common_texture_item_box_question_mark);
+        for (int i = 0; i < 32 * 64; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_finish_line_banner);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_trees_import);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_green_shell);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_blue_shell);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_portrait_mario);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_portrait_bomb_kart_and_question_mark);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_portrait_luigi);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_portrait_wario);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_portrait_yoshi);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_portrait_peach);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_portrait_toad);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_portrait_bowser);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_portrait_donkey_kong);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_none);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_banana);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_banana_bunch);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_mushroom);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_double_mushroom);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_triple_mushroom);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_super_mushroom);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_blue_shell);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_boo);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_green_shell);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_triple_green_shell);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_red_shell);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_triple_red_shell);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_star);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_thunder_bolt);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_tlut_item_window_fake_item_box);
+        for (int i = 0; i < 256; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_texture_banana);
+        for (int i = 0; i < 32 * 32; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = (u16*) segmented_to_virtual(common_texture_flat_banana);
+        for (int i = 0; i < 64 * 32; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = segmented_to_virtual(l_common_texture_minimap_kart_mario[0]);
+        for (int i = 0; i < 8 * 8; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = segmented_to_virtual(l_common_texture_minimap_kart_mario[1]);
+        for (int i = 0; i < 8 * 8; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = segmented_to_virtual(l_common_texture_minimap_kart_mario[2]);
+        for (int i = 0; i < 8 * 8; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = segmented_to_virtual(l_common_texture_minimap_kart_mario[3]);
+        for (int i = 0; i < 8 * 8; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = segmented_to_virtual(common_texture_minimap_finish_line);
+        for (int i = 0; i < 8 * 8; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = segmented_to_virtual(l_common_texture_minimap_kart_mario[4]);
+        for (int i = 0; i < 8 * 8; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = segmented_to_virtual(l_common_texture_minimap_kart_mario[5]);
+        for (int i = 0; i < 8 * 8; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = segmented_to_virtual(l_common_texture_minimap_kart_mario[6]);
+        for (int i = 0; i < 8 * 8; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = segmented_to_virtual(l_common_texture_minimap_kart_mario[7]);
+        for (int i = 0; i < 8 * 8; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+        tlut_ptr = segmented_to_virtual(l_common_texture_minimap_kart_mario[8]);
+        for (int i = 0; i < 8 * 8; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+
+        tlut_ptr = segmented_to_virtual(common_texture_minimap_progress_dot);
+        for (int i = 0; i < 8 * 8; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+// bomb kart wheel, 16x16
+        tlut_ptr = segmented_to_virtual(D_0D02AA58);
+        for (int i = 0; i < 16 * 16; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+
+
+        sgm_run = 1;
+    }
 }
 
 /**
@@ -1151,18 +2181,14 @@ void update_gamestate(void) {
              * @bug Reloading this segment makes random_u16() deterministic for player spawn order.
              * In laymens terms, random_u16() outputs the same value every time.
              */
-            init_segment_racing();
             setup_race();
             break;
         case ENDING:
             gCurrentlyLoadedCourseId = COURSE_NULL;
-            init_segment_ending_sequences();
             load_ceremony_cutscene();
             break;
         case CREDITS_SEQUENCE:
             gCurrentlyLoadedCourseId = COURSE_NULL;
-            init_segment_racing();
-            init_segment_ending_sequences();
             load_credits();
             break;
     }

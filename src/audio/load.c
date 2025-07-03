@@ -796,6 +796,7 @@ void audio_init(void) {
     D_803B7178 = 20.03042f;
     gRefreshRate = 50;
 #else // US
+    u32 osTvType = TV_TYPE_NTSC;
     switch (osTvType) {
         case TV_TYPE_PAL:
             D_803B7178 = 20.03042f;

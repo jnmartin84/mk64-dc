@@ -591,6 +591,7 @@ void options_menu_act(struct Controller* controller, u16 controllerIdx) {
                     play_sound2(SOUND_MENU_FILE_NOT_FOUND);
                     return;
                 }
+#if 0
                 res = osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName,
                                     (u8*) gExtCode, &gControllerPak1FileNote);
                 if (res == PFS_NO_ERROR) {
@@ -601,6 +602,7 @@ void options_menu_act(struct Controller* controller, u16 controllerIdx) {
                     play_sound2(SOUND_MENU_FILE_NOT_FOUND);
                     return;
                 }
+#endif
                 gSubMenuSelection = SUB_MENU_COPY_PAK_COMPLETED;
                 D_8018EE10[sp38->param1].courseIndex = (sp30 + sp38->param2)->courseIndex;
                 func_800B6088(sp38->param1);
@@ -990,6 +992,10 @@ void controller_pak_menu_act(struct Controller* controller, UNUSED u16 controlle
                 selectedTableRow = gControllerPakVisibleTableRows[gControllerPakSelectedTableRow + 2] - 1;
                 osPfsState = &pfsState[selectedTableRow];
 
+                gControllerPakMenuSelection = CONTROLLER_PAK_MENU_ERASE_ERROR_NO_PAK;
+                return;
+
+#if 0
                 switch (osPfsDeleteFile(&gControllerPak1FileHandle, osPfsState->company_code, osPfsState->game_code,
                                         (u8*) &osPfsState->game_name, (u8*) &osPfsState->ext_name)) {
                     default:
@@ -1007,6 +1013,7 @@ void controller_pak_menu_act(struct Controller* controller, UNUSED u16 controlle
                         gControllerPakMenuSelection = CONTROLLER_PAK_MENU_ERASE_ERROR_PAK_CHANGED;
                         return;
                 }
+#endif
                 break;
             case CONTROLLER_PAK_MENU_ERASE_ERROR_NOT_ERASED:
             case CONTROLLER_PAK_MENU_ERASE_ERROR_NO_PAK:
@@ -2004,11 +2011,12 @@ bool is_screen_being_faded(void) {
 /**
  * Unused debug function, prints the character id for the player and both controller pak ghosts
  */
-UNUSED void debug_print_ghost_kart_character_id(s32 arg0, s32 arg1) {
+UNUSED void debug_print_ghost_kart_character_id(UNUSED s32 arg0, UNUSED s32 arg1) {
+#if 0
     struct_8018EE10_entry* pak1 = D_8018EE10;
     struct_8018EE10_entry* pak2 = (struct_8018EE10_entry*) gSomeDLBuffer;
-
     rmonPrintf("ghost_kart=%d,", D_80162DE0);
     rmonPrintf("pak1_ghost_kart=%d,", (pak1 + arg0)->characterId);
     rmonPrintf("pak2_ghost_kart=%d\n", (pak2 + arg1)->characterId);
+#endif
 }

@@ -1179,13 +1179,18 @@ void spawn_course_actors(void) {
     gNumPermanentActors = gNumActors;
 }
 
+extern u8 *ROVING_SEG3_BUF;
+extern u8 __attribute__((aligned(32))) SEG3_BUF[/*98304*/100352];
+
 /**
  * @brief Loads actor textures, course specific actor textures.
  * Calls to spawn_course_vehicles and place_course_actors
  *
  */
 void init_actors_and_load_textures(void) {
-    set_segment_base_addr(3, (void*) gNextFreeMemoryAddress);
+    set_segment_base_addr(3, (void*) SEG3_BUF + 0x9000);
+    ROVING_SEG3_BUF = SEG3_BUF + 0x9000;
+
     D_802BA050 = dma_textures(gTextureGreenShell0, 0x00000257U, 0x00000400U);
     dma_textures(gTextureGreenShell1, 0x00000242U, 0x00000400U);
     dma_textures(gTextureGreenShell2, 0x00000259U, 0x00000400U);

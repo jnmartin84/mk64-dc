@@ -294,6 +294,9 @@ void clear_nmi_buffer(void) {
     }
 }
 
+extern u8 __attribute__((aligned(32))) SEG3_BUF[/*98304*/100352];
+u8 *ROVING_SEG3_BUF;
+
 void func_80003040(void) {
     Vec3f position;
     Vec3f velocity = { 0, 0, 0 };
@@ -313,8 +316,8 @@ void func_80003040(void) {
     // In other words, the first texture in segment 3 for credits should start at 0x9000
     // This is only required for moo moo farm.
     // This is also bad memory management practice as this could result in overwriting the wrong memory.
-    set_segment_base_addr(0x3, (void*) (gNextFreeMemoryAddress - 0x9000));
-    destroy_all_actors();
+    set_segment_base_addr(0x3, (void*)SEG3_BUF);// + 0x9000);// (gNextFreeMemoryAddress - 0x9000));
+	ROVING_SEG3_BUF = SEG3_BUF;// + 0x9000;
 #if !ENABLE_CUSTOM_COURSE_ENGINE
     switch (gCurrentCourseId) {
         case COURSE_MARIO_RACEWAY:
