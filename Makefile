@@ -228,10 +228,10 @@ INCLUDE_DIRS   := include
 
 # Directories containing source files
 #SRC_ASSETS_DIR := assets/code/ceremony_data assets/code/startup_logo assets/code/data_800E45C0 assets/code/data_segment2 assets/code/data_800E8700 assets/code/common_data
-SRC_DIRS       := src src/data src/buffers src/racing src/ending src/audio src/debug src/os src/os/math courses 
+SRC_DIRS       := src src/data src/buffers src/racing src/ending src/audio src/debug src/os src/os/math courses
+# $(SRC_ASSETS_DIR)
 #assets/code/ceremony_data assets/code/startup_logo $(SRC_ASSETS_DIR)
-ASM_DIRS       := $(DATA_DIR) $(DATA_DIR)/karts
-#$(DATA_DIR)/sound_data 
+ASM_DIRS       := $(DATA_DIR) $(DATA_DIR)/karts $(DATA_DIR)/zkarts $(DATA_DIR)/sound_data 
 #asm asm/os asm/unused 
 
 

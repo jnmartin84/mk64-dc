@@ -12,6 +12,17 @@
 #include "courses/courseTable.h"
 #include "defines.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+extern s16 gCurrentCourseId;
+extern uint8_t __attribute__((aligned(32))) DECOMP_VERT_BUF[228656];
+extern u8 __attribute__((aligned(32))) SEG4_BUF[228656];
+extern u8 __attribute__((aligned(32))) SEG5_BUF[133120];
+extern uint8_t __attribute__((aligned(32))) COMP_VERT_BUF[65536];
+static char __attribute__((aligned(32))) texfn[256];
+
 s32 sGfxSeekPosition;
 s32 sPackedSeekPosition;
 
@@ -960,301 +971,8 @@ UNUSED void func_802A9AEC(void) {
  * This issue is prevented so long as the packed file adheres to correct opcodes and unpack code
  * increments the file pointer the correct number of times.
  */
-void displaylist_unpack(uintptr_t* data, uintptr_t finalDisplaylistOffset, u32 arg2) {
-    uintptr_t segment = SEGMENT_NUMBER2(data);
-    uintptr_t offset = SEGMENT_OFFSET(data);
-    u8* packed_dl = VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
-
-    Gfx* gfx;
-    u32 addr;
-
-    u8 opcode;
-
-    finalDisplaylistOffset = ALIGN16(finalDisplaylistOffset) + 8;
-    gHeapEndPtr -= finalDisplaylistOffset;
-    addr = gHeapEndPtr;
-    gfx = (Gfx*) gHeapEndPtr;
-    sGfxSeekPosition = 0;
-    sPackedSeekPosition = 0;
-
-    while (true) {
-
-        // Seek to the next byte
-        opcode = packed_dl[sPackedSeekPosition++];
-
-        // Break when the eof has been reached denoted by opcode 0xFF
-        if (opcode == 0xFF) {
-            break;
-        }
-
-        switch (opcode) {
-            case 0x0:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x1:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x2:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x3:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x4:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x5:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x6:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x7:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x8:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x9:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0xA:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0xB:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0xC:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0xD:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0xE:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0xF:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x10:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x11:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x12:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x13:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x14:
-                unpack_lights(gfx, packed_dl, opcode);
-                break;
-            case 0x15:
-                unpack_combine_mode1(gfx, packed_dl, arg2);
-                break;
-            case 0x16:
-                unpack_combine_mode2(gfx, packed_dl, arg2);
-                break;
-            case 0x17:
-                unpack_combine_mode_shade(gfx, packed_dl, arg2);
-                break;
-            case 0x2E:
-                unpack_combine_mode4(gfx, packed_dl, arg2);
-                break;
-            case 0x53:
-                unpack_combine_mode5(gfx, packed_dl, arg2);
-                break;
-            case 0x18:
-                unpack_render_mode_opaque(gfx, packed_dl, arg2);
-                break;
-            case 0x19:
-                unpack_render_mode_tex_edge(gfx, packed_dl, arg2);
-                break;
-            case 0x2F:
-                unpack_render_mode_translucent(gfx, packed_dl, arg2);
-                break;
-            case 0x54:
-                unpack_render_mode_opaque_decal(gfx, packed_dl, arg2);
-                break;
-            case 0x55:
-                unpack_render_mode_translucent_decal(gfx, packed_dl, arg2);
-                break;
-            case 0x1A:
-                unpack_tile_sync(gfx, packed_dl, opcode);
-                break;
-            case 0x2C:
-                unpack_tile_sync(gfx, packed_dl, opcode);
-                break;
-            case 0x1B:
-                unpack_tile_sync(gfx, packed_dl, opcode);
-                break;
-            case 0x1C:
-                unpack_tile_sync(gfx, packed_dl, opcode);
-                break;
-            case 0x1D:
-                unpack_tile_sync(gfx, packed_dl, opcode);
-                break;
-            case 0x1E:
-                unpack_tile_sync(gfx, packed_dl, opcode);
-                break;
-            case 0x1F:
-                unpack_tile_sync(gfx, packed_dl, opcode);
-                break;
-            case 0x20:
-                unpack_tile_load_sync(gfx, packed_dl, opcode);
-                break;
-            case 0x21:
-                unpack_tile_load_sync(gfx, packed_dl, opcode);
-                break;
-            case 0x22:
-                unpack_tile_load_sync(gfx, packed_dl, opcode);
-                break;
-            case 0x23:
-                unpack_tile_load_sync(gfx, packed_dl, opcode);
-                break;
-            case 0x24:
-                unpack_tile_load_sync(gfx, packed_dl, opcode);
-                break;
-            case 0x25:
-                unpack_tile_load_sync(gfx, packed_dl, opcode);
-                break;
-            case 0x26:
-                unpack_texture_on(gfx, packed_dl, opcode);
-                break;
-            case 0x27:
-                unpack_texture_off(gfx, packed_dl, opcode);
-                break;
-            case 0x28:
-                unpack_vtx1(gfx, packed_dl, opcode);
-                break;
-            case 0x33:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x34:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x35:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x36:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x37:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x38:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x39:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x3A:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x3B:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x3C:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x3D:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x3E:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x3F:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x40:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x41:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x42:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x43:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x44:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x45:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x46:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x47:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x48:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x49:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x4A:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x4B:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x4C:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x4D:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x4E:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x4F:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x50:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x51:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x52:
-                unpack_vtx2(gfx, packed_dl, opcode);
-                break;
-            case 0x29:
-                unpack_triangle(gfx, packed_dl, opcode);
-                break;
-            case 0x58:
-                unpack_quadrangle(gfx, packed_dl, opcode);
-                break;
-            case 0x30:
-                unpack_spline_3D(gfx, packed_dl, opcode);
-                break;
-            case 0x2D:
-                unpack_cull_displaylist(gfx, packed_dl, opcode);
-                break;
-            case 0x2A:
-                unpack_end_displaylist(gfx, packed_dl, opcode);
-                break;
-            case 0x56:
-                unpack_set_geometry_mode(gfx, packed_dl, opcode);
-                break;
-            case 0x57:
-                unpack_clear_geometry_mode(gfx, packed_dl, opcode);
-                break;
-            case 0x2B:
-                unpack_displaylist(gfx, packed_dl, opcode);
-                break;
-            default:
-                // Skip unknown values
-                break;
-        }
-    }
-    set_segment_base_addr(0x7, (void*) addr);
+void displaylist_unpack(uintptr_t* data) {
+	set_segment_base_addr(0x7, (void*) data);
 }
 
 struct UnkStr_802AA7C8 {
@@ -1264,115 +982,229 @@ struct UnkStr_802AA7C8 {
     uintptr_t unkC;
 };
 
-void decompress_textures(u32* arg0) {
-    u32 segment = SEGMENT_NUMBER2(arg0);
-    u32 offset = SEGMENT_OFFSET(arg0);
-    struct UnkStr_802AA7C8* phi_s0 = (struct UnkStr_802AA7C8*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
-    struct UnkStr_802AA7C8* temp_s0;
-    uintptr_t temp_t2;
-    u8* temp_a0;
-    uintptr_t phi_v0;
-    uintptr_t sp20;
+const char __attribute__((aligned(32))) coursenames[20][32] = {
+"mario_raceway",
+"choco_mountain",
+"bowsers_castle",
+"banshee_boardwalk",
+"yoshi_valley",
+"frappe_snowland",
+"koopa_troopa_beach",
+"royal_raceway",
+"luigi_raceway",
+"moo_moo_farm",
+"toads_turnpike",
+"kalimari_desert",
+"sherbet_land",
+"rainbow_road",
+"wario_stadium",
+"block_fort",
+"skyscraper",
+"double_deck",
+"dks_jungle_parkway",
+"big_donut",
+};
 
-    phi_v0 = 0;
-    temp_s0 = phi_s0;
-    while (true) {
-        temp_a0 = phi_s0->unk0;
-        if ((temp_a0) == 0) {
-            break;
-        }
-        phi_v0 += phi_s0->unk8;
-        phi_s0++;
-    }
-    phi_s0 = temp_s0;
-    gHeapEndPtr -= phi_v0;
-    sp20 = gHeapEndPtr;
-
-    while (true) {
-        temp_a0 = phi_s0->unk0;
-        if ((temp_a0) == 0) {
-            break;
-        }
-        MIO0_0F(temp_a0, phi_s0->unk4, phi_s0->unk8);
-        phi_s0++;
-    }
-    gHeapEndPtr = sp20;
-    temp_t2 = gHeapEndPtr;
-    set_segment_base_addr(0x5, (void*) temp_t2);
+char *get_course_name(s16 course) {
+    return coursenames[course];
 }
+extern char *fnpre;
 
-void* decompress_segments(u8* start, u8* end) {
-    UNUSED u32 pad;
-    u32 sp28;
-    u32 size = ALIGN16(end - start);
-    u8* heapEnd;
-    u32* freeSpace;
+void decompress_textures(UNUSED u32* arg0) {
+    char *courseName = get_course_name(gCurrentCourseId);
+	sprintf(texfn, "%s/dc_data/%s_tex.bin", fnpre, courseName);
+    FILE *file = fopen(texfn, "rb");
 
-    heapEnd = (u8*) gHeapEndPtr - size;
-    // sp20 = temp_a0;
-    dma_copy(heapEnd, start, size);
-    sp28 = *(u32*) (heapEnd + 4);
-    sp28 = ALIGN16(sp28);
-    freeSpace = (u32*) gNextFreeMemoryAddress;
-    mio0decode(heapEnd, (u8*) freeSpace);
-    gNextFreeMemoryAddress += sp28;
-    return (void*) freeSpace;
+    if (!file) {
+        perror("fopen");
+	    exit(-1);
+    }
+
+    fseek(file, 0, SEEK_END);
+    long filesize = ftell(file);
+    rewind(file);
+
+	long toread = filesize;
+    long didread = 0;
+
+    while(didread < toread) {
+        long rv = fread(&SEG5_BUF[didread], 1, toread - didread, file);
+        if (rv == -1) { printf("FILE IS FUCKED\n"); exit(-1); }
+	    toread -= rv;
+    	didread += rv;
+    }
+    fclose(file);
+
+    set_segment_base_addr(0x5, (void*)SEG5_BUF);
 }
-
+static inline uint32_t Swap32(uint32_t val)
+{
+	return ((((val)&0xff000000) >> 24) | (((val)&0x00ff0000) >> 8) |
+		(((val)&0x0000ff00) << 8) | (((val)&0x000000ff) << 24));
+}
+//extern uint8_t TEMP_DECODE_BUF[131072];
+u32 max_size = 0;
+void* decompress_segments(u8* start, u8 *target) {
+    mio0decode(segmented_to_virtual(start), (u8*) target);
+    return (void*) target;
+}
 /**
  * @brief Loads & DMAs course data. Vtx, textures, displaylists, etc.
  * @param courseId
  */
+extern uint8_t __attribute__((aligned(32))) COURSE_BUF[146464];
+extern u8 __attribute__((aligned(32))) UNPACK_BUF[51008];
+
+u32 packoffs[20] = {
+0x00009754,// g       .data	00000000 d_course_mario_raceway_packed
+0x0000a130,// g       .data	00000000 d_course_choco_mountain_packed
+0x0000e350,// g       .data	00000000 d_course_bowsers_castle_packed
+0x000069f4,// g       .data	00000000 d_course_banshee_boardwalk_packed
+0x00007d54,// g       .data	00000000 d_course_yoshi_valley_packed
+0x00009d88,// g       .data	00000000 d_course_frappe_snowland_packed
+0x0000faec,// g       .data	00000000 d_course_koopa_troopa_beach_packed
+0x0000ec44,// g       .data	00000000 d_course_royal_raceway_packed
+0x00009760,// g       .data	00000000 d_course_luigi_raceway_packed
+0x0000d998,// g       .data	00000000 d_course_moo_moo_farm_packed
+0x0000a75c,// g       .data	00000000 d_course_toads_turnpike_packed
+0x0000b520,// g       .data	00000000 d_course_kalimari_desert_packed
+0x00004924,// g       .data	00000000 d_course_sherbet_land_packed
+0x00005b4c,// g       .data	00000000 d_course_rainbow_road_packed
+0x0000aa08,// g       .data	00000000 d_course_wario_stadium_packed
+0x000018cc,// g       .data	00000000 d_course_block_fort_packed
+0x00001700,// g       .data	00000000 d_course_skyscraper_packed
+0x00000cc0,// g       .data	00000000 d_course_double_deck_packed
+0x0000a4f8,// g       .data	00000000 d_course_dks_jungle_parkway_packed
+0x00001c74,// g       .data	00000000 d_course_big_donut_packed
+};
+extern void nuke_everything(void);
+#if 0
+extern u16 d_course_rainbow_road_static_tluts[];
+extern u16 d_tlut_rainbow_road_neon_luigi[];
+extern u16 d_tlut_rainbow_road_neon_dk[];
+extern u16 d_tlut_rainbow_road_neon_yoshi[];
+extern u16 d_tlut_rainbow_road_neon_bowser[];
+extern u16 d_tlut_rainbow_road_neon_wario[];
+extern u16 d_tlut_rainbow_road_neon_toad[];
+#endif
+
+
+
+//int max_unpack = 0;
 u8* load_course(s32 courseId) {
-    UNUSED s32 pad[4];
-    u8* vtxCompressed;      // mio0 compressed
-    u8* courseDataRomStart; // mio0 compressed
-    u8* courseDataRomEnd;
-    u8* vertexRomStart; // mio0 compressed
-    u8* vertexRomEnd;
-    UNUSED s32 pad2[2];
-    u32* textures;
-    CourseVtx* vertexStart; // mio0 compressed
-    u8* packedStart;
     u32 vertexCount;
-    u8* finalDisplaylistOffset;
-    u32 unknown1;
-    s32 prevLoadedAddress_saved;
-    u8* offsetRomStart;
-    u8* offsetRomEnd;
+    nuke_everything();
 
-    // Pointers to rom offsets
-    // gamestate = gGamestate;
-    courseDataRomStart = gCourseTable[courseId].dlRomStart;
-    courseDataRomEnd = gCourseTable[courseId].dlRomEnd;
-    offsetRomStart = gCourseTable[courseId].offsetRomStart;
-    offsetRomEnd = gCourseTable[courseId].offsetRomEnd;
-    vertexRomStart = gCourseTable[courseId].vertexRomStart;
-    vertexRomEnd = gCourseTable[courseId].vertexRomEnd;
-    textures = gCourseTable[courseId].textures;
-    vertexStart = gCourseTable[courseId].vertexStart;
-    packedStart = gCourseTable[courseId].packedStart;
     vertexCount = gCourseTable[courseId].vertexCount;
-    finalDisplaylistOffset = gCourseTable[courseId].finalDisplaylistOffset;
-    unknown1 = gCourseTable[courseId].unknown1;
-
-    if ((gGamestate == ENDING) || (gGamestate == CREDITS_SEQUENCE)) {
-        gHeapEndPtr = SEG_ENDING;
-    } else {
-        gHeapEndPtr = SEG_RACING;
+#if 1
+    memset(COURSE_BUF, 0, sizeof(COURSE_BUF));
+    memset(COMP_VERT_BUF, 0, sizeof(COMP_VERT_BUF));
+    memset(DECOMP_VERT_BUF, 0, sizeof(DECOMP_VERT_BUF));
+    memset(UNPACK_BUF, 0, sizeof(UNPACK_BUF));
+#endif
+    char *courseName = get_course_name(gCurrentCourseId);
+	// open course data
+#if 1
+	sprintf(texfn, "%s/dc_data/%s_data.bin", fnpre, courseName);
+#else
+    sprintf(texfn, "/cd/dc_data/%s_data.bin", courseName);
+#endif
+    printf("opening %s\n", texfn);
+	FILE *file = fopen(texfn, "rb");
+    if (!file) {
+        perror("fopen");
+        exit(-1);
     }
-    set_segment_base_addr(9, load_data((uintptr_t) offsetRomStart, (uintptr_t) offsetRomEnd));
 
-    if (gGamestate != ENDING) {
-        set_segment_base_addr(6, decompress_segments(courseDataRomStart, courseDataRomEnd));
+    fseek(file, 0, SEEK_END);
+    long filesize = ftell(file);
+    printf("Filesize %d\n", filesize);
+	fseek(file, 0, SEEK_SET);
+
+	long toread = filesize;
+    long didread = 0;
+
+    while(didread < toread) {
+        long rv = fread(&COURSE_BUF[didread], 1, toread - didread, file);
+        if (rv == -1) { printf("FILE IS FUCKED\n"); exit(-1); }
+        toread -= rv;
+        didread += rv;
     }
-    prevLoadedAddress_saved = gNextFreeMemoryAddress;
-    vtxCompressed = dma_compressed_vtx(vertexRomStart, vertexRomEnd);
+    fclose(file);
+    file = NULL;
 
-    set_segment_base_addr(0xF, (void*) vtxCompressed);
-    decompress_vtx(vertexStart, vertexCount);
-    displaylist_unpack((uintptr_t*) packedStart, (uintptr_t) finalDisplaylistOffset, unknown1);
-    decompress_textures(textures);
-    gNextFreeMemoryAddress = prevLoadedAddress_saved;
-    return vtxCompressed;
+    set_segment_base_addr(6, COURSE_BUF);
+
+	// get the verts and the packed
+#if 1
+    sprintf(texfn, "%s/dc_data/%s_geography.bin", fnpre,courseName);
+#else
+    sprintf(texfn, "/cd/dc_data/%s_geography.bin", courseName);
+#endif
+	file = fopen(texfn, "rb");
+    if (!file) {
+        perror("fopen");
+        exit(-1);
+    }
+
+    fseek(file, 0, SEEK_END);
+    filesize = ftell(file);
+    rewind(file);
+
+    {
+        long toread = packoffs[gCurrentCourseId];
+        long didread = 0;
+
+        while(didread < toread) {
+
+            long rv = fread(&COMP_VERT_BUF[didread], 1, toread - didread, file);
+            if (rv == -1) { printf("FILE IS FUCKED\n"); exit(-1); }
+            toread -= rv;
+            didread += rv;
+        }
+    }
+  
+    {
+        long toread = filesize - packoffs[gCurrentCourseId];
+//        if (toread > max_unpack) {
+   //         max_unpack = toread;
+     //       printf("max_unpack %d\n", max_unpack);
+       // }
+        long didread = 0;
+
+        while(didread < toread) {
+
+        //	uint8_t *tmpbuf = malloc(filesize);
+            long rv = fread(&UNPACK_BUF[didread], 1, toread - didread, file);
+            if (rv == -1) { printf("FILE IS FUCKED\n"); exit(-1); }
+            toread -= rv;
+            didread += rv;
+        }
+
+        fclose(file);
+        file = NULL;
+
+        set_segment_base_addr(0xF, (void*) COMP_VERT_BUF);
+        decompress_vtx(COMP_VERT_BUF, DECOMP_VERT_BUF);
+
+        displaylist_unpack(UNPACK_BUF);
+        printf("unpack to %08x\n", (uintptr_t*) UNPACK_BUF);
+    }
+    decompress_textures(0);
+#if 0
+if(gCurrentCourseId == 13) {
+extern u8 d_course_rainbow_road_static_textures[][4096];
+
+// 1 through 5
+for (int n=0;n<6;n++) {
+    u16* tlut_ptr = (u16*) segmented_to_virtual(d_course_rainbow_road_static_textures[n]);
+        for (int i = 0; i < 2048; i++) {
+            uint16_t np = tlut_ptr[i];
+            np = (np << 8) | ((np >> 8) & 0xff);
+            tlut_ptr[i] = np;
+        }
+}
+}
+#endif
+    return COMP_VERT_BUF;
 }

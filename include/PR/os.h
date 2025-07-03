@@ -759,12 +759,6 @@ extern void osWriteHost(void*, u32);
 extern void osAckRamromRead(void);
 extern void osAckRamromWrite(void);
 
-/* byte string operations */
-
-extern void bcopy(const void*, void*, size_t);
-extern int bcmp(const void*, const void*, int);
-extern void bzero(void*, size_t);
-
 /* Miscellaneous operations */
 
 extern void osInitialize(void);
@@ -774,7 +768,6 @@ extern u32 osGetMemSize(void);
 
 /* Printf */
 
-extern int sprintf(char* s, const char* fmt, ...);
 extern void osSyncPrintf(const char* fmt, ...);
 extern void osAsyncPrintf(const char* fmt, ...);
 extern int osSyncGetChars(char* buf);
