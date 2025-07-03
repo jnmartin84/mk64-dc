@@ -8,825 +8,825 @@
 # segment 0x0A000000 (0x729A30 - 0x7E684F)
 
 .align 2, 0x00
-glabel gTextureMarioFace00
+glabel _gTextureMarioFace00
 .incbin "assets/character_select/mario/mario_face_00.mio0"
-glabel gTextureMarioFace00_end
+glabel _gTextureMarioFace00_end
 
 .align 2, 0x00
-glabel gTextureMarioFace01
+glabel _gTextureMarioFace01
 .incbin "assets/character_select/mario/mario_face_01.mio0"
-glabel gTextureMarioFace01_end
+glabel _gTextureMarioFace01_end
 
 .align 2, 0x00
-glabel gTextureMarioFace02
+glabel _gTextureMarioFace02
 .incbin "assets/character_select/mario/mario_face_02.mio0"
-glabel gTextureMarioFace02_end
+glabel _gTextureMarioFace02_end
 
 .align 2, 0x00
-glabel gTextureMarioFace03
+glabel _gTextureMarioFace03
 .incbin "assets/character_select/mario/mario_face_03.mio0"
-glabel gTextureMarioFace03_end
+glabel _gTextureMarioFace03_end
 
 .align 2, 0x00
-glabel gTextureMarioFace04
+glabel _gTextureMarioFace04
 .incbin "assets/character_select/mario/mario_face_04.mio0"
-glabel gTextureMarioFace04_end
+glabel _gTextureMarioFace04_end
 
 .align 2, 0x00
-glabel gTextureMarioFace05
+glabel _gTextureMarioFace05
 .incbin "assets/character_select/mario/mario_face_05.mio0"
-glabel gTextureMarioFace05_end
+glabel _gTextureMarioFace05_end
 
 .align 2, 0x00
-glabel gTextureMarioFace06
+glabel _gTextureMarioFace06
 .incbin "assets/character_select/mario/mario_face_06.mio0"
-glabel gTextureMarioFace06_end
+glabel _gTextureMarioFace06_end
 
 .align 2, 0x00
-glabel gTextureMarioFace07
+glabel _gTextureMarioFace07
 .incbin "assets/character_select/mario/mario_face_07.mio0"
-glabel gTextureMarioFace07_end
+glabel _gTextureMarioFace07_end
 
 .align 2, 0x00
-glabel gTextureMarioFace08
+glabel _gTextureMarioFace08
 .incbin "assets/character_select/mario/mario_face_08.mio0"
-glabel gTextureMarioFace08_end
+glabel _gTextureMarioFace08_end
 
 .align 2, 0x00
-glabel gTextureMarioFace09
+glabel _gTextureMarioFace09
 .incbin "assets/character_select/mario/mario_face_09.mio0"
-glabel gTextureMarioFace09_end
+glabel _gTextureMarioFace09_end
 
 .align 2, 0x00
-glabel gTextureMarioFace10
+glabel _gTextureMarioFace10
 .incbin "assets/character_select/mario/mario_face_10.mio0"
-glabel gTextureMarioFace10_end
+glabel _gTextureMarioFace10_end
 
 .align 2, 0x00
-glabel gTextureMarioFace11
+glabel _gTextureMarioFace11
 .incbin "assets/character_select/mario/mario_face_11.mio0"
-glabel gTextureMarioFace11_end
+glabel _gTextureMarioFace11_end
 
 .align 2, 0x00
-glabel gTextureMarioFace12
+glabel _gTextureMarioFace12
 .incbin "assets/character_select/mario/mario_face_12.mio0"
-glabel gTextureMarioFace12_end
+glabel _gTextureMarioFace12_end
 
 .align 2, 0x00
-glabel gTextureMarioFace13
+glabel _gTextureMarioFace13
 .incbin "assets/character_select/mario/mario_face_13.mio0"
-glabel gTextureMarioFace13_end
+glabel _gTextureMarioFace13_end
 
 .align 2, 0x00
-glabel gTextureMarioFace14
+glabel _gTextureMarioFace14
 .incbin "assets/character_select/mario/mario_face_14.mio0"
-glabel gTextureMarioFace14_end
+glabel _gTextureMarioFace14_end
 
 .align 2, 0x00
-glabel gTextureMarioFace15
+glabel _gTextureMarioFace15
 .incbin "assets/character_select/mario/mario_face_15.mio0"
-glabel gTextureMarioFace15_end
+glabel _gTextureMarioFace15_end
 
 .align 2, 0x00
-glabel gTextureMarioFace16
+glabel _gTextureMarioFace16
 .incbin "assets/character_select/mario/mario_face_16.mio0"
-glabel gTextureMarioFace16_end
+glabel _gTextureMarioFace16_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace00
+glabel _gTextureLuigiFace00
 .incbin "assets/character_select/luigi/luigi_face_00.mio0"
-glabel gTextureLuigiFace00_end
+glabel _gTextureLuigiFace00_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace01
+glabel _gTextureLuigiFace01
 .incbin "assets/character_select/luigi/luigi_face_01.mio0"
-glabel gTextureLuigiFace01_end
+glabel _gTextureLuigiFace01_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace02
+glabel _gTextureLuigiFace02
 .incbin "assets/character_select/luigi/luigi_face_02.mio0"
-glabel gTextureLuigiFace02_end
+glabel _gTextureLuigiFace02_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace03
+glabel _gTextureLuigiFace03
 .incbin "assets/character_select/luigi/luigi_face_03.mio0"
-glabel gTextureLuigiFace03_end
+glabel _gTextureLuigiFace03_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace04
+glabel _gTextureLuigiFace04
 .incbin "assets/character_select/luigi/luigi_face_04.mio0"
-glabel gTextureLuigiFace04_end
+glabel _gTextureLuigiFace04_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace05
+glabel _gTextureLuigiFace05
 .incbin "assets/character_select/luigi/luigi_face_05.mio0"
-glabel gTextureLuigiFace05_end
+glabel _gTextureLuigiFace05_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace06
+glabel _gTextureLuigiFace06
 .incbin "assets/character_select/luigi/luigi_face_06.mio0"
-glabel gTextureLuigiFace06_end
+glabel _gTextureLuigiFace06_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace07
+glabel _gTextureLuigiFace07
 .incbin "assets/character_select/luigi/luigi_face_07.mio0"
-glabel gTextureLuigiFace07_end
+glabel _gTextureLuigiFace07_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace08
+glabel _gTextureLuigiFace08
 .incbin "assets/character_select/luigi/luigi_face_08.mio0"
-glabel gTextureLuigiFace08_end
+glabel _gTextureLuigiFace08_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace09
+glabel _gTextureLuigiFace09
 .incbin "assets/character_select/luigi/luigi_face_09.mio0"
-glabel gTextureLuigiFace09_end
+glabel _gTextureLuigiFace09_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace10
+glabel _gTextureLuigiFace10
 .incbin "assets/character_select/luigi/luigi_face_10.mio0"
-glabel gTextureLuigiFace10_end
+glabel _gTextureLuigiFace10_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace11
+glabel _gTextureLuigiFace11
 .incbin "assets/character_select/luigi/luigi_face_11.mio0"
-glabel gTextureLuigiFace11_end
+glabel _gTextureLuigiFace11_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace12
+glabel _gTextureLuigiFace12
 .incbin "assets/character_select/luigi/luigi_face_12.mio0"
-glabel gTextureLuigiFace12_end
+glabel _gTextureLuigiFace12_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace13
+glabel _gTextureLuigiFace13
 .incbin "assets/character_select/luigi/luigi_face_13.mio0"
-glabel gTextureLuigiFace13_end
+glabel _gTextureLuigiFace13_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace14
+glabel _gTextureLuigiFace14
 .incbin "assets/character_select/luigi/luigi_face_14.mio0"
-glabel gTextureLuigiFace14_end
+glabel _gTextureLuigiFace14_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace15
+glabel _gTextureLuigiFace15
 .incbin "assets/character_select/luigi/luigi_face_15.mio0"
-glabel gTextureLuigiFace15_end
+glabel _gTextureLuigiFace15_end
 
 .align 2, 0x00
-glabel gTextureLuigiFace16
+glabel _gTextureLuigiFace16
 .incbin "assets/character_select/luigi/luigi_face_16.mio0"
-glabel gTextureLuigiFace16_end
+glabel _gTextureLuigiFace16_end
 
 .align 2, 0x00
-glabel gTexturePeachFace00
+glabel _gTexturePeachFace00
 .incbin "assets/character_select/peach/peach_face_00.mio0"
-glabel gTexturePeachFace00_end
+glabel _gTexturePeachFace00_end
 
 .align 2, 0x00
-glabel gTexturePeachFace01
+glabel _gTexturePeachFace01
 .incbin "assets/character_select/peach/peach_face_01.mio0"
-glabel gTexturePeachFace01_end
+glabel _gTexturePeachFace01_end
 
 .align 2, 0x00
-glabel gTexturePeachFace02
+glabel _gTexturePeachFace02
 .incbin "assets/character_select/peach/peach_face_02.mio0"
-glabel gTexturePeachFace02_end
+glabel _gTexturePeachFace02_end
 
 .align 2, 0x00
-glabel gTexturePeachFace03
+glabel _gTexturePeachFace03
 .incbin "assets/character_select/peach/peach_face_03.mio0"
-glabel gTexturePeachFace03_end
+glabel _gTexturePeachFace03_end
 
 .align 2, 0x00
-glabel gTexturePeachFace04
+glabel _gTexturePeachFace04
 .incbin "assets/character_select/peach/peach_face_04.mio0"
-glabel gTexturePeachFace04_end
+glabel _gTexturePeachFace04_end
 
 .align 2, 0x00
-glabel gTexturePeachFace05
+glabel _gTexturePeachFace05
 .incbin "assets/character_select/peach/peach_face_05.mio0"
-glabel gTexturePeachFace05_end
+glabel _gTexturePeachFace05_end
 
 .align 2, 0x00
-glabel gTexturePeachFace06
+glabel _gTexturePeachFace06
 .incbin "assets/character_select/peach/peach_face_06.mio0"
-glabel gTexturePeachFace06_end
+glabel _gTexturePeachFace06_end
 
 .align 2, 0x00
-glabel gTexturePeachFace07
+glabel _gTexturePeachFace07
 .incbin "assets/character_select/peach/peach_face_07.mio0"
-glabel gTexturePeachFace07_end
+glabel _gTexturePeachFace07_end
 
 .align 2, 0x00
-glabel gTexturePeachFace08
+glabel _gTexturePeachFace08
 .incbin "assets/character_select/peach/peach_face_08.mio0"
-glabel gTexturePeachFace08_end
+glabel _gTexturePeachFace08_end
 
 .align 2, 0x00
-glabel gTexturePeachFace09
+glabel _gTexturePeachFace09
 .incbin "assets/character_select/peach/peach_face_09.mio0"
-glabel gTexturePeachFace09_end
+glabel _gTexturePeachFace09_end
 
 .align 2, 0x00
-glabel gTexturePeachFace10
+glabel _gTexturePeachFace10
 .incbin "assets/character_select/peach/peach_face_10.mio0"
-glabel gTexturePeachFace10_end
+glabel _gTexturePeachFace10_end
 
 .align 2, 0x00
-glabel gTexturePeachFace11
+glabel _gTexturePeachFace11
 .incbin "assets/character_select/peach/peach_face_11.mio0"
-glabel gTexturePeachFace11_end
+glabel _gTexturePeachFace11_end
 
 .align 2, 0x00
-glabel gTexturePeachFace12
+glabel _gTexturePeachFace12
 .incbin "assets/character_select/peach/peach_face_12.mio0"
-glabel gTexturePeachFace12_end
+glabel _gTexturePeachFace12_end
 
 .align 2, 0x00
-glabel gTexturePeachFace13
+glabel _gTexturePeachFace13
 .incbin "assets/character_select/peach/peach_face_13.mio0"
-glabel gTexturePeachFace13_end
+glabel _gTexturePeachFace13_end
 
 .align 2, 0x00
-glabel gTexturePeachFace14
+glabel _gTexturePeachFace14
 .incbin "assets/character_select/peach/peach_face_14.mio0"
-glabel gTexturePeachFace14_end
+glabel _gTexturePeachFace14_end
 
 .align 2, 0x00
-glabel gTexturePeachFace15
+glabel _gTexturePeachFace15
 .incbin "assets/character_select/peach/peach_face_15.mio0"
-glabel gTexturePeachFace15_end
+glabel _gTexturePeachFace15_end
 
 .align 2, 0x00
-glabel gTexturePeachFace16
+glabel _gTexturePeachFace16
 .incbin "assets/character_select/peach/peach_face_16.mio0"
-glabel gTexturePeachFace16_end
+glabel _gTexturePeachFace16_end
 
 .align 2, 0x00
-glabel gTextureToadFace00
+glabel _gTextureToadFace00
 .incbin "assets/character_select/toad/toad_face_00.mio0"
-glabel gTextureToadFace00_end
+glabel _gTextureToadFace00_end
 
 .align 2, 0x00
-glabel gTextureToadFace01
+glabel _gTextureToadFace01
 .incbin "assets/character_select/toad/toad_face_01.mio0"
-glabel gTextureToadFace01_end
+glabel _gTextureToadFace01_end
 
 .align 2, 0x00
-glabel gTextureToadFace02
+glabel _gTextureToadFace02
 .incbin "assets/character_select/toad/toad_face_02.mio0"
-glabel gTextureToadFace02_end
+glabel _gTextureToadFace02_end
 
 .align 2, 0x00
-glabel gTextureToadFace03
+glabel _gTextureToadFace03
 .incbin "assets/character_select/toad/toad_face_03.mio0"
-glabel gTextureToadFace03_end
+glabel _gTextureToadFace03_end
 
 .align 2, 0x00
-glabel gTextureToadFace04
+glabel _gTextureToadFace04
 .incbin "assets/character_select/toad/toad_face_04.mio0"
-glabel gTextureToadFace04_end
+glabel _gTextureToadFace04_end
 
 .align 2, 0x00
-glabel gTextureToadFace05
+glabel _gTextureToadFace05
 .incbin "assets/character_select/toad/toad_face_05.mio0"
-glabel gTextureToadFace05_end
+glabel _gTextureToadFace05_end
 
 .align 2, 0x00
-glabel gTextureToadFace06
+glabel _gTextureToadFace06
 .incbin "assets/character_select/toad/toad_face_06.mio0"
-glabel gTextureToadFace06_end
+glabel _gTextureToadFace06_end
 
 .align 2, 0x00
-glabel gTextureToadFace07
+glabel _gTextureToadFace07
 .incbin "assets/character_select/toad/toad_face_07.mio0"
-glabel gTextureToadFace07_end
+glabel _gTextureToadFace07_end
 
 .align 2, 0x00
-glabel gTextureToadFace08
+glabel _gTextureToadFace08
 .incbin "assets/character_select/toad/toad_face_08.mio0"
-glabel gTextureToadFace08_end
+glabel _gTextureToadFace08_end
 
 .align 2, 0x00
-glabel gTextureToadFace09
+glabel _gTextureToadFace09
 .incbin "assets/character_select/toad/toad_face_09.mio0"
-glabel gTextureToadFace09_end
+glabel _gTextureToadFace09_end
 
 .align 2, 0x00
-glabel gTextureToadFace10
+glabel _gTextureToadFace10
 .incbin "assets/character_select/toad/toad_face_10.mio0"
-glabel gTextureToadFace10_end
+glabel _gTextureToadFace10_end
 
 .align 2, 0x00
-glabel gTextureToadFace11
+glabel _gTextureToadFace11
 .incbin "assets/character_select/toad/toad_face_11.mio0"
-glabel gTextureToadFace11_end
+glabel _gTextureToadFace11_end
 
 .align 2, 0x00
-glabel gTextureToadFace12
+glabel _gTextureToadFace12
 .incbin "assets/character_select/toad/toad_face_12.mio0"
-glabel gTextureToadFace12_end
+glabel _gTextureToadFace12_end
 
 .align 2, 0x00
-glabel gTextureToadFace13
+glabel _gTextureToadFace13
 .incbin "assets/character_select/toad/toad_face_13.mio0"
-glabel gTextureToadFace13_end
+glabel _gTextureToadFace13_end
 
 .align 2, 0x00
-glabel gTextureToadFace14
+glabel _gTextureToadFace14
 .incbin "assets/character_select/toad/toad_face_14.mio0"
-glabel gTextureToadFace14_end
+glabel _gTextureToadFace14_end
 
 .align 2, 0x00
-glabel gTextureToadFace15
+glabel _gTextureToadFace15
 .incbin "assets/character_select/toad/toad_face_15.mio0"
-glabel gTextureToadFace15_end
+glabel _gTextureToadFace15_end
 
 .align 2, 0x00
-glabel gTextureToadFace16
+glabel _gTextureToadFace16
 .incbin "assets/character_select/toad/toad_face_16.mio0"
-glabel gTextureToadFace16_end
+glabel _gTextureToadFace16_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace00
+glabel _gTextureYoshiFace00
 .incbin "assets/character_select/yoshi/yoshi_face_00.mio0"
-glabel gTextureYoshiFace00_end
+glabel _gTextureYoshiFace00_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace01
+glabel _gTextureYoshiFace01
 .incbin "assets/character_select/yoshi/yoshi_face_01.mio0"
-glabel gTextureYoshiFace01_end
+glabel _gTextureYoshiFace01_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace02
+glabel _gTextureYoshiFace02
 .incbin "assets/character_select/yoshi/yoshi_face_02.mio0"
-glabel gTextureYoshiFace02_end
+glabel _gTextureYoshiFace02_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace03
+glabel _gTextureYoshiFace03
 .incbin "assets/character_select/yoshi/yoshi_face_03.mio0"
-glabel gTextureYoshiFace03_end
+glabel _gTextureYoshiFace03_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace04
+glabel _gTextureYoshiFace04
 .incbin "assets/character_select/yoshi/yoshi_face_04.mio0"
-glabel gTextureYoshiFace04_end
+glabel _gTextureYoshiFace04_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace05
+glabel _gTextureYoshiFace05
 .incbin "assets/character_select/yoshi/yoshi_face_05.mio0"
-glabel gTextureYoshiFace05_end
+glabel _gTextureYoshiFace05_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace06
+glabel _gTextureYoshiFace06
 .incbin "assets/character_select/yoshi/yoshi_face_06.mio0"
-glabel gTextureYoshiFace06_end
+glabel _gTextureYoshiFace06_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace07
+glabel _gTextureYoshiFace07
 .incbin "assets/character_select/yoshi/yoshi_face_07.mio0"
-glabel gTextureYoshiFace07_end
+glabel _gTextureYoshiFace07_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace08
+glabel _gTextureYoshiFace08
 .incbin "assets/character_select/yoshi/yoshi_face_08.mio0"
-glabel gTextureYoshiFace08_end
+glabel _gTextureYoshiFace08_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace09
+glabel _gTextureYoshiFace09
 .incbin "assets/character_select/yoshi/yoshi_face_09.mio0"
-glabel gTextureYoshiFace09_end
+glabel _gTextureYoshiFace09_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace10
+glabel _gTextureYoshiFace10
 .incbin "assets/character_select/yoshi/yoshi_face_10.mio0"
-glabel gTextureYoshiFace10_end
+glabel _gTextureYoshiFace10_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace11
+glabel _gTextureYoshiFace11
 .incbin "assets/character_select/yoshi/yoshi_face_11.mio0"
-glabel gTextureYoshiFace11_end
+glabel _gTextureYoshiFace11_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace12
+glabel _gTextureYoshiFace12
 .incbin "assets/character_select/yoshi/yoshi_face_12.mio0"
-glabel gTextureYoshiFace12_end
+glabel _gTextureYoshiFace12_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace13
+glabel _gTextureYoshiFace13
 .incbin "assets/character_select/yoshi/yoshi_face_13.mio0"
-glabel gTextureYoshiFace13_end
+glabel _gTextureYoshiFace13_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace14
+glabel _gTextureYoshiFace14
 .incbin "assets/character_select/yoshi/yoshi_face_14.mio0"
-glabel gTextureYoshiFace14_end
+glabel _gTextureYoshiFace14_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace15
+glabel _gTextureYoshiFace15
 .incbin "assets/character_select/yoshi/yoshi_face_15.mio0"
-glabel gTextureYoshiFace15_end
+glabel _gTextureYoshiFace15_end
 
 .align 2, 0x00
-glabel gTextureYoshiFace16
+glabel _gTextureYoshiFace16
 .incbin "assets/character_select/yoshi/yoshi_face_16.mio0"
-glabel gTextureYoshiFace16_end
+glabel _gTextureYoshiFace16_end
 
 .align 2, 0x00
-glabel gTextureDkFace00
+glabel _gTextureDkFace00
 .incbin "assets/character_select/donkeykong/donkeykong_face_00.mio0"
-glabel gTextureDkFace00_end
+glabel _gTextureDkFace00_end
 
 .align 2, 0x00
-glabel gTextureDkFace01
+glabel _gTextureDkFace01
 .incbin "assets/character_select/donkeykong/donkeykong_face_01.mio0"
-glabel gTextureDkFace01_end
+glabel _gTextureDkFace01_end
 
 .align 2, 0x00
-glabel gTextureDkFace02
+glabel _gTextureDkFace02
 .incbin "assets/character_select/donkeykong/donkeykong_face_02.mio0"
-glabel gTextureDkFace02_end
+glabel _gTextureDkFace02_end
 
 .align 2, 0x00
-glabel gTextureDkFace03
+glabel _gTextureDkFace03
 .incbin "assets/character_select/donkeykong/donkeykong_face_03.mio0"
-glabel gTextureDkFace03_end
+glabel _gTextureDkFace03_end
 
 .align 2, 0x00
-glabel gTextureDkFace04
+glabel _gTextureDkFace04
 .incbin "assets/character_select/donkeykong/donkeykong_face_04.mio0"
-glabel gTextureDkFace04_end
+glabel _gTextureDkFace04_end
 
 .align 2, 0x00
-glabel gTextureDkFace05
+glabel _gTextureDkFace05
 .incbin "assets/character_select/donkeykong/donkeykong_face_05.mio0"
-glabel gTextureDkFace05_end
+glabel _gTextureDkFace05_end
 
 .align 2, 0x00
-glabel gTextureDkFace06
+glabel _gTextureDkFace06
 .incbin "assets/character_select/donkeykong/donkeykong_face_06.mio0"
-glabel gTextureDkFace06_end
+glabel _gTextureDkFace06_end
 
 .align 2, 0x00
-glabel gTextureDkFace07
+glabel _gTextureDkFace07
 .incbin "assets/character_select/donkeykong/donkeykong_face_07.mio0"
-glabel gTextureDkFace07_end
+glabel _gTextureDkFace07_end
 
 .align 2, 0x00
-glabel gTextureDkFace08
+glabel _gTextureDkFace08
 .incbin "assets/character_select/donkeykong/donkeykong_face_08.mio0"
-glabel gTextureDkFace08_end
+glabel _gTextureDkFace08_end
 
 .align 2, 0x00
-glabel gTextureDkFace09
+glabel _gTextureDkFace09
 .incbin "assets/character_select/donkeykong/donkeykong_face_09.mio0"
-glabel gTextureDkFace09_end
+glabel _gTextureDkFace09_end
 
 .align 2, 0x00
-glabel gTextureDkFace10
+glabel _gTextureDkFace10
 .incbin "assets/character_select/donkeykong/donkeykong_face_10.mio0"
-glabel gTextureDkFace10_end
+glabel _gTextureDkFace10_end
 
 .align 2, 0x00
-glabel gTextureDkFace11
+glabel _gTextureDkFace11
 .incbin "assets/character_select/donkeykong/donkeykong_face_11.mio0"
-glabel gTextureDkFace11_end
+glabel _gTextureDkFace11_end
 
 .align 2, 0x00
-glabel gTextureDkFace12
+glabel _gTextureDkFace12
 .incbin "assets/character_select/donkeykong/donkeykong_face_12.mio0"
-glabel gTextureDkFace12_end
+glabel _gTextureDkFace12_end
 
 .align 2, 0x00
-glabel gTextureDkFace13
+glabel _gTextureDkFace13
 .incbin "assets/character_select/donkeykong/donkeykong_face_13.mio0"
-glabel gTextureDkFace13_end
+glabel _gTextureDkFace13_end
 
 .align 2, 0x00
-glabel gTextureDkFace14
+glabel _gTextureDkFace14
 .incbin "assets/character_select/donkeykong/donkeykong_face_14.mio0"
-glabel gTextureDkFace14_end
+glabel _gTextureDkFace14_end
 
 .align 2, 0x00
-glabel gTextureDkFace15
+glabel _gTextureDkFace15
 .incbin "assets/character_select/donkeykong/donkeykong_face_15.mio0"
-glabel gTextureDkFace15_end
+glabel _gTextureDkFace15_end
 
 .align 2, 0x00
-glabel gTextureDkFace16
+glabel _gTextureDkFace16
 .incbin "assets/character_select/donkeykong/donkeykong_face_16.mio0"
-glabel gTextureDkFace16_end
+glabel _gTextureDkFace16_end
 
 .align 2, 0x00
-glabel gTextureWarioFace00
+glabel _gTextureWarioFace00
 .incbin "assets/character_select/wario/wario_face_00.mio0"
-glabel gTextureWarioFace00_end
+glabel _gTextureWarioFace00_end
 
 .align 2, 0x00
-glabel gTextureWarioFace01
+glabel _gTextureWarioFace01
 .incbin "assets/character_select/wario/wario_face_01.mio0"
-glabel gTextureWarioFace01_end
+glabel _gTextureWarioFace01_end
 
 .align 2, 0x00
-glabel gTextureWarioFace02
+glabel _gTextureWarioFace02
 .incbin "assets/character_select/wario/wario_face_02.mio0"
-glabel gTextureWarioFace02_end
+glabel _gTextureWarioFace02_end
 
 .align 2, 0x00
-glabel gTextureWarioFace03
+glabel _gTextureWarioFace03
 .incbin "assets/character_select/wario/wario_face_03.mio0"
-glabel gTextureWarioFace03_end
+glabel _gTextureWarioFace03_end
 
 .align 2, 0x00
-glabel gTextureWarioFace04
+glabel _gTextureWarioFace04
 .incbin "assets/character_select/wario/wario_face_04.mio0"
-glabel gTextureWarioFace04_end
+glabel _gTextureWarioFace04_end
 
 .align 2, 0x00
-glabel gTextureWarioFace05
+glabel _gTextureWarioFace05
 .incbin "assets/character_select/wario/wario_face_05.mio0"
-glabel gTextureWarioFace05_end
+glabel _gTextureWarioFace05_end
 
 .align 2, 0x00
-glabel gTextureWarioFace06
+glabel _gTextureWarioFace06
 .incbin "assets/character_select/wario/wario_face_06.mio0"
-glabel gTextureWarioFace06_end
+glabel _gTextureWarioFace06_end
 
 .align 2, 0x00
-glabel gTextureWarioFace07
+glabel _gTextureWarioFace07
 .incbin "assets/character_select/wario/wario_face_07.mio0"
-glabel gTextureWarioFace07_end
+glabel _gTextureWarioFace07_end
 
 .align 2, 0x00
-glabel gTextureWarioFace08
+glabel _gTextureWarioFace08
 .incbin "assets/character_select/wario/wario_face_08.mio0"
-glabel gTextureWarioFace08_end
+glabel _gTextureWarioFace08_end
 
 .align 2, 0x00
-glabel gTextureWarioFace09
+glabel _gTextureWarioFace09
 .incbin "assets/character_select/wario/wario_face_09.mio0"
-glabel gTextureWarioFace09_end
+glabel _gTextureWarioFace09_end
 
 .align 2, 0x00
-glabel gTextureWarioFace10
+glabel _gTextureWarioFace10
 .incbin "assets/character_select/wario/wario_face_10.mio0"
-glabel gTextureWarioFace10_end
+glabel _gTextureWarioFace10_end
 
 .align 2, 0x00
-glabel gTextureWarioFace11
+glabel _gTextureWarioFace11
 .incbin "assets/character_select/wario/wario_face_11.mio0"
-glabel gTextureWarioFace11_end
+glabel _gTextureWarioFace11_end
 
 .align 2, 0x00
-glabel gTextureWarioFace12
+glabel _gTextureWarioFace12
 .incbin "assets/character_select/wario/wario_face_12.mio0"
-glabel gTextureWarioFace12_end
+glabel _gTextureWarioFace12_end
 
 .align 2, 0x00
-glabel gTextureWarioFace13
+glabel _gTextureWarioFace13
 .incbin "assets/character_select/wario/wario_face_13.mio0"
-glabel gTextureWarioFace13_end
+glabel _gTextureWarioFace13_end
 
 .align 2, 0x00
-glabel gTextureWarioFace14
+glabel _gTextureWarioFace14
 .incbin "assets/character_select/wario/wario_face_14.mio0"
-glabel gTextureWarioFace14_end
+glabel _gTextureWarioFace14_end
 
 .align 2, 0x00
-glabel gTextureWarioFace15
+glabel _gTextureWarioFace15
 .incbin "assets/character_select/wario/wario_face_15.mio0"
-glabel gTextureWarioFace15_end
+glabel _gTextureWarioFace15_end
 
 .align 2, 0x00
-glabel gTextureWarioFace16
+glabel _gTextureWarioFace16
 .incbin "assets/character_select/wario/wario_face_16.mio0"
-glabel gTextureWarioFace16_end
+glabel _gTextureWarioFace16_end
 
 .align 2, 0x00
-glabel gTextureBowserFace00
+glabel _gTextureBowserFace00
 .incbin "assets/character_select/bowser/bowser_face_00.mio0"
-glabel gTextureBowserFace00_end
+glabel _gTextureBowserFace00_end
 
 .align 2, 0x00
-glabel gTextureBowserFace01
+glabel _gTextureBowserFace01
 .incbin "assets/character_select/bowser/bowser_face_01.mio0"
-glabel gTextureBowserFace01_end
+glabel _gTextureBowserFace01_end
 
 .align 2, 0x00
-glabel gTextureBowserFace02
+glabel _gTextureBowserFace02
 .incbin "assets/character_select/bowser/bowser_face_02.mio0"
-glabel gTextureBowserFace02_end
+glabel _gTextureBowserFace02_end
 
 .align 2, 0x00
-glabel gTextureBowserFace03
+glabel _gTextureBowserFace03
 .incbin "assets/character_select/bowser/bowser_face_03.mio0"
-glabel gTextureBowserFace03_end
+glabel _gTextureBowserFace03_end
 
 .align 2, 0x00
-glabel gTextureBowserFace04
+glabel _gTextureBowserFace04
 .incbin "assets/character_select/bowser/bowser_face_04.mio0"
-glabel gTextureBowserFace04_end
+glabel _gTextureBowserFace04_end
 
 .align 2, 0x00
-glabel gTextureBowserFace05
+glabel _gTextureBowserFace05
 .incbin "assets/character_select/bowser/bowser_face_05.mio0"
-glabel gTextureBowserFace05_end
+glabel _gTextureBowserFace05_end
 
 .align 2, 0x00
-glabel gTextureBowserFace06
+glabel _gTextureBowserFace06
 .incbin "assets/character_select/bowser/bowser_face_06.mio0"
-glabel gTextureBowserFace06_end
+glabel _gTextureBowserFace06_end
 
 .align 2, 0x00
-glabel gTextureBowserFace07
+glabel _gTextureBowserFace07
 .incbin "assets/character_select/bowser/bowser_face_07.mio0"
-glabel gTextureBowserFace07_end
+glabel _gTextureBowserFace07_end
 
 .align 2, 0x00
-glabel gTextureBowserFace08
+glabel _gTextureBowserFace08
 .incbin "assets/character_select/bowser/bowser_face_08.mio0"
-glabel gTextureBowserFace08_end
+glabel _gTextureBowserFace08_end
 
 .align 2, 0x00
-glabel gTextureBowserFace09
+glabel _gTextureBowserFace09
 .incbin "assets/character_select/bowser/bowser_face_09.mio0"
-glabel gTextureBowserFace09_end
+glabel _gTextureBowserFace09_end
 
 .align 2, 0x00
-glabel gTextureBowserFace10
+glabel _gTextureBowserFace10
 .incbin "assets/character_select/bowser/bowser_face_10.mio0"
-glabel gTextureBowserFace10_end
+glabel _gTextureBowserFace10_end
 
 .align 2, 0x00
-glabel gTextureBowserFace11
+glabel _gTextureBowserFace11
 .incbin "assets/character_select/bowser/bowser_face_11.mio0"
-glabel gTextureBowserFace11_end
+glabel _gTextureBowserFace11_end
 
 .align 2, 0x00
-glabel gTextureBowserFace12
+glabel _gTextureBowserFace12
 .incbin "assets/character_select/bowser/bowser_face_12.mio0"
-glabel gTextureBowserFace12_end
+glabel _gTextureBowserFace12_end
 
 .align 2, 0x00
-glabel gTextureBowserFace13
+glabel _gTextureBowserFace13
 .incbin "assets/character_select/bowser/bowser_face_13.mio0"
-glabel gTextureBowserFace13_end
+glabel _gTextureBowserFace13_end
 
 .align 2, 0x00
-glabel gTextureBowserFace14
+glabel _gTextureBowserFace14
 .incbin "assets/character_select/bowser/bowser_face_14.mio0"
-glabel gTextureBowserFace14_end
+glabel _gTextureBowserFace14_end
 
 .align 2, 0x00
-glabel gTextureBowserFace15
+glabel _gTextureBowserFace15
 .incbin "assets/character_select/bowser/bowser_face_15.mio0"
-glabel gTextureBowserFace15_end
+glabel _gTextureBowserFace15_end
 
 .align 2, 0x00
-glabel gTextureBowserFace16
+glabel _gTextureBowserFace16
 .incbin "assets/character_select/bowser/bowser_face_16.mio0"
-glabel gTextureBowserFace16_end
+glabel _gTextureBowserFace16_end
 
 .align 2, 0x00
-glabel gTextureCoursePreviewMarioRaceway
+glabel _gTextureCoursePreviewMarioRaceway
 .incbin "assets/course_previews/gTextureCoursePreviewMarioRaceway.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewChocoMountain
+glabel _gTextureCoursePreviewChocoMountain
 .incbin "assets/course_previews/gTextureCoursePreviewChocoMountain.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewBowsersCastle
+glabel _gTextureCoursePreviewBowsersCastle
 .incbin "assets/course_previews/gTextureCoursePreviewBowsersCastle.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewBansheeBoardwalk
+glabel _gTextureCoursePreviewBansheeBoardwalk
 .incbin "assets/course_previews/gTextureCoursePreviewBansheeBoardwalk.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewYoshiValley
+glabel _gTextureCoursePreviewYoshiValley
 .incbin "assets/course_previews/gTextureCoursePreviewYoshiValley.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewFrappeSnowland
+glabel _gTextureCoursePreviewFrappeSnowland
 .incbin "assets/course_previews/gTextureCoursePreviewFrappeSnowland.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewKoopaTroopaBeach
+glabel _gTextureCoursePreviewKoopaTroopaBeach
 .incbin "assets/course_previews/gTextureCoursePreviewKoopaTroopaBeach.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewRoyalRaceway
+glabel _gTextureCoursePreviewRoyalRaceway
 .incbin "assets/course_previews/gTextureCoursePreviewRoyalRaceway.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewLuigiRaceway
+glabel _gTextureCoursePreviewLuigiRaceway
 .incbin "assets/course_previews/gTextureCoursePreviewLuigiRaceway.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewMooMooFarm
+glabel _gTextureCoursePreviewMooMooFarm
 .incbin "assets/course_previews/gTextureCoursePreviewMooMooFarm.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewToadsTurnpike
+glabel _gTextureCoursePreviewToadsTurnpike
 .incbin "assets/course_previews/gTextureCoursePreviewToadsTurnpike.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewKalimariDesert
+glabel _gTextureCoursePreviewKalimariDesert
 .incbin "assets/course_previews/gTextureCoursePreviewKalimariDesert.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewSherbetLand
+glabel _gTextureCoursePreviewSherbetLand
 .incbin "assets/course_previews/gTextureCoursePreviewSherbetLand.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewRainbowRoad
+glabel _gTextureCoursePreviewRainbowRoad
 .incbin "assets/course_previews/gTextureCoursePreviewRainbowRoad.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewWarioStadium
+glabel _gTextureCoursePreviewWarioStadium
 .incbin "assets/course_previews/gTextureCoursePreviewWarioStadium.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewBlockFort
+glabel _gTextureCoursePreviewBlockFort
 .incbin "assets/course_previews/gTextureCoursePreviewBlockFort.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewSkyscraper
+glabel _gTextureCoursePreviewSkyscraper
 .incbin "assets/course_previews/gTextureCoursePreviewSkyscraper.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewDoubleDeck
+glabel _gTextureCoursePreviewDoubleDeck
 .incbin "assets/course_previews/gTextureCoursePreviewDoubleDeck.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewDksJungleParkway
+glabel _gTextureCoursePreviewDksJungleParkway
 .incbin "assets/course_previews/gTextureCoursePreviewDksJungleParkway.mio0"
 
 .align 2, 0x00
-glabel gTextureCoursePreviewBigDonut
+glabel _gTextureCoursePreviewBigDonut
 .incbin "assets/course_previews/gTextureCoursePreviewBigDonut.mio0"
 
 .align 2, 0x00
-glabel gTextureTrophyGold
+glabel _gTextureTrophyGold
 .incbin "textures/standalone/trophy_gold.rgba16.mio0"
-glabel gTextureTrophyGold_end
+glabel _gTextureTrophyGold_end
 
 .align 2, 0x00
-glabel gTextureTrophySilver
+glabel _gTextureTrophySilver
 .incbin "textures/standalone/trophy_silver.rgba16.mio0"
-glabel gTextureTrophySilver_end
+glabel _gTextureTrophySilver_end
 
 .align 2, 0x00
-glabel gTextureTrophyBronze
+glabel _gTextureTrophyBronze
 .incbin "textures/standalone/trophy_bronze.rgba16.mio0"
-glabel gTextureTrophyBronze_end
+glabel _gTextureTrophyBronze_end
 
 .align 2, 0x00
-glabel gTextureCupGold
+glabel _gTextureCupGold
 .incbin "textures/standalone/cup_gold.rgba16.mio0"
-glabel gTextureCupGold_end
+glabel _gTextureCupGold_end
 
 .align 2, 0x00
-glabel gTextureCupSilver
+glabel _gTextureCupSilver
 .incbin "textures/standalone/cup_silver.rgba16.mio0"
-glabel gTextureCupSilver_end
+glabel _gTextureCupSilver_end
 
 .align 2, 0x00
-glabel gTextureCupBronze
+glabel _gTextureCupBronze
 .incbin "textures/standalone/cup_bronze.rgba16.mio0"
-glabel gTextureCupBronze_end
+glabel _gTextureCupBronze_end
 
 .align 2, 0x00
-glabel gTexturePushStartButton
+glabel _gTexturePushStartButton
 .incbin "textures/raw/push_start_button.rgba16"
 
 .align 2, 0x00
-glabel gTextureCopyright1996
+glabel _gTextureCopyright1996
 .incbin "textures/raw/copyright_1996.rgba16"
 
 .align 2, 0x00
-glabel gTextureP1BorderBlue
+glabel _gTextureP1BorderBlue
 .incbin "textures/raw/p1_border_blue.rgba16"
 
 .align 2, 0x00
-glabel gTextureP2BorderRed
+glabel _gTextureP2BorderRed
 .incbin "textures/raw/p2_border_red.rgba16"
 
 .align 2, 0x00
-glabel gTextureP3BorderOrange
+glabel _gTextureP3BorderOrange
 .incbin "textures/raw/p3_border_orange.rgba16"
 
 .align 2, 0x00
-glabel gTextureP4BorderGreen
+glabel _gTextureP4BorderGreen
 .incbin "textures/raw/p4_border_green.rgba16"
 
 .align 2, 0x00
-glabel gTextureSmallGreenTriangle
+glabel _gTextureSmallGreenTriangle
 .incbin "textures/raw/small_green_triangle.rgba16"
 
 .align 2, 0x00
-glabel gTexture7E56E4
+glabel _gTexture7E56E4
 .incbin "textures/standalone/texture_7E56E4.ia16.mio0"
-glabel gTexture7E56E4_end
+glabel _gTexture7E56E4_end
 

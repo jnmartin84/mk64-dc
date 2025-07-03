@@ -5,37 +5,70 @@
 
 .section .data
 
-glabel instrument_sets
-.hword instrument_set_00 - instrument_sets # 0x003C
-.hword instrument_set_01 - instrument_sets # 0x003E
-.hword instrument_set_02 - instrument_sets # 0x0040
-.hword instrument_set_03 - instrument_sets # 0x0042
-.hword instrument_set_04 - instrument_sets # 0x0044
-.hword instrument_set_05 - instrument_sets # 0x0046
-.hword instrument_set_06 - instrument_sets # 0x0048
-.hword instrument_set_07 - instrument_sets # 0x004A
-.hword instrument_set_08 - instrument_sets # 0x004C
-.hword instrument_set_09 - instrument_sets # 0x004E
-.hword instrument_set_0A - instrument_sets # 0x0050
-.hword instrument_set_0B - instrument_sets # 0x0052
-.hword instrument_set_0C - instrument_sets # 0x0054
-.hword instrument_set_0D - instrument_sets # 0x0056
-.hword instrument_set_0E - instrument_sets # 0x0058
-.hword instrument_set_0F - instrument_sets # 0x005A
-.hword instrument_set_10 - instrument_sets # 0x005C
-.hword instrument_set_11 - instrument_sets # 0x005E
-.hword instrument_set_12 - instrument_sets # 0x0060
-.hword instrument_set_13 - instrument_sets # 0x0062
-.hword instrument_set_14 - instrument_sets # 0x0064
-.hword instrument_set_15 - instrument_sets # 0x0066
-.hword instrument_set_16 - instrument_sets # 0x0068
-.hword instrument_set_17 - instrument_sets # 0x006A
-.hword instrument_set_18 - instrument_sets # 0x006C
-.hword instrument_set_19 - instrument_sets # 0x006E
-.hword instrument_set_1A - instrument_sets # 0x0070
-.hword instrument_set_1B - instrument_sets # 0x0072
-.hword instrument_set_1C - instrument_sets # 0x0074
-.hword instrument_set_1D - instrument_sets # 0x0076
+glabel __instrument_setsSegmentStart
+glabel __instrument_setsSegmentRomStart
+
+glabel _instrument_sets
+.hword instrument_set_00 - _instrument_sets 
+# 0x003C
+.hword instrument_set_01 - _instrument_sets 
+# 0x003E
+.hword instrument_set_02 - _instrument_sets 
+# 0x0040
+.hword instrument_set_03 - _instrument_sets 
+# 0x0042
+.hword instrument_set_04 - _instrument_sets 
+# 0x0044
+.hword instrument_set_05 - _instrument_sets 
+# 0x0046
+.hword instrument_set_06 - _instrument_sets
+ # 0x0048
+.hword instrument_set_07 - _instrument_sets 
+# 0x004A
+.hword instrument_set_08 - _instrument_sets 
+# 0x004C
+.hword instrument_set_09 - _instrument_sets 
+# 0x004E
+.hword instrument_set_0A - _instrument_sets 
+# 0x0050
+.hword instrument_set_0B - _instrument_sets 
+# 0x0052
+.hword instrument_set_0C - _instrument_sets 
+# 0x0054
+.hword instrument_set_0D - _instrument_sets 
+# 0x0056
+.hword instrument_set_0E - _instrument_sets 
+# 0x0058
+.hword instrument_set_0F - _instrument_sets 
+# 0x005A
+.hword instrument_set_10 - _instrument_sets 
+# 0x005C
+.hword instrument_set_11 - _instrument_sets 
+# 0x005E
+.hword instrument_set_12 - _instrument_sets 
+# 0x0060
+.hword instrument_set_13 - _instrument_sets 
+# 0x0062
+.hword instrument_set_14 - _instrument_sets 
+# 0x0064
+.hword instrument_set_15 - _instrument_sets 
+# 0x0066
+.hword instrument_set_16 - _instrument_sets 
+# 0x0068
+.hword instrument_set_17 - _instrument_sets 
+# 0x006A
+.hword instrument_set_18 - _instrument_sets 
+# 0x006C
+.hword instrument_set_19 - _instrument_sets 
+# 0x006E
+.hword instrument_set_1A - _instrument_sets 
+# 0x0070
+.hword instrument_set_1B - _instrument_sets 
+# 0x0072
+.hword instrument_set_1C - _instrument_sets 
+# 0x0074
+.hword instrument_set_1D - _instrument_sets 
+# 0x0076
 
 instrument_set_00:
 .byte 0x01, 0x00
@@ -97,4 +130,8 @@ instrument_set_1C:
 .byte 0x01, 0x14
 instrument_set_1D:
 .byte 0x01, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-instrument_sets_end:
+glabel _instrument_sets_end
+
+glabel __instrument_setsSegmentEnd
+glabel __instrument_setsSegmentRomEnd
+

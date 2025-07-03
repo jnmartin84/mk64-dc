@@ -4,11 +4,13 @@
 .include "macros.inc"
 
 .section .data
-
+glabel __audio_banksSegmentStart
+glabel __audio_banksSegmentRomStart
 # Audiobank data
-
 .ifdef VERSION_EU_V10
     .incbin "bin/audiobanks.eu.bin"
 .else
     .incbin "bin/audiobanks.us.bin"
 .endif
+glabel __audio_banksSegmentEnd
+glabel __audio_banksSegmentRomEnd

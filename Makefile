@@ -1,4 +1,5 @@
 # Makefile to rebuild MK64 split image
+#include ${KOS_BASE}/Makefile.rules
 
 include util.mk
 
@@ -8,7 +9,8 @@ include safe_gcc.mk
 default: all
 
 # Preprocessor definitions
-DEFINES :=
+DEFINES := 
+#_FINALROM=1 NDEBUG=1 F3DEX_GBI_2=1
 
 #==============================================================================#
 # Build Options                                                                #
@@ -18,14 +20,18 @@ DEFINES :=
 # Run 'make clean' prior to changing versions.
 
 # Build for the N64 (turn this off for ports)
-TARGET_N64 ?= 1
+TARGET_N64 ?= 0
+TARGET_DC := 1
+ifeq ($(TARGET_DC), 1)
+  ENABLE_OPENGL ?= 1
+  NON_MATCHING := 1
+endif
 
 # COMPILER - selects the C compiler to use
 #   ido - uses the SGI IRIS Development Option compiler, which is used to build
 #         an original matching N64 ROM
 #   gcc - uses the GNU C Compiler
-COMPILER ?= ido
-$(eval $(call validate-option,COMPILER,ido gcc))
+COMPILER ?= kos-cc
 
 # Add debug tools with 'make DEBUG=1' and modify the macros in include/debug.h
 # Adds crash screen enhancement and activates debug mode
@@ -33,14 +39,13 @@ $(eval $(call validate-option,COMPILER,ido gcc))
 DEBUG ?= 0
 
 # Compile with GCC
-GCC ?= 0
+GCC ?= 1
 
 # VERSION - selects the version of the game to build
 #  us     - builds the 1997 North American version
 #  eu.v10 - builds the 1997 1.0 PAL version
 #  eu.v11 - builds the 1997 1.1 PAL version
 VERSION ?= us
-$(eval $(call validate-option,VERSION,us eu.v10 eu.v11))
 
 ifeq      ($(VERSION),us)
   DEFINES += VERSION_US=1
@@ -72,7 +77,7 @@ BASEROM := baserom.$(VERSION).z64
 $(eval $(call validate-option,GRUCODE,f3dex_old f3dex f3dex2))
 
 ifeq ($(GRUCODE),f3dex_old) # Fast3DEX 0.95
-  DEFINES += F3DEX_GBI=1 F3D_OLD=1
+  DEFINES += F3DEX_GBI=1 F3D_OLD=1 _LANGUAGE_C=1
 else ifeq ($(GRUCODE),f3dex) # Fast3DEX 1.23
   DEFINES += F3DEX_GBI=1 F3DEX_GBI_SHARED=1
 else ifeq ($(GRUCODE),f3dex2) # Fast3DEX2
@@ -80,12 +85,12 @@ else ifeq ($(GRUCODE),f3dex2) # Fast3DEX2
 endif
 
 ifeq      ($(COMPILER),ido)
-  MIPSISET := -mips2
+  #MIPSISET := -mips2
 else ifeq ($(COMPILER),gcc)
   DEFINES += AVOID_UB=1 NON_MATCHING=1
   NON_MATCHING := 1
-  VERSION_ASFLAGS := --defsym AVOID_UB=1
-  MIPSISET     := -mips3
+  VERSION_ASFLAGS := --defsym AVOID_UB=1 
+#  MIPSISET     := -mips3
 endif
 
 
@@ -102,7 +107,7 @@ endif
 
 ifeq ($(NON_MATCHING),1)
   DEFINES += NON_MATCHING=1 AVOID_UB=1
-  VERSION_ASFLAGS := --defsym AVOID_UB=1
+  VERSION_ASFLAGS := --defsym AVOID_UB=1 
   COMPARE := 0
 endif
 
@@ -120,12 +125,10 @@ $(eval $(call validate-option,COMPARE,0 1))
 
 
 # Whether to hide commands or not
-VERBOSE ?= 0
+VERBOSE ?= 1
 ifeq ($(VERBOSE),0)
   V := @
 endif
-
-
 
 # Whether to colorize build messages
 COLOR ?= 1
@@ -224,9 +227,12 @@ DATA_DIR       := data
 INCLUDE_DIRS   := include
 
 # Directories containing source files
-SRC_ASSETS_DIR := assets/code/ceremony_data assets/code/startup_logo assets/code/data_800E45C0 assets/code/data_segment2 assets/code/data_800E8700 assets/code/common_data
-SRC_DIRS       := src src/data src/buffers src/racing src/ending src/audio src/debug src/os src/os/math courses assets/code/ceremony_data assets/code/startup_logo $(SRC_ASSETS_DIR)
-ASM_DIRS       := asm asm/os asm/unused $(DATA_DIR) $(DATA_DIR)/sound_data $(DATA_DIR)/karts
+#SRC_ASSETS_DIR := assets/code/ceremony_data assets/code/startup_logo assets/code/data_800E45C0 assets/code/data_segment2 assets/code/data_800E8700 assets/code/common_data
+SRC_DIRS       := src src/data src/buffers src/racing src/ending src/audio src/debug src/os src/os/math courses 
+#assets/code/ceremony_data assets/code/startup_logo $(SRC_ASSETS_DIR)
+ASM_DIRS       := $(DATA_DIR) $(DATA_DIR)/karts
+#$(DATA_DIR)/sound_data 
+#asm asm/os asm/unused 
 
 
 # Directories containing course source and data files
@@ -245,8 +251,9 @@ include $(MAKEFILE_SPLIT)
 # These are files that need to be encoded into EUC-JP in order for the ROM to match
 # We filter them out from the regular C_FILES since we don't need nor want the
 # UTF-8 versions getting compiled
-EUC_JP_FILES := src/ending/credits.c src/cpu_vehicles_camera_path.c src/menu_items.c
-C_FILES := $(filter-out %.inc.c,$(filter-out $(EUC_JP_FILES),$(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.c))))
+#EUC_JP_FILES := src/ending/credits.c src/cpu_vehicles_camera_path.c src/menu_items.c
+#C_FILES := $(filter-out %.inc.c,$(filter-out $(EUC_JP_FILES),$(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.c))))
+C_FILES := $(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.c))
 S_FILES := $(foreach dir,$(ASM_DIRS),$(wildcard $(dir)/*.s))
 # Include source files in courses/course_name/files.c but exclude .inc.c files.
 COURSE_FILES := $(foreach dir,$(COURSE_DIRS),$(filter-out %.inc.c,$(wildcard $(dir)/*.c)))
@@ -290,40 +297,50 @@ models/%: models/%.json
 #==============================================================================#
 
 # detect prefix for MIPS toolchain
-ifneq ($(CROSS),)
-else ifneq ($(call find-command,mips64-elf-ld),)
-  CROSS := mips64-elf-
+#ifneq ($(CROSS),)
+#else ifneq ($(call find-command,mips64-elf-ld),)
+#  CROSS := mips64-elf-
 # else ifneq ($(call find-command,mips-n64-ld),)
 #   CROSS := mips-n64-
-else ifneq ($(call find-command,mips64-ld),)
-  CROSS := mips64-
-else ifneq ($(call find-command,mips-linux-gnu-ld),)
-  CROSS := mips-linux-gnu-
-else ifneq ($(call find-command,mips64-linux-gnu-ld),)
-  CROSS := mips64-linux-gnu-
-else ifneq ($(call find-command,mips-ld),)
-  CROSS := mips-
-else
-  $(error Unable to detect a suitable MIPS toolchain installed)
-endif
+#else ifneq ($(call find-command,mips64-ld),)
+#  CROSS := mips64-
+#else ifneq ($(call find-command,mips-linux-gnu-ld),)
+#  CROSS := mips-linux-gnu-
+#else ifneq ($(call find-command,mips64-linux-gnu-ld),)
+#  CROSS := mips64-linux-gnu-
+#else ifneq ($(call find-command,mips-ld),)
+#  CROSS := mips-
+#else
+#  $(error Unable to detect a suitable MIPS toolchain installed)
+#endif
 
-AS      := $(CROSS)as
-ifeq ($(COMPILER),gcc)
-  CC      := $(CROSS)gcc
-else
-  IDO_ROOT := $(TOOLS_DIR)/ido-recomp/$(DETECTED_OS)
-  CC      := $(IDO_ROOT)/cc
-endif
-LD      := $(CROSS)ld
-AR      := $(CROSS)ar
-OBJDUMP := $(CROSS)objdump
-OBJCOPY := $(CROSS)objcopy
+CROSS :=
 
-OPT_FLAGS := -O2
+AS      := kos-as
+  
+#ifeq ($(COMPILER),kos-cc)
+  CC      := kos-cc
+#$(CROSS)gcc
+#else
+#  IDO_ROOT := $(TOOLS_DIR)/ido-recomp/$(DETECTED_OS)
+#  CC      := $(IDO_ROOT)/cc
+#endif
+LD      := sh-elf-ld
+AR      := kos-ar
+OBJDUMP := sh-elf-objdump
+OBJCOPY := sh-elf-objcopy
+
+OPT_FLAGS := 
 
 ifeq ($(TARGET_N64),1)
-  TARGET_CFLAGS := -nostdinc -DTARGET_N64 -D_LANGUAGE_C
+  TARGET_CFLAGS := -nostdinc -DTARGET_N64 -D_LANGUAGE_C 
   CC_CFLAGS := -fno-builtin
+endif
+
+ifeq ($(TARGET_DC),1)
+  TARGET_CFLAGS := -fno-strict-aliasing -Wall -Os -DTARGET_DC -D_LANGUAGE_C
+#  TARGET_CFLAGS := -Os -DTARGET_DC -D_LANGUAGE_C
+  CC_CFLAGS :=
 endif
 
 INCLUDE_DIRS := include $(BUILD_DIR) $(BUILD_DIR)/include src src/racing src/ending .
@@ -346,27 +363,28 @@ else
 endif
 
 # Check code syntax with host compiler
-CC_CHECK ?= gcc
-CC_CHECK_CFLAGS := -fsyntax-only -fsigned-char $(CC_CFLAGS) $(TARGET_CFLAGS) -std=gnu90 -Wall -Wempty-body -Wextra -Wno-format-security -Wno-main -DNON_MATCHING -DAVOID_UB $(DEF_INC_CFLAGS)
+CC_CHECK ?= kos-cc
+CC_CHECK_CFLAGS := -fsyntax-only -fsigned-char $(CC_CFLAGS) $(TARGET_CFLAGS) -std=gnu90 -Wall -Wempty-body -Wextra -Wno-format-security -DNON_MATCHING -DAVOID_UB $(DEF_INC_CFLAGS) -g3
 
 # C compiler options
 HIDE_WARNINGS := -woff 838,649,807
-CFLAGS = -G 0 $(OPT_FLAGS) $(TARGET_CFLAGS) $(MIPSISET) $(DEF_INC_CFLAGS)
-ifeq ($(COMPILER),gcc)
-  CFLAGS += -mno-shared -march=vr4300 -mfix4300 -mabi=32 -mhard-float -mdivide-breaks -fno-stack-protector -fno-common -fno-zero-initialized-in-bss -fno-PIC -mno-abicalls -fno-strict-aliasing -fno-inline-functions -ffreestanding -fwrapv -Wall -Wextra
+CFLAGS = $(OPT_FLAGS) $(TARGET_CFLAGS) $(MIPSISET) $(DEF_INC_CFLAGS) -g3
+ifeq ($(COMPILER),kos-cc)
+  CFLAGS += -Wall -Wextra -Wno-incompatible-pointer-types -Wno-int-conversion
 else
-  CFLAGS += $(HIDE_WARNINGS) -non_shared -Wab,-r4300_mul -Xcpluscomm -fullwarn -signed -32
+#  CFLAGS += $(HIDE_WARNINGS) -non_shared -Wab,-r4300_mul -Xcpluscomm -fullwarn -signed -32
 endif
 
-ASFLAGS = -march=vr4300 -mabi=32 -I include -I $(BUILD_DIR) $(VERSION_ASFLAGS) $(foreach d,$(DEFINES),--defsym $(d))
+ASFLAGS = -I include -I $(BUILD_DIR) $(VERSION_ASFLAGS) $(foreach d,$(DEFINES),--defsym $(d))
 
 # Fills end of rom
-OBJCOPYFLAGS = --pad-to=0xC00000 --gap-fill=0xFF
+OBJCOPYFLAGS =
+# --pad-to=0xC00000 --gap-fill=0xFF
 
-LDFLAGS = -T undefined_syms.txt -T $(BUILD_DIR)/$(LD_SCRIPT) -Map $(BUILD_DIR)/$(TARGET).map --no-check-sections
+LDFLAGS = -Map $(BUILD_DIR)/$(TARGET).map --no-check-sections
 
 # Ensure that gcc treats the code as 32-bit
-CC_CHECK += -m32
+#CC_CHECK += -m32
 
 # Prevent a crash with -sopt
 export LANG := C
@@ -405,9 +423,9 @@ BLINK   := \033[33;5m
 endif
 
 # Use Objcopy instead of extract_data_for_mio
-ifeq ($(COMPILER),gcc)
+#ifeq ($(COMPILER),gcc)
   EXTRACT_DATA_FOR_MIO := $(OBJCOPY) -O binary --only-section=.data
-endif
+#endif
 
 # Common build print status function
 define print
@@ -419,13 +437,14 @@ ifeq ($(GCC),1)
   $(BUILD_DIR)/src/main.o:                          OPT_FLAGS := -g
   $(BUILD_DIR)/src/racing/skybox_and_splitscreen.o: OPT_FLAGS := -g
   $(BUILD_DIR)/src/racing/render_courses.o:         OPT_FLAGS := -g
-  $(SAFE_C_FILES): OPT_FLAGS := -O3
-  $(SAFE_C_FILES): CC        := $(CROSS)gcc
-  $(SAFE_C_FILES): MIPSISET  := -mips3
-  $(SAFE_C_FILES): CFLAGS    := -G 0 $(OPT_FLAGS) $(TARGET_CFLAGS) $(MIPSISET) $(DEF_INC_CFLAGS) -mno-shared -march=vr4300 -mfix4300 -mabi=32 -mhard-float \
-   -mdivide-breaks -fno-stack-protector -fno-common -fno-zero-initialized-in-bss -fno-PIC -mno-abicalls -fno-strict-aliasing -fno-inline-functions          \
-   -ffreestanding -fwrapv -Wall -Wextra -ffast-math -fno-unsafe-math-optimizations
-  $(SAFE_C_FILES): CC_CHECK := gcc -m32
+  $(SAFE_C_FILES): OPT_FLAGS := 
+  $(SAFE_C_FILES): CC        := kos-cc
+#  $(SAFE_C_FILES): MIPSISET  := -mips3
+#  $(SAFE_C_FILES): CFLAGS    := -G 0 $(OPT_FLAGS) $(TARGET_CFLAGS) $(MIPSISET) $(DEF_INC_CFLAGS) -mno-shared -march=vr4300 -mfix4300 -mabi=32 -mhard-float \
+ #  -mdivide-breaks -fno-stack-protector -fno-common -fno-zero-initialized-in-bss -fno-PIC -mno-abicalls -fno-strict-aliasing -fno-inline-functions          \
+  # -ffreestanding -fwrapv -Wall -Wextra -ffast-math -fno-unsafe-math-optimizations
+  $(SAFE_C_FILES): CC_CHECK := kos-cc
+# -m32
 endif
 
 
@@ -516,9 +535,9 @@ $(BUILD_DIR)/%.mio0.s: $(BUILD_DIR)/%.mio0
 $(BUILD_DIR)/src/crash_screen.o: src/crash_screen.c
 	@$(PRINT) "$(GREEN)Compiling Crash Screen:  $(BLUE)$@ $(NO_COL)\n"
 	$(V)$(N64GRAPHICS) -i $(BUILD_DIR)/textures/crash_screen/crash_screen_font.ia1.inc.c -g textures/crash_screen/crash_screen_font.ia1.png -f ia1 -s u8
-	@$(CC_CHECK) $(CC_CHECK_CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/$*.d $<
+#	@$(CC_CHECK) $(CC_CHECK_CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/$*.d $<
 	$(V)$(CC) -c $(CFLAGS) -o $@ $<
-	$(V)$(PYTHON) $(TOOLS_DIR)/set_o32abi_bit.py $@
+#	$(V)$(PYTHON) $(TOOLS_DIR)/set_o32abi_bit.py $@
 
 #==============================================================================#
 # Common Textures Segment Generation                                           #
@@ -541,9 +560,9 @@ $(TEXTURE_FILES_TLUT):
 # common textures
 $(BUILD_DIR)/assets/code/common_data/common_data.o: assets/code/common_data/common_data.c $(TEXTURE_FILES) $(TEXTURE_FILES_TLUT)
 	@$(PRINT) "$(GREEN)Compiling Common Textures:  $(BLUE)$@ $(NO_COL)\n"
-	@$(CC_CHECK) $(CC_CHECK_CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/$*.d $<
+#	@$(CC_CHECK) $(CC_CHECK_CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/$*.d $<
 	$(V)$(CC) -c $(CFLAGS) -o $@ $<
-	$(V)$(PYTHON) $(TOOLS_DIR)/set_o32abi_bit.py $@
+#	$(V)$(PYTHON) $(TOOLS_DIR)/set_o32abi_bit.py $@
 
 
 
@@ -562,18 +581,18 @@ COURSE_DISPLAYLIST_OFILES := $(foreach dir,$(COURSE_DIRS),$(BUILD_DIR)/$(dir)/co
 $(COURSE_DISPLAYLIST_OFILES): $(BUILD_DIR)/%/course_displaylists.inc.o: %/course_textures.linkonly.h
 
 %/course_textures.linkonly.elf: %/course_textures.linkonly.o
-	$(V)$(LD) -t -e 0 -Ttext=05000000 -Map $@.map -o $@ $< --no-check-sections
+	$(V)$(LD) -EL -t -e 0 -Ttext=05000000 -Map $@.map -o $@ $< --no-check-sections
 
 %/course_displaylists.inc.elf: %/course_displaylists.inc.o %/course_textures.linkonly.elf
-	$(V)$(LD) -t -e 0 -Ttext=07000000 -Map $@.map -R $*/course_textures.linkonly.elf -o $@ $< --no-check-sections
+	$(V)$(LD) -EL -t -e 0 -Ttext=07000000 -Map $@.map -R $*/course_textures.linkonly.elf -o $@ $< --no-check-sections
 
 %/course_displaylists.inc.bin: %/course_displaylists.inc.elf
 	$(V)$(EXTRACT_DATA_FOR_MIO) $< $@
 
 # Displaylists are packed using a custom format
-%/course_displaylists_packed.inc.bin: %/course_displaylists.inc.bin
-	@$(PRINT) "$(GREEN)Compressing Course Displaylists:  $(BLUE)$@ $(NO_COL)\n"
-	$(V)$(DLPACKER) $< $@
+#%/course_displaylists_packed.inc.bin: %/course_displaylists.inc.bin
+#	@$(PRINT) "$(GREEN)Compressing Course Displaylists:  $(BLUE)$@ $(NO_COL)\n"
+#	$(V)$(DLPACKER) $< $@
 
 
 
@@ -584,7 +603,7 @@ $(COURSE_DISPLAYLIST_OFILES): $(BUILD_DIR)/%/course_displaylists.inc.o: %/course
 COURSE_GEOGRAPHY_TARGETS := $(foreach dir,$(COURSE_DIRS),$(BUILD_DIR)/$(dir)/course_geography.mio0.o)
 
 %/course_vertices.inc.elf: %/course_vertices.inc.o
-	$(V)$(LD) -t -e 0 -Ttext=0F000000 -Map $@.map -o $@ $< --no-check-sections
+	$(V)$(LD) -EL -t -e 0 -Ttext=0F000000 -Map $@.map -o $@ $< --no-check-sections
 
 %/course_vertices.inc.bin: %/course_vertices.inc.elf
 	$(V)$(EXTRACT_DATA_FOR_MIO) $< $@
@@ -594,8 +613,9 @@ COURSE_GEOGRAPHY_TARGETS := $(foreach dir,$(COURSE_DIRS),$(BUILD_DIR)/$(dir)/cou
 	$(V)$(MIO0TOOL) -c $< $@
 
 # Course vertices and displaylists are included together due to no alignment between the two files.
-%/course_geography.mio0.s: %/course_vertices.inc.mio0 %/course_displaylists_packed.inc.bin
-	$(V)$(PRINT) ".include \"macros.inc\"\n\n.section .data\n\n.balign 4\n\nglabel d_course_$(lastword $(subst /, ,$*))_vertex\n\n.incbin \"$(@D)/course_vertices.inc.mio0\"\n\n.balign 4\n\nglabel d_course_$(lastword $(subst /, ,$*))_packed\n\n.incbin \"$(@D)/course_displaylists_packed.inc.bin\"\n\n.balign 0x10\n" > $@
+#%/course_geography.mio0.s: %/course_vertices.inc.mio0 %/course_displaylists_packed.inc.bin
+%/course_geography.mio0.s: %/course_vertices.inc.mio0 %/course_displaylists.inc.bin
+	$(V)$(PRINT) ".include \"macros.inc\"\n\n.section .data\n\n.balign 4\n\nglabel __$(lastword $(subst /, ,$*))_vertexSegmentRomStart\n\nglabel _d_course_$(lastword $(subst /, ,$*))_vertex\n\n.incbin \"$(@D)/course_vertices.inc.mio0\"\n\n.balign 4\n\nglabel _d_course_$(lastword $(subst /, ,$*))_packed\n\n.incbin \"$(@D)/course_displaylists.inc.bin\"\n\n.balign 0x10\nglabel __$(lastword $(subst /, ,$*))_vertexSegmentRomEnd\n\n" > $@
 
 
 
@@ -604,7 +624,7 @@ COURSE_GEOGRAPHY_TARGETS := $(foreach dir,$(COURSE_DIRS),$(BUILD_DIR)/$(dir)/cou
 #==============================================================================#
 
 COURSE_DATA_ELFS := $(foreach dir,$(COURSE_DIRS),$(BUILD_DIR)/$(dir)/course_data.elf)
-LDFLAGS += $(foreach elf,$(COURSE_DATA_ELFS),-R $(elf))
+LDFLAGS += $(foreach elf,$(COURSE_DATA_ELFS),-R $(elf)) 
 
 COURSE_DATA_TARGETS := $(foreach dir,$(COURSE_DIRS),$(BUILD_DIR)/$(dir)/course_data.mio0.o)
 
@@ -612,7 +632,7 @@ COURSE_DISPLAYLIST_OFILES := $(foreach dir,$(COURSE_DIRS),$(BUILD_DIR)/$(dir)/co
 $(COURSE_DISPLAYLIST_OFILES): $(BUILD_DIR)/%/course_data.o: %/course_textures.linkonly.h
 
 %/course_data.elf: %/course_data.o %/course_displaylists.inc.elf
-	$(V)$(LD) -t -e 0 -Ttext=06000000 -Map $@.map -R $*/course_displaylists.inc.elf -o $@ $< --no-check-sections
+	$(V)$(LD) -EL -t -e 0 -Ttext=06000000 -Map $@.map -R $*/course_displaylists.inc.elf -o $@ $< --no-check-sections
 
 %/course_data.bin: %/course_data.elf
 	$(V)$(EXTRACT_DATA_FOR_MIO) $< $@
@@ -622,31 +642,31 @@ $(COURSE_DISPLAYLIST_OFILES): $(BUILD_DIR)/%/course_data.o: %/course_textures.li
 	$(V)$(MIO0TOOL) -c $< $@
 
 %/course_data.mio0.s: %/course_data.mio0
-	$(V)$(PRINT) ".include \"macros.inc\"\n\n.section .data\n\n.balign 4\n\n.incbin \"$<\"\n\n" > $@
+	$(V)$(PRINT) ".include \"macros.inc\"\n\n.section .data\n\n.balign 4\n\nglabel __course_$(lastword $(subst /, ,$*))_dl_mio0SegmentRomStart\n\n.incbin \"$<\"\n\nglabel __course_$(lastword $(subst /, ,$*))_dl_mio0SegmentRomEnd\n\n" > $@
 
 
 #==============================================================================#
 # Source Code Generation                                                       #
 #==============================================================================#
-$(BUILD_DIR)/%.jp.c: %.c
-	$(call print,Encoding:,$<,$@)
-	$(V)iconv -t EUC-JP -f UTF-8 $< > $@
+#$(BUILD_DIR)/%.jp.c: %.c
+#	$(call print,Encoding:,$<,$@)
+#	$(V)iconv -t EUC-JP -f UTF-8 $< > $@
 
 $(BUILD_DIR)/%.o: %.c
 	$(call print,Compiling:,$<,$@)
-	$(V)$(CC_CHECK) $(CC_CHECK_CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/$*.d $<
+#	$(V)$(CC_CHECK) $(CC_CHECK_CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/$*.d $<
 	$(V)$(CC) -c $(CFLAGS) -o $@ $<
-	$(V)$(PYTHON) $(TOOLS_DIR)/set_o32abi_bit.py $@
+#	$(V)$(PYTHON) $(TOOLS_DIR)/set_o32abi_bit.py $@
 
 $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c
 	$(call print,Compiling:,$<,$@)
-	$(V)$(CC_CHECK) $(CC_CHECK_CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/$*.d $<
+#	$(V)$(CC_CHECK) $(CC_CHECK_CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/$*.d $<
 	$(V)$(CC) -c $(CFLAGS) -o $@ $<
 
 $(BUILD_DIR)/%.o: %.s $(MIO0_FILES) $(RAW_TEXTURE_FILES)
 	$(V)$(AS) $(ASFLAGS) -o $@ $<
 
-$(EUC_JP_FILES:%.c=$(BUILD_DIR)/%.jp.o): CC := $(PYTHON) $(TOOLS_DIR)/asm_processor/build.py $(CC) -- $(AS) $(ASFLAGS) --
+#$(EUC_JP_FILES:%.c=$(BUILD_DIR)/%.jp.o): CC := $(PYTHON) $(TOOLS_DIR)/asm_processor/build.py $(CC) -- $(AS) $(ASFLAGS) --
 
 $(GLOBAL_ASM_O_FILES): CC := $(PYTHON) $(TOOLS_DIR)/asm_processor/build.py $(CC) -- $(AS) $(ASFLAGS) --
 
@@ -660,19 +680,19 @@ $(GLOBAL_ASM_RACING_O_FILES): CC := $(PYTHON) $(TOOLS_DIR)/asm_processor/build.p
 # Libultra Definitions                                                         #
 #==============================================================================#
 
-$(BUILD_DIR)/src/os/%.o:          OPT_FLAGS :=
-$(BUILD_DIR)/src/os/math/%.o:     OPT_FLAGS := -O2
-$(BUILD_DIR)/src/os/math/ll%.o:   OPT_FLAGS :=
-$(BUILD_DIR)/src/os/math/ll%.o:   MIPSISET := -mips3
-$(BUILD_DIR)/src/os/ldiv.o:       OPT_FLAGS := -O2
-$(BUILD_DIR)/src/os/string.o:     OPT_FLAGS := -O2
-$(BUILD_DIR)/src/os/gu%.o:        OPT_FLAGS := -O3
-$(BUILD_DIR)/src/os/al%.o:        OPT_FLAGS := -O3
-$(BUILD_DIR)/src/os/__osLeoInterrupt.o:        OPT_FLAGS := -O1
-$(BUILD_DIR)/src/os/_Printf.o:        OPT_FLAGS := -O3
-$(BUILD_DIR)/src/os/_Litob.o:        OPT_FLAGS := -O3
-$(BUILD_DIR)/src/os/_Ldtob.o:        OPT_FLAGS := -O3
-$(BUILD_DIR)/src/os/osSyncPrintf.o:        OPT_FLAGS := -O3
+$(BUILD_DIR)/src/os/%.o:          OPT_FLAGS := 
+$(BUILD_DIR)/src/os/math/%.o:     OPT_FLAGS := 
+$(BUILD_DIR)/src/os/math/ll%.o:   OPT_FLAGS := 
+#$(BUILD_DIR)/src/os/math/ll%.o:   MIPSISET := -mips3
+$(BUILD_DIR)/src/os/ldiv.o:       OPT_FLAGS := 
+$(BUILD_DIR)/src/os/string.o:     OPT_FLAGS := 
+$(BUILD_DIR)/src/os/gu%.o:        OPT_FLAGS := 
+$(BUILD_DIR)/src/os/al%.o:        OPT_FLAGS := 
+$(BUILD_DIR)/src/os/__osLeoInterrupt.o:        OPT_FLAGS := 
+$(BUILD_DIR)/src/os/_Printf.o:        OPT_FLAGS := 
+$(BUILD_DIR)/src/os/_Litob.o:        OPT_FLAGS := 
+$(BUILD_DIR)/src/os/_Ldtob.o:        OPT_FLAGS := 
+$(BUILD_DIR)/src/os/osSyncPrintf.o:        OPT_FLAGS := 
 
 # Alternate compiler flags needed for matching
 ifeq ($(COMPILER),ido)
@@ -690,7 +710,7 @@ endif
 LDFLAGS += -R $(BUILD_DIR)/assets/code/ceremony_data/ceremony_data.elf
 
 %/ceremony_data.elf: %/ceremony_data.o
-	$(V)$(LD) -t -e 0 -Ttext=0B000000 -Map $@.map -o $@ $< --no-check-sections
+	$(V)$(LD) -EL -t -e 0 -Ttext=0B000000 -Map $@.map -o $@ $< --no-check-sections
 
 %/ceremony_data.bin: %/ceremony_data.elf
 	$(V)$(EXTRACT_DATA_FOR_MIO) $< $@
@@ -700,7 +720,7 @@ LDFLAGS += -R $(BUILD_DIR)/assets/code/ceremony_data/ceremony_data.elf
 	$(V)$(MIO0TOOL) -c $< $@
 
 %/ceremony_data.mio0.s: %/ceremony_data.mio0
-	$(V)$(PRINT) ".include \"macros.inc\"\n\n.data\n\n.balign 4\n\nglabel ceremony_data\n\n.incbin \"$<\"\n\n.balign 16\nglabel ceremonyData_end\n" > $@
+	$(V)$(PRINT) ".include \"macros.inc\"\n\n.data\n\n.balign 4\n\nglabel __ceremonyDataSegmentRomStart\n\nglabel _ceremony_data\n\n.incbin \"$<\"\n\n.balign 16\nglabel __ceremonyDataSegmentRomEnd\nglabel _ceremonyData_end\n" > $@
 
 
 #==============================================================================#
@@ -710,7 +730,7 @@ LDFLAGS += -R $(BUILD_DIR)/assets/code/ceremony_data/ceremony_data.elf
 LDFLAGS += -R $(BUILD_DIR)/assets/code/startup_logo/startup_logo.elf
 
 %/startup_logo.elf: %/startup_logo.o
-	$(V)$(LD) -t -e 0 -Ttext=06000000 -Map $@.map -o $@ $< --no-check-sections
+	$(V)$(LD) -m shlelf -t -e 0 -Ttext=06000000 -Map $@.map -o $@ $< --no-check-sections
 
 %/startup_logo.bin: %/startup_logo.elf
 	$(V)$(EXTRACT_DATA_FOR_MIO) $< $@
@@ -720,7 +740,7 @@ LDFLAGS += -R $(BUILD_DIR)/assets/code/startup_logo/startup_logo.elf
 	$(V)$(MIO0TOOL) -c $< $@
 
 %/startup_logo.mio0.s: %/startup_logo.mio0
-	$(V)$(PRINT) ".include \"macros.inc\"\n\n.data\n\n.balign 4\n\nglabel startup_logo\n\n.incbin \"$<\"\n\n.balign 16\n\nglabel startupLogo_end\n" > $@
+	$(V)$(PRINT) ".include \"macros.inc\"\n\n.data\n\n.balign 4\n\nglabel __startupLogoSegmentRomStart\n\nglabel _startup_logo\n\n.incbin \"$<\"\n\n.balign 16\n\nglabel __startupLogoSegmentRomEnd\n\nglabel _startupLogo_end\n" > $@
 
 #==============================================================================#
 # Compile Common Textures                                                      #
@@ -729,7 +749,7 @@ LDFLAGS += -R $(BUILD_DIR)/assets/code/startup_logo/startup_logo.elf
 LDFLAGS += -R $(BUILD_DIR)/assets/code/common_data/common_data.elf
 
 %/common_data.elf: %/common_data.o
-	$(V)$(LD) -t -e 0 -Ttext=0D000000 -Map $@.map -o $@ $< --no-check-sections
+	$(V)$(LD) -EL -t -e 0 -Ttext=0D000000 -Map $@.map -o $@ $< --no-check-sections
 
 %/common_data.bin: %/common_data.elf
 	$(V)$(EXTRACT_DATA_FOR_MIO) $< $@
@@ -739,7 +759,7 @@ LDFLAGS += -R $(BUILD_DIR)/assets/code/common_data/common_data.elf
 	$(V)$(MIO0TOOL) -c $< $@
 
 %/common_data.mio0.s: %/common_data.mio0
-	$(V)$(PRINT) ".include \"macros.inc\"\n\n.section .data\n\n.balign 4\n\n.incbin \"$<\"\n\n" > $@
+	$(V)$(PRINT) ".include \"macros.inc\"\n\n.section .data\n\nglabel __common_texturesSegmentRomStart\n\n.balign 4\n\n.incbin \"$<\"\n\nglabel __common_texturesSegmentRomEnd\n\n" > $@
 
 
 
@@ -753,9 +773,9 @@ $(BUILD_DIR)/$(LD_SCRIPT): $(LD_SCRIPT)
 	$(V)$(CPP) $(CPPFLAGS) -DBUILD_DIR=$(BUILD_DIR) -MMD -MP -MT $@ -MF $@.d -o $@ $<
 
 # Link MK64 ELF file
-$(ELF): $(O_FILES) $(COURSE_DATA_TARGETS) $(BUILD_DIR)/$(LD_SCRIPT) $(BUILD_DIR)/assets/code/startup_logo/startup_logo.mio0.o $(BUILD_DIR)/assets/code/ceremony_data/ceremony_data.mio0.o $(BUILD_DIR)/assets/code/common_data/common_data.mio0.o $(COURSE_GEOGRAPHY_TARGETS) undefined_syms.txt
+$(ELF):	$(O_FILES) $(COURSE_DATA_TARGETS) $(BUILD_DIR)/$(LD_SCRIPT) $(BUILD_DIR)/assets/code/startup_logo/startup_logo.mio0.o $(BUILD_DIR)/assets/code/ceremony_data/ceremony_data.mio0.o $(BUILD_DIR)/assets/code/common_data/common_data.mio0.o $(COURSE_GEOGRAPHY_TARGETS) undefined_syms.txt
 	@$(PRINT) "$(GREEN)Linking ELF file:  $(BLUE)$@ $(NO_COL)\n"
-	$(V)$(LD) $(LDFLAGS) -o $@
+	$(V)$(LD) -EL $(LDFLAGS) -o $@
 
 # Build ROM
 $(ROM): $(ELF)

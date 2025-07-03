@@ -8,2137 +8,2148 @@
 # 641F70-72421F: standalone textures
 
 .balign 4, 0x00
-glabel gTextureSignShellShot0
+glabel __other_texturesSegmentStart
+glabel __other_texturesSegmentRomStart
+
+glabel _gTextureSignShellShot0
 .incbin "textures/standalone/sign_shell_shot_0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignShellShot1
+glabel _gTextureSignShellShot1
 .incbin "textures/standalone/sign_shell_shot_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGrayCheckerboard
+glabel _gTextureGrayCheckerboard
 .incbin "textures/standalone/gray_checkerboard.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGrayCobblestone
+glabel _gTextureGrayCobblestone
 .incbin "textures/standalone/gray_cobblestone.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64275C
+glabel _gTexture64275C
 .incbin "textures/standalone/texture_64275C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64286C
+glabel _gTexture64286C
 .incbin "textures/standalone/texture_64286C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture642978
+glabel _gTexture642978
 .incbin "textures/standalone/texture_642978.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignBlue64
+glabel _gTextureSignBlue64
 .incbin "textures/standalone/sign_blue_64.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureCheckerboardYellowPink
+glabel _gTextureCheckerboardYellowPink
 .incbin "textures/standalone/checkerboard_yellow_pink.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64313C
+glabel _gTexture64313C
 .incbin "textures/standalone/texture_64313C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureCheckerboardYellowBlue
+glabel _gTextureCheckerboardYellowBlue
 .incbin "textures/standalone/checkerbord_yellow_blue.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture643430
+glabel _gTexture643430
 .incbin "textures/standalone/texture_643430.ia16.mio0"
 
 .balign 4, 0x00
-glabel gTexture643A34
+glabel _gTexture643A34
 .incbin "textures/standalone/texture_643A34.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture643B3C
+glabel _gTexture643B3C
 .incbin "textures/standalone/texture_643B3C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6442D4
+glabel _gTexture6442D4
 .incbin "textures/standalone/texture_6442D4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64440C
+glabel _gTexture64440C
 .incbin "textures/standalone/texture_64440C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6446AC
+glabel _gTexture6446AC
 .incbin "textures/standalone/texture_6446AC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6447C4
+glabel _gTexture6447C4
 .incbin "textures/standalone/texture_6447C4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureCheckerboardBlackWhite
+glabel _gTextureCheckerboardBlackWhite
 .incbin "textures/standalone/checkerboard_black_white.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6449D4
+glabel _gTexture6449D4
 .incbin "textures/standalone/texture_6449D4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture645134
+glabel _gTexture645134
 .incbin "textures/standalone/texture_645134.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture645660
+glabel _gTexture645660
 .incbin "textures/standalone/texture_645660.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6457D8
+glabel _gTexture6457D8
 .incbin "textures/standalone/texture_6457D8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureCheckerboardBlueGreen
+glabel _gTextureCheckerboardBlueGreen
 .incbin "textures/standalone/checkerboard_blue_green.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureNumberYellowBlue1
+glabel _gTextureNumberYellowBlue1
 .incbin "textures/standalone/number_yellow_blue_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureNumberYellowBlue2
+glabel _gTextureNumberYellowBlue2
 .incbin "textures/standalone/number_yellow_blue_2.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureNumberYellowBlue3
+glabel _gTextureNumberYellowBlue3
 .incbin "textures/standalone/number_yellow_blue_3.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureNumberYellowBlue4
+glabel _gTextureNumberYellowBlue4
 .incbin "textures/standalone/number_yellow_blue_4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64619C
+glabel _gTexture64619C
 .incbin "textures/standalone/texture_64619C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6462C0
+glabel _gTexture6462C0
 .incbin "textures/standalone/texture_6462C0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64647C
+glabel _gTexture64647C
 .incbin "textures/standalone/texture_64647C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture646CA8
+glabel _gTexture646CA8
 .incbin "textures/standalone/texture_646CA8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6473E4
+glabel _gTexture6473E4
 .incbin "textures/standalone/texture_6473E4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture647994
+glabel _gTexture647994
 .incbin "textures/standalone/texture_647994.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture647F4C
+glabel _gTexture647F4C
 .incbin "textures/standalone/texture_647F4C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture648508
+glabel _gTexture648508
 .incbin "textures/standalone/texture_648508.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGrass1
+glabel _gTextureGrass1
 .incbin "textures/standalone/grass_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureWoodDoor0
+glabel _gTextureWoodDoor0
 .incbin "textures/standalone/wood_door_0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureWoodDoor1
+glabel _gTextureWoodDoor1
 .incbin "textures/standalone/wood_door_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGrass2
+glabel _gTextureGrass2
 .incbin "textures/standalone/grass_2.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureMooMooFarmSignLeft
+glabel _gTextureMooMooFarmSignLeft
 .incbin "assets/courses/moo_moo_farm/gTextureMooMooFarmSignLeft.mio0"
 
 .balign 4, 0x00
-glabel gTextureMooMooFarmSignRight
+glabel _gTextureMooMooFarmSignRight
 .incbin "assets/courses/moo_moo_farm/gTextureMooMooFarmSignRight.mio0"
 
 .balign 4, 0x00
-glabel gTexture64ACAC
+glabel _gTexture64ACAC
 .incbin "textures/standalone/texture_64ACAC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64AF50
+glabel _gTexture64AF50
 .incbin "textures/standalone/texture_64AF50.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64B090
+glabel _gTexture64B090
 .incbin "textures/standalone/texture_64B090.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64B3F8
+glabel _gTexture64B3F8
 .incbin "textures/standalone/texture_64B3F8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64B54C
+glabel _gTexture64B54C
 .incbin "textures/standalone/texture_64B54C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64B8D8
+glabel _gTexture64B8D8
 .incbin "textures/standalone/texture_64B8D8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64BA50
+glabel _gTexture64BA50
 .incbin "textures/standalone/texture_64BA50.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64BB60
+glabel _gTexture64BB60
 .incbin "textures/standalone/texture_64BB60.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64BCCC
+glabel _gTexture64BCCC
 .incbin "textures/standalone/texture_64BCCC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64C11C
+glabel _gTexture64C11C
 .incbin "textures/standalone/texture_64C11C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64C7B4
+glabel _gTexture64C7B4
 .incbin "textures/standalone/texture_64C7B4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64CC20
+glabel _gTexture64CC20
 .incbin "textures/standalone/texture_64CC20.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignMergingLanes
+glabel _gTextureSignMergingLanes
 .incbin "textures/standalone/sign_merging_lanes.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGrass3
+glabel _gTextureGrass3
 .incbin "textures/standalone/grass_3.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGrass4
+glabel _gTextureGrass4
 .incbin "textures/standalone/grass_4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGrass5
+glabel _gTextureGrass5
 .incbin "textures/standalone/grass_5.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGrass6
+glabel _gTextureGrass6
 .incbin "textures/standalone/grass_6.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignNintendo0
+glabel _gTextureSignNintendo0
 .incbin "textures/standalone/sign_nintendo_0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignNintendo1
+glabel _gTextureSignNintendo1
 .incbin "textures/standalone/sign_nintendo_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGrass7
+glabel _gTextureGrass7
 .incbin "textures/standalone/grass_7.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64F9E8
+glabel _gTexture64F9E8
 .incbin "textures/standalone/texture_64F9E8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64FBF4
+glabel _gTexture64FBF4
 .incbin "textures/standalone/texture_64FBF4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture64FE68
+glabel _gTexture64FE68
 .incbin "textures/standalone/texture_64FE68.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureWoodBridgeSlats
+glabel _gTextureWoodBridgeSlats
 .incbin "textures/standalone/wood_bridge_slats.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureFlagRed
+glabel _gTextureFlagRed
 .incbin "textures/standalone/flag_red.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture65100C
+glabel _gTexture65100C
 .incbin "textures/standalone/texture_65100C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture65112C
+glabel _gTexture65112C
 .incbin "textures/standalone/texture_65112C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture65127C
+glabel _gTexture65127C
 .incbin "textures/standalone/texture_65127C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture651428
+glabel _gTexture651428
 .incbin "textures/standalone/texture_651428.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture651984
+glabel _gTexture651984
 .incbin "textures/standalone/texture_651984.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture651B20
+glabel _gTexture651B20
 .incbin "textures/standalone/texture_651B20.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture651F40
+glabel _gTexture651F40
 .incbin "textures/standalone/texture_651F40.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6522E0
+glabel _gTexture6522E0
 .incbin "textures/standalone/texture_6522E0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6528DC
+glabel _gTexture6528DC
 .incbin "textures/standalone/texture_6528DC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture652B54
+glabel _gTexture652B54
 .incbin "textures/standalone/texture_652B54.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture65315C
+glabel _gTexture65315C
 .incbin "textures/standalone/texture_65315C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture653608
+glabel _gTexture653608
 .incbin "textures/standalone/texture_653608.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture653DB0
+glabel _gTexture653DB0
 .incbin "textures/standalone/texture_653DB0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture654460
+glabel _gTexture654460
 .incbin "textures/standalone/texture_654460.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture654F74
+glabel _gTexture654F74
 .incbin "textures/standalone/texture_654F74.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture655998
+glabel _gTexture655998
 .incbin "textures/standalone/texture_655998.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture655F38
+glabel _gTexture655F38
 .incbin "textures/standalone/texture_655F38.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture656AF4
+glabel _gTexture656AF4
 .incbin "textures/standalone/texture_656AF4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6575C8
+glabel _gTexture6575C8
 .incbin "textures/standalone/texture_6575C8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture658370
+glabel _gTexture658370
 .incbin "textures/standalone/texture_658370.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture65912C
+glabel _gTexture65912C
 .incbin "textures/standalone/texture_65912C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture659EE8
+glabel _gTexture659EE8
 .incbin "textures/standalone/texture_659EE8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture65ADE0
+glabel _gTexture65ADE0
 .incbin "textures/standalone/texture_65ADE0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture65BB3C
+glabel _gTexture65BB3C
 .incbin "textures/standalone/texture_65BB3C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture65C8DC
+glabel _gTexture65C8DC
 .incbin "textures/standalone/texture_65C8DC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture65D5D4
+glabel _gTexture65D5D4
 .incbin "textures/standalone/texture_65D5D4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture65E2EC
+glabel _gTexture65E2EC
 .incbin "textures/standalone/texture_65E2EC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture65E59C
+glabel _gTexture65E59C
 .incbin "textures/standalone/texture_65E59C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture65EAEC
+glabel _gTexture65EAEC
 .incbin "textures/standalone/texture_65EAEC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture65EE38
+glabel _gTexture65EE38
 .incbin "textures/standalone/texture_65EE38.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture65FB18
+glabel _gTexture65FB18
 .incbin "textures/standalone/texture_65FB18.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignPinkArrow
+glabel _gTextureSignPinkArrow
 .incbin "textures/standalone/sign_pink_arrow.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureCrownJewelBlue
+glabel _gTextureCrownJewelBlue
 .incbin "textures/standalone/crown_jewel_blue.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureCrown
+glabel _gTextureCrown
 .incbin "textures/standalone/crown.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureCrownJewelPink
+glabel _gTextureCrownJewelPink
 .incbin "textures/standalone/crown_jewel_pink.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6607C0
+glabel _gTexture6607C0
 .incbin "textures/standalone/texture_6607C0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6608C8
+glabel _gTexture6608C8
 .incbin "textures/standalone/texture_6608C8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6609D0
+glabel _gTexture6609D0
 .incbin "textures/standalone/texture_6609D0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture660D8C
+glabel _gTexture660D8C
 .incbin "textures/standalone/texture_660D8C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureRoofTile
+glabel _gTextureRoofTile
 .incbin "textures/standalone/roof_tile.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureCastleBricks
+glabel _gTextureCastleBricks
 .incbin "textures/standalone/castle_bricks.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureCastleBridge
+glabel _gTextureCastleBridge
 .incbin "textures/standalone/castle_bridge.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGrass8
+glabel _gTextureGrass8
 .incbin "textures/standalone/grass_8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGrass9
+glabel _gTextureGrass9
 .incbin "textures/standalone/grass_9.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66262C
+glabel _gTexture66262C
 .incbin "textures/standalone/texture_66262C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture662924
+glabel _gTexture662924
 .incbin "textures/standalone/texture_662924.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture662A34
+glabel _gTexture662A34
 .incbin "textures/standalone/texture_662A34.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignToadYellow
+glabel _gTextureSignToadYellow
 .incbin "textures/standalone/sign_toad_yellow.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignToadGreen
+glabel _gTextureSignToadGreen
 .incbin "textures/standalone/sign_toad_green.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignToadRed
+glabel _gTextureSignToadRed
 .incbin "textures/standalone/sign_toad_red.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture663F90
+glabel _gTexture663F90
 .incbin "textures/standalone/texture_663F90.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6640B4
+glabel _gTexture6640B4
 .incbin "textures/standalone/texture_6640B4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6642A4
+glabel _gTexture6642A4
 .incbin "textures/standalone/texture_6642A4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture664408
+glabel _gTexture664408
 .incbin "textures/standalone/texture_664408.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6646B8
+glabel _gTexture6646B8
 .incbin "textures/standalone/texture_6646B8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignKoopaAir0
+glabel _gTextureSignKoopaAir0
 .incbin "textures/standalone/sign_koopa_air_0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignKoopaAir1
+glabel _gTextureSignKoopaAir1
 .incbin "textures/standalone/sign_koopa_air_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureBricksRed
+glabel _gTextureBricksRed
 .incbin "textures/standalone/bricks_red.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture665C0C
+glabel _gTexture665C0C
 .incbin "textures/standalone/texture_665C0C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6661AC
+glabel _gTexture6661AC
 .incbin "textures/standalone/texture_6661AC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6663A4
+glabel _gTexture6663A4
 .incbin "textures/standalone/texture_6663A4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignBowser0
+glabel _gTextureSignBowser0
 .incbin "textures/standalone/sign_bowser_0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignBowser1
+glabel _gTextureSignBowser1
 .incbin "textures/standalone/sign_bowser_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGrass10
+glabel _gTextureGrass10
 .incbin "textures/standalone/grass_10.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGrass11
+glabel _gTextureGrass11
 .incbin "textures/standalone/grass_11.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture667BAC
+glabel _gTexture667BAC
 .incbin "textures/standalone/texture_667BAC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture668228
+glabel _gTexture668228
 .incbin "textures/standalone/texture_668228.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture668358
+glabel _gTexture668358
 .incbin "textures/standalone/texture_668358.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6684F8
+glabel _gTexture6684F8
 .incbin "textures/standalone/texture_6684F8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture668608
+glabel _gTexture668608
 .incbin "textures/standalone/texture_668608.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture668728
+glabel _gTexture668728
 .incbin "textures/standalone/texture_668728.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture668920
+glabel _gTexture668920
 .incbin "textures/standalone/texture_668920.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGrass12
+glabel _gTextureGrass12
 .incbin "textures/standalone/grass_12.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture669570
+glabel _gTexture669570
 .incbin "textures/standalone/texture_669570.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66A3DC
+glabel _gTexture66A3DC
 .incbin "textures/standalone/texture_66A3DC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66ABA4
+glabel _gTexture66ABA4
 .incbin "textures/standalone/texture_66ABA4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66AEB8
+glabel _gTexture66AEB8
 .incbin "textures/standalone/texture_66AEB8.ia16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignLuigiFace0
+glabel _gTextureSignLuigiFace0
 .incbin "textures/standalone/sign_luigi_face_0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignLuigiFace1
+glabel _gTextureSignLuigiFace1
 .incbin "textures/standalone/sign_luigi_face_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignLuigis0
+glabel _gTextureSignLuigis0
 .incbin "textures/standalone/sign_luigis_0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignLuigis1
+glabel _gTextureSignLuigis1
 .incbin "textures/standalone/sign_luigis_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignMarioStar0
+glabel _gTextureSignMarioStar0
 .incbin "textures/standalone/sign_mario_star_0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignMarioStar1
+glabel _gTextureSignMarioStar1
 .incbin "textures/standalone/sign_mario_star_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66C7A8
+glabel _gTexture66C7A8
 .incbin "textures/standalone/texture_66C7A8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66C8F4
+glabel _gTexture66C8F4
 .incbin "textures/standalone/texture_66C8F4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66CA98
+glabel _gTexture66CA98
 .incbin "textures/standalone/texture_66CA98.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66CD64
+glabel _gTexture66CD64
 .incbin "textures/standalone/texture_66CD64.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66D024
+glabel _gTexture66D024
 .incbin "textures/standalone/texture_66D024.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureFlagRed2
+glabel _gTextureFlagRed2
 .incbin "textures/standalone/flag_red_2.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66D698
+glabel _gTexture66D698
 .incbin "textures/standalone/texture_66D698.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureCheckerboardPink
+glabel _gTextureCheckerboardPink
 .incbin "textures/standalone/checkerboard_pink.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66DB60
+glabel _gTexture66DB60
 .incbin "textures/standalone/texture_66DB60.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66DD38
+glabel _gTexture66DD38
 .incbin "textures/standalone/texture_66DD38.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignNintendoRed0
+glabel _gTextureSignNintendoRed0
 .incbin "textures/standalone/sign_nintendo_red_0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignNintendoRed1
+glabel _gTextureSignNintendoRed1
 .incbin "textures/standalone/sign_nintendo_red_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66E608
+glabel _gTexture66E608
 .incbin "textures/standalone/texture_66E608.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66EBF0
+glabel _gTexture66EBF0
 .incbin "textures/standalone/texture_66EBF0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture66ED38
+glabel _gTexture66ED38
 .incbin "textures/standalone/texture_66ED38.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureStainglassPeach0
+glabel _gTextureStainglassPeach0
 .incbin "textures/standalone/stainglass_peach_0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureStainglassPeach1
+glabel _gTextureStainglassPeach1
 .incbin "textures/standalone/stainglass_peach_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture670AC8
+glabel _gTexture670AC8
 .incbin "textures/standalone/texture_670AC8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture671A88
+glabel _gTexture671A88
 .incbin "textures/standalone/texture_671A88.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureRailroadTrack
+glabel _gTextureRailroadTrack
 .incbin "textures/standalone/railroad_track.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureRailroadCrossingTrack
+glabel _gTextureRailroadCrossingTrack
 .incbin "textures/standalone/railroad_crossing_track.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67291C
+glabel _gTexture67291C
 .incbin "textures/standalone/texture_67291C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureRainbow
+glabel _gTextureRainbow
 .incbin "textures/standalone/rainbow.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture673118
+glabel _gTexture673118
 .incbin "textures/standalone/texture_673118.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6733CC
+glabel _gTexture6733CC
 .incbin "textures/standalone/texture_6733CC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6735DC
+glabel _gTexture6735DC
 .incbin "textures/standalone/texture_6735DC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture673990
+glabel _gTexture673990
 .incbin "textures/standalone/texture_673990.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture673C68
+glabel _gTexture673C68
 .incbin "textures/standalone/texture_673C68.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture673FF8
+glabel _gTexture673FF8
 .incbin "textures/standalone/texture_673FF8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture674354
+glabel _gTexture674354
 .incbin "textures/standalone/texture_674354.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6747C4
+glabel _gTexture6747C4
 .incbin "textures/standalone/texture_6747C4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67490C
+glabel _gTexture67490C
 .incbin "textures/standalone/texture_67490C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture674B28
+glabel _gTexture674B28
 .incbin "textures/standalone/texture_674B28.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture674D58
+glabel _gTexture674D58
 .incbin "textures/standalone/texture_674D58.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture675064
+glabel _gTexture675064
 .incbin "textures/standalone/texture_675064.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture675220
+glabel _gTexture675220
 .incbin "textures/standalone/texture_675220.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture675434
+glabel _gTexture675434
 .incbin "textures/standalone/texture_675434.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureRoad0
+glabel _gTextureRoad0
 .incbin "textures/standalone/road_0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureRoad1
+glabel _gTextureRoad1
 .incbin "textures/standalone/road_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureRoad2
+glabel _gTextureRoad2
 .incbin "textures/standalone/road_2.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureRoad3
+glabel _gTextureRoad3
 .incbin "textures/standalone/road_3.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureRoad4
+glabel _gTextureRoad4
 .incbin "textures/standalone/road_4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureRoad5
+glabel _gTextureRoad5
 .incbin "textures/standalone/road_5.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureRoadFinish0
+glabel _gTextureRoadFinish0
 .incbin "textures/standalone/road_finish_0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureRoadFinish1
+glabel _gTextureRoadFinish1
 .incbin "textures/standalone/road_finish_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture676C6C
+glabel _gTexture676C6C
 .incbin "textures/standalone/texture_676C6C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture676D7C
+glabel _gTexture676D7C
 .incbin "textures/standalone/texture_676D7C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture676EA8
+glabel _gTexture676EA8
 .incbin "textures/standalone/texture_676EA8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture676FB0
+glabel _gTexture676FB0
 .incbin "textures/standalone/texture_676FB0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6774D8
+glabel _gTexture6774D8
 .incbin "textures/standalone/texture_6774D8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6775EC
+glabel _gTexture6775EC
 .incbin "textures/standalone/texture_6775EC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureFenceBarbedWire
+glabel _gTextureFenceBarbedWire
 .incbin "textures/standalone/fence_barbed_wire.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture677A40
+glabel _gTexture677A40
 .incbin "textures/standalone/texture_677A40.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignFallingRocks
+glabel _gTextureSignFallingRocks
 .incbin "textures/standalone/sign_falling_rocks.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignBackside
+glabel _gTextureSignBackside
 .incbin "textures/standalone/sign_backside.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture677F04
+glabel _gTexture677F04
 .incbin "textures/standalone/texture_677F04.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture678118
+glabel _gTexture678118
 .incbin "textures/standalone/texture_678118.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67842C
+glabel _gTexture67842C
 .incbin "textures/standalone/texture_67842C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67893C
+glabel _gTexture67893C
 .incbin "textures/standalone/texture_67893C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture678CC8
+glabel _gTexture678CC8
 .incbin "textures/standalone/texture_678CC8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture679258
+glabel _gTexture679258
 .incbin "textures/standalone/texture_679258.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67973C
+glabel _gTexture67973C
 .incbin "textures/standalone/texture_67973C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture679C04
+glabel _gTexture679C04
 .incbin "textures/standalone/texture_679C04.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture679D34
+glabel _gTexture679D34
 .incbin "textures/standalone/texture_679D34.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureStarOutline
+glabel _gTextureStarOutline
 .incbin "textures/standalone/star_outline.ia16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67A1B8
+glabel _gTexture67A1B8
 .incbin "textures/standalone/texture_67A1B8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67A370
+glabel _gTexture67A370
 .incbin "textures/standalone/texture_67A370.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67A91C
+glabel _gTexture67A91C
 .incbin "textures/standalone/texture_67A91C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67ADF0
+glabel _gTexture67ADF0
 .incbin "textures/standalone/texture_67ADF0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67B388
+glabel _gTexture67B388
 .incbin "textures/standalone/texture_67B388.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67B75C
+glabel _gTexture67B75C
 .incbin "textures/standalone/texture_67B75C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67B864
+glabel _gTexture67B864
 .incbin "textures/standalone/texture_67B864.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67B9B0
+glabel _gTexture67B9B0
 .incbin "textures/standalone/texture_67B9B0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67BBD8
+glabel _gTexture67BBD8
 .incbin "textures/standalone/texture_67BBD8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67BEE8
+glabel _gTexture67BEE8
 .incbin "textures/standalone/texture_67BEE8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSandFinish
+glabel _gTextureSandFinish
 .incbin "textures/standalone/sand_finish.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureWaves0
+glabel _gTextureWaves0
 .incbin "textures/standalone/waves_0.ia16.mio0"
 
 .balign 4, 0x00
-glabel gTextureWaves1
+glabel _gTextureWaves1
 .incbin "textures/standalone/waves_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureWaves2
+glabel _gTextureWaves2
 .incbin "textures/standalone/waves_2.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67D304
+glabel _gTexture67D304
 .incbin "textures/standalone/texture_67D304.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67DC20
+glabel _gTexture67DC20
 .incbin "textures/standalone/texture_67DC20.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67E010
+glabel _gTexture67E010
 .incbin "textures/standalone/texture_67E010.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67E428
+glabel _gTexture67E428
 .incbin "textures/standalone/texture_67E428.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67EEAC
+glabel _gTexture67EEAC
 .incbin "textures/standalone/texture_67EEAC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67EFEC
+glabel _gTexture67EFEC
 .incbin "textures/standalone/texture_67EFEC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67F15C
+glabel _gTexture67F15C
 .incbin "textures/standalone/texture_67F15C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67F450
+glabel _gTexture67F450
 .incbin "textures/standalone/texture_67F450.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignWarioFace
+glabel _gTextureSignWarioFace
 .incbin "textures/standalone/sign_wario_face.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture67FE0C
+glabel _gTexture67FE0C
 .incbin "textures/standalone/texture_67FE0C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignWelcome0
+glabel _gTextureSignWelcome0
 .incbin "textures/standalone/sign_welcome_0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignWelcome1
+glabel _gTextureSignWelcome1
 .incbin "textures/standalone/sign_welcome_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignWoodenBack0
+glabel _gTextureSignWoodenBack0
 .incbin "textures/standalone/sign_wooden_back_0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignWoodenBack1
+glabel _gTextureSignWoodenBack1
 .incbin "textures/standalone/sign_wooden_back_1.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureWheelSteamEngine
+glabel _gTextureWheelSteamEngine
 .incbin "textures/standalone/wheel_steam_engine.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureWheelSteamEngineReal
+glabel _gTextureWheelSteamEngineReal
 .incbin "textures/standalone/wheel_steam_engine_real.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68272C
+glabel _gTexture68272C
 .incbin "textures/standalone/texture_68272C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture682928
+glabel _gTexture682928
 .incbin "textures/standalone/texture_682928.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture682B24
+glabel _gTexture682B24
 .incbin "textures/standalone/texture_682B24.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture682D20
+glabel _gTexture682D20
 .incbin "textures/standalone/texture_682D20.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture682F1C
+glabel _gTexture682F1C
 .incbin "textures/standalone/texture_682F1C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture683118
+glabel _gTexture683118
 .incbin "textures/standalone/texture_683118.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture683314
+glabel _gTexture683314
 .incbin "textures/standalone/texture_683314.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6835F0
+glabel _gTexture6835F0
 .incbin "textures/standalone/texture_6835F0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture683844
+glabel _gTexture683844
 .incbin "textures/standalone/texture_683844.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureFencePostWooden
+glabel _gTextureFencePostWooden
 .incbin "textures/standalone/fence_post_wooden.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6846DC
+glabel _gTexture6846DC
 .incbin "textures/standalone/texture_6846DC.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureFenceRope
+glabel _gTextureFenceRope
 .incbin "textures/standalone/fence_rope.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture685108
+glabel _gTexture685108
 .incbin "textures/standalone/texture_685108.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignWoodRedArrow
+glabel _gTextureSignWoodRedArrow
 .incbin "textures/standalone/sign_wood_red_arrow.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture685AC0
+glabel _gTexture685AC0
 .incbin "textures/standalone/texture_685AC0.ia16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignGreenArrow
+glabel _gTextureSignGreenArrow
 .incbin "textures/standalone/sign_green_arrow.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6864E8
+glabel _gTexture6864E8
 .incbin "textures/standalone/texture_6864E8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture686CF0
+glabel _gTexture686CF0
 .incbin "textures/standalone/texture_686CF0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture6875A8
+glabel _gTexture6875A8
 .incbin "textures/standalone/texture_6875A8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture687EE8
+glabel _gTexture687EE8
 .incbin "textures/standalone/texture_687EE8.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68876C
+glabel _gTexture68876C
 .incbin "textures/standalone/texture_68876C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture689230
+glabel _gTexture689230
 .incbin "textures/standalone/texture_689230.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture689C00
+glabel _gTexture689C00
 .incbin "textures/standalone/texture_689C00.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68A484
+glabel _gTexture68A484
 .incbin "textures/standalone/texture_68A484.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68AC5C
+glabel _gTexture68AC5C
 .incbin "textures/standalone/texture_68AC5C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68B6A4
+glabel _gTexture68B6A4
 .incbin "textures/standalone/texture_68B6A4.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68BE6C
+glabel _gTexture68BE6C
 .incbin "textures/standalone/texture_68BE6C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68C310
+glabel _gTexture68C310
 .incbin "textures/standalone/texture_68C310.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68C620
+glabel _gTexture68C620
 .incbin "textures/standalone/texture_68C620.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68C79C
+glabel _gTexture68C79C
 .incbin "textures/standalone/texture_68C79C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68C944
+glabel _gTexture68C944
 .incbin "textures/standalone/texture_68C944.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68CA94
+glabel _gTexture68CA94
 .incbin "textures/standalone/texture_68CA94.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68CC0C
+glabel _gTexture68CC0C
 .incbin "textures/standalone/texture_68CC0C.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68CDA0
+glabel _gTexture68CDA0
 .incbin "textures/standalone/texture_68CDA0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureSignYoshi
+glabel _gTextureSignYoshi
 .incbin "textures/standalone/sign_yoshi.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureCheckerboardBlueGray
+glabel _gTextureCheckerboardBlueGray
 .incbin "textures/standalone/checkerboard_blue_gray.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68D834
+glabel _gTexture68D834
 .incbin "textures/standalone/texture_68D834.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68D940
+glabel _gTexture68D940
 .incbin "textures/standalone/texture_68D940.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68DEC0
+glabel _gTexture68DEC0
 .incbin "textures/standalone/texture_68DEC0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture68E2D0
+glabel _gTexture68E2D0
 .incbin "textures/standalone/texture_68E2D0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureGreenShell0
+glabel _gTextureGreenShell0
 .incbin "assets/greenshell/gTextureGreenShell0.mio0"
 
 .balign 4, 0x00
-glabel gTextureGreenShell1
+glabel _gTextureGreenShell1
 .incbin "assets/greenshell/gTextureGreenShell1.mio0"
 
 .balign 4, 0x00
-glabel gTextureGreenShell2
+glabel _gTextureGreenShell2
 .incbin "assets/greenshell/gTextureGreenShell2.mio0"
 
 .balign 4, 0x00
-glabel gTextureGreenShell3
+glabel _gTextureGreenShell3
 .incbin "assets/greenshell/gTextureGreenShell3.mio0"
 
 .balign 4, 0x00
-glabel gTextureGreenShell4
+glabel _gTextureGreenShell4
 .incbin "assets/greenshell/gTextureGreenShell4.mio0"
 
 .balign 4, 0x00
-glabel gTextureGreenShell5
+glabel _gTextureGreenShell5
 .incbin "assets/greenshell/gTextureGreenShell5.mio0"
 
 .balign 4, 0x00
-glabel gTextureGreenShell6
+glabel _gTextureGreenShell6
 .incbin "assets/greenshell/gTextureGreenShell6.mio0"
 
 .balign 4, 0x00
-glabel gTextureGreenShell7
+glabel _gTextureGreenShell7
 .incbin "assets/greenshell/gTextureGreenShell7.mio0"
 
 .balign 4, 0x00
-glabel gTextureBlueShell0
+glabel _gTextureBlueShell0
 .incbin "assets/blueshell/gTextureBlueShell0.mio0"
 
 .balign 4, 0x00
-glabel gTextureBlueShell1
+glabel _gTextureBlueShell1
 .incbin "assets/blueshell/gTextureBlueShell1.mio0"
 
 .balign 4, 0x00
-glabel gTextureBlueShell2
+glabel _gTextureBlueShell2
 .incbin "assets/blueshell/gTextureBlueShell2.mio0"
 
 .balign 4, 0x00
-glabel gTextureBlueShell3
+glabel _gTextureBlueShell3
 .incbin "assets/blueshell/gTextureBlueShell3.mio0"
 
 .balign 4, 0x00
-glabel gTextureBlueShell4
+glabel _gTextureBlueShell4
 .incbin "assets/blueshell/gTextureBlueShell4.mio0"
 
 .balign 4, 0x00
-glabel gTextureBlueShell5
+glabel _gTextureBlueShell5
 .incbin "assets/blueshell/gTextureBlueShell5.mio0"
 
 .balign 4, 0x00
-glabel gTextureBlueShell6
+glabel _gTextureBlueShell6
 .incbin "assets/blueshell/gTextureBlueShell6.mio0"
 
 .balign 4, 0x00
-glabel gTextureBlueShell7
+glabel _gTextureBlueShell7
 .incbin "assets/blueshell/gTextureBlueShell7.mio0"
 
 .balign 4, 0x00
-glabel gTextureQuestionMarkYellow
+glabel _gTextureQuestionMarkYellow
 .incbin "textures/standalone/question_mark_yellow.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureTrees1
+glabel _gTextureTrees1
 .incbin "assets/trees/gTextureTrees1.mio0"
 
 .balign 4, 0x00
-glabel gTextureTrees2
+glabel _gTextureTrees2
 .incbin "assets/trees/gTextureTrees2.mio0"
 
 .balign 4, 0x00
-glabel gTextureTrees3
+glabel _gTextureTrees3
 .incbin "assets/trees/gTextureTrees3.mio0"
 
 .balign 4, 0x00
-glabel gTextureTrees4Left
+glabel _gTextureTrees4Left
 .incbin "assets/trees/gTextureTrees4Left.mio0"
 
 .balign 4, 0x00
-glabel gTextureTrees4Right
+glabel _gTextureTrees4Right
 .incbin "assets/trees/gTextureTrees4Right.mio0"
 
 .balign 4, 0x00
-glabel gTextureTrees5Left
+glabel _gTextureTrees5Left
 .incbin "assets/trees/gTextureTrees5Left.mio0"
 
 .balign 4, 0x00
-glabel gTextureTrees5Right
+glabel _gTextureTrees5Right
 .incbin "assets/trees/gTextureTrees5Right.mio0"
 
 .balign 4, 0x00
-glabel gTextureTrees6
+glabel _gTextureTrees6
 .incbin "assets/trees/gTextureTrees6.mio0"
 
 .balign 4, 0x00
-glabel gTextureTrees7
+glabel _gTextureTrees7
 .incbin "assets/trees/gTextureTrees7.mio0"
 
 .balign 4, 0x00
-glabel gTextureShrub
+glabel _gTextureShrub
 .incbin "textures/standalone/shrub.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureFrappeSnowlandTreeLeft
+glabel _gTextureFrappeSnowlandTreeLeft
 .incbin "assets/courses/frappe_snowland/gTextureFrappeSnowlandTreeLeft.mio0"
 
 .balign 4, 0x00
-glabel gTextureFrappeSnowlandTreeRight
+glabel _gTextureFrappeSnowlandTreeRight
 .incbin "assets/courses/frappe_snowland/gTextureFrappeSnowlandTreeRight.mio0"
 
 .balign 4, 0x00
-glabel gTextureCow01Left
+glabel _gTextureCow01Left
 .incbin "assets/courses/moo_moo_farm/gTextureCow01Left.mio0"
 
 .balign 4, 0x00
-glabel gTextureCow01Right
+glabel _gTextureCow01Right
 .incbin "assets/courses/moo_moo_farm/gTextureCow01Right.mio0"
 
 .balign 4, 0x00
-glabel gTextureCow02Left
+glabel _gTextureCow02Left
 .incbin "assets/courses/moo_moo_farm/gTextureCow02Left.mio0"
 
 .balign 4, 0x00
-glabel gTextureCow02Right
+glabel _gTextureCow02Right
 .incbin "assets/courses/moo_moo_farm/gTextureCow02Right.mio0"
 
 .balign 4, 0x00
-glabel gTextureCow03Left
+glabel _gTextureCow03Left
 .incbin "assets/courses/moo_moo_farm/gTextureCow03Left.mio0"
 
 .balign 4, 0x00
-glabel gTextureCow03Right
+glabel _gTextureCow03Right
 .incbin "assets/courses/moo_moo_farm/gTextureCow03Right.mio0"
 
 .balign 4, 0x00
-glabel gTextureCow04Left
+glabel _gTextureCow04Left
 .incbin "assets/courses/moo_moo_farm/gTextureCow04Left.mio0"
 
 .balign 4, 0x00
-glabel gTextureCow04Right
+glabel _gTextureCow04Right
 .incbin "assets/courses/moo_moo_farm/gTextureCow04Right.mio0"
 
 .balign 4, 0x00
-glabel gTextureCow05Left
+glabel _gTextureCow05Left
 .incbin "assets/courses/moo_moo_farm/gTextureCow05Left.mio0"
 
 .balign 4, 0x00
-glabel gTextureCow05Right
+glabel _gTextureCow05Right
 .incbin "assets/courses/moo_moo_farm/gTextureCow05Right.mio0"
 
 .balign 4, 0x00
-glabel gTextureCactus1Left
+glabel _gTextureCactus1Left
 .incbin "assets/courses/kalimari_desert/gTextureCactus1Left.mio0"
 
 .balign 4, 0x00
-glabel gTextureCactus1Right
+glabel _gTextureCactus1Right
 .incbin "assets/courses/kalimari_desert/gTextureCactus1Right.mio0"
 
 .balign 4, 0x00
-glabel gTextureCactus2Left
+glabel _gTextureCactus2Left
 .incbin "assets/courses/kalimari_desert/gTextureCactus2Left.mio0"
 
 .balign 4, 0x00
-glabel gTextureCactus2Right
+glabel _gTextureCactus2Right
 .incbin "assets/courses/kalimari_desert/gTextureCactus2Right.mio0"
 
 .balign 4, 0x00
-glabel gTextureCactus3
+glabel _gTextureCactus3
 .incbin "assets/courses/kalimari_desert/gTextureCactus3.mio0"
 
 .balign 4, 0x00
-glabel gTextureFinishLineBanner1
+glabel _gTextureFinishLineBanner1
 .incbin "assets/finish_line_banner/gTextureFinishLineBanner1.mio0"
 
 .balign 4, 0x00
-glabel gTextureFinishLineBanner2
+glabel _gTextureFinishLineBanner2
 .incbin "assets/finish_line_banner/gTextureFinishLineBanner2.mio0"
 
 .balign 4, 0x00
-glabel gTextureFinishLineBanner3
+glabel _gTextureFinishLineBanner3
 .incbin "assets/finish_line_banner/gTextureFinishLineBanner3.mio0"
 
 .balign 4, 0x00
-glabel gTextureFinishLineBanner4
+glabel _gTextureFinishLineBanner4
 .incbin "assets/finish_line_banner/gTextureFinishLineBanner4.mio0"
 
 .balign 4, 0x00
-glabel gTextureFinishLineBanner5
+glabel _gTextureFinishLineBanner5
 .incbin "assets/finish_line_banner/gTextureFinishLineBanner5.mio0"
 
 .balign 4, 0x00
-glabel gTextureFinishLineBanner6
+glabel _gTextureFinishLineBanner6
 .incbin "assets/finish_line_banner/gTextureFinishLineBanner6.mio0"
 
 .balign 4, 0x00
-glabel gTextureFinishLineBanner7
+glabel _gTextureFinishLineBanner7
 .incbin "assets/finish_line_banner/gTextureFinishLineBanner7.mio0"
 
 .balign 4, 0x00
-glabel gTextureFinishLineBanner8
+glabel _gTextureFinishLineBanner8
 .incbin "assets/finish_line_banner/gTextureFinishLineBanner8.mio0"
 
 .balign 4, 0x00
-glabel gTexturePiranhaPlant1
+glabel _gTexturePiranhaPlant1
 .incbin "assets/courses/mario_raceway/gTexturePiranhaPlant1.mio0"
 
 .balign 4, 0x00
-glabel gTexturePiranhaPlant2
+glabel _gTexturePiranhaPlant2
 .incbin "assets/courses/mario_raceway/gTexturePiranhaPlant2.mio0"
 
 .balign 4, 0x00
-glabel gTexturePiranhaPlant3
+glabel _gTexturePiranhaPlant3
 .incbin "assets/courses/mario_raceway/gTexturePiranhaPlant3.mio0"
 
 .balign 4, 0x00
-glabel gTexturePiranhaPlant4
+glabel _gTexturePiranhaPlant4
 .incbin "assets/courses/mario_raceway/gTexturePiranhaPlant4.mio0"
 
 .balign 4, 0x00
-glabel gTexturePiranhaPlant5
+glabel _gTexturePiranhaPlant5
 .incbin "assets/courses/mario_raceway/gTexturePiranhaPlant5.mio0"
 
 .balign 4, 0x00
-glabel gTexturePiranhaPlant6
+glabel _gTexturePiranhaPlant6
 .incbin "assets/courses/mario_raceway/gTexturePiranhaPlant6.mio0"
 
 .balign 4, 0x00
-glabel gTexturePiranhaPlant7
+glabel _gTexturePiranhaPlant7
 .incbin "assets/courses/mario_raceway/gTexturePiranhaPlant7.mio0"
 
 .balign 4, 0x00
-glabel gTexturePiranhaPlant8
+glabel _gTexturePiranhaPlant8
 .incbin "assets/courses/mario_raceway/gTexturePiranhaPlant8.mio0"
 
 .balign 4, 0x00
-glabel gTexturePiranhaPlant9
+glabel _gTexturePiranhaPlant9
 .incbin "assets/courses/mario_raceway/gTexturePiranhaPlant9.mio0"
 
 .balign 4, 0x00
-glabel gTexture6997E0
+glabel _gTexture6997E0
 .incbin "textures/standalone/texture_6997E0.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTextureDksJungleParkwayKiwanoFruit1
+glabel _gTextureDksJungleParkwayKiwanoFruit1
 .incbin "assets/courses/dks_jungle_parkway/gTextureDksJungleParkwayKiwanoFruit1.mio0"
 
 .balign 4, 0x00
-glabel gTextureDksJungleParkwayKiwanoFruit2
+glabel _gTextureDksJungleParkwayKiwanoFruit2
 .incbin "assets/courses/dks_jungle_parkway/gTextureDksJungleParkwayKiwanoFruit2.mio0"
 
 .balign 4, 0x00
-glabel gTextureDksJungleParkwayKiwanoFruit3
+glabel _gTextureDksJungleParkwayKiwanoFruit3
 .incbin "assets/courses/dks_jungle_parkway/gTextureDksJungleParkwayKiwanoFruit3.mio0"
 
 .balign 16, 0x00
-glabel gTextureKartShadow
+glabel _gTextureKartShadow
 .incbin "textures/standalone/kart_shadow.i8.mio0"
 
 .balign 4, 0x00
-glabel gTexture69B03C
+glabel _gTexture69B03C
 .incbin "textures/standalone/texture_69B03C.i8.mio0"
 
 .balign 4, 0x00
-glabel gTexture69B140
+glabel _gTexture69B140
 .incbin "textures/standalone/texture_69B140.i8.mio0"
 
 .balign 4, 0x00
-glabel gTexture69B378
+glabel _gTexture69B378
 .incbin "textures/standalone/texture_69B378.rgba16.mio0"
 
 .balign 4, 0x00
-glabel gTexture69B960
+glabel _gTexture69B960
 .incbin "textures/standalone/texture_69B960.i8.mio0"
 
 .balign 4, 0x00
-glabel gTexture69BA28
+glabel _gTexture69BA28
 .incbin "textures/standalone/texture_69BA28.i8.mio0"
 
 .balign 4, 0x00
-glabel gTextureBoingExclamation
+glabel _gTextureBoingExclamation
 .incbin "textures/standalone/boing_exclamation.ia8.mio0"
 
 .balign 4, 0x00
-glabel gTexture69BE6C
+glabel _gTexture69BE6C
 .incbin "textures/standalone/texture_69BE6C.ia16.mio0"
 
 .balign 4, 0x00
-glabel gTexture69BF54
+glabel _gTexture69BF54
 .incbin "textures/standalone/texture_69BF54.ia16.mio0"
 
 .balign 4, 0x00
-glabel gTexture69C090
+glabel _gTexture69C090
 .incbin "textures/standalone/texture_69C090.ia16.mio0"
 
 .balign 4, 0x00
-glabel gTexture69C1E8
+glabel _gTexture69C1E8
 .incbin "textures/standalone/texture_69C1E8.ia16.mio0"
 
 .balign 4, 0x00
-glabel gTexture69C354
+glabel _gTexture69C354
 .incbin "textures/standalone/texture_69C354.ia8.mio0"
 
 .balign 4, 0x00
-glabel gTexture69C4E4
+glabel _gTexture69C4E4
 .incbin "textures/standalone/texture_69C4E4.i8.mio0"
 
 .balign 4, 0x00
-glabel gTexture69C80C
+glabel _gTexture69C80C
 .incbin "textures/standalone/texture_69C80C.ia8.mio0"
 
 .balign 4, 0x00
-glabel gTexture69C9C4
+glabel _gTexture69C9C4
 .incbin "textures/standalone/texture_69C9C4.ia16.mio0"
 
 .balign 4, 0x00
-glabel gTexture69CB84
+glabel _gTexture69CB84
 .incbin "textures/standalone/texture_69CB84.i4.mio0"
 
 .balign 4, 0x00
-glabel gTexture69CCEC
+glabel _gTexture69CCEC
 .incbin "textures/standalone/texture_69CCEC.i4.mio0"
 
 .balign 4, 0x00
-glabel gTexture69CEB8
+glabel _gTexture69CEB8
 .incbin "textures/standalone/texture_69CEB8.i4.mio0"
 
 .balign 4, 0x00
-glabel gTexture69D148
+glabel _gTexture69D148
 .incbin "textures/standalone/texture_69D148.i4.mio0"
 
 .balign 4, 0x00
-glabel gTexture69D4E0
+glabel _gTexture69D4E0
 .incbin "textures/standalone/texture_69D4E0.i4.mio0"
 
 .balign 4, 0x00
-glabel gTexture69D8FC
+glabel _gTexture69D8FC
 .incbin "textures/standalone/texture_69D8FC.i4.mio0"
 
 .balign 4, 0x00
-glabel gTexture69DCB4
+glabel _gTexture69DCB4
 .incbin "textures/standalone/texture_69DCB4.i4.mio0"
 
 .balign 4, 0x00
-glabel gTexture69DFA0
+glabel _gTexture69DFA0
 .incbin "textures/standalone/texture_69DFA0.i4.mio0"
 
 .balign 4, 0x00
-glabel gTexture69E25C
+glabel _gTexture69E25C
 .incbin "textures/standalone/texture_69E25C.i4.mio0"
 
 .balign 4, 0x00
-glabel gTexture69E518
+glabel _gTexture69E518
 .incbin "textures/standalone/texture_69E518.i4.mio0"
 
 .balign 4, 0x00
-glabel gTexture69E7A8
+glabel _gTexture69E7A8
 .incbin "textures/standalone/texture_69E7A8.i4.mio0"
 
 .balign 4, 0x00
-glabel gTexture69EA18
+glabel _gTexture69EA18
 .incbin "textures/standalone/texture_69EA18.i4.mio0"
 
 .balign 4, 0x00
-glabel gTexture69EC54
+glabel _gTexture69EC54
 .incbin "textures/standalone/texture_69EC54.i4.mio0"
 
 .balign 4, 0x00
-glabel gTexture69EE38
+glabel _gTexture69EE38
 .incbin "textures/standalone/texture_69EE38.i4.mio0"
 
 .balign 4, 0x00
-glabel gTexture69EFE0
+glabel _gTexture69EFE0
 .incbin "textures/standalone/texture_69EFE0.i4.mio0"
 
 .balign 4, 0x00
-glabel gTextureOnomatopoeiaCrash1
+glabel _gTextureOnomatopoeiaCrash1
 .incbin "assets/onomatopoeia/gTextureOnomatopoeiaCrash1.mio0"
 
 .balign 4, 0x00
-glabel gTextureOnomatopoeiaCrash2
+glabel _gTextureOnomatopoeiaCrash2
 .incbin "assets/onomatopoeia/gTextureOnomatopoeiaCrash2.mio0"
 
 .balign 4, 0x00
-glabel gTextureOnomatopoeiaWhrrrr1
+glabel _gTextureOnomatopoeiaWhrrrr1
 .incbin "assets/onomatopoeia/gTextureOnomatopoeiaWhrrrr1.mio0"
 
 .balign 4, 0x00
-glabel gTextureOnomatopoeiaWhrrrr2
+glabel _gTextureOnomatopoeiaWhrrrr2
 .incbin "assets/onomatopoeia/gTextureOnomatopoeiaWhrrrr2.mio0"
 
 .balign 4, 0x00
-glabel gTextureOnomatopoeiaPoomp1
+glabel _gTextureOnomatopoeiaPoomp1
 .incbin "assets/onomatopoeia/gTextureOnomatopoeiaPoomp1.mio0"
 
 .balign 4, 0x00
-glabel gTextureOnomatopoeiaPoomp2
+glabel _gTextureOnomatopoeiaPoomp2
 .incbin "assets/onomatopoeia/gTextureOnomatopoeiaPoomp2.mio0"
 
 .balign 4, 0x00
-glabel gTextureBalloon1
+glabel _gTextureBalloon1
 .incbin "assets/onomatopoeia/gTextureBalloon1.mio0"
 
 .balign 4, 0x00
-glabel gTextureBalloon2
+glabel _gTextureBalloon2
 .incbin "assets/onomatopoeia/gTextureBalloon2.mio0"
 
 .balign 4, 0x00
-glabel gTextureLightningBolt0
+glabel _gTextureLightningBolt0
 .incbin "textures/standalone/lightning_zap_0.ia8.mio0"
 
 .balign 4, 0x00
-glabel gTextureLightningBolt1
+glabel _gTextureLightningBolt1
 .incbin "textures/standalone/lightning_zap_1.ia8.mio0"
 
 .balign 16, 0x00
-glabel gTextureLakituNoLights1
+glabel _gTextureLakituNoLights1
 .incbin "assets/lakitu/nolights/gTextureLakituNoLights1.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituNoLights2
+glabel _gTextureLakituNoLights2
 .incbin "assets/lakitu/nolights/gTextureLakituNoLights2.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituNoLights3
+glabel _gTextureLakituNoLights3
 .incbin "assets/lakitu/nolights/gTextureLakituNoLights3.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituNoLights4
+glabel _gTextureLakituNoLights4
 .incbin "assets/lakitu/nolights/gTextureLakituNoLights4.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituNoLights5
+glabel _gTextureLakituNoLights5
 .incbin "assets/lakitu/nolights/gTextureLakituNoLights5.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituNoLights6
+glabel _gTextureLakituNoLights6
 .incbin "assets/lakitu/nolights/gTextureLakituNoLights6.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituNoLights7
+glabel _gTextureLakituNoLights7
 .incbin "assets/lakitu/nolights/gTextureLakituNoLights7.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituNoLights8
+glabel _gTextureLakituNoLights8
 .incbin "assets/lakitu/nolights/gTextureLakituNoLights8.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights01
+glabel _gTextureLakituRedLights01
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights01.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights02
+glabel _gTextureLakituRedLights02
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights02.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights03
+glabel _gTextureLakituRedLights03
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights03.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights04
+glabel _gTextureLakituRedLights04
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights04.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights05
+glabel _gTextureLakituRedLights05
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights05.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights06
+glabel _gTextureLakituRedLights06
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights06.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights07
+glabel _gTextureLakituRedLights07
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights07.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights08
+glabel _gTextureLakituRedLights08
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights08.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights09
+glabel _gTextureLakituRedLights09
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights09.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights10
+glabel _gTextureLakituRedLights10
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights10.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights11
+glabel _gTextureLakituRedLights11
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights11.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights12
+glabel _gTextureLakituRedLights12
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights12.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights13
+glabel _gTextureLakituRedLights13
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights13.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights14
+glabel _gTextureLakituRedLights14
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights14.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights15
+glabel _gTextureLakituRedLights15
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights15.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituRedLights16
+glabel _gTextureLakituRedLights16
 .incbin "assets/lakitu/redlights/gTextureLakituRedLights16.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituBlueLight1
+glabel _gTextureLakituBlueLight1
 .incbin "assets/lakitu/bluelight/gTextureLakituBlueLight1.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituBlueLight2
+glabel _gTextureLakituBlueLight2
 .incbin "assets/lakitu/bluelight/gTextureLakituBlueLight2.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituBlueLight3
+glabel _gTextureLakituBlueLight3
 .incbin "assets/lakitu/bluelight/gTextureLakituBlueLight3.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituBlueLight4
+glabel _gTextureLakituBlueLight4
 .incbin "assets/lakitu/bluelight/gTextureLakituBlueLight4.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituBlueLight5
+glabel _gTextureLakituBlueLight5
 .incbin "assets/lakitu/bluelight/gTextureLakituBlueLight5.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituBlueLight6
+glabel _gTextureLakituBlueLight6
 .incbin "assets/lakitu/bluelight/gTextureLakituBlueLight6.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituBlueLight7
+glabel _gTextureLakituBlueLight7
 .incbin "assets/lakitu/bluelight/gTextureLakituBlueLight7.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituBlueLight8
+glabel _gTextureLakituBlueLight8
 .incbin "assets/lakitu/bluelight/gTextureLakituBlueLight8.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag01
+glabel _gTextureLakituCheckeredFlag01
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag01.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag02
+glabel _gTextureLakituCheckeredFlag02
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag02.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag03
+glabel _gTextureLakituCheckeredFlag03
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag03.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag04
+glabel _gTextureLakituCheckeredFlag04
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag04.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag05
+glabel _gTextureLakituCheckeredFlag05
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag05.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag06
+glabel _gTextureLakituCheckeredFlag06
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag06.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag07
+glabel _gTextureLakituCheckeredFlag07
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag07.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag08
+glabel _gTextureLakituCheckeredFlag08
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag08.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag09
+glabel _gTextureLakituCheckeredFlag09
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag09.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag10
+glabel _gTextureLakituCheckeredFlag10
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag10.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag11
+glabel _gTextureLakituCheckeredFlag11
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag11.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag12
+glabel _gTextureLakituCheckeredFlag12
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag12.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag13
+glabel _gTextureLakituCheckeredFlag13
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag13.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag14
+glabel _gTextureLakituCheckeredFlag14
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag14.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag15
+glabel _gTextureLakituCheckeredFlag15
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag15.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag16
+glabel _gTextureLakituCheckeredFlag16
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag16.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag17
+glabel _gTextureLakituCheckeredFlag17
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag17.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag18
+glabel _gTextureLakituCheckeredFlag18
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag18.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag19
+glabel _gTextureLakituCheckeredFlag19
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag19.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag20
+glabel _gTextureLakituCheckeredFlag20
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag20.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag21
+glabel _gTextureLakituCheckeredFlag21
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag21.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag22
+glabel _gTextureLakituCheckeredFlag22
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag22.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag23
+glabel _gTextureLakituCheckeredFlag23
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag23.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag24
+glabel _gTextureLakituCheckeredFlag24
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag24.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag25
+glabel _gTextureLakituCheckeredFlag25
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag25.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag26
+glabel _gTextureLakituCheckeredFlag26
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag26.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag27
+glabel _gTextureLakituCheckeredFlag27
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag27.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag28
+glabel _gTextureLakituCheckeredFlag28
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag28.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag29
+glabel _gTextureLakituCheckeredFlag29
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag29.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag30
+glabel _gTextureLakituCheckeredFlag30
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag30.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag31
+glabel _gTextureLakituCheckeredFlag31
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag31.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituCheckeredFlag32
+glabel _gTextureLakituCheckeredFlag32
 .incbin "assets/lakitu/checkeredflag/gTextureLakituCheckeredFlag32.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap01
+glabel _gTextureLakituSecondLap01
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap01.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap02
+glabel _gTextureLakituSecondLap02
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap02.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap03
+glabel _gTextureLakituSecondLap03
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap03.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap04
+glabel _gTextureLakituSecondLap04
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap04.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap05
+glabel _gTextureLakituSecondLap05
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap05.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap06
+glabel _gTextureLakituSecondLap06
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap06.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap07
+glabel _gTextureLakituSecondLap07
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap07.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap08
+glabel _gTextureLakituSecondLap08
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap08.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap09
+glabel _gTextureLakituSecondLap09
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap09.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap10
+glabel _gTextureLakituSecondLap10
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap10.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap11
+glabel _gTextureLakituSecondLap11
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap11.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap12
+glabel _gTextureLakituSecondLap12
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap12.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap13
+glabel _gTextureLakituSecondLap13
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap13.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap14
+glabel _gTextureLakituSecondLap14
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap14.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap15
+glabel _gTextureLakituSecondLap15
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap15.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituSecondLap16
+glabel _gTextureLakituSecondLap16
 .incbin "assets/lakitu/secondlap/gTextureLakituSecondLap16.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap01
+glabel _gTextureLakituFinalLap01
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap01.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap02
+glabel _gTextureLakituFinalLap02
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap02.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap03
+glabel _gTextureLakituFinalLap03
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap03.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap04
+glabel _gTextureLakituFinalLap04
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap04.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap05
+glabel _gTextureLakituFinalLap05
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap05.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap06
+glabel _gTextureLakituFinalLap06
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap06.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap07
+glabel _gTextureLakituFinalLap07
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap07.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap08
+glabel _gTextureLakituFinalLap08
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap08.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap09
+glabel _gTextureLakituFinalLap09
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap09.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap10
+glabel _gTextureLakituFinalLap10
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap10.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap11
+glabel _gTextureLakituFinalLap11
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap11.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap12
+glabel _gTextureLakituFinalLap12
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap12.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap13
+glabel _gTextureLakituFinalLap13
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap13.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap14
+glabel _gTextureLakituFinalLap14
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap14.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap15
+glabel _gTextureLakituFinalLap15
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap15.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFinalLap16
+glabel _gTextureLakituFinalLap16
 .incbin "assets/lakitu/finallap/gTextureLakituFinalLap16.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse01
+glabel _gTextureLakituReverse01
 .incbin "assets/lakitu/reverse/gTextureLakituReverse01.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse02
+glabel _gTextureLakituReverse02
 .incbin "assets/lakitu/reverse/gTextureLakituReverse02.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse03
+glabel _gTextureLakituReverse03
 .incbin "assets/lakitu/reverse/gTextureLakituReverse03.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse04
+glabel _gTextureLakituReverse04
 .incbin "assets/lakitu/reverse/gTextureLakituReverse04.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse05
+glabel _gTextureLakituReverse05
 .incbin "assets/lakitu/reverse/gTextureLakituReverse05.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse06
+glabel _gTextureLakituReverse06
 .incbin "assets/lakitu/reverse/gTextureLakituReverse06.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse07
+glabel _gTextureLakituReverse07
 .incbin "assets/lakitu/reverse/gTextureLakituReverse07.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse08
+glabel _gTextureLakituReverse08
 .incbin "assets/lakitu/reverse/gTextureLakituReverse08.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse09
+glabel _gTextureLakituReverse09
 .incbin "assets/lakitu/reverse/gTextureLakituReverse09.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse10
+glabel _gTextureLakituReverse10
 .incbin "assets/lakitu/reverse/gTextureLakituReverse10.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse11
+glabel _gTextureLakituReverse11
 .incbin "assets/lakitu/reverse/gTextureLakituReverse11.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse12
+glabel _gTextureLakituReverse12
 .incbin "assets/lakitu/reverse/gTextureLakituReverse12.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse13
+glabel _gTextureLakituReverse13
 .incbin "assets/lakitu/reverse/gTextureLakituReverse13.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse14
+glabel _gTextureLakituReverse14
 .incbin "assets/lakitu/reverse/gTextureLakituReverse14.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse15
+glabel _gTextureLakituReverse15
 .incbin "assets/lakitu/reverse/gTextureLakituReverse15.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituReverse16
+glabel _gTextureLakituReverse16
 .incbin "assets/lakitu/reverse/gTextureLakituReverse16.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFishing1
+glabel _gTextureLakituFishing1
 .incbin "assets/lakitu/fishing/gTextureLakituFishing1.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFishing2
+glabel _gTextureLakituFishing2
 .incbin "assets/lakitu/fishing/gTextureLakituFishing2.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFishing3
+glabel _gTextureLakituFishing3
 .incbin "assets/lakitu/fishing/gTextureLakituFishing3.bin"
 
 .balign 4, 0x00
-glabel gTextureLakituFishing4
+glabel _gTextureLakituFishing4
 .incbin "assets/lakitu/fishing/gTextureLakituFishing4.bin"
 
 .balign 4, 0x00
-glabel gTextureGhosts
+glabel _gTextureGhosts
 .incbin "assets/courses/banshee_boardwalk/boo_frames.mio0"
 
 .balign 4, 0x00
-glabel gTextureExhaust0
+glabel _gTextureExhaust0
 .incbin "textures/standalone/exhaust_0.ia8.mio0"
 
 .balign 4, 0x00
-glabel gTextureExhaust1
+glabel _gTextureExhaust1
 .incbin "textures/standalone/exhaust_1.ia8.mio0"
 
 .balign 4, 0x00
-glabel gTextureExhaust2
+glabel _gTextureExhaust2
 .incbin "textures/standalone/exhaust_2.ia8.mio0"
 
 .balign 4, 0x00
-glabel gTextureExhaust3
+glabel _gTextureExhaust3
 .incbin "textures/standalone/exhaust_3.ia8.mio0"
 
 .balign 4, 0x00
-glabel gTextureExhaust4
+glabel _gTextureExhaust4
 .incbin "textures/standalone/exhaust_4.ia8.mio0"
 
 .balign 4, 0x00
-glabel gTextureExhaust5
+glabel _gTextureExhaust5
 .incbin "textures/standalone/exhaust_5.ia8.mio0"
 
 .balign 4, 0x00
-glabel gTextureLogoMarioKart64
+glabel _gTextureLogoMarioKart64
 .incbin "textures/standalone/logo_mario_kart_64.rgba32.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineMarioRaceway
+glabel _gTextureCourseOutlineMarioRaceway
 .incbin "assets/course_outlines/gTextureCourseOutlineMarioRaceway.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineChocoMountain
+glabel _gTextureCourseOutlineChocoMountain
 .incbin "assets/course_outlines/gTextureCourseOutlineChocoMountain.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineBowsersCastle
+glabel _gTextureCourseOutlineBowsersCastle
 .incbin "assets/course_outlines/gTextureCourseOutlineBowsersCastle.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineBansheeBoardwalk
+glabel _gTextureCourseOutlineBansheeBoardwalk
 .incbin "assets/course_outlines/gTextureCourseOutlineBansheeBoardwalk.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineYoshiValley
+glabel _gTextureCourseOutlineYoshiValley
 .incbin "assets/course_outlines/gTextureCourseOutlineYoshiValley.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineFrappeSnowland
+glabel _gTextureCourseOutlineFrappeSnowland
 .incbin "assets/course_outlines/gTextureCourseOutlineFrappeSnowland.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineKoopaTroopaBeach
+glabel _gTextureCourseOutlineKoopaTroopaBeach
 .incbin "assets/course_outlines/gTextureCourseOutlineKoopaTroopaBeach.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineRoyalRaceway
+glabel _gTextureCourseOutlineRoyalRaceway
 .incbin "assets/course_outlines/gTextureCourseOutlineRoyalRaceway.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineLuigiRaceway
+glabel _gTextureCourseOutlineLuigiRaceway
 .incbin "assets/course_outlines/gTextureCourseOutlineLuigiRaceway.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineMooMooFarm
+glabel _gTextureCourseOutlineMooMooFarm
 .incbin "assets/course_outlines/gTextureCourseOutlineMooMooFarm.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineToadsTurnpike
+glabel _gTextureCourseOutlineToadsTurnpike
 .incbin "assets/course_outlines/gTextureCourseOutlineToadsTurnpike.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineKalimariDesert
+glabel _gTextureCourseOutlineKalimariDesert
 .incbin "assets/course_outlines/gTextureCourseOutlineKalimariDesert.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineSherbetLand
+glabel _gTextureCourseOutlineSherbetLand
 .incbin "assets/course_outlines/gTextureCourseOutlineSherbetLand.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineRainbowRoad
+glabel _gTextureCourseOutlineRainbowRoad
 .incbin "assets/course_outlines/gTextureCourseOutlineRainbowRoad.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineWarioStadium
+glabel _gTextureCourseOutlineWarioStadium
 .incbin "assets/course_outlines/gTextureCourseOutlineWarioStadium.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineBlockFort
+glabel _gTextureCourseOutlineBlockFort
 .incbin "assets/course_outlines/gTextureCourseOutlineBlockFort.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineSkyscraper
+glabel _gTextureCourseOutlineSkyscraper
 .incbin "assets/course_outlines/gTextureCourseOutlineSkyscraper.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineDoubleDeck
+glabel _gTextureCourseOutlineDoubleDeck
 .incbin "assets/course_outlines/gTextureCourseOutlineDoubleDeck.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineDksJungleParkway
+glabel _gTextureCourseOutlineDksJungleParkway
 .incbin "assets/course_outlines/gTextureCourseOutlineDksJungleParkway.mio0"
 
 .balign 4, 0x00
-glabel gTextureCourseOutlineBigDonut
+glabel _gTextureCourseOutlineBigDonut
 .incbin "assets/course_outlines/gTextureCourseOutlineBigDonut.mio0"
+
+.balign 0x10, 0x00
+
+glabel __other_texturesSegmentEnd
+glabel __other_texturesSegmentRomEnd
+glabel __other_texturesSegmentSize
+.long (__other_texturesSegmentEnd - __other_texturesSegmentSize)
+
