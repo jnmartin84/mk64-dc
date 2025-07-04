@@ -39,7 +39,7 @@ void load_track_path(s32 pathIndex) {
             // Skip processing the data.
             //! @todo Confirm this comment
             if (!bInvalidPath) {
-                var_v0 = func_80011014(pathDest, path, sp24, pathIndex);
+                var_v0 = generate_smoothed_course_path(pathDest, path, sp24, pathIndex);
                 gPathCountByPathIndex[pathIndex] = (u16) var_v0;
             }
         }
@@ -305,7 +305,7 @@ f32 func_80010FA0(f32 arg0, f32 arg1, f32 arg2, UNUSED s32 arg3, UNUSED s32 arg4
 /**
  * @return's the number of items processed.
  */
-s32 func_80011014(TrackPathPoint* pathDest, TrackPathPoint* path, s32 numPathPoints, UNUSED s32 pathIndex) {
+s32 generate_smoothed_course_path(TrackPathPoint* pathDest, TrackPathPoint* path, s32 numPathPoints, UNUSED s32 pathIndex) {
     f32 temp_f24_2;
     f32 temp_f2_3;
     f32 var_f20_2;
@@ -434,6 +434,8 @@ s32 process_path_data(TrackPathPoint* dest, TrackPathPoint* src) {
     s32 var_v0;
     s32 var_v1;
     u16 temp_t0;
+    dest = segmented_to_virtual(dest);
+	src = segmented_to_virtual(src);
 
     var_v1 = 0;
     for (var_v0 = 0; var_v0 < 0x7D0; var_v0++) {

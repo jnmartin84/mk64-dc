@@ -36,6 +36,8 @@
 #include <vehicles.h>
 #include "data/some_data.h"
 
+void gfx_texture_cache_invalidate(void *orig_addr);
+
 void func_800431B0(Vec3f pos, Vec3su orientation, f32 scale, Vtx* vtx) {
     rsp_set_matrix_transformation(pos, orientation, scale);
     gSPVertex(gDisplayListHead++, vtx, 4, 0);
@@ -493,7 +495,7 @@ void func_80046424(s32 arg0, s32 arg1, u16 arg2, f32 arg3, u8* texture, Vtx* arg
                    s32 arg9) {
     func_80042330(arg0, arg1, arg2, arg3);
     gSPDisplayList(gDisplayListHead++, D_0D007968);
-    func_8004B614(D_801656C0, D_801656D0, D_801656E0, 128, 128, 128, 255);
+    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 128, 128, 128, 255);
     func_80045D0C(texture, arg5, arg6, arg7, arg9);
 }
 
@@ -668,6 +670,7 @@ void draw_rectangle_texture_overlap(u8* tlut, u8* texture, Vtx* arg2, UNUSED s32
 
     gDPLoadTLUT_pal256(gDisplayListHead++, tlut);
     for (heightIndex = 0; heightIndex < arg4 / height; heightIndex++) {
+        gfx_texture_cache_invalidate(img);
         rsp_load_texture(img, width, height);
         gSPVertex(gDisplayListHead++, &arg2[vertexIndex], 4, 0);
         gSPDisplayList(gDisplayListHead++, common_rectangle_display);
@@ -1250,7 +1253,7 @@ void func_8004A2F4(s32 arg0, s32 arg1, u16 arg2, f32 arg3, s32 red, s32 green, s
                    Vtx* arg9, s32 argA, s32 argB, s32 argC, s32 argD) {
     func_80042330(arg0, arg1, arg2, arg3);
     gSPDisplayList(gDisplayListHead++, D_0D007A40);
-    func_8004B414(red, green, blue, alpha);
+    set_shadow_color(red, green, blue, alpha);
     func_80049970(texture, arg9, argA, argB, argC, argD);
 }
 
@@ -1258,7 +1261,7 @@ void func_8004A384(s32 arg0, s32 arg1, u16 arg2, f32 arg3, s32 red, s32 green, s
                    Vtx* arg9, s32 argA, s32 argB, s32 argC, s32 argD) {
     func_80042330(arg0, arg1, arg2, arg3);
     gSPDisplayList(gDisplayListHead++, D_0D007A60);
-    func_8004B414(red, green, blue, alpha);
+    set_shadow_color(red, green, blue, alpha);
     func_80049970(texture, arg9, argA, argB, argC, argD);
 }
 
@@ -1438,7 +1441,7 @@ void func_8004B05C(u8* tlut) {
     gDPSetTexturePersp(gDisplayListHead++, G_TP_NONE);
 }
 
-void func_8004B138(s32 red, s32 green, s32 blue, s32 alpha) {
+void set_prim_only(s32 red, s32 green, s32 blue, s32 alpha) {
     gDPSetPrimColor(gDisplayListHead++, 0, 0, red, green, blue, alpha);
 }
 
@@ -1477,13 +1480,13 @@ void func_8004B3C8(s32 alpha) {
     gDPSetPrimColor(gDisplayListHead++, 0, 0, 0x00, 0x00, 0x00, alpha);
 }
 
-void func_8004B414(s32 red, s32 green, s32 blue, s32 alpha) {
+void set_shadow_color(s32 red, s32 green, s32 blue, s32 alpha) {
     gDPSetCombineLERP(gDisplayListHead++, 0, 0, 0, PRIMITIVE, TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, PRIMITIVE, TEXEL0, 0,
                       PRIMITIVE, 0);
     gDPSetPrimColor(gDisplayListHead++, 0, 0, red, green, blue, alpha);
 }
 
-void func_8004B480(s32 red, s32 green, s32 blue) {
+void set_trans_masked_color(s32 red, s32 green, s32 blue) {
     gDPSetCombineLERP(gDisplayListHead++, 0, 0, 0, PRIMITIVE, 0, 0, 0, TEXEL0, 0, 0, 0, PRIMITIVE, 0, 0, 0, TEXEL0);
     gDPSetPrimColor(gDisplayListHead++, 0, 0, red, green, blue, 0xFF);
 }
@@ -1506,7 +1509,7 @@ UNUSED void func_8004B5A8(s32 red, s32 green, s32 blue, s32 alpha) {
                       TEXEL0, PRIMITIVE, 0, 0, 0, TEXEL0);
 }
 
-void func_8004B614(s32 primRed, s32 primGreen, s32 primBlue, s32 envRed, s32 envGreen, s32 envBlue, s32 primAlpha) {
+void setup_tinted_transparent(s32 primRed, s32 primGreen, s32 primBlue, s32 envRed, s32 envGreen, s32 envBlue, s32 primAlpha) {
     gDPSetPrimColor(gDisplayListHead++, 0, 0, primRed, primGreen, primBlue, primAlpha);
     gDPSetEnvColor(gDisplayListHead++, envRed, envGreen, envBlue, 0xFF);
     gDPSetCombineLERP(gDisplayListHead++, 1, ENVIRONMENT, TEXEL0, PRIMITIVE, PRIMITIVE, 0, TEXEL0, 0, 1, ENVIRONMENT,
@@ -1739,7 +1742,7 @@ void draw_hud_2d_texture(s32 x, s32 y, u32 width, u32 height, u8* texture) {
 void func_8004C450(s32 x, s32 y, u32 width, u32 height, u8* texture) {
 
     gSPDisplayList(gDisplayListHead++, D_0D007F38);
-    func_8004B614(D_801656C0, D_801656D0, D_801656E0, 0x80, 0x80, 0x80, 0xFF);
+    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 0x80, 0x80, 0x80, 0xFF);
     load_texture_block_rgba16_mirror(texture, width, height);
     func_8004B97C(x - (width >> 1), y - (height >> 1), width, height, 1);
     gSPDisplayList(gDisplayListHead++, D_0D007EB8);
@@ -1979,8 +1982,8 @@ void func_8004D37C(s32 arg0, s32 arg1, u8* texture, s32 arg3, s32 arg4, s32 arg5
     var_s3 = arg1 - (arg8 / 2);
     img = texture;
     gSPDisplayList(gDisplayListHead++, D_0D007FE0);
-    func_8004B414(arg3, arg4, arg5, arg6);
-
+    set_shadow_color(arg3, arg4, arg5, arg6);
+    gfx_texture_cache_invalidate(img);
     for (i = 0; i < arg8 / height; i++) {
         func_80044F34(img, width, height);
         func_8004B97C(arg0 - (width / 2), var_s3, width, height, 1);
@@ -1998,7 +2001,7 @@ void func_8004D4E8(s32 arg0, s32 arg1, u8* texture, s32 arg3, s32 arg4, s32 arg5
     var_s3 = arg1 - (arg8 / 2);
     img = texture;
     gSPDisplayList(gDisplayListHead++, D_0D007FE0);
-    func_8004B414(arg3, arg4, arg5, arg6);
+    set_shadow_color(arg3, arg4, arg5, arg6);
 
     for (i = 0; i < arg8 / height; i++) {
         func_800450C8(img, width, height);
@@ -2017,7 +2020,7 @@ void func_8004D654(s32 arg0, s32 arg1, u8* texture, f32 arg3, s32 arg4, s32 arg5
     var_s3 = arg1 - (arg9 / 2);
     textureCopy = texture;
     gSPDisplayList(gDisplayListHead++, D_0D008000);
-    func_8004B480(arg4, arg5, arg6);
+    set_trans_masked_color(arg4, arg5, arg6);
     for (i = 0; i < (arg9 / height); i++) {
         func_80044F34(textureCopy, width, height);
         func_8004BB3C(arg0, arg1, width, arg9, arg3);
@@ -2465,6 +2468,8 @@ void render_mini_map_finish_line(s32 arg0) {
 #endif
 }
 
+extern u16 l_common_texture_minimap_kart_mario[][64];
+
 void draw_minimap_character(s32 arg0, s32 playerId, s32 characterId) {
     f32 thing0;
     f32 thing1;
@@ -2480,9 +2485,9 @@ void draw_minimap_character(s32 arg0, s32 playerId, s32 characterId) {
         // huh?
         if (characterId != 8) {
             if ((gGPCurrentRaceRankByPlayerId[playerId] == 0) && (gModeSelection != 3) && (gModeSelection != 1)) {
-                func_80046424(x, y, player->rotation[1] + 0x8000, 1.0f, (u8*)&common_texture_minimap_kart_mario[characterId * 64], common_vtx_player_minimap_icon, 8, 8, 8, 8);
+                func_80046424(x, y, player->rotation[1] + 0x8000, 1.0f, (u8*)&l_common_texture_minimap_kart_mario[characterId], common_vtx_player_minimap_icon, 8, 8, 8, 8);
             } else {
-                func_800463B0(x, y, player->rotation[1] + 0x8000, 1.0f, (u8*)&common_texture_minimap_kart_mario[characterId * 64], common_vtx_player_minimap_icon, 8, 8, 8, 8);
+                func_800463B0(x, y, player->rotation[1] + 0x8000, 1.0f, (u8*)&l_common_texture_minimap_kart_mario[characterId], common_vtx_player_minimap_icon, 8, 8, 8, 8);
             }
         } else {
             if (gGPCurrentRaceRankByPlayerId[playerId] == 0) {
@@ -2613,7 +2618,7 @@ void func_8004F950(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
 
 void print_timer_rainbow(s32 arg0, s32 arg1, s32 arg2) {
     gSPDisplayList(gDisplayListHead++, D_0D007F38);
-    func_8004B614(D_801656C0, D_801656D0, D_801656E0, 128, 128, 128, 255);
+    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 128, 128, 128, 255);
     load_texture_block_rgba16_mirror((u8*) common_texture_hud_normal_digit, 104, 16);
     func_8004F6D0(arg2);
     func_8004F8CC(arg0, arg1);
@@ -2984,7 +2989,7 @@ void func_80050E34(s32 playerId, s32 arg1) {
         gDPLoadTLUT_pal256(gDisplayListHead++, gPortraitTLUTs[characterId]);
         gSPDisplayList(gDisplayListHead++, D_0D007DB8);
         if (player->effects & STAR_EFFECT) {
-            func_8004B614((s32) D_801656C0, (s32) D_801656D0, (s32) D_801656E0, 0x00000080, 0x00000080, 0x00000080,
+            setup_tinted_transparent((s32) D_801656C0, (s32) D_801656D0, (s32) D_801656E0, 0x00000080, 0x00000080, 0x00000080,
                           (s32) gObjectList[objectIndex].primAlpha);
         } else {
             set_transparency((s32) gObjectList[objectIndex].primAlpha);
@@ -3107,7 +3112,7 @@ void func_800519D4(s32 objectIndex, s16 arg1, s16 arg2) {
             func_80044DA0(gObjectList[objectIndex].activeTexture, gObjectList[objectIndex].textureWidth,
                           gObjectList[objectIndex].textureHeight);
         }
-        func_8004B138(0x000000FF, 0x000000FF, 0x000000FF, gObjectList[objectIndex].primAlpha);
+        set_prim_only(0x000000FF, 0x000000FF, 0x000000FF, gObjectList[objectIndex].primAlpha);
         func_80042330(arg1, arg2, 0U, gObjectList[objectIndex].sizeScaling);
         gSPVertex(gDisplayListHead++, gObjectList[objectIndex].vertex, 4, 0);
         gSPDisplayList(gDisplayListHead++, common_rectangle_display);
@@ -3122,7 +3127,7 @@ void func_80051ABC(s16 arg0, s32 arg1) {
     D_8018D228 = 0xFF;
     gSPDisplayList(gDisplayListHead++, D_0D007A60);
     if ((u8) D_8018D230 != 0) {
-        func_8004B414(0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF);
+        set_shadow_color(0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF);
         for (var_s0 = 0; var_s0 < D_8018D1F0; var_s0++) {
             objectIndex = D_8018CC80[arg1 + var_s0];
             object = &gObjectList[objectIndex];
@@ -3162,7 +3167,7 @@ void func_80051C60(s16 arg0, s32 arg1) {
     D_8018D228 = 0xFF;
     gSPDisplayList(gDisplayListHead++, D_0D007A60);
     if ((u8) D_8018D230 != 0) {
-        func_8004B414(0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF);
+        set_shadow_color(0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF);
         for (var_s0 = 0; var_s0 < D_8018D1F0; var_s0++) {
             objectIndex = D_8018CC80[arg1 + var_s0];
             object = &gObjectList[objectIndex];
@@ -3684,9 +3689,12 @@ void render_object_thwomps(s32 cameraId) {
         if (objectIndex != NULL_OBJECT_ID) {
             object = &gObjectList[objectIndex];
             if ((object->state >= 2) && (object->unk_0D5 == 2) && (gMatrixHudCount <= MTX_HUD_POOL_SIZE_MAX)) {
-                func_8004B138(0x000000FF, 0x000000FF, 0x000000FF, (s32) object->primAlpha);
+                set_prim_only(0x000000FF, 0x000000FF, 0x000000FF, (s32) object->primAlpha);
                 D_80183E80[1] = func_800418AC(object->pos[0], object->pos[2], camera->pos);
                 func_800431B0(object->pos, D_80183E80, object->sizeScaling, D_0D005AE0);
+                // jnmartin84 -- ???
+                func_800431B0(object->pos, D_80183E80, object->sizeScaling*0.85, D_0D005AE0);
+                func_800431B0(object->pos, D_80183E80, object->sizeScaling*0.7, D_0D005AE0);
             }
         }
     }
@@ -3713,7 +3721,7 @@ void render_object_grand_prix_balloons(s32 arg0) {
 
     gSPDisplayList(gDisplayListHead++, D_0D007E98);
     gDPLoadTLUT_pal256(gDisplayListHead++, D_800E52D0);
-    func_8004B614(0, 0, 0, 0, 0, 0, 0);
+    setup_tinted_transparent(0, 0, 0, 0, 0, 0, 0);
     D_80183E80[0] = 0;
     D_80183E80[1] = 0x8000;
     rsp_load_texture(D_8018D4BC, 64, 32);
@@ -3845,7 +3853,7 @@ void render_object_bowser_flame_particle(s32 objectIndex, s32 cameraId) {
         if (object->unk_0D5 == 9) {
             func_8004B72C(0xFF, (s32) object->type, 0, (s32) object->unk_0A2, 0, 0, (s32) object->primAlpha);
         } else {
-            func_8004B138(0xFF, (s32) object->type, 0, (s32) object->primAlpha);
+            set_prim_only(0xFF, (s32) object->type, 0, (s32) object->primAlpha);
         }
         D_80183E80[1] = func_800418AC(object->pos[0], object->pos[2], camera->pos);
         func_800431B0(object->pos, D_80183E80, object->sizeScaling, D_0D005AE0);
@@ -3858,7 +3866,7 @@ void render_object_bowser_flame(s32 cameraId) {
 
     gSPDisplayList(gDisplayListHead++, D_0D007AE0);
     load_texture_block_i8_nomirror(common_texture_particle_smoke[D_80165598], 0x00000020, 0x00000020);
-    func_8004B414(0, 0, 0, 0x000000FF);
+    set_shadow_color(0, 0, 0, 0x000000FF);
     D_80183E80[0] = 0;
     D_80183E80[2] = 0x8000;
     for (var_s0 = 0; var_s0 < gObjectParticle1_SIZE; var_s0++) {
@@ -3927,7 +3935,7 @@ void func_80054AFC(s32 objectIndex, Vec3f arg1) {
     D_80183E80[0] = func_800418E8(gObjectList[objectIndex].pos[2], gObjectList[objectIndex].pos[1], arg1);
     D_80183E80[1] = func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], arg1);
     D_80183E80[2] = (u16) gObjectList[objectIndex].orientation[2];
-    func_8004B138((s32) gObjectList[objectIndex].unk_084[0], (s32) gObjectList[objectIndex].unk_084[1],
+    set_prim_only((s32) gObjectList[objectIndex].unk_084[0], (s32) gObjectList[objectIndex].unk_084[1],
                   (s32) gObjectList[objectIndex].unk_084[2], (s32) gObjectList[objectIndex].primAlpha);
     rsp_set_matrix_transformation(gObjectList[objectIndex].pos, (u16*) D_80183E80,
                                   gObjectList[objectIndex].sizeScaling);
@@ -4392,7 +4400,7 @@ void func_800562E4(s32 arg0, s32 arg1, s32 arg2) {
     D_80165860 = D_800E46F8[arg0][0];
     D_8016586C = D_800E46F8[arg0][1];
     D_80165878 = D_800E46F8[arg0][2];
-    func_8004B138(D_80165860, D_8016586C, D_80165878, arg2);
+    set_prim_only(D_80165860, D_8016586C, D_80165878, arg2);
     rsp_set_matrix_transformation(D_80183E40, D_80183E80, 0.2f);
     func_80044BF8(common_texture_particle_spark[arg1], 0x00000020, 0x00000020);
     gSPVertex(gDisplayListHead++, D_0D005AE0, 4, 0);
@@ -4422,7 +4430,7 @@ void func_800563DC(s32 objectIndex, s32 cameraId, s32 arg2) {
                                    0x00000020, 0x00000020, 0x00000020);
     temp_s0 = D_8018D400;
     gSPDisplayList(gDisplayListHead++, D_0D007B00);
-    func_8004B414(0, 0, 0, arg2);
+    set_shadow_color(0, 0, 0, arg2);
     D_80183E40[1] = D_80183E40[1] + 4.0;
     D_80183E80[2] = 0;
     func_800562E4(temp_s0 % 3, temp_s0 % 4, arg2);
@@ -4532,7 +4540,7 @@ void func_80056BF0(s32 bombIndex) {
                        0x20);
     temp_s0 = D_8018D400;
     gSPDisplayList(gDisplayListHead++, D_0D007B00);
-    func_8004B414(0, 0, 0, 0xFF);
+    set_shadow_color(0, 0, 0, 0xFF);
     D_80183E40[1] = sp40.bombPos[1] + 5.0;
     D_80183E80[2] = 0;
     func_800562E4((s32) temp_s0 % 3, temp_s0 % 4, 0xFFU);

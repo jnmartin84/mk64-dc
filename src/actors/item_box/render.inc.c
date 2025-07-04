@@ -2,6 +2,28 @@
 #include <main.h>
 #include <macros.h>
 
+Gfx l_itemBoxQuestionMarkModel[] = {
+    gsSPClearGeometryMode(G_CULL_BACK),
+    gsSPTexture(0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON),
+    gsDPPipeSync(),
+    gsDPSetCombineMode(G_CC_MODULATEIDECALA, G_CC_MODULATEIDECALA),
+    gsDPSetRenderMode(G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2),
+    gsDPTileSync(),
+    gsDPSetTile(G_IM_FMT_RGBA, G_IM_SIZ_16b, 8, 0x0000, G_TX_RENDERTILE, 0, G_TX_NOMIRROR | G_TX_CLAMP, 6, G_TX_NOLOD,
+                G_TX_NOMIRROR | G_TX_CLAMP, 5, G_TX_NOLOD),
+    gsDPSetTileSize(G_TX_RENDERTILE, 0, 0, 0x007C, 0x00FC),
+    gsDPSetTextureImage(G_IM_FMT_RGBA, G_IM_SIZ_16b, 1, common_texture_item_box_question_mark),
+    gsDPTileSync(),
+    gsDPSetTile(G_IM_FMT_RGBA, G_IM_SIZ_16b, 0, 0x0000, G_TX_LOADTILE, 0, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK,
+                G_TX_NOLOD, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOLOD),
+    gsDPLoadSync(),
+    gsDPLoadBlock(G_TX_LOADTILE, 0, 0, 2047, 256),
+    gsSPVertex(&common_vtx_itembox[4], 4, 0),
+    gsSP2Triangles(0, 1, 2, 0, 0, 2, 3, 0),
+    gsSPSetGeometryMode(G_CULL_BACK),
+    gsSPEndDisplayList(),
+};
+
 /**
  * @brief Renders the item box actor.
  *
@@ -51,7 +73,7 @@ void render_actor_item_box(Camera* camera, struct ItemBox* item_box) {
                 return;
             }
 
-            gSPDisplayList(gDisplayListHead++, itemBoxQuestionMarkModel);
+            gSPDisplayList(gDisplayListHead++, l_itemBoxQuestionMarkModel);
         }
         if (item_box->state == 5) {
             mtxf_pos_rotation_xyz(someMatrix1, item_box->pos, item_box->rot);
@@ -60,7 +82,7 @@ void render_actor_item_box(Camera* camera, struct ItemBox* item_box) {
                 return;
             }
 
-            gSPDisplayList(gDisplayListHead++, itemBoxQuestionMarkModel);
+            gSPDisplayList(gDisplayListHead++, l_itemBoxQuestionMarkModel);
         }
         if (item_box->state != 3) {
             mtxf_pos_rotation_xyz(someMatrix1, item_box->pos, item_box->rot);
@@ -71,7 +93,7 @@ void render_actor_item_box(Camera* camera, struct ItemBox* item_box) {
 
             gSPClearGeometryMode(gDisplayListHead++, G_LIGHTING);
             gDPSetCombineMode(gDisplayListHead++, G_CC_MODULATEIA, G_CC_MODULATEIA);
-            if ((item_box->rot[1] < 0xAA1) && (item_box->rot[1] > 0)) {
+            /* if ((item_box->rot[1] < 0xAA1) && (item_box->rot[1] > 0)) {
                 gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
             } else if ((item_box->rot[1] >= 0x6AA5) && (item_box->rot[1] < 0x754E)) {
                 gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
@@ -79,9 +101,14 @@ void render_actor_item_box(Camera* camera, struct ItemBox* item_box) {
                 gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
             } else if ((item_box->rot[1] >= 0xC711) && (item_box->rot[1] < 0xD1BA)) {
                 gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
-            } else {
-                gDPSetBlendMask(gDisplayListHead++, 0xFF);
-                gDPSetRenderMode(gDisplayListHead++, G_RM_ZB_CLD_SURF, G_RM_ZB_CLD_SURF2);
+            } else */ {
+                /* gDPSetBlendMask(gDisplayListHead++, 0xFF);
+                gDPSetRenderMode(gDisplayListHead++, G_RM_ZB_CLD_SURF, G_RM_ZB_CLD_SURF2); */
+                gDPSetRenderMode(gDisplayListHead++,
+                                 AA_EN | Z_CMP | Z_UPD | IM_RD | CVG_DST_WRAP | ZMODE_XLU | CVG_X_ALPHA | FORCE_BL |
+                                     GBL_c1(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA),
+                                 AA_EN | Z_CMP | Z_UPD | IM_RD | CVG_DST_WRAP | ZMODE_XLU | CVG_X_ALPHA | FORCE_BL |
+                                     GBL_c2(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA));
             }
             gSPSetGeometryMode(gDisplayListHead++, G_SHADING_SMOOTH);
             gSPDisplayList(gDisplayListHead++, D_0D003090);

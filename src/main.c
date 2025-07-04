@@ -169,19 +169,19 @@ s32 padding[2048];
 u16 D_80152300[4];
 u16 D_80152308;
 
-UNUSED OSThread paddingThread;
-OSThread gIdleThread;
-ALIGNED8 u8 gIdleThreadStack[STACKSIZE]; // Based on sm64 and padding between bss symbols.
-OSThread gVideoThread;
-ALIGNED8 u8 gVideoThreadStack[STACKSIZE];
-UNUSED OSThread D_80156820;
-UNUSED ALIGNED8 u8 D_8015680_Stack[STACKSIZE];
-OSThread gGameLoopThread;
-ALIGNED8 u8 gGameLoopThreadStack[STACKSIZE];
-OSThread gAudioThread;
+//UNUSED OSThread paddingThread;
+//OSThread gIdleThread;
+//ALIGNED8 u8 gIdleThreadStack[STACKSIZE]; // Based on sm64 and padding between bss symbols.
+//OSThread gVideoThread;
+//ALIGNED8 u8 gVideoThreadStack[STACKSIZE];
+//UNUSED OSThread D_80156820;
+//UNUSED ALIGNED8 u8 D_8015680_Stack[STACKSIZE];
+//OSThread gGameLoopThread;
+//ALIGNED8 u8 gGameLoopThreadStack[STACKSIZE];
+//OSThread gAudioThread;
 ALIGNED8 u8 gAudioThreadStack[STACKSIZE];
-UNUSED OSThread D_8015CD30;
-UNUSED ALIGNED8 u8 D_8015CD30_Stack[STACKSIZE / 2];
+//UNUSED OSThread D_8015CD30;
+//UNUSED ALIGNED8 u8 D_8015CD30_Stack[STACKSIZE / 2];
 
 ALIGNED8 u8 gGfxSPTaskYieldBuffer[4352];
 ALIGNED8 u32 gGfxSPTaskStack[256];
@@ -237,47 +237,38 @@ extern void gfx_run(Gfx *commands);
 extern void thread5_game_loop(void *arg);
 
 void game_loop_one_iteration(void) {
-//StartAudioFrame();
     gfx_start_frame();
 
     func_800CB2C4();
 
-    //printf("after func_800CB2C4\n");
     // Update the gamestate if it has changed (racing, menus, credits, etc.).
     if (gGamestateNext != gGamestate) {
         gGamestate = gGamestateNext;
         update_gamestate();
-  //      printf("after updategamestate\n");
     }
-//    profiler_log_thread5_time(THREAD5_START);
-    config_gfx_pool();
-   // printf("after config gfx pool\n");
-    read_controllers();
-    //printf("after read controler\n");
-    game_state_handler();
-    //printf("after game state\n");
-    end_master_display_list();
-    //printf("after end master dl\n");
-    display_and_vsync();
-    //printf("after dispandvsync\n");
-    gfx_end_frame();
-//EndAudioFrame();
 
-//    printf("audio frame shit\n");
-  //  printf("end iteration\n");
+    config_gfx_pool();
+
+    read_controllers();
+
+    game_state_handler();
+
+    end_master_display_list();
+
+    display_and_vsync();
+
+    gfx_end_frame();
 }
 
 void send_display_list(struct SPTask *spTask) {
 
     if (!inited) {
-
         return;
-
     }
-    gfx_run((Gfx *)spTask->task.t.data_ptr);
-//	usleep(300000);
 
+    gfx_run((Gfx *)spTask->task.t.data_ptr);
 }
+
 #if 0
 void produce_one_frame(void) {
     gfx_start_frame();
@@ -536,7 +527,7 @@ int main(UNUSED int argc, UNUSED char **argv) {
 
     fclose(fntest);
 
-    setup_audio_data();
+//    setup_audio_data();
 
     thread5_game_loop(NULL);
 
@@ -1875,7 +1866,7 @@ void race_logic_loop(void) {
             }
         }
     }
-    func_802A4300();
+    draw_splitscreen_separators();
     func_800591B4();
     func_80093E20();
 #if DVDL
@@ -2086,6 +2077,7 @@ void handle_sp_complete(void) {
 }
 
 void thread3_video(UNUSED void* arg0) {
+#if 0
     s32 i;
     u64* framebuffer1;
     OSMesg msg;
@@ -2127,6 +2119,7 @@ void thread3_video(UNUSED void* arg0) {
                 break;
         }
     }
+#endif
 }
 
 void func_800025D4(void) {
@@ -2193,7 +2186,7 @@ void update_gamestate(void) {
             break;
     }
 }
-
+#if 0
 void thread5_game_loop(UNUSED void* arg) {
     osCreateMesgQueue(&gGfxVblankQueue, gGfxMesgBuf, 1);
     osCreateMesgQueue(&gGameVblankQueue, &gGameMesgBuf, 1);
@@ -2231,6 +2224,67 @@ void thread5_game_loop(UNUSED void* arg) {
         game_state_handler();
         end_master_display_list();
         display_and_vsync();
+    }
+}
+#endif
+
+void thread5_game_loop(UNUSED void* arg) {
+    setup_mesg_queues();
+    setup_game_memory();
+
+    gfx_init(wm_api, rendering_api, "Mario Kart 64", false);
+
+    osCreateMesgQueue(&gGfxVblankQueue, gGfxMesgBuf, 1);
+    osCreateMesgQueue(&gGameVblankQueue, &gGameMesgBuf, 1);
+
+    init_controllers();
+    if (!wasSoftReset) {
+        clear_nmi_buffer();
+    }
+
+    // These variables track stats such as player wins.
+    // In the event of a console reset, it remembers them.
+    gNmiUnknown1 = &pAppNmiBuffer[0]; // 2  u8's, tracks number of times player 1/2 won a VS race
+    gNmiUnknown2 =
+        &pAppNmiBuffer[2]; // 9  u8's, 3x3, tracks number of times player 1/2/3   has placed in 1st/2nd/3rd in a VS race
+    gNmiUnknown3 = &pAppNmiBuffer[11]; // 12 u8's, 4x3, tracks number of times player 1/2/3/4 has placed in 1st/2nd/3rd
+                                       // in a VS race
+    gNmiUnknown4 = &pAppNmiBuffer[23]; // 2  u8's, tracking number of Battle mode wins by player 1/2
+    gNmiUnknown5 = &pAppNmiBuffer[25]; // 3  u8's, tracking number of Battle mode wins by player 1/2/3
+    gNmiUnknown6 = &pAppNmiBuffer[28]; // 4  u8's, tracking number of Battle mode wins by player 1/2/3/4
+    rendering_init();
+    read_controllers();
+    func_800C5CB8();
+	inited = 1;
+
+#if 0
+    for(int mi=0;mi<6*1048576;mi+=65536) {
+        void *test_m = malloc(mi);
+        if (test_m != NULL) {
+            free(test_m);
+            test_m = NULL;
+            continue;
+        } else {
+            int bi = mi - 65536;
+            for (; bi < 6 * 1048576; bi++) {
+                test_m = malloc(bi);
+                if (test_m != NULL) {
+                    free(test_m);
+                    test_m = NULL;
+                    continue;
+                } else {
+                    printf("free ram for malloc: %d\n", bi);
+                    goto run_game_loop;
+                }
+            }
+        }
+    }
+run_game_loop:
+#endif
+
+    while (true) {
+        game_loop_one_iteration();
+		thd_pass();
     }
 }
 

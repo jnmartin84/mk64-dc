@@ -3,7 +3,7 @@
 
 /* Function Prototypes */
 
-void func_802903D8(Player*, Player*);
+void func_resolve_player_player_collision(Player*, Player*);
 void func_8028DF00(void);
 void func_8028DF38(void);
 void func_8028E028(void);

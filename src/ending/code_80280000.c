@@ -5,6 +5,8 @@
 #include <PR/gu.h>
 #include <mk64.h>
 #include <course.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "main.h"
 #include <segments.h>
@@ -26,6 +28,8 @@
 #include "render_courses.h"
 #include "main.h"
 #include "render_player.h"
+
+static char texfn[256];
 
 s32 D_802874A0;
 // s32 D_802874A4[5];
@@ -124,6 +128,9 @@ void credits_loop(void) {
     }
 }
 
+extern char *fnpre;
+extern uint8_t __attribute__((aligned(32))) CEREMONY_BUF[36232];
+extern CollisionTriangle __attribute__((aligned(32))) allColTris[2048+1024];//2800];//2798];//2048+1024];
 void load_credits(void) {
     Camera* camera = &cameras[0];
 
@@ -140,11 +147,45 @@ void load_credits(void) {
     D_800DC5EC->screenStartY = 120;
     gScreenModeSelection = SCREEN_MODE_1P;
     gActiveScreenMode = SCREEN_MODE_1P;
-    gNextFreeMemoryAddress = gFreeMemoryResetAnchor;
     load_course(gCurrentCourseId);
-    D_8015F730 = gNextFreeMemoryAddress;
-    set_segment_base_addr(0xB, (void*) decompress_segments((u8*) CEREMONY_DATA_ROM_START, (u8*) CEREMONY_DATA_ROM_END));
+    {
+#if 1
+        sprintf(texfn, "%s/dc_data/ceremony_data.bin", fnpre);
+#else
+        sprintf(texfn, "/cd/dc_data/ceremony_data.bin");
+#endif
+        printf("opening %s\n", texfn);
+        FILE* file = fopen(texfn, "rb");
+        if (!file) {
+            perror("fopen");
+            printf("\n");
+            while(1){}
+            exit(-1);
+        }
 
+        fseek(file, 0, SEEK_END);
+        long filesize = ftell(file);
+        printf("Filesize %ld\n", filesize);
+        fseek(file, 0, SEEK_SET);
+
+        long toread = filesize;
+        long didread = 0;
+
+        while (didread < toread) {
+            long rv = fread(&CEREMONY_BUF[didread], 1, toread - didread, file);
+            if (rv == -1) {
+                printf("FILE IS FUCKED\n");
+            printf("\n");
+            while(1){}
+                exit(-1);
+            }
+            toread -= rv;
+            didread += rv;
+        }
+        fclose(file);
+        file = NULL;
+        set_segment_base_addr(0xB, (void*) CEREMONY_BUF);
+    }
     gCourseMinX = -0x15A1;
     gCourseMinY = -0x15A1;
     gCourseMinZ = -0x15A1;
@@ -158,7 +199,7 @@ void load_credits(void) {
     gCollisionMeshCount = 0;
     D_800DC5BC = 0;
     D_800DC5C8 = 0;
-    gCollisionMesh = (CollisionTriangle*) gNextFreeMemoryAddress;
+    gCollisionMesh = (CollisionTriangle*) allColTris;
     camera->pos[0] = 1400.0f;
     camera->pos[1] = 300.0f;
     camera->pos[2] = 1400.0f;
@@ -173,7 +214,4 @@ void load_credits(void) {
     init_hud();
     func_80093E60();
     func_80092688();
-    if (D_800DC5EC) {}
-    D_801625F8 = ((s32) gHeapEndPtr - gNextFreeMemoryAddress);
-    D_801625FC = ((f32) D_801625F8 / 1000.0f);
 }

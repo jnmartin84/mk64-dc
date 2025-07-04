@@ -8,7 +8,7 @@
 void func_8003DC40(Player*);
 void func_8003DC50(Player*, Vec3f);
 void func_8003DE4C(Player*, Vec3f);
-void func_8003E048(Player*, Vec3f, Vec3f, Vec3f, f32*, f32*, f32*, f32*);
+void apply_surface_push_and_slope_response(Player*, Vec3f, Vec3f, Vec3f, f32*, f32*, f32*, f32*);
 void func_8003E37C(Player*, Vec3f, Vec3f, Vec3f, f32*, f32*, f32*, f32*);
 void func_8003E6EC(Player*, Vec3f, Vec3f, Vec3f, f32*, f32*, f32*, f32*);
 void func_8003E9EC(Player*, Vec3f, Vec3f, Vec3f, f32*, f32*, f32*, f32*);

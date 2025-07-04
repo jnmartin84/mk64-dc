@@ -11,13 +11,14 @@
 // defines
 
 #define MIO0_VERSION "0.1"
-
+#include <kos.h>
 #define GET_BIT(buf, bit) ((buf)[(bit) / 8] & (1 << (7 - ((bit) % 8))))
 
 // decode MIO0 header
 // returns 1 if valid header, 0 otherwise
 int mio0_decode_header(const unsigned char *buf, mio0_header_t *head)
 {
+//   printf("%c%c%c%c\n", buf[0],buf[1],buf[2],buf[3]);
    if (!memcmp(buf, "MIO0", 4)) {
       head->dest_size = read_u32_be(&buf[4]);
       head->comp_offset = read_u32_be(&buf[8]);
@@ -43,8 +44,8 @@ int mio0decode(const unsigned char *in, unsigned char *out)
    // verify MIO0 header
    if (!valid) {
       printf("invalid header aborting from libmio0?\n");
-            printf("\n");
-            while(1){}
+      printf("\n");
+      while(1){}
       exit(-1);
       return -2;
    }

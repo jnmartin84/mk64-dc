@@ -38,7 +38,7 @@
  *
  */
 #if defined(GCC) || defined(DEBUG)
-#define ENABLE_DEBUG_MODE 1
+#define ENABLE_DEBUG_MODE 0
 #else
 #define ENABLE_DEBUG_MODE 0
 #endif

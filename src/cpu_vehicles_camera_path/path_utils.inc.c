@@ -6,20 +6,20 @@
 #include "main.h"
 #include "cpu_vehicles_camera_path.h"
 
-bool are_in_curve(UNUSED s32 arg0, u16 pathPointIndex) {
+s32 are_in_curve(UNUSED s32 arg0, u16 pathPointIndex) {
     s16 thing = gCurrentTrackConsecutiveCurveCountsPath[pathPointIndex];
     if (thing > 0) {
-        return true;
+        return 1;
     }
-    return false;
+    return 0;
 }
 
-bool is_far_from_path(s32 playerIndex) {
+s32 is_far_from_path(s32 playerIndex) {
     f32 value = gTrackPositionFactor[playerIndex];
     if ((1.1f <= value) || (value <= -1.1f)) {
-        return true;
+        return 1;
     }
-    return false;
+    return 0;
 }
 
 /**
@@ -347,7 +347,7 @@ s16 update_path_index(f32 posX, f32 posY, f32 posZ, s16 pathPointIndex, s32 path
     s16 nearestPathPointIndex;
     s16 searchIndex;
     s16 considerIndex;
-    bool pathPointFound;
+    uint8_t pathPointFound;
     s32 pathPathPointCount;
     f32 x_dist;
     f32 y_dist;
@@ -357,7 +357,7 @@ s16 update_path_index(f32 posX, f32 posY, f32 posZ, s16 pathPointIndex, s32 path
     TrackPathPoint* pathPathPoints;
     TrackPathPoint* considerPathPoint;
 
-    pathPointFound = false;
+    pathPointFound = 0;
     nearestPathPointIndex = -1;
     minimumDistance = 400.0f * 400.0f;
     pathPathPointCount = gPathCountByPathIndex[pathIndex];
@@ -374,10 +374,10 @@ s16 update_path_index(f32 posX, f32 posY, f32 posZ, s16 pathPointIndex, s32 path
         if (squaredDistance < minimumDistance) {
             minimumDistance = squaredDistance;
             nearestPathPointIndex = considerIndex;
-            pathPointFound = true;
+            pathPointFound = 1;
         }
     }
-    if (pathPointFound == false) {
+    if (pathPointFound == 0) {
         for (searchIndex = pathPointIndex - 3; searchIndex < pathPointIndex + 7; searchIndex++) {
             considerIndex = ((searchIndex + pathPathPointCount) % pathPathPointCount);
             considerPathPoint = &pathPathPoints[considerIndex];
@@ -457,7 +457,7 @@ s16 update_player_path(f32 posX, f32 posY, f32 posZ, s16 pathPointIndex, Player*
             newPathPoint = update_path_index_track_section(posX, posY, posZ, player, playerId, &pathIndex);
         }
     } else { // AI or special case player handling
-        if (D_801631E0[playerId] == true) {
+        if (D_801631E0[playerId] == 1) {
             if (player->unk_0CA & 1) {
                 temp_v1 = &gTrackPaths[pathIndex][pathPointIndex];
                 player->pos[0] = (f32) temp_v1->posX;
@@ -639,7 +639,7 @@ void determine_ideal_cpu_position_offset(s32 playerId, u16 pathPoint) {
             lookAheadDistance = 7;
         }
     }
-    if (is_far_from_path(playerId) == true) {
+    if (is_far_from_path(playerId) == 1) {
         lookAheadDistance = 5;
     }
     if (gCurrentPlayerLookAhead[playerId] < lookAheadDistance) {
@@ -648,6 +648,8 @@ void determine_ideal_cpu_position_offset(s32 playerId, u16 pathPoint) {
     if (lookAheadDistance < gCurrentPlayerLookAhead[playerId]) {
         gCurrentPlayerLookAhead[playerId]--;
     }
+    // jnmartin84 -- error handling... because...
+    if (gSelectedPathCount < 1) gSelectedPathCount = 1;
     pathPoint = (gCurrentPlayerLookAhead[playerId] + pathPoint) % gSelectedPathCount;
     set_track_offset_position(pathPoint, sp2C, gPlayerPathIndex);
     sp48 = gOffsetPosition[0];
@@ -659,7 +661,7 @@ void determine_ideal_cpu_position_offset(s32 playerId, u16 pathPoint) {
     gOffsetPosition[2] = (sp44 + stackPadding4) * 0.5f;
 }
 
-s16 func_8000D6D0(Vec3f position, s16* pathPointIndex, f32 speed, f32 arg3, s16 pathIndex, s16 arg5) {
+s16 move_along_path(Vec3f position, s16* pathPointIndex, f32 speed, f32 arg3, s16 pathIndex, s16 arg5) {
     f32 temp1;
     f32 temp2;
     f32 midX;

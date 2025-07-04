@@ -1190,48 +1190,30 @@ void load_kart_texture(Player* player, s8 playerId, s8 screenId, s8 screenId2, s
     if (((temp & 0x80) == 0x80) || ((temp & 0x40) == 0x40) || ((temp & 0x80000) == 0x80000) ||
         ((temp & 0x800000) == 0x800000) || ((temp & 0x20000) == 0x20000) || ((player->unk_044 & 0x800) != 0)) {
         if (player->animFrameSelector[screenId] != 0) {
-            osInvalDCache(&gEncodedKartTexture[index][screenId2][playerId], D_800DDEB0[player->characterId]);
-
-            osPiStartDma(&gDmaIoMesg, OS_MESG_PRI_NORMAL, OS_READ,
-                         (uintptr_t) &_kart_texturesSegmentRomStart[SEGMENT_OFFSET(
-                             gKartTextureTable1[player->characterId][player->animGroupSelector[screenId]]
-                                               [player->animFrameSelector[screenId]])],
-                         &gEncodedKartTexture[index][screenId2][playerId], D_800DDEB0[player->characterId],
-                         &gDmaMesgQueue);
-
-            osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
+            dma_copy(&gEncodedKartTexture[index][screenId2][playerId],
+                    gKartTextureTable1[player->characterId]
+                        [player->animGroupSelector[screenId]]
+                        [player->animFrameSelector[screenId]],
+                    D_800DDEB0[player->characterId]);
         } else {
-            osInvalDCache(&gEncodedKartTexture[index][screenId2][playerId], D_800DDEB0[player->characterId]);
-
-            osPiStartDma(&gDmaIoMesg, OS_MESG_PRI_NORMAL, OS_READ,
-                         (uintptr_t) &_kart_texturesSegmentRomStart[SEGMENT_OFFSET(
-                             gKartTextureTable0[player->characterId][player->animGroupSelector[screenId]]
-                                               [player->animFrameSelector[screenId]])],
-                         &gEncodedKartTexture[index][screenId2][playerId], D_800DDEB0[player->characterId],
-                         &gDmaMesgQueue);
-
-            osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
+            dma_copy(&gEncodedKartTexture[index][screenId2][playerId],
+                    gKartTextureTable0[player->characterId]
+                        [player->animGroupSelector[screenId]]
+                        [player->animFrameSelector[screenId]],
+                    D_800DDEB0[player->characterId]);
         }
     } else if (((temp & 0x400) == 0x400) || ((temp & 0x01000000) == 0x01000000) ||
                ((temp & 0x02000000) == 0x02000000) || ((temp & 0x10000) == 0x10000)) {
-        osInvalDCache(&gEncodedKartTexture[index][screenId2][playerId], 0x780U);
-        // player->unk_0A8 >> 8 converts an 8.8 fixed-point animation frame to a whole number.
-        osPiStartDma(&gDmaIoMesg, OS_MESG_PRI_NORMAL, OS_READ,
-                     (uintptr_t) &_kart_texturesSegmentRomStart[SEGMENT_OFFSET(
-                         gKartTextureTumbles[player->characterId][player->unk_0A8 >> 8])],
-                     &gEncodedKartTexture[index][screenId2][playerId], 0x900, &gDmaMesgQueue);
-
-        osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
+        dma_copy(&gEncodedKartTexture[index][screenId2][playerId],
+                gKartTextureTumbles[player->characterId]
+                    [player->unk_0A8 >> 8],
+                0x900);
     } else {
-        osInvalDCache(&gEncodedKartTexture[index][screenId2][playerId], D_800DDEB0[player->characterId]);
-
-        osPiStartDma(&gDmaIoMesg, OS_MESG_PRI_NORMAL, OS_READ,
-                     (uintptr_t) &_kart_texturesSegmentRomStart[SEGMENT_OFFSET(
-                         gKartTextureTable0[player->characterId][player->animGroupSelector[screenId]]
-                                           [player->animFrameSelector[screenId]])],
-                     &gEncodedKartTexture[index][screenId2][playerId], D_800DDEB0[player->characterId], &gDmaMesgQueue);
-
-        osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
+        dma_copy(&gEncodedKartTexture[index][screenId2][playerId],
+                gKartTextureTable0[player->characterId]
+                    [player->animGroupSelector[screenId]]
+                    [player->animFrameSelector[screenId]],
+                D_800DDEB0[player->characterId]);
     }
 }
 
@@ -1241,78 +1223,40 @@ void load_kart_texture_non_blocking(Player* player, s8 arg1, s8 arg2, s8 arg3, s
     if (((temp & 0x80) == 0x80) || ((temp & 0x40) == 0x40) || ((temp & 0x80000) == 0x80000) ||
         ((temp & 0x800000) == 0x800000) || ((temp & 0x20000) == 0x20000) || ((player->unk_044 & 0x800) != 0)) {
         if (player->animFrameSelector[arg2] != 0) {
-            osInvalDCache(&gEncodedKartTexture[arg4][arg3][arg1], D_800DDEB0[player->characterId]);
-
-            osPiStartDma(&gDmaIoMesg, OS_MESG_PRI_NORMAL, OS_READ,
-                         (uintptr_t) &_kart_texturesSegmentRomStart[SEGMENT_OFFSET(
-                             gKartTextureTable1[player->characterId][player->animGroupSelector[arg2]]
-                                               [player->animFrameSelector[arg2]])],
-                         &gEncodedKartTexture[arg4][arg3][arg1], D_800DDEB0[player->characterId], &gDmaMesgQueue);
+            dma_copy(&gEncodedKartTexture[arg4][arg3][arg1],
+                    gKartTextureTable1[player->characterId]
+                        [player->animGroupSelector[arg2]]
+                        [player->animFrameSelector[arg2]],
+                    D_800DDEB0[player->characterId]);
         } else {
-            osInvalDCache(&gEncodedKartTexture[arg4][arg3][arg1], D_800DDEB0[player->characterId]);
-
-            osPiStartDma(&gDmaIoMesg, OS_MESG_PRI_NORMAL, OS_READ,
-                         (uintptr_t) &_kart_texturesSegmentRomStart[SEGMENT_OFFSET(
-                             gKartTextureTable0[player->characterId][player->animGroupSelector[arg2]]
-                                               [player->animFrameSelector[arg2]])],
-                         &gEncodedKartTexture[arg4][arg3][arg1], D_800DDEB0[player->characterId], &gDmaMesgQueue);
+            dma_copy(&gEncodedKartTexture[arg4][arg3][arg1],
+                    gKartTextureTable0[player->characterId]
+                        [player->animGroupSelector[arg2]]
+                        [player->animFrameSelector[arg2]],
+                    D_800DDEB0[player->characterId]);
         }
     } else if (((temp & 0x400) == 0x400) || ((temp & 0x01000000) == 0x01000000) ||
                ((temp & 0x02000000) == 0x02000000) || ((temp & 0x10000) == 0x10000)) {
-        osInvalDCache(&gEncodedKartTexture[arg4][arg3][arg1], 0x780);
-        // player->unk_0A8 >> 8 converts an 8.8 fixed-point animation frame to a whole number.
-        osPiStartDma(&gDmaIoMesg, OS_MESG_PRI_NORMAL, OS_READ,
-                     (uintptr_t) &_kart_texturesSegmentRomStart[SEGMENT_OFFSET(
-                         gKartTextureTumbles[player->characterId][player->unk_0A8 >> 8])],
-                     &gEncodedKartTexture[arg4][arg3][arg1], 0x900, &gDmaMesgQueue);
+        dma_copy(&gEncodedKartTexture[arg4][arg3][arg1],
+                gKartTextureTumbles[player->characterId]
+                    [player->unk_0A8 >> 8],
+                0x900);
     } else {
-        osInvalDCache(&gEncodedKartTexture[arg4][arg3][arg1], D_800DDEB0[player->characterId]);
-
-        osPiStartDma(&gDmaIoMesg, OS_MESG_PRI_NORMAL, OS_READ,
-                     (uintptr_t) &_kart_texturesSegmentRomStart[SEGMENT_OFFSET(
-                         gKartTextureTable0[player->characterId][player->animGroupSelector[arg2]]
-                                           [player->animFrameSelector[arg2]])],
-                     &gEncodedKartTexture[arg4][arg3][arg1], D_800DDEB0[player->characterId], &gDmaMesgQueue);
+        dma_copy(&gEncodedKartTexture[arg4][arg3][arg1],
+                gKartTextureTable0[player->characterId]
+                    [player->animGroupSelector[arg2]]
+                    [player->animFrameSelector[arg2]],
+                D_800DDEB0[player->characterId]);
     }
 }
 
 void load_kart_palette(Player* player, s8 playerId, s8 screenId, s8 index) {
-#ifdef AVOID_UB
     struct_D_802F1F80* temp_s0 = &gPlayerPalettesList[index][screenId][playerId];
-#else
-    struct_D_802F1F80* temp_s0 = (struct_D_802F1F80*) &gPlayerPalettesList[index][screenId][playerId * 0x100];
-#endif
-    switch (gActiveScreenMode) {
-        case SCREEN_MODE_1P:
-        case SCREEN_MODE_2P_SPLITSCREEN_HORIZONTAL:
-        case SCREEN_MODE_2P_SPLITSCREEN_VERTICAL:
-            osInvalDCache(temp_s0, sizeof(struct_D_802F1F80));
-
-            osPiStartDma(&gDmaIoMesg, OS_MESG_PRI_NORMAL, OS_READ,
-                         (uintptr_t) &_kart_texturesSegmentRomStart[SEGMENT_OFFSET(gKartPalettes[player->characterId])],
-                         temp_s0, sizeof(struct_D_802F1F80), &gDmaMesgQueue);
-
-            osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
-            break;
-        case SCREEN_MODE_3P_4P_SPLITSCREEN: // Code identical to above
-            osInvalDCache(temp_s0, sizeof(struct_D_802F1F80));
-
-            osPiStartDma(&gDmaIoMesg, OS_MESG_PRI_NORMAL, OS_READ,
-                         (uintptr_t) &_kart_texturesSegmentRomStart[SEGMENT_OFFSET(gKartPalettes[player->characterId])],
-                         temp_s0, sizeof(struct_D_802F1F80), &gDmaMesgQueue);
-
-            osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
-            break;
-    }
+    dma_copy(temp_s0, gKartPalettes[player->characterId],sizeof(struct_D_802F1F80));
 }
 
 void load_player_data(UNUSED Player* player, s32 arg1, void* vAddr, u16 size) {
-    osInvalDCache(vAddr, size);
-
-    osPiStartDma(&gDmaIoMesg, OS_MESG_PRI_NORMAL, OS_READ,
-                 (uintptr_t) &_kart_texturesSegmentRomStart[SEGMENT_OFFSET(arg1)], vAddr, size, &gDmaMesgQueue);
-
-    osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
+    dma_copy(vAddr, arg1, size);
 }
 
 /**
@@ -1324,8 +1268,5 @@ void load_player_data(UNUSED Player* player, s32 arg1, void* vAddr, u16 size) {
  * @param size Size of data to read
  */
 void load_player_data_non_blocking(UNUSED Player* player, s32 arg1, void* vAddr, u16 size) {
-    osInvalDCache(vAddr, size);
-
-    osPiStartDma(&gDmaIoMesg, OS_MESG_PRI_NORMAL, OS_READ,
-                 (uintptr_t) &_kart_texturesSegmentRomStart[SEGMENT_OFFSET(arg1)], vAddr, size, &gDmaMesgQueue);
+    dma_copy(vAddr, arg1, size);
 }

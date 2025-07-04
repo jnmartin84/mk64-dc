@@ -13,16 +13,10 @@
 #include "code_800029B0.h"
 #include <defines.h>
 
-#pragma intrinsic(sqrtf)
-
 // Used to delete the choco mountain guard rail
 void nullify_displaylist(uintptr_t addr) {
-    s32 segment = SEGMENT_NUMBER2(addr);
-    s32 offset = SEGMENT_OFFSET(addr);
-
     Gfx* macro;
-
-    macro = (Gfx*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
+    macro = (Gfx*)segmented_to_virtual(addr);    macro->words.w0 = ((uint8_t)G_ENDDL << 24);
     macro->words.w0 = (G_ENDDL << 24);
     macro->words.w1 = 0;
 }
@@ -456,7 +450,7 @@ s32 check_horizontally_colliding_with_triangle(f32 posX, f32 posZ, u16 index) {
     f32 crossProductZX_1;
     f32 crossProductZX_3;
     f32 crossProductZX_2;
-    s32 b = true;
+    s32 b = 1;
 
     x1 = triangle->vtx1->v.ob[0];
     z1 = triangle->vtx1->v.ob[2];
@@ -476,23 +470,23 @@ s32 check_horizontally_colliding_with_triangle(f32 posX, f32 posZ, u16 index) {
         crossProductZX_3 = (z3 - posZ) * (x1 - posX) - (x3 - posX) * (z1 - posZ);
 
         if ((crossProductZX_2 * crossProductZX_3) < 0.0f) {
-            b = false;
+            b = 0;
         }
     } else {
         crossProductZX_2 = (z2 - posZ) * (x3 - posX) - (x2 - posX) * (z3 - posZ);
         if (!crossProductZX_2) {
             crossProductZX_3 = (z3 - posZ) * (x1 - posX) - (x3 - posX) * (z1 - posZ);
             if (crossProductZX_1 * crossProductZX_3 < 0.0f) {
-                b = false;
+                b = 0;
             }
         } else {
             if ((crossProductZX_1 * crossProductZX_2) < 0.0f) {
-                b = false;
+                b = 0;
             } else {
                 crossProductZX_3 = ((z3 - posZ) * (x1 - posX)) - ((x3 - posX) * (z1 - posZ));
                 if (crossProductZX_3 != 0) {
                     if ((crossProductZX_2 * crossProductZX_3) < 0.0f) {
-                        b = false;
+                        b = 0;
                     }
                 }
             }
@@ -756,6 +750,7 @@ UNUSED s32 detect_tyre_collision(KartTyre* tyre) {
     // Another function that has a return value but doesn't have an explicit return statement in one of its codepaths.
     // The return value at this point will be whatever was last returned by func_802AAE4C/func_802AB6C4/func_802AB288
     // depending on which (if any) if statements were entered on the loop's last cycle
+    return 0;
 }
 
 s32 is_colliding_with_drivable_surface(Collision* collision, f32 boundingBoxSize, f32 newX, f32 newY, f32 newZ,
@@ -1753,9 +1748,19 @@ void set_vtx_from_triangle(u32 triangle, s8 surfaceType, u16 sectionId) {
     u32 vert2 = ((triangle & 0x0000FF00) >> 8) / 2;
     u32 vert3 = (triangle & 0x000000FF) / 2;
 
-    Vtx* vtx1 = vtxBuffer[vert1];
-    Vtx* vtx2 = vtxBuffer[vert2];
-    Vtx* vtx3 = vtxBuffer[vert3];
+    Vtx* vtx1;
+    Vtx* vtx2;
+    Vtx* vtx3;
+
+    if (gIsMirrorMode) {
+        vtx1 = vtxBuffer[vert3];
+        vtx2 = vtxBuffer[vert2];
+        vtx3 = vtxBuffer[vert1];
+    } else {
+        vtx1 = vtxBuffer[vert1];
+        vtx2 = vtxBuffer[vert2];
+        vtx3 = vtxBuffer[vert3];
+    }
 
     add_collision_triangle(vtx1, vtx2, vtx3, surfaceType, sectionId);
 }
@@ -1771,13 +1776,33 @@ void set_vtx_from_tri2(u32 triangle1, u32 triangle2, s8 surfaceType, u16 section
     u32 vert5 = ((triangle2 & 0x0000FF00) >> 8) / 2;
     u32 vert6 = (triangle2 & 0x000000FF) / 2;
 
-    Vtx* vtx1 = vtxBuffer[vert1];
-    Vtx* vtx2 = vtxBuffer[vert2];
-    Vtx* vtx3 = vtxBuffer[vert3];
+    Vtx* vtx1;
+    Vtx* vtx2;
+    Vtx* vtx3;
 
-    Vtx* vtx4 = vtxBuffer[vert4];
-    Vtx* vtx5 = vtxBuffer[vert5];
-    Vtx* vtx6 = vtxBuffer[vert6];
+    if (gIsMirrorMode) {
+        vtx1 = vtxBuffer[vert3];
+        vtx2 = vtxBuffer[vert2];
+        vtx3 = vtxBuffer[vert1];
+    } else {
+        vtx1 = vtxBuffer[vert1];
+        vtx2 = vtxBuffer[vert2];
+        vtx3 = vtxBuffer[vert3];
+    }
+
+    Vtx* vtx4;
+    Vtx* vtx5;
+    Vtx* vtx6;
+
+    if (gIsMirrorMode) {
+        vtx4 = vtxBuffer[vert6];
+        vtx5 = vtxBuffer[vert5];
+        vtx6 = vtxBuffer[vert4];
+    } else {
+        vtx4 = vtxBuffer[vert4];
+        vtx5 = vtxBuffer[vert5];
+        vtx6 = vtxBuffer[vert6];
+    }
 
     // Triangle 1
     add_collision_triangle(vtx1, vtx2, vtx3, surfaceType, sectionId);
@@ -1813,9 +1838,7 @@ void set_vtx_from_quadrangle(u32 line, s8 surfaceType, u16 sectionId) {
  */
 void set_vtx_buffer(uintptr_t addr, u32 numVertices, u32 bufferIndex) {
     u32 i;
-    u32 segment = SEGMENT_NUMBER2(addr);
-    u32 offset = SEGMENT_OFFSET(addr);
-    Vtx* vtx = (Vtx*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
+    Vtx* vtx = (Vtx*) segmented_to_virtual(addr);
     for (i = 0; i < numVertices; i++) {
         vtxBuffer[bufferIndex] = vtx;
         vtx++;
@@ -1921,6 +1944,7 @@ s32 is_triangle_intersecting_bounding_box(s16 minX, s16 maxX, s16 minZ, s16 maxZ
     return 0;
 }
 
+extern u16 __attribute__((aligned(32))) colls[16384];//2800];//2798];//16384];//32768];
 /**
  * Splits the collision mesh into 32x32 sections. This allows the game to check only
  * nearby geography for a collision rather than checking against the whole collision mesh.
@@ -1953,11 +1977,7 @@ void generate_collision_grid(void) {
     }
 
     gNumCollisionTriangles = 0;
-    /**
-     * @warning gNextFreeMemoryAddress incremented just outside this function. Bad practice to hide memory allocation
-     * like this.
-     */
-    gCollisionIndices = (u16*) gNextFreeMemoryAddress;
+    gCollisionIndices = (u16*)colls;
 
     // 32x32 grid
     for (j = 0; j < GRID_SIZE; j++) {
@@ -2026,9 +2046,7 @@ void generate_collision_mesh(Gfx* addr, s8 surfaceType, u16 sectionId) {
     uintptr_t hi;
     s32 i;
 
-    s32 segment = SEGMENT_NUMBER2(addr);
-    s32 offset = SEGMENT_OFFSET(addr);
-    Gfx* gfx = (Gfx*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
+    Gfx* gfx = (Gfx*)segmented_to_virtual(addr);
     D_8015F6FA = 0;
     D_8015F6FC = 0;
 
@@ -2068,15 +2086,16 @@ void generate_collision_mesh(Gfx* addr, s8 surfaceType, u16 sectionId) {
  * Search for G_SETTILESIZE and set its args.
  */
 void find_and_set_tile_size(uintptr_t addr, s32 uls, s32 ult) {
-    u32 segment = SEGMENT_NUMBER2(addr);
-    u32 offset = SEGMENT_OFFSET(addr);
-    Gfx* gfx = (Gfx*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
+    Gfx* gfx = (Gfx*)segmented_to_virtual(addr);
     u32 opcode;
 
+    s32 lrs, lrt;
     uls = (uls << 12) & 0xFFF000;
+    lrs = (uls + (255 << 12)) & 0xFFF000;
     ult &= 0xFFF;
+    lrt = (ult + 255) & 0xFFF;
 
-    while (true) {
+    while (1) {
 
         opcode = GFX_GET_OPCODE(gfx->words.w0);
 
@@ -2084,7 +2103,7 @@ void find_and_set_tile_size(uintptr_t addr, s32 uls, s32 ult) {
             break;
         } else if (opcode == (u32) (G_SETTILESIZE << 24)) {
             gfx->words.w0 = (G_SETTILESIZE << 24) | uls | ult;
-
+            gfx->words.w1 = (gfx->words.w1 & 0x07000000) | lrs | lrt;
             break;
         }
         gfx++;
@@ -2092,10 +2111,8 @@ void find_and_set_tile_size(uintptr_t addr, s32 uls, s32 ult) {
 }
 
 void set_vertex_colours(uintptr_t addr, u32 vertexCount, UNUSED s32 vert3, s8 alpha, u8 red, u8 green, u8 blue) {
-    s32 segment = SEGMENT_NUMBER2(addr);
-    s32 offset = SEGMENT_OFFSET(addr);
     s32 i;
-    Vtx* vtx = (Vtx*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
+    Vtx* vtx = (Vtx*)segmented_to_virtual(addr);
 
     for (i = 0; (u32) i < vertexCount; i++) {
         if (red) {
@@ -2112,24 +2129,22 @@ void set_vertex_colours(uintptr_t addr, u32 vertexCount, UNUSED s32 vert3, s8 al
  * Recursive search for vertices and set their colour values.
  */
 void find_vtx_and_set_colours(uintptr_t displayList, s8 alpha, u8 red, u8 green, u8 blue) {
-    s32 segment = SEGMENT_NUMBER2(displayList);
-    s32 offset = SEGMENT_OFFSET(displayList);
-    Gfx* gfx = (Gfx*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
+    Gfx* gfx = (Gfx*)segmented_to_virtual(displayList);
     uintptr_t lo;
     uintptr_t hi;
     s32 opcode;
 
-    while (true) {
+    while (1) {
         lo = gfx->words.w0;
         hi = gfx->words.w1;
         opcode = GFX_GET_OPCODE(lo);
         if (opcode == (G_ENDDL << 24)) {
             break;
         } else if (opcode == (G_DL << 24)) {
-            find_vtx_and_set_colours(hi, alpha, red, green, blue);
+            find_vtx_and_set_colours(segmented_to_virtual(hi), alpha, red, green, blue);
         } else if (opcode == (G_VTX << 24)) {
             // G_VTX contains an addr hi
-            set_vertex_colours(hi, (lo >> 10) & 0x3F, ((lo >> 16) & 0xFF) >> 1, alpha, red, green, blue);
+            set_vertex_colours(segmented_to_virtual(hi), (lo >> 10) & 0x3F, ((lo >> 16) & 0xFF) >> 1, alpha, red, green, blue);
         }
         gfx++;
     }

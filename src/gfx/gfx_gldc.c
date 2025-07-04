@@ -432,11 +432,11 @@ static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int 
             int pwidth = next_pot(width);
             int pheight = next_pot(height);
             /*@Note: Might not need texture max sizes */
-            if (pwidth > 128) {
-                pwidth = 128;
+            if (pwidth > 512) {
+                pwidth = 512;
             }
-            if (pheight > 128) {
-                pheight = 128;
+            if (pheight > 512) {
+                pheight = 512;
             }
 
             /* Need texture min sizes */

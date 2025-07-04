@@ -59,7 +59,7 @@ typedef struct {
 void camera_init(f32, f32, f32, s16, u32, s32);
 void func_8001CA10(Camera*);
 void func_8001CA24(Player*, f32);
-void func_8001CA78(Player*, Camera*, Vec3f, f32*, f32*, f32*, s32, s32);
+void update_camera_flyby_trailing_view(Player*, Camera*, Vec3f, f32*, f32*, f32*, s32, s32);
 void func_8001CCEC(Player*, Camera*, Vec3f, f32*, f32*, f32*, s32*, s16, s16);
 void func_8001D53C(Player*, Camera*, Vec3f, f32*, f32*, f32*, s16, s16);
 void func_8001D794(Player*, Camera*, Vec3f, f32*, f32*, f32*, s16);

@@ -209,7 +209,7 @@ void func_8001CA24(Player* player, f32 arg1) {
     camera->unk_94.unk_0 = arg1;
 }
 
-void func_8001CA78(UNUSED Player* player, Camera* camera, Vec3f arg2, f32* arg3, f32* arg4, f32* arg5, UNUSED s32 huh,
+void update_camera_flyby_trailing_view(UNUSED Player* player, Camera* camera, Vec3f arg2, f32* arg3, f32* arg4, f32* arg5, UNUSED s32 huh,
                    UNUSED s32 wut) {
     Mat3 sp74;
     Vec3f sp68;
@@ -648,7 +648,7 @@ void func_8001E0C4(Camera* camera, Player* player, s8 arg2) {
         var_a2 = (player->unk_078 / 3) + 0x87;
     }
     adjust_angle(&camera->unk_2C, player->rotation[1], var_a2);
-    func_8001CA78(player, camera, sp60, &sp74, &sp70, &sp6C, camera->unk_2C, arg2);
+    update_camera_flyby_trailing_view(player, camera, sp60, &sp74, &sp70, &sp6C, camera->unk_2C, arg2);
     camera->someBitFlags &= ~0x0004;
     temp_t7 = check_bounding_collision(&camera->collision, test, sp74, sp70, sp6C);
     if (camera->collision.surfaceDistance[2] < 0.0f) {

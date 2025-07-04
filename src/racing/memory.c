@@ -16,6 +16,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <kos.h>
+
 extern s16 gCurrentCourseId;
 extern uint8_t __attribute__((aligned(32))) DECOMP_VERT_BUF[228656];
 extern u8 __attribute__((aligned(32))) SEG4_BUF[228656];
@@ -36,6 +38,7 @@ struct UnkStruct_802B8CD4 D_802B8CD4[] = { 0 };
 s32 D_802B8CE4 = 0; // pad
 s32 memoryPadding[2];
 
+#if 0
 /**
  * @brief Returns the address of the next available memory location and updates the memory pointer
  * to reference the next location of available memory based provided size to allocate.
@@ -48,6 +51,7 @@ void* get_next_available_memory_addr(uintptr_t size) {
     gNextFreeMemoryAddress += size;
     return (void*) freeSpace;
 }
+#endif
 
 /**
  * @brief Stores the physical memory addr for segmented memory in `gSegmentTable` using the segment number as an index.
@@ -61,7 +65,7 @@ void* get_next_available_memory_addr(uintptr_t size) {
  * @return The stored base address, truncated to a 29-bit value.
  */
 uintptr_t set_segment_base_addr(s32 segment, void* addr) {
-    gSegmentTable[segment] = (uintptr_t) addr & 0x1FFFFFFF;
+    gSegmentTable[segment] = (uintptr_t) addr;
     return gSegmentTable[segment];
 }
 
@@ -70,25 +74,47 @@ uintptr_t set_segment_base_addr(s32 segment, void* addr) {
  * @param permits segment numbers from 0x0 to 0xF.
  */
 void* get_segment_base_addr(s32 segment) {
-    return (void*) (gSegmentTable[segment] | 0x80000000);
+    return (void*) (gSegmentTable[segment]);
 }
-
 /**
  * @brief converts an RSP segment + offset address to a normal memory address
  */
 void* segmented_to_virtual(const void* addr) {
-    size_t segment = (uintptr_t) addr >> 24;
-    size_t offset = (uintptr_t) addr & 0x00FFFFFF;
+	uintptr_t uip_addr = (uintptr_t)addr;
 
-    return (void*) ((gSegmentTable[segment] + offset) | 0x80000000);
+    if ((uip_addr >= 0x8c010000) && (uip_addr <= 0x8cffffff)) {
+		return uip_addr;
+	} 
+
+    size_t segment = (uintptr_t) uip_addr >> 24;
+
+    // investigate why this hits on Sherbet Land 4 player attract mode demo
+//    if (segment < 0x2) {
+//        printf("%08x converts to bad segment %02x %08x\n", addr, segment, uip_addr);
+//    }
+    
+    if(segment > 0xf) {
+        printf("%08x converts to bad segment %02x %08x\n", (uintptr_t)addr, segment, (uintptr_t)uip_addr);
+            printf("\n");
+        arch_stk_trace(0);
+            printf("\n");
+            while(1){}
+        exit(-1);
+	}
+
+    size_t offset = (uintptr_t) uip_addr & 0x00FFFFFF;
+    return (void*) ((gSegmentTable[segment] + offset));
 }
 
 void move_segment_table_to_dmem(void) {
-    s32 i;
+//    s32 i;
 
-    for (i = 0; i < 16; i++) {
-        gSPSegment(gDisplayListHead++, i, gSegmentTable[i]);
-    }
+//	//printf(__func__);
+//	//printf("\n");
+
+//    for (i = 0; i < 16; i++) {
+//        gSPSegment(gDisplayListHead++, i, gSegmentTable[i]);
+//    }
 }
 
 UNUSED void func_802A7D54(s32 arg0, s32 arg1) {
@@ -304,58 +330,6 @@ UNUSED uintptr_t func_802A82AC(s32 arg0) {
     return phi_v1;
 }
 
-/**
- * @brief Returns pointer to mio0 compressed Vtx.
- */
-u8* dma_compressed_vtx(u8* start, u8* end) {
-    u8* freeSpace;
-    uintptr_t size;
-
-    size = ALIGN16(end - start);
-    freeSpace = (u8*) gNextFreeMemoryAddress;
-    dma_copy(freeSpace, start, size);
-    gNextFreeMemoryAddress += size;
-    return freeSpace;
-}
-
-// unused mio0 decode func.
-UNUSED uintptr_t func_802A8348(s32 arg0, s32 arg1, s32 arg2) {
-    uintptr_t offset;
-    UNUSED void* pad;
-    uintptr_t oldAddr;
-    void* newAddr;
-
-    offset = ALIGN16(arg1 * arg2);
-    oldAddr = gNextFreeMemoryAddress;
-    newAddr = (void*) (oldAddr + offset);
-    pad = &newAddr;
-    osInvalDCache(newAddr, offset);
-    osPiStartDma(&gDmaIoMesg, 0, 0, (uintptr_t) &_other_texturesSegmentRomStart[SEGMENT_OFFSET(arg0)], newAddr, offset,
-                 &gDmaMesgQueue);
-    osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, 1);
-
-    func_80040030((u8*) newAddr, (u8*) oldAddr);
-    gNextFreeMemoryAddress += offset;
-    return oldAddr;
-}
-
-UNUSED u8* func_802A841C(u8* arg0, s32 arg1, s32 arg2) {
-    u8* temp_v0;
-    void* temp_a0;
-    temp_v0 = (u8*) gNextFreeMemoryAddress;
-    temp_a0 = temp_v0 + arg2;
-    arg1 = ALIGN16(arg1);
-    arg2 = ALIGN16(arg2);
-
-    osInvalDCache(temp_a0, arg1);
-    osPiStartDma(&gDmaIoMesg, 0, 0, (uintptr_t) &_other_texturesSegmentRomStart[SEGMENT_OFFSET(arg0)], temp_a0, arg1,
-                 &gDmaMesgQueue);
-    osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, 1);
-    func_80040030((u8*) temp_a0, temp_v0);
-    gNextFreeMemoryAddress += arg2;
-    return temp_v0;
-}
-
 void gfx_texture_cache_invalidate(void* arg);
 // starting address for this texture COMPRESSED is gNextFree+arg2
 // starting address for this texture DECOMPRESSED is gNextFree
@@ -368,7 +342,6 @@ u8* dma_textures(u8 texture[], size_t arg1, size_t arg2) {
     temp_a0 = temp_v0 + arg2;
     arg1 = ALIGN16(arg1);
     arg2 = ALIGN16(arg2);
-    osInvalDCache((void*) temp_a0, arg1);
     dma_copy(temp_a0, texture, arg1);
     mio0decode((u8*) temp_a0, temp_v0);
     gfx_texture_cache_invalidate(temp_v0);
@@ -380,17 +353,12 @@ void func_802A86A8(CourseVtx* data, u32 arg1) {
     CourseVtx* courseVtx = data;
     Vtx* vtx;
     s32 tmp = ALIGN16(arg1 * 0x10);
-#ifdef AVOID_UB
     u32 i;
-#else
-    s32 i;
-#endif
     s8 temp_a0;
     s8 temp_a3;
     s8 flags;
 
-    gHeapEndPtr -= tmp;
-    vtx = (Vtx*) gHeapEndPtr;
+    vtx = (Vtx*) SEG4_BUF;
 
     // s32 to u32 comparison required for matching.
     for (i = 0; i < arg1; i++) {
@@ -513,7 +481,7 @@ static inline uint32_t Swap32(uint32_t val)
 		(((val)&0x0000ff00) << 8) | (((val)&0x000000ff) << 24));
 }
 //extern uint8_t TEMP_DECODE_BUF[131072];
-u32 max_size = 0;
+
 void* decompress_segments(u8* start, u8 *target) {
     mio0decode(segmented_to_virtual(start), (u8*) target);
     return (void*) target;

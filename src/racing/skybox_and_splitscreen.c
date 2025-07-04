@@ -67,7 +67,7 @@ Vtx D_802B8A10[] = {
     { { { 0, 120, -1 }, 0, { 0, 0 }, { 0x00, 0xDC, 0x00, 0xFF } } },
 };
 
-void func_802A3730(struct UnkStruct_800DC5EC* arg0) {
+void set_the_scissor(struct UnkStruct_800DC5EC* arg0) {
     s32 ulx;
     s32 uly;
     s32 lrx;
@@ -95,6 +95,7 @@ void func_802A3730(struct UnkStruct_800DC5EC* arg0) {
     screenStartX /= 4;
     screenStartY /= 4;
 
+#if 0
     lrx = screenStartX + screenWidth;
     if (lrx > SCREEN_WIDTH) {
         lrx = SCREEN_WIDTH;
@@ -106,6 +107,28 @@ void func_802A3730(struct UnkStruct_800DC5EC* arg0) {
     }
     ulx = 0;
     uly = 0;
+#endif
+
+    ulx = screenStartX - screenWidth;
+    lrx = screenStartX + screenWidth;
+    uly = screenStartY - screenHeight;
+    lry = screenStartY + screenHeight;
+    ulx = (ulx + 31) & ~31;
+    uly = (uly + 31) & ~31;
+    lrx = (lrx + 31) & ~31;
+    lry = (lry + 31) & ~31;
+    if (ulx < 0) {
+        ulx = 0;
+    }
+    if (uly < 0) {
+        uly = 0;
+    }
+    if (lrx > SCREEN_WIDTH) {
+        lrx = SCREEN_WIDTH;
+    }
+    if (lry > SCREEN_HEIGHT) {
+        lry = SCREEN_HEIGHT;
+    }
 
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, ulx, uly, lrx, lry);
 }
@@ -266,6 +289,7 @@ void set_viewport(void) {
  * Tells the RDP which of the three framebuffers it shall draw to.
  */
 void select_framebuffer(void) {
+#if 0
     gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH,
                      VIRTUAL_TO_PHYSICAL(gPhysicalFramebuffers[sRenderingFramebuffer]));
     gDPSetFillColor(gDisplayListHead++, GPACK_RGBA5551(D_800DC5D0, D_800DC5D4, D_800DC5D8, 1) << 0x10 |
@@ -275,9 +299,15 @@ void select_framebuffer(void) {
     gDPFillRectangle(gDisplayListHead++, 0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
     gDPPipeSync(gDisplayListHead++);
     gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
+#else
+    gDPPipeSync(gDisplayListHead++);
+    gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    gDPPipeSync(gDisplayListHead++);
+    gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
+#endif
 }
 
-void func_802A4300(void) {
+void draw_splitscreen_separators(void) {
 
     if (gActiveScreenMode == SCREEN_MODE_1P) {
         return;
@@ -300,7 +330,8 @@ void func_802A4300(void) {
             gDPFillRectangle(gDisplayListHead++, 157, 0, 159, 239);
             break;
         case SCREEN_MODE_2P_SPLITSCREEN_HORIZONTAL:
-            gDPFillRectangle(gDisplayListHead++, 0, 119, 319, 121);
+            //gDPFillRectangle(gDisplayListHead++, 0, 119, 319, 121);
+            gDPFillRectangle(gDisplayListHead++, 0, 223, 319, 223+32);
             break;
         case SCREEN_MODE_3P_4P_SPLITSCREEN:
             gDPFillRectangle(gDisplayListHead++, 157, 0, 159, 239);
@@ -452,7 +483,7 @@ void func_802A487C(Vtx* arg0, UNUSED struct UnkStruct_800DC5EC* arg1, UNUSED s32
         gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
         gSPClearGeometryMode(gDisplayListHead++, G_ZBUFFER | G_LIGHTING);
         guOrtho(&gGfxPool->mtxScreen, 0.0f, SCREEN_WIDTH, 0.0f, SCREEN_HEIGHT, 0.0f, 5.0f, 1.0f);
-        gSPPerspNormalize(gDisplayListHead++, 0xFFFF);
+        //gSPPerspNormalize(gDisplayListHead++, 0xFFFF);
         gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxScreen),
                   G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
         gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&D_0D008E98), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
@@ -462,6 +493,9 @@ void func_802A487C(Vtx* arg0, UNUSED struct UnkStruct_800DC5EC* arg1, UNUSED s32
 }
 
 void func_802A4A0C(Vtx* vtx, struct UnkStruct_800DC5EC* arg1, UNUSED s32 arg2, UNUSED s32 arg3, UNUSED f32* arg4) {
+    // jnmartin84 - possible bug-fix from Spaghetti dudes
+    s32 id = arg1 - D_8015F480;
+    arg1->camera = &cameras[id];
     Camera* camera = arg1->camera;
     s16 temp_t5;
     f32 temp_f0;
@@ -505,7 +539,7 @@ void func_802A4A0C(Vtx* vtx, struct UnkStruct_800DC5EC* arg1, UNUSED s32 arg2, U
     gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
     gSPClearGeometryMode(gDisplayListHead++, G_ZBUFFER | G_LIGHTING);
     guOrtho(&gGfxPool->mtxScreen, 0.0f, SCREEN_WIDTH, 0.0f, SCREEN_HEIGHT, 0.0f, 5.0f, 1.0f);
-    gSPPerspNormalize(gDisplayListHead++, 0xFFFF);
+    //gSPPerspNormalize(gDisplayListHead++, 0xFFFF);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxScreen),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&D_0D008E98), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
@@ -608,7 +642,7 @@ void func_802A4EF4(void) {
 void func_802A5004(void) {
 
     init_rdp();
-    func_802A3730(D_800DC5F0);
+    set_the_scissor(D_800DC5F0);
 
     gSPClearGeometryMode(gDisplayListHead++, 0xFFFFFFFF);
 
@@ -626,7 +660,7 @@ void func_802A5004(void) {
 void func_802A50EC(void) {
 
     init_rdp();
-    func_802A3730(D_800DC5EC);
+    set_the_scissor(D_800DC5EC);
 
     gSPClearGeometryMode(gDisplayListHead++, 0xFFFFFFFF);
     gSPSetGeometryMode(gDisplayListHead++, G_SHADE | G_SHADING_SMOOTH | G_CLIPPING);
@@ -644,7 +678,7 @@ void func_802A51D4(void) {
 
     init_rdp();
     func_802A39E0(D_800DC5EC);
-    func_802A3730(D_800DC5EC);
+    set_the_scissor(D_800DC5EC);
 
     gSPClearGeometryMode(gDisplayListHead++, 0xFFFFFFFF);
     gSPSetGeometryMode(gDisplayListHead++, G_SHADE | G_SHADING_SMOOTH | G_CLIPPING);
@@ -661,7 +695,7 @@ void func_802A52BC(void) {
 
     init_rdp();
     func_802A39E0(D_800DC5F0);
-    func_802A3730(D_800DC5F0);
+    set_the_scissor(D_800DC5F0);
 
     gSPClearGeometryMode(gDisplayListHead++, 0xFFFFFFFF);
     gSPSetGeometryMode(gDisplayListHead++, G_SHADE | G_SHADING_SMOOTH | G_CLIPPING);
@@ -678,7 +712,7 @@ void func_802A53A4(void) {
 
     move_segment_table_to_dmem();
     init_rdp();
-    func_802A3730(D_800DC5EC);
+    set_the_scissor(D_800DC5EC);
 
     gSPClearGeometryMode(gDisplayListHead++, 0xFFFFFFFF);
     gSPSetGeometryMode(gDisplayListHead++, G_SHADE | G_SHADING_SMOOTH | G_CLIPPING);
@@ -699,7 +733,7 @@ void func_802A54A8(void) {
 
     init_rdp();
     func_802A39E0(D_800DC5EC);
-    func_802A3730(D_800DC5EC);
+    set_the_scissor(D_800DC5EC);
 
     gSPClearGeometryMode(gDisplayListHead++, 0xFFFFFFFF);
     gSPSetGeometryMode(gDisplayListHead++, G_SHADE | G_SHADING_SMOOTH | G_CLIPPING);
@@ -716,7 +750,7 @@ void func_802A5590(void) {
 
     init_rdp();
     func_802A39E0(D_800DC5F0);
-    func_802A3730(D_800DC5F0);
+    set_the_scissor(D_800DC5F0);
 
     gSPClearGeometryMode(gDisplayListHead++, 0xFFFFFFFF);
     gSPSetGeometryMode(gDisplayListHead++, G_SHADE | G_SHADING_SMOOTH | G_CLIPPING);
@@ -733,7 +767,7 @@ void func_802A5678(void) {
 
     init_rdp();
     func_802A39E0(D_800DC5F4);
-    func_802A3730(D_800DC5F4);
+    set_the_scissor(D_800DC5F4);
 
     gSPClearGeometryMode(gDisplayListHead++, 0xFFFFFFFF);
     gSPSetGeometryMode(gDisplayListHead++, G_SHADE | G_SHADING_SMOOTH | G_CLIPPING);
@@ -767,10 +801,10 @@ void func_802A5760(void) {
         gDPPipeSync(gDisplayListHead++);
         gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
 
-        func_802A3730(D_800DC5F8);
+        set_the_scissor(D_800DC5F8);
 
     } else {
-        func_802A3730(D_800DC5F8);
+        set_the_scissor(D_800DC5F8);
         func_802A39E0(D_800DC5F8);
 
         if (D_800DC5B4 != 0) {
@@ -798,7 +832,7 @@ void render_player_one_1p_screen(void) {
 #endif
     func_802A53A4();
     init_rdp();
-    func_802A3730(D_800DC5EC);
+    set_the_scissor(D_800DC5EC);
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_LIGHTING | G_SHADING_SMOOTH);
     gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
 #ifdef VERSION_EU
@@ -807,7 +841,7 @@ void render_player_one_1p_screen(void) {
     guPerspective(&gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
-    gSPPerspNormalize(gDisplayListHead++, perspNorm);
+    //gSPPerspNormalize(gDisplayListHead++, perspNorm);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[0]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
 
@@ -862,7 +896,7 @@ void render_player_one_2p_screen_vertical(void) {
     sp9C = gScreenAspect * 1.2f;
 #endif
     init_rdp();
-    func_802A3730(D_800DC5EC);
+    set_the_scissor(D_800DC5EC);
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU
     guPerspective(&gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
@@ -870,7 +904,7 @@ void render_player_one_2p_screen_vertical(void) {
     guPerspective(&gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
-    gSPPerspNormalize(gDisplayListHead++, perspNorm);
+    //gSPPerspNormalize(gDisplayListHead++, perspNorm);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[0]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     guLookAt(&gGfxPool->mtxLookAt[0], camera->pos[0], camera->pos[1], camera->pos[2], camera->lookAt[0],
@@ -926,7 +960,7 @@ void render_player_two_2p_screen_vertical(void) {
 
     func_802A5004();
     init_rdp();
-    func_802A3730(D_800DC5F0);
+    set_the_scissor(D_800DC5F0);
 #ifdef VERSION_EU
     sp9C = gScreenAspect * 1.2f;
 #endif
@@ -937,7 +971,7 @@ void render_player_two_2p_screen_vertical(void) {
     guPerspective(&gGfxPool->mtxPersp[1], &perspNorm, gCameraZoom[1], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
-    gSPPerspNormalize(gDisplayListHead++, perspNorm);
+    //gSPPerspNormalize(gDisplayListHead++, perspNorm);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[1]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     guLookAt(&gGfxPool->mtxLookAt[1], camera->pos[0], camera->pos[1], camera->pos[2], camera->lookAt[0],
@@ -989,7 +1023,7 @@ void render_player_one_2p_screen_horizontal(void) {
     func_802A51D4();
     gSPSetGeometryMode(gDisplayListHead++, G_SHADE | G_CULL_BACK | G_LIGHTING | G_SHADING_SMOOTH);
     init_rdp();
-    func_802A3730(D_800DC5EC);
+    set_the_scissor(D_800DC5EC);
 #ifdef VERSION_EU
     sp9C = gScreenAspect * 1.2f;
 #endif
@@ -1000,7 +1034,7 @@ void render_player_one_2p_screen_horizontal(void) {
     guPerspective(&gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
-    gSPPerspNormalize(gDisplayListHead++, perspNorm);
+    //gSPPerspNormalize(gDisplayListHead++, perspNorm);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[0]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     guLookAt(&gGfxPool->mtxLookAt[0], camera->pos[0], camera->pos[1], camera->pos[2], camera->lookAt[0],
@@ -1053,7 +1087,7 @@ void render_player_two_2p_screen_horizontal(void) {
     func_802A52BC();
     gSPSetGeometryMode(gDisplayListHead++, G_SHADE | G_CULL_BACK | G_LIGHTING | G_SHADING_SMOOTH);
     init_rdp();
-    func_802A3730(D_800DC5F0);
+    set_the_scissor(D_800DC5F0);
 #ifdef VERSION_EU
     sp9C = gScreenAspect * 1.2f;
 #endif
@@ -1064,7 +1098,7 @@ void render_player_two_2p_screen_horizontal(void) {
     guPerspective(&gGfxPool->mtxPersp[1], &perspNorm, gCameraZoom[1], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
-    gSPPerspNormalize(gDisplayListHead++, perspNorm);
+    //gSPPerspNormalize(gDisplayListHead++, perspNorm);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[1]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     guLookAt(&gGfxPool->mtxLookAt[1], camera->pos[0], camera->pos[1], camera->pos[2], camera->lookAt[0],
@@ -1116,7 +1150,7 @@ void render_player_one_3p_4p_screen(void) {
 
     func_802A54A8();
     init_rdp();
-    func_802A3730(D_800DC5EC);
+    set_the_scissor(D_800DC5EC);
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU
     guPerspective(&gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
@@ -1124,7 +1158,7 @@ void render_player_one_3p_4p_screen(void) {
     guPerspective(&gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
-    gSPPerspNormalize(gDisplayListHead++, perspNorm);
+    //gSPPerspNormalize(gDisplayListHead++, perspNorm);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[0]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     guLookAt(&gGfxPool->mtxLookAt[0], camera->pos[0], camera->pos[1], camera->pos[2], camera->lookAt[0],
@@ -1176,7 +1210,7 @@ void render_player_two_3p_4p_screen(void) {
 
     func_802A5590();
     init_rdp();
-    func_802A3730(D_800DC5F0);
+    set_the_scissor(D_800DC5F0);
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU
     guPerspective(&gGfxPool->mtxPersp[1], &perspNorm, gCameraZoom[1], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
@@ -1184,7 +1218,7 @@ void render_player_two_3p_4p_screen(void) {
     guPerspective(&gGfxPool->mtxPersp[1], &perspNorm, gCameraZoom[1], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
-    gSPPerspNormalize(gDisplayListHead++, perspNorm);
+    //gSPPerspNormalize(gDisplayListHead++, perspNorm);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[1]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
 
@@ -1236,7 +1270,7 @@ void render_player_three_3p_4p_screen(void) {
 
     func_802A5678();
     init_rdp();
-    func_802A3730(D_800DC5F4);
+    set_the_scissor(D_800DC5F4);
 
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU
@@ -1245,7 +1279,7 @@ void render_player_three_3p_4p_screen(void) {
     guPerspective(&gGfxPool->mtxPersp[2], &perspNorm, gCameraZoom[2], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
-    gSPPerspNormalize(gDisplayListHead++, perspNorm);
+    //gSPPerspNormalize(gDisplayListHead++, perspNorm);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[2]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     guLookAt(&gGfxPool->mtxLookAt[2], camera->pos[0], camera->pos[1], camera->pos[2], camera->lookAt[0],
@@ -1306,7 +1340,7 @@ void render_player_four_3p_4p_screen(void) {
     }
 
     init_rdp();
-    func_802A3730(D_800DC5F8);
+    set_the_scissor(D_800DC5F8);
 
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU
@@ -1315,7 +1349,7 @@ void render_player_four_3p_4p_screen(void) {
     guPerspective(&gGfxPool->mtxPersp[3], &perspNorm, gCameraZoom[3], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
-    gSPPerspNormalize(gDisplayListHead++, perspNorm);
+    //gSPPerspNormalize(gDisplayListHead++, perspNorm);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[3]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     guLookAt(&gGfxPool->mtxLookAt[3], camera->pos[0], camera->pos[1], camera->pos[2], camera->lookAt[0],
@@ -1435,39 +1469,62 @@ void copy_framebuffer(s32 arg0, s32 arg1, s32 width, s32 height, u16* source, u1
         }
     }
 }
+extern uint16_t vram_s[];
+static inline uint16_t rgb565_to_rgba5551(uint16_t rgb565) {
+    // Extract components from RGB565
+    uint8_t r5 = (rgb565 >> 11) & 0x1F;         // 5 bits red
+    uint8_t g6 = (rgb565 >> 5) & 0x3F;          // 6 bits green
+    uint8_t b5 = rgb565 & 0x1F;                 // 5 bits blue
 
-void func_802A7728(void) {
-    s16 temp_v0;
+    // Convert 6-bit green to 5-bit by shifting (losing LSB)
+    uint8_t g5 = g6 >> 1;
 
-    if (gActiveScreenMode == SCREEN_MODE_3P_4P_SPLITSCREEN) {
-        D_800DC5DC = 0;
-    } else {
-        D_800DC5DC = 128;
-    }
-    D_800DC5E0 = 0;
-    temp_v0 = (s16) sRenderedFramebuffer - 1;
-    if (temp_v0 < 0) {
-        temp_v0 = 2;
-    } else if (temp_v0 > 2) {
-        temp_v0 = 0;
-    }
-    copy_framebuffer(D_800DC5DC, D_800DC5E0, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
-                     (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0x8800));
-    copy_framebuffer(D_800DC5DC + 64, D_800DC5E0, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
-                     (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0x9800));
-    copy_framebuffer(D_800DC5DC, D_800DC5E0 + 32, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
-                     (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0xA800));
-    copy_framebuffer(D_800DC5DC + 64, D_800DC5E0 + 32, 64, 32,
-                     (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
-                     (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0xB800));
-    copy_framebuffer(D_800DC5DC, D_800DC5E0 + 64, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
-                     (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0xC800));
-    copy_framebuffer(D_800DC5DC + 64, D_800DC5E0 + 64, 64, 32,
-                     (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
-                     (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0xD800));
+    // Alpha = 1 (opaque)
+    uint8_t a1 = 1;
+
+    // Pack into RGBA5551
+    uint16_t rgba5551 = (r5 << 11) | (g5 << 6) | (b5 << 1) | a1;
+
+    return (rgba5551 << 8) | ((rgba5551 >> 8)&0xff);
 }
 
-void func_802A7940(void) {
+void copy_framebuffer2(s32 xofs, s32 yofs, s32 width, s32 height, UNUSED u16* source, u16* target) {
+    s32 y;
+    s32 x;
+    s32 targetIndex;
+//    s32 sourceIndex;
+    target = segmented_to_virtual(target);
+    targetIndex = 0;
+    for (y = 0; y < height; y++) {
+        s32 y_h = (y + yofs) * 2;
+
+        for (x = 0; x < width; x++, targetIndex++) {
+            s32 x_w = x + xofs;
+            target[targetIndex] = rgb565_to_rgba5551(vram_s[(y_h * 640) + (x_w * 2)]);
+        }
+    }
+}
+
+extern void gfx_texture_cache_invalidate(void *addr);
+
+extern u8 gWSTexture68272C[];
+
+/* 0x05009800 */
+extern u8 gWSTexture682928[];
+
+/* 0x0500A800 */
+extern u8 gWSTexture682B24[];
+
+/* 0x0500B800 */
+extern u8 gWSTexture682D20[];
+
+/* 0x0500C800 */
+extern u8 gWSTexture682F1C[];
+
+/* 0x0500D800 */
+extern u8 gWSTexture683118[];
+
+void wario_jumbotron(void) {
     s16 temp_v0;
 
     if (gActiveScreenMode == SCREEN_MODE_3P_4P_SPLITSCREEN) {
@@ -1482,21 +1539,82 @@ void func_802A7940(void) {
     } else if (temp_v0 > 2) {
         temp_v0 = 0;
     }
-    copy_framebuffer(D_800DC5DC, D_800DC5E0, 0x40, 0x20, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
-                     (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0xF800));
-    copy_framebuffer(D_800DC5DC + 0x40, D_800DC5E0, 0x40, 0x20,
-                     (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
-                     (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0x10800));
-    copy_framebuffer(D_800DC5DC, D_800DC5E0 + 0x20, 0x40, 0x20,
-                     (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
-                     (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0x11800));
-    copy_framebuffer(D_800DC5DC + 0x40, D_800DC5E0 + 0x20, 0x40, 0x20,
-                     (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
-                     (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0x12800));
-    copy_framebuffer(D_800DC5DC, D_800DC5E0 + 0x40, 0x40, 0x20,
-                     (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
-                     (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0x13800));
-    copy_framebuffer(D_800DC5DC + 0x40, D_800DC5E0 + 0x40, 0x40, 0x20,
-                     (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
-                     (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0x14800));
+    copy_framebuffer2(D_800DC5DC, D_800DC5E0, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
+                      (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture68272C)); // gSegmentTable[5] + 0x8800));
+    gfx_texture_cache_invalidate(gWSTexture68272C);
+
+    copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
+                      (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture682928)); // gSegmentTable[5] + 0x9800));
+    gfx_texture_cache_invalidate(gWSTexture682928);
+
+    copy_framebuffer2(D_800DC5DC, D_800DC5E0 + 32, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
+                      (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture682B24)); // gSegmentTable[5] + 0xA800));
+    gfx_texture_cache_invalidate(gWSTexture682B24);
+
+    copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0 + 32, 64, 32,
+                      (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
+                      (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture682D20)); // gSegmentTable[5] + 0xB800));
+    gfx_texture_cache_invalidate(gWSTexture682D20);
+
+    copy_framebuffer2(D_800DC5DC, D_800DC5E0 + 64, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
+                      (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture682F1C)); // gSegmentTable[5] + 0xC800));
+    gfx_texture_cache_invalidate(gWSTexture682F1C);
+
+    copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0 + 64, 64, 32,
+                      (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
+                      (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture683118)); // gSegmentTable[5] + 0xD800));
+    gfx_texture_cache_invalidate(gWSTexture683118);
+}
+
+extern u8 gLRTexture68272C[];
+extern u8 gLRTexture682928[];
+extern u8 gLRTexture682B24[];
+extern u8 gLRTexture682D20[];
+extern u8 gLRTexture682F1C[];
+extern u8 gLRTexture683118[];
+
+void luigi_jumbotron(void) {
+    s16 temp_v0;
+
+    if (gActiveScreenMode == SCREEN_MODE_3P_4P_SPLITSCREEN) {
+        D_800DC5DC = 0;
+    } else {
+        D_800DC5DC = 128;
+    }
+    D_800DC5E0 = 0;
+    temp_v0 = (s16) sRenderedFramebuffer - 1;
+    if (temp_v0 < 0) {
+        temp_v0 = 2;
+    } else if (temp_v0 > 2) {
+        temp_v0 = 0;
+    }
+    /**
+     * The jumbo television screen is split into six sections each section is copied one at a time.
+     * This is done to fit within the n64's texture size requirements; 64x32
+     */
+    copy_framebuffer2(D_800DC5DC, D_800DC5E0, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
+                      (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture68272C)));
+    gfx_texture_cache_invalidate(gLRTexture68272C);
+
+    copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
+                      (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture682928)));
+    gfx_texture_cache_invalidate(gLRTexture682928);
+
+    copy_framebuffer2(D_800DC5DC, D_800DC5E0 + 32, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
+                      (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture682B24)));
+    gfx_texture_cache_invalidate(gLRTexture682B24);
+
+    copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0 + 32, 64, 32,
+                      (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
+                      (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture682D20)));
+    gfx_texture_cache_invalidate(gLRTexture682D20);
+
+    copy_framebuffer2(D_800DC5DC, D_800DC5E0 + 64, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
+                      (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture682F1C)));
+    gfx_texture_cache_invalidate(gLRTexture682F1C);
+
+    copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0 + 64, 64, 32,
+                      (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
+                      (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture683118)));
+    gfx_texture_cache_invalidate(gLRTexture683118);
 }

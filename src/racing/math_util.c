@@ -9,8 +9,6 @@
 #include "math.h"
 #include "memory.h"
 
-#pragma intrinsic(sqrtf, fabs)
-
 s32 D_802B91C0[2] = { 13, 13 };
 Vec3f D_802B91C8 = { 0.0f, 0.0f, 0.0f };
 
@@ -166,8 +164,8 @@ void mtxf_copy_n_element(s32* dest, s32* src, s32 n) {
 
 // Transform a matrix to a matrix identity
 void mtxf_identity(Mat4 mtx) {
-    register s32 i;
-    register s32 k;
+    s32 i;
+    s32 k;
 
     for (i = 0; i < 4; i++) {
         for (k = 0; k < 4; k++) {
@@ -253,8 +251,8 @@ void func_802B5564(Mat4 arg0, u16* arg1, f32 arg2, f32 arg3, f32 arg4, f32 arg5,
 
 // Appears to only be for the skybox. mtxf_lookat from sm64 with some modifications.
 void func_802B5794(Mat4 mtx, Vec3f from, Vec3f to) {
-    // register from sm64 but not required for matching.
-    register f32 invLength;
+    // from sm64 but not required for matching.
+    f32 invLength;
     f32 xColY;
     f32 yColY;
     f32 zColY;
@@ -433,8 +431,6 @@ void func_802B5D30(s16 arg0, s16 arg1, s32 arg2) {
  * @param arg3
  */
 void set_course_lighting(Lights1* addr, s16 arg1, s16 arg2, s32 arg3) {
-    u32 segment = SEGMENT_NUMBER2(addr);
-    u32 offset = SEGMENT_OFFSET(addr);
     UNUSED s32 pad;
     f32 sp48;
     f32 sp44;
@@ -445,8 +441,7 @@ void set_course_lighting(Lights1* addr, s16 arg1, s16 arg2, s32 arg3) {
     s8 sp2C[3];
     Lights1* var_s0;
 
-    var_s0 = (Lights1*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
-    sp48 = sins(arg2);
+    var_s0 = (Lights1*) segmented_to_virtual(addr);    sp48 = sins(arg2);
     sp44 = coss(arg2);
     sp40 = sins(arg1);
     temp_f10 = coss(arg1);
@@ -877,10 +872,10 @@ void mtxf_to_mtx(Mtx* dest, Mat4 src) {
     guMtxF2L(src, dest);
 #else
     s32 asFixedPoint;
-    register s32 i;
-    register s16* a3 = (s16*) dest;      // all integer parts stored in first 16 bytes
-    register s16* t0 = (s16*) dest + 16; // all fraction parts stored in last 16 bytes
-    register f32* t1 = (f32*) src;
+    s32 i;
+    s16* a3 = (s16*) dest;      // all integer parts stored in first 16 bytes
+    s16* t0 = (s16*) dest + 16; // all fraction parts stored in last 16 bytes
+    f32* t1 = (f32*) src;
 
     for (i = 0; i < 16; i++) {
         asFixedPoint = *t1++ * (1 << 16);         //! float-to-integer conversion responsible for PU crashes
@@ -1083,9 +1078,15 @@ void func_802B7F7C(Vec3f arg0, Vec3f arg1, Vec3s dest) {
     dest[2] = func_802B7F34(x1, y1, x2, y2);
 }
 
+// if you want to use instrinsics...
+//    float farg0 = ((float)(arg0 / 16.0f) / 1024.0f) * F_PI * 0.5f;
+//    return sinf(farg0);
+
 f32 sins(u16 arg0) {
     return gSineTable[arg0 >> 4];
 }
+
+#define gCosineTable (gSineTable + 0x400)
 
 f32 coss(u16 arg0) {
     return gCosineTable[arg0 >> 4];
@@ -1186,8 +1187,6 @@ f32 is_within_render_distance(Vec3f cameraPos, Vec3f objectPos, u16 orientationY
 // No idea if arg1 is actually a Mat4 or not, but since this function is unused
 // its impossible to know with certainty either way, very close of set_course_lighting
 UNUSED void func_802B8414(uintptr_t addr, Mat4 arg1, s16 arg2, s16 arg3, s32 arg4) {
-    u32 segment = SEGMENT_NUMBER2(addr);
-    u32 offset = SEGMENT_OFFSET(addr);
     UNUSED s32 pad;
     Vec3f sp40;
     s8 sp3C[3];
@@ -1195,7 +1194,7 @@ UNUSED void func_802B8414(uintptr_t addr, Mat4 arg1, s16 arg2, s16 arg3, s32 arg
     UNUSED s32 pad2[3];
     Lights1* var_s0;
 
-    var_s0 = (Lights1*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
+    var_s0 = (Lights1*)segmented_to_virtual(addr);
     sins(arg3);
     coss(arg3);
     sins(arg2);

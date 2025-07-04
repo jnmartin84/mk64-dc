@@ -936,9 +936,9 @@ void func_8028FCBC(void) {
             if (D_802BA034 == 1.0f) {
                 if (gActiveScreenMode != SCREEN_MODE_1P) {
                     if (gCurrentCourseId == COURSE_LUIGI_RACEWAY) {
-                        func_802A7940();
+                        luigi_jumbotron();
                     } else if (gCurrentCourseId == COURSE_WARIO_STADIUM) {
-                        func_802A7728();
+                        wario_jumbotron();
                     }
                 }
                 D_800DC510 = 2;
@@ -1097,7 +1097,7 @@ void func_802903B0(void) {
     gGotoMode = RACING;
 }
 
-void func_802903D8(Player* playerOne, Player* playerTwo) {
+void func_resolve_player_player_collision(Player* playerOne, Player* playerTwo) {
     f32 sp70 = (playerOne->boundingBoxSize + playerTwo->boundingBoxSize) - 5.0f;
     f32 temp_f0;
     f32 sp74;
@@ -1220,7 +1220,7 @@ void func_802909F0(void) {
                 if ((ply2->type & PLAYER_EXISTS) && (!(ply2->effects & 0x80000000)) &&
                     (!(ply2->type & PLAYER_INVISIBLE_OR_BOMB)) && (!(ply2->effects & 0x4000000))) {
 
-                    func_802903D8(ply, ply2);
+                    func_resolve_player_player_collision(ply, ply2);
                 }
             }
         }

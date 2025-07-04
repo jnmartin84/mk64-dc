@@ -9,8 +9,8 @@ void generate_train_path(void) {
     s32 i;
     Path2D* temp;
     TrackPathPoint* pathPoint =
-        (TrackPathPoint*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[SEGMENT_NUMBER2(d_course_kalimari_desert_train_path)] +
-                                               SEGMENT_OFFSET(d_course_kalimari_desert_train_path));
+        (TrackPathPoint*)segmented_to_virtual(d_course_kalimari_desert_train_path); //VIRTUAL_TO_PHYSICAL2(gSegmentTable[SEGMENT_NUMBER2(d_course_kalimari_desert_train_path)] +
+                          //                     SEGMENT_OFFSET(d_course_kalimari_desert_train_path));
 
     GET_PATH_LENGTH(pathPoint)
 
@@ -24,8 +24,8 @@ void generate_ferry_path(void) {
     s32 i;
 
     pathPoint =
-        (TrackPathPoint*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[SEGMENT_NUMBER2(d_course_dks_jungle_parkway_ferry_path)] +
-                                               (SEGMENT_OFFSET(d_course_dks_jungle_parkway_ferry_path)));
+        (TrackPathPoint*)segmented_to_virtual(d_course_dks_jungle_parkway_ferry_path); //VIRTUAL_TO_PHYSICAL2(gSegmentTable[SEGMENT_NUMBER2(d_course_dks_jungle_parkway_ferry_path)] +
+                            // 
 
     GET_PATH_LENGTH(pathPoint)
 
@@ -40,8 +40,8 @@ void spawn_vehicle_on_road(VehicleStuff* vehicle) {
 
     origXPos = vehicle->position[0];
     origZPos = vehicle->position[2];
-    if (gIsInExtra == false) {
-        func_8000D6D0(vehicle->position, (s16*) &vehicle->pathPointIndex, vehicle->speed,
+    if (gIsInExtra == 0) {
+        move_along_path(vehicle->position, (s16*) &vehicle->pathPointIndex, vehicle->speed,
                       vehicle->someMultiplierTheSequel, 0, 3);
         vehicle->rotation[0] = 0;
         vehicle->rotation[1] = -0x8000;
@@ -360,7 +360,7 @@ void handle_trains_interactions(s32 playerId, Player* player) {
     s32 trainIndex;
     s32 passengerCarIndex;
 
-    if (D_801631E0[playerId] != true) {
+    if (D_801631E0[playerId] != 1) {
         if (!(player->effects & UNKNOWN_EFFECT_0x1000000)) {
             playerPosX = player->pos[0];
             playerPosZ = player->pos[2];
@@ -447,7 +447,7 @@ void func_80013054(void) {
 void check_ai_crossing_distance(s32 playerId) {
     bStopAICrossing[playerId] = 0;
     if (gCurrentCourseId == COURSE_KALAMARI_DESERT) {
-        if ((!(D_801631E0[playerId] != false)) ||
+        if ((!(D_801631E0[playerId] != 0)) ||
             (set_vehicle_render_distance_flags(gPlayers[playerId].pos, TRAIN_CROSSING_AI_DISTANCE, 0))) {
 
             if ((isCrossingTriggeredByIndex[1] == 1) && ((sCrossingActiveTimer[1]) > FRAMES_SINCE_CROSSING_ACTIVATED)) {
@@ -665,8 +665,8 @@ void initialize_toads_turnpike_vehicle(f32 speedA, f32 speedB, s32 numVehicles, 
         }
         veh->rotation[0] = 0;
         veh->rotation[2] = 0;
-        if (gIsInExtra == false) {
-            veh->rotation[1] = func_8000D6D0(veh->position, (s16*) &veh->pathPointIndex, veh->speed,
+        if (gIsInExtra == 0) {
+            veh->rotation[1] = move_along_path(veh->position, (s16*) &veh->pathPointIndex, veh->speed,
                                              veh->someMultiplierTheSequel, 0, 3);
         } else {
             veh->rotation[1] =
@@ -741,8 +741,8 @@ void update_vehicle_follow_pathPoint(VehicleStuff* vehicle) {
             vehicle->someMultiplierTheSequel = temp_f0_2;
         }
     }
-    if (gIsInExtra == false) {
-        var_a1 = func_8000D6D0(vehicle->position, (s16*) &vehicle->pathPointIndex, vehicle->speed,
+    if (gIsInExtra == 0) {
+        var_a1 = move_along_path(vehicle->position, (s16*) &vehicle->pathPointIndex, vehicle->speed,
                                vehicle->someMultiplierTheSequel, 0, 3);
     } else {
         var_a1 = func_8000D940(vehicle->position, (s16*) &vehicle->pathPointIndex, vehicle->speed,
@@ -787,7 +787,7 @@ void handle_vehicle_interactions(s32 playerId, Player* player, VehicleStuff* veh
     f32 playerY;
     f32 playerZ;
 
-    if (((D_801631E0[playerId] != true) || ((((player->type & PLAYER_HUMAN) != 0)) && !(player->type & PLAYER_CPU))) &&
+    if (((D_801631E0[playerId] != 1) || ((((player->type & PLAYER_HUMAN) != 0)) && !(player->type & PLAYER_CPU))) &&
         !(player->effects & UNKNOWN_EFFECT_0x1000000)) {
 
         playerX = player->pos[0];
@@ -834,35 +834,35 @@ void handle_vehicle_interactions(s32 playerId, Player* player, VehicleStuff* veh
                     (((deltaZ) > -200.0)) && ((deltaZ) < 200.0)) {
                     if (!(vehicle->someFlagsTheSequel & ((1 << playerId)))) {
 
-                        bool shouldInteract = false;
+                        uint8_t shouldInteract = 0;
                         u16 path = gPathCountByPathIndex[0];
                         s32 t1;
                         s32 t2;
 
                         switch (gIsInExtra) {
-                            case false:
+                            case 0:
                                 t1 = is_path_point_in_range(vehicle->pathPointIndex,
                                                             gNearestPathPointByPlayerId[playerId], 10, 0, path);
                                 if ((gIsPlayerWrongDirection[playerId] == 0) && (t1 > 0) &&
                                     (player->speed < vehicle->speed)) {
-                                    shouldInteract = true;
+                                    shouldInteract = 1;
                                 }
                                 if ((gIsPlayerWrongDirection[playerId] == 1) && (t1 > 0)) {
-                                    shouldInteract = true;
+                                    shouldInteract = 1;
                                 }
                                 break;
-                            case true:
+                            case 1:
                                 t2 = is_path_point_in_range(vehicle->pathPointIndex,
                                                             gNearestPathPointByPlayerId[playerId], 0, 10, path);
                                 if (t2 > 0) {
                                     if (random_int(2) == 0) {
                                         // temp_v1_2 = gIsPlayerWrongDirection[playerId];
                                         if (gIsPlayerWrongDirection[playerId] == 0) {
-                                            shouldInteract = true;
+                                            shouldInteract = 1;
                                         }
                                         if ((gIsPlayerWrongDirection[playerId] == 1) &&
                                             (player->speed < vehicle->speed)) {
-                                            shouldInteract = true;
+                                            shouldInteract = 1;
                                         }
                                     } else {
                                         vehicle->someFlagsTheSequel |= ((1 << playerId));
@@ -870,7 +870,7 @@ void handle_vehicle_interactions(s32 playerId, Player* player, VehicleStuff* veh
                                 }
                                 break;
                         }
-                        if (shouldInteract == true) {
+                        if (shouldInteract == 1) {
 
                             u32 soundBits2 = SOUND_ARG_LOAD(0x19, 0x01, 0x70, 0x3B);
 

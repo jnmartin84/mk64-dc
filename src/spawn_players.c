@@ -818,7 +818,7 @@ void spawn_players_4p_battle(f32* arg0, f32* arg1, f32 arg2) {
     func_80039AE4();
 }
 
-void func_8003BE30(void) {
+void spawn_players_for_ending(void) {
     spawn_player(gPlayerOne, 0, -2770.774f, -345.187f, -34.6f, 0.0f, gCharacterIdByGPOverallRank[0],
                  PLAYER_EXISTS | PLAYER_CPU | PLAYER_START_SEQUENCE);
     spawn_player(gPlayerTwo, 1, -3691.506f, -6.822f, -6.95f, 36400.0f, gCharacterIdByGPOverallRank[1],
@@ -840,7 +840,7 @@ void func_8003BE30(void) {
     func_80039AE4();
 }
 
-void func_8003C0F0(void) {
+void init_race_and_spawn_players(void) {
     s16 sp5E;
     s16 sp5C;
     s16 sp5A;
@@ -1158,7 +1158,7 @@ void func_8003C0F0(void) {
 }
 
 void func_8003CD78(void) {
-    func_8003BE30();
+    spawn_players_for_ending();
 }
 
 void func_8003CD98(Player* player, Camera* camera, s8 playerId, s8 screenId) {
@@ -1193,11 +1193,11 @@ void func_8003D080(void) {
     UNUSED s32 pad;
     Player* player = &gPlayers[0];
 
-    func_8005D290();
+    load_race_common_tex();
     if (gGamestate == ENDING) {
         func_8003CD78();
     } else {
-        func_8003C0F0();
+        init_race_and_spawn_players();
     }
     if (!gDemoMode) {
         switch (gActiveScreenMode) {

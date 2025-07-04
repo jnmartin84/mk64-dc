@@ -1502,7 +1502,7 @@ struct struct_80284AE8 {
  */
 void play_cutscene(CinematicCamera* camera) {
     UNUSED s32 pad[3];
-    s16 cutsceneDuration;
+    s16 cutsceneDuration = 0;
 
 #define CUTSCENE(id, cutscene)                               \
     case id:                                                 \
@@ -1571,6 +1571,8 @@ void ceremony_transition_sliding_borders(void) {
     do {if (temp_f0 > 240.0f) { temp_f0 = 239.0f; } } while (0);
     // clang-format on
 
+    // jnmartin84 -- transition issues
+#if 0
     gDPPipeSync(gDisplayListHead++);
     gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
     gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
@@ -1579,4 +1581,5 @@ void ceremony_transition_sliding_borders(void) {
     gDPFillRectangle(gDisplayListHead++, 0, (s32) temp_f0, 319, 239);
     gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
     adjust_f32_value_transition(&gSizeSlidingBorders, gOrderedSizeSlidingBorders, D_802856BC / D_802856B4);
+#endif
 }

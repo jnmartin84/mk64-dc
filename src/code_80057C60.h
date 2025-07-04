@@ -115,7 +115,7 @@ void func_8005D0FC(s32);
 void func_8005D18C(void);
 void func_8005D1F4(s32);
 
-void func_8005D290(void);
+void load_race_common_tex(void);
 void func_8005D6C0(Player*);
 void func_8005D794(Player*, UnkPlayerStruct258*, f32, f32, f32, s8, s8);
 s32 func_8005D7D8(UnkPlayerStruct258*, s8, f32);
@@ -158,7 +158,7 @@ void func_80062968(Player*, s8, s8, s8);
 void func_800629BC(Player*, s8, s8, s8);
 void func_80062A18(Player*, s8, s8, s8);
 void func_80062AA8(Player*, s8, s8, s8);
-void func_80062B18(f32*, f32*, f32*, f32, f32, f32, u16, u16);
+void composite_rotation(f32*, f32*, f32*, f32, f32, f32, u16, u16);
 void func_80062C74(Player*, s16, s32, s32);
 void func_80062F98(Player*, s16, s8, s8);
 

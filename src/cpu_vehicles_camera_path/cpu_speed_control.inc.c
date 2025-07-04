@@ -70,7 +70,7 @@ void func_80007D04(s32 playerId, Player* player) {
         player->effects &= ~UNKNOWN_EFFECT_0x200000;
         player_accelerate(player);
         D_801634C0[playerId] = 3;
-    } else if (D_801631E0[playerId] == false) {
+    } else if (D_801631E0[playerId] == 0) {
         player->effects &= ~UNKNOWN_EFFECT_0x200000;
         player_accelerate(player);
         D_801634C0[playerId] = 2;
@@ -138,7 +138,7 @@ void regulate_cpu_speed(s32 playerId, f32 targetSpeed, Player* player) {
         !(player->soundEffects & 4)) {
         if (gCurrentCourseId == COURSE_AWARD_CEREMONY) {
             func_80007FA4(playerId, player, speed);
-        } else if ((bStopAICrossing[playerId] == true) && !(player->effects & (STAR_EFFECT | BOO_EFFECT))) {
+        } else if ((bStopAICrossing[playerId] == 1) && !(player->effects & (STAR_EFFECT | BOO_EFFECT))) {
             decelerate_player(player, 10.0f);
             if (player->currentSpeed == 0.0) {
                 player->velocity[0] = 0.0f;
@@ -168,7 +168,7 @@ void regulate_cpu_speed(s32 playerId, f32 targetSpeed, Player* player) {
                     player->effects &= ~UNKNOWN_EFFECT_0x200000;
                     decelerate_player(player, 1.0f);
                 }
-            } else if ((D_801631E0[playerId] == true) && (D_80163330[playerId] != 1)) {
+            } else if ((D_801631E0[playerId] == 1) && (D_80163330[playerId] != 1)) {
                 if (func_800088D8(playerId, gLapCountByPlayerId[playerId], gGPCurrentRaceRankByPlayerIdDup[playerId]) ==
                     1) {
                     player->effects |= UNKNOWN_EFFECT_0x200000;
@@ -206,7 +206,7 @@ void regulate_cpu_speed(s32 playerId, f32 targetSpeed, Player* player) {
                         } else if (D_80163330[playerId] == 1) {
                             func_80007D04(playerId, player);
                         } else if (func_800088D8(playerId, gLapCountByPlayerId[playerId],
-                                                 gGPCurrentRaceRankByPlayerIdDup[playerId]) == true) {
+                                                 gGPCurrentRaceRankByPlayerIdDup[playerId]) == 1) {
                             player->effects |= UNKNOWN_EFFECT_0x200000;
                             player_accelerate(player);
                         } else {

@@ -14,12 +14,14 @@ ALIGNED8 struct_D_802F1F80 gPlayerPalettesList[2][4][8];
 ALIGNED8 u16 gPlayerPalettesList[2][4][0x100 * 8];
 #endif
 
-ALIGNED8 u16 gZBuffer[SCREEN_WIDTH * SCREEN_HEIGHT];
+ALIGNED8 u16 gZBuffer[4];
 
+#if 0
 #ifdef AVOID_UB
 ALIGNED8 u16 gFramebuffers[3][SCREEN_WIDTH * SCREEN_HEIGHT];
 #else
 u16 gFramebuffer0[SCREEN_WIDTH * SCREEN_HEIGHT];
 u16 gFramebuffer1[SCREEN_WIDTH * SCREEN_HEIGHT];
 u16 gFramebuffer2[SCREEN_WIDTH * SCREEN_HEIGHT];
+#endif
 #endif

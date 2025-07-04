@@ -5,6 +5,8 @@
 #include <mk64.h>
 #include <common_structs.h>
 
+#define AVOID_UB 1
+
 /*
  * This type could reasonably be called decodedTexture or similar
  * These are textures that have been passed through mio0decode
@@ -83,8 +85,11 @@ extern struct_D_802F1F80 gPlayerPalettesList[2][4][8];
 #else
 extern u16 gPlayerPalettesList[][4][0x100 * 8];
 #endif
+#if 0
 extern u16 gZBuffer[SCREEN_WIDTH * SCREEN_HEIGHT];
-
+#else
+extern u16 gZBuffer[4];
+#endif
 // NOTE: This UB fix from sm64 implemented in mk64,
 // in-case it has the same issue.
 // untested. Unconfirmed if this applies to mk64.

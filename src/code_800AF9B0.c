@@ -30,12 +30,12 @@ Light D_800E8688 = { {
 s16 D_8018EDB0;
 s16 D_8018EDB2;
 s16 D_8018EDB4;
-Vtx* D_8018EDB8;
-Vtx* D_8018EDBC;
+Vtx D_8018EDB8[480];
+Vtx D_8018EDBC[480];
 
 void func_800AF9B0(void) {
-    D_8018EDB8 = (void*) get_next_available_memory_addr(480 * sizeof(Vtx));
-    D_8018EDBC = (void*) get_next_available_memory_addr(480 * sizeof(Vtx));
+//    D_8018EDB8 = (void*) get_next_available_memory_addr(480 * sizeof(Vtx));
+//    D_8018EDBC = (void*) get_next_available_memory_addr(480 * sizeof(Vtx));
 }
 
 // could be a normal vertex, not a color...

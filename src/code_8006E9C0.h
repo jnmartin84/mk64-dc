@@ -16,7 +16,7 @@ void func_8006EF60(void);
 void track_minimap_settings(void);
 void func_8006F824(s32);
 void func_8006F8CC(void);
-void func_8006FA94(void);
+void reset_all_kinds_of_stuff(void);
 void func_80070148(void);
 void init_object_list_index(void);
 void init_cloud_object(s32, s32, CloudData*);

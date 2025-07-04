@@ -29,7 +29,7 @@
 void init_hud(void) {
 
     reset_object_variable();
-    func_8006FA94();
+    reset_all_kinds_of_stuff();
 
     switch (gScreenModeSelection) {
         case SCREEN_MODE_1P:
@@ -115,17 +115,10 @@ void clear_object_list() {
  * Dma's mario kart 64 logo and course outline textures.
  */
 u8* dma_copy_base_misc_textures(u8* devAddr, u8* baseAddress, u32 size, u32 offset) {
-    u8** tempAddress;
-    u8* address;
-    address = baseAddress + offset;
-
+    u8* address = baseAddress + offset;
     size = ALIGN16(size);
-    osInvalDCache(address, (size));
-    osPiStartDma(&gDmaIoMesg, 0, 0, (uintptr_t) &_other_texturesSegmentRomStart[((u32) devAddr) & 0xFFFFFF], address,
-                 size, &gDmaMesgQueue);
-    osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, 1);
-    tempAddress = &address;
-    mio0decode(*tempAddress, (u8*) baseAddress);
+    dma_copy(address, devAddr, size);
+    mio0decode(address, (u8*) baseAddress);
     return baseAddress;
 }
 
@@ -159,18 +152,21 @@ void func_8006EEE8(s32 courseId) {
     D_8018D2B8 = D_800E5548[courseId * 2 + 1];
 }
 
+extern u8 __attribute__((aligned(32))) backing_gCourseOutline[0x15][128*96/2];
 void func_8006EF60(void) {
     s32 i;
     // `huh`'s and `i`'s types have to differ, for some reason
     s16 huh;
     u8* wut;
 
-    wut = (u8*) &gMenuCompressedBuffer[0x3FFFC000];
+    wut = (u8*) &gMenuCompressedBuffer[0];//0x3FFFC000];
     // clang-format off
     // God forgive me for my sins...
-    huh = 0x14; if (0) {} for (i = 0; i < huh; i++) { D_8018D248[i] = dma_copy_base_misc_textures(gCourseOutlineTextures[i], wut, D_800E5520[i], D_800E5520[i]); wut += D_800E5520[i]; }
+    huh = 0x14; if (0) {} for (i = 0; i < huh; i++) { D_8018D248[i] = dma_copy_base_misc_textures(gCourseOutlineTextures[i], backing_gCourseOutline[i], D_800E5520[i], D_800E5520[i]); wut += D_800E5520[i]; }
     // clang-format on
 }
+
+void gfx_texture_cache_invalidate(void *arg);
 
 void track_minimap_settings(void) {
     D_801655C8 = 0;
@@ -418,7 +414,7 @@ void func_8006F8CC(void) {
     }
 }
 
-void func_8006FA94(void) {
+void reset_all_kinds_of_stuff(void) {
     s32 i;
     Player *player;
 
@@ -586,6 +582,7 @@ void init_cloud_object(s32 objectIndex, s32 arg1, CloudData* arg2) {
     temp_v0->unk_09E = arg2->posY;
     temp_v0->sizeScaling = (f32) arg2->scalePercent / 100.0;
     temp_v0->activeTexture = (u8*) &D_8018D220[arg2->subType];
+    gfx_texture_cache_invalidate(temp_v0->activeTexture);
     func_80073404(objectIndex, 0x40U, 0x20U, D_0D005FB0);
     temp_v0->primAlpha = 0x00FF;
 }
@@ -784,7 +781,8 @@ void init_course_objects(void) {
         case COURSE_BANSHEE_BOARDWALK:
             if (gGamestate != CREDITS_SEQUENCE) {
                 objectId = indexObjectList1[0];
-                init_texture_object(objectId, d_course_banshee_boardwalk_bat_tlut, *d_course_banshee_boardwalk_bat,
+                // jnmartin84 -- why does this dereference the bats?
+                init_texture_object(objectId, d_course_banshee_boardwalk_bat_tlut, /* * */ d_course_banshee_boardwalk_bat,
                                     0x20U, (u16) 0x00000040);
                 gObjectList[objectId].orientation[0] = 0;
                 gObjectList[objectId].orientation[1] = 0;

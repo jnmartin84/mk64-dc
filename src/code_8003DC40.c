@@ -63,11 +63,11 @@ UNUSED void func_8003DE4C(Player* player, Vec3f arg1) {
 }
 
 // Stick to ground?
-void func_8003E048(Player* player, Vec3f arg1, Vec3f arg2, Vec3f arg3, f32* arg4, f32* arg5, f32* arg6, f32* arg7) {
+void apply_surface_push_and_slope_response(Player* player, Vec3f arg1, Vec3f arg2, Vec3f arg3, f32* arg4, f32* arg5, f32* arg6, f32* arg7) {
     *arg5 += arg1[0] * player->collision.surfaceDistance[2] * 1;
     *arg6 += arg1[1] * player->collision.surfaceDistance[2] * 0.1;
     *arg7 += arg1[2] * player->collision.surfaceDistance[2] * 1;
-    func_8002A5F4(arg1, *arg4, arg2, 1, 2);
+    apply_terrain_aligned_vector_adjustment(arg1, *arg4, arg2, 1, 2);
     if (player->collision.orientationVector[1] <= 0.8829f) {
         arg3[0] = ((player->unk_206 / 182) * 0xB4);
         arg3[2] = (-(player->slopeAccel / 182) * 0xB4);
@@ -94,7 +94,7 @@ void func_8003E37C(Player* player, Vec3f arg1, Vec3f arg2, Vec3f arg3, f32* arg4
     *arg5 += arg1[0] * player->collision.surfaceDistance[2] * 1;
     *arg6 += arg1[1] * player->collision.surfaceDistance[2] * 0.2;
     *arg7 += arg1[2] * player->collision.surfaceDistance[2] * 1;
-    func_8002A5F4(arg1, *arg4, arg2, 0.5f, 2);
+    apply_terrain_aligned_vector_adjustment(arg1, *arg4, arg2, 0.5f, 2);
     if ((player->collision.orientationVector[1] <= 0.7318f) || (player->surfaceType == CLIFF)) {
         arg3[0] = ((player->unk_206 / 182) * 0xB4);
         arg3[2] = (-(player->slopeAccel / 182) * 0xB4);
@@ -123,7 +123,7 @@ void func_8003E6EC(Player* player, Vec3f arg1, Vec3f arg2, Vec3f arg3, f32* arg4
     *arg5 += arg1[0] * player->collision.surfaceDistance[2] * 1;
     *arg6 += arg1[1] * player->collision.surfaceDistance[2] * 0.1;
     *arg7 += arg1[2] * player->collision.surfaceDistance[2] * 1;
-    func_8002A5F4(arg1, *arg4, arg2, 0.5f, 2);
+    apply_terrain_aligned_vector_adjustment(arg1, *arg4, arg2, 0.5f, 2);
     if (player->collision.orientationVector[1] <= 0.8829f) {
         arg3[0] = ((player->unk_206 / 182) * 0xB4);
         arg3[2] = (-(player->slopeAccel / 182) * 0xB4);
@@ -145,7 +145,7 @@ void func_8003E9EC(Player* player, Vec3f arg1, Vec3f arg2, Vec3f arg3, f32* arg4
     *arg5 += arg1[0] * player->collision.surfaceDistance[2] * 1;
     *arg6 += arg1[1] * player->collision.surfaceDistance[2] * 0.1;
     *arg7 += arg1[2] * player->collision.surfaceDistance[2] * 1;
-    func_8002A5F4(arg1, *arg4, arg2, 1.2f, 2);
+    apply_terrain_aligned_vector_adjustment(arg1, *arg4, arg2, 1.2f, 2);
     if (player->collision.orientationVector[1] <= 0.8357f) {
         arg3[0] = ((player->unk_206 / 182) * 0x78);
         arg3[2] = (-(player->slopeAccel / 182) * 0xB4);
@@ -180,7 +180,7 @@ void func_8003EE2C(Player* player, Vec3f arg1, Vec3f arg2, Vec3f arg3, f32* arg4
     *arg5 += arg1[0] * player->collision.surfaceDistance[2] * 1;
     *arg6 += arg1[1] * player->collision.surfaceDistance[2] * 0.1;
     *arg7 += arg1[2] * player->collision.surfaceDistance[2] * 1;
-    func_8002A5F4(arg1, *arg4, arg2, 0.5f, 2);
+    apply_terrain_aligned_vector_adjustment(arg1, *arg4, arg2, 0.5f, 2);
     if (player->collision.orientationVector[1] <= 0.8357f) {
         arg3[0] = ((player->unk_206 / 182) * 0x78);
         arg3[2] = (-(player->slopeAccel / 182) * 0xB4);
@@ -202,7 +202,7 @@ void func_8003F138(Player* player, Vec3f arg1, Vec3f arg2, Vec3f arg3, f32* arg4
     *arg5 += arg1[0] * player->collision.surfaceDistance[2] * 1;
     *arg6 += arg1[1] * player->collision.surfaceDistance[2] * 0.1;
     *arg7 += arg1[2] * player->collision.surfaceDistance[2] * 1;
-    func_8002A5F4(arg1, *arg4, arg2, 0.5f, 2);
+    apply_terrain_aligned_vector_adjustment(arg1, *arg4, arg2, 0.5f, 2);
     if (player->surfaceType == GRASS) {
         player->unk_044 &= ~1;
     }
@@ -234,7 +234,7 @@ void func_8003F46C(Player* player, Vec3f arg1, Vec3f arg2, Vec3f arg3, f32* arg4
         *arg5 += arg1[0] * player->collision.surfaceDistance[2] * 1;
         *arg6 += arg1[1] * player->collision.surfaceDistance[2] * 1;
         *arg7 += arg1[2] * player->collision.surfaceDistance[2] * 1;
-        func_8002A5F4(arg1, *arg4, arg2, 1.2f, 0.0f);
+        apply_terrain_aligned_vector_adjustment(arg1, *arg4, arg2, 1.2f, 0.0f);
         player->kartHopJerk = 0.0f;
         player->kartHopAcceleration = 0.0f;
         player->kartHopVelocity = 0.0f;
@@ -243,7 +243,7 @@ void func_8003F46C(Player* player, Vec3f arg1, Vec3f arg2, Vec3f arg3, f32* arg4
 #if !ENABLE_CUSTOM_COURSE_ENGINE
         switch (gCurrentCourseId) {
             case COURSE_MARIO_RACEWAY:
-                func_8003E048(player, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                apply_surface_push_and_slope_response(player, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
                 break;
             case COURSE_CHOCO_MOUNTAIN:
             case COURSE_KOOPA_BEACH:
@@ -262,7 +262,7 @@ void func_8003F46C(Player* player, Vec3f arg1, Vec3f arg2, Vec3f arg3, f32* arg4
                 func_8003F138(player, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
                 break;
             default:
-                func_8003E048(player, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                apply_surface_push_and_slope_response(player, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
                 break;
         }
 #else
@@ -287,15 +287,15 @@ void func_8003F734(Player* player, Vec3f arg1, Vec3f arg2, f32* arg3, f32* arg4,
         *arg5 += arg1[1] * player->collision.surfaceDistance[0] * 0.1;
         *arg6 += arg1[2] * player->collision.surfaceDistance[0] * 1;
         if ((player->slopeAccel < 0) && (((player->speed / 18.0f) * 216.0f) < 10.0f)) {
-            func_8002A5F4(arg1, *arg3, arg2, 2.5f, 0);
+            apply_terrain_aligned_vector_adjustment(arg1, *arg3, arg2, 2.5f, 0);
         } else {
-            func_8002A5F4(arg1, *arg3, arg2, 0.5f, 0);
+            apply_terrain_aligned_vector_adjustment(arg1, *arg3, arg2, 0.5f, 0);
         }
     } else if (player->collision.unk48[1] <= 0.5) {
         *arg4 += arg1[0] * player->collision.surfaceDistance[0] * 1;
         *arg5 += arg1[1] * player->collision.surfaceDistance[0] * 0.1;
         *arg6 += arg1[2] * player->collision.surfaceDistance[0] * 1;
-        func_8002A5F4(arg1, *arg3, arg2, 1, 0);
+        apply_terrain_aligned_vector_adjustment(arg1, *arg3, arg2, 1, 0);
         if ((!(player->effects & UNKNOWN_EFFECT_0x10000)) && ((player->effects & 8) == 0)) {
             arg2[1] *= -1e-05;
         }
@@ -308,7 +308,7 @@ void func_8003F734(Player* player, Vec3f arg1, Vec3f arg2, f32* arg3, f32* arg4,
             *arg5 += temp_f0_2 * 0;
         }
         *arg6 += arg1[2] * player->collision.surfaceDistance[0] * 1;
-        func_8002A5F4(arg1, *arg3, arg2, 1.2f, 0);
+        apply_terrain_aligned_vector_adjustment(arg1, *arg3, arg2, 1.2f, 0);
         if ((!(player->effects & UNKNOWN_EFFECT_0x10000)) && ((player->effects & 8) == 0)) {
             arg2[1] *= -1e-05;
         }
@@ -341,15 +341,15 @@ void func_8003FBAC(Player* player, Vec3f arg1, Vec3f arg2, f32* arg3, f32* arg4,
         *arg5 += arg1[1] * player->collision.surfaceDistance[1] * 0.1;
         *arg6 += arg1[2] * player->collision.surfaceDistance[1] * 1;
         if ((player->slopeAccel < 0) && (((player->speed / 18.0f) * 216.0f) < 10.0f)) {
-            func_8002A5F4(arg1, *arg3, arg2, 1.5f, 0);
+            apply_terrain_aligned_vector_adjustment(arg1, *arg3, arg2, 1.5f, 0);
         } else {
-            func_8002A5F4(arg1, *arg3, arg2, 0.5f, 0);
+            apply_terrain_aligned_vector_adjustment(arg1, *arg3, arg2, 0.5f, 0);
         }
     } else if (player->collision.unk54[1] <= 0.5) {
         *arg4 += arg1[0] * player->collision.surfaceDistance[1] * 1;
         *arg5 += arg1[1] * player->collision.surfaceDistance[1] * 0.1;
         *arg6 += arg1[2] * player->collision.surfaceDistance[1] * 1;
-        func_8002A5F4(arg1, *arg3, arg2, 1, 0);
+        apply_terrain_aligned_vector_adjustment(arg1, *arg3, arg2, 1, 0);
         if ((!(player->effects & UNKNOWN_EFFECT_0x10000)) && ((player->effects & 8) == 0)) {
             arg2[1] *= -1e-05;
         }
@@ -362,7 +362,7 @@ void func_8003FBAC(Player* player, Vec3f arg1, Vec3f arg2, f32* arg3, f32* arg4,
             *arg5 += temp_f0_2 * 0;
         }
         *arg6 += arg1[2] * player->collision.surfaceDistance[1] * 1;
-        func_8002A5F4(arg1, *arg3, arg2, 1.2f, 0);
+        apply_terrain_aligned_vector_adjustment(arg1, *arg3, arg2, 1.2f, 0);
         if ((!(player->effects & UNKNOWN_EFFECT_0x10000)) && ((player->effects & 8) == 0)) {
             arg2[1] *= -1e-05;
         }

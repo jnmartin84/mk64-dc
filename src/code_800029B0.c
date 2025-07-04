@@ -110,11 +110,7 @@ u16 D_8015F702;
 f32 D_8015F704;
 Vec3f D_8015F708;
 UNUSED u32 D_8015F718[3]; // Likely held ptrs to segmented data.
-size_t gFreeMemorySize;
-uintptr_t gNextFreeMemoryAddress;
-uintptr_t gHeapEndPtr;
-u32 D_8015F730;
-uintptr_t gFreeMemoryResetAnchor;
+
 Vec3f D_8015F738;
 Vec3f D_8015F748;
 Vec3f D_8015F758;
@@ -156,8 +152,8 @@ s16 sIsController1Unplugged;
 s32 D_801625EC;
 s32 D_801625F0;
 s32 D_801625F4;
-s32 D_801625F8;
-f32 D_801625FC;
+/* s32 D_801625F8;
+f32 D_801625FC; */
 
 void func_800029B0(void) {
     switch (D_800DC5A8) {
@@ -173,10 +169,13 @@ void func_800029B0(void) {
     }
 }
 
+void nuke_everything();
+
 void setup_race(void) {
     struct Controller* controller;
     int i;
 
+    nuke_everything();
     gPlayerCountSelection1 = gPlayerCount;
     if (gGamestate != RACING) {
         gIsMirrorMode = 0;
@@ -193,12 +192,8 @@ void setup_race(void) {
     if (gCurrentCourseId != gCurrentlyLoadedCourseId) {
         D_80150120 = 0;
         gCurrentlyLoadedCourseId = gCurrentCourseId;
-        gNextFreeMemoryAddress = gFreeMemoryResetAnchor;
         load_course(gCurrentCourseId);
         course_generate_collision_mesh();
-        D_8015F730 = gNextFreeMemoryAddress;
-    } else {
-        gNextFreeMemoryAddress = D_8015F730;
     }
     func_802969F8();
     func_80005310();
@@ -318,6 +313,7 @@ void func_80003040(void) {
     // This is also bad memory management practice as this could result in overwriting the wrong memory.
     set_segment_base_addr(0x3, (void*)SEG3_BUF);// + 0x9000);// (gNextFreeMemoryAddress - 0x9000));
 	ROVING_SEG3_BUF = SEG3_BUF;// + 0x9000;
+    destroy_all_actors();
 #if !ENABLE_CUSTOM_COURSE_ENGINE
     switch (gCurrentCourseId) {
         case COURSE_MARIO_RACEWAY:
@@ -326,11 +322,11 @@ void func_80003040(void) {
             break;
         case COURSE_BOWSER_CASTLE:
             // d_course_bowsers_castle_packed_dl_1350
-            find_vtx_and_set_colours(0x07001350, 0x32, 0, 0, 0);
+            find_vtx_and_set_colours(d_course_bowsers_castle_packed_dl_1350, 0x32, 0, 0, 0);
             break;
         case COURSE_BANSHEE_BOARDWALK:
             // d_course_banshee_boardwalk_packed_dl_878
-            find_vtx_and_set_colours(0x07000878, -0x80, 0, 0, 0);
+            find_vtx_and_set_colours(d_course_banshee_boardwalk_packed_dl_878, -0x80, 0, 0, 0);
             break;
         case COURSE_YOSHI_VALLEY:
             vec3f_set(position, -2300.0f, 0.0f, 634.0f);
@@ -354,17 +350,17 @@ void func_80003040(void) {
             break;
         case COURSE_SHERBET_LAND:
             // d_course_sherbet_land_packed_dl_1EB8
-            find_vtx_and_set_colours(0x07001EB8, -0x4C, 0xFF, 0xFF, 0xFF);
+            find_vtx_and_set_colours(d_course_sherbet_land_packed_dl_1EB8, -0x4C, 0xFF, 0xFF, 0xFF);
             // d_course_sherbet_land_packed_dl_2308
-            find_vtx_and_set_colours(0x07002308, -0x6A, 0xFF, 0xFF, 0xFF);
+            find_vtx_and_set_colours(d_course_sherbet_land_packed_dl_2308, -0x6A, 0xFF, 0xFF, 0xFF);
             break;
         case COURSE_RAINBOW_ROAD:
             // d_course_rainbow_road_packed_dl_2068
-            find_vtx_and_set_colours(0x07002068, -0x6A, 0xFF, 0xFF, 0xFF);
+            find_vtx_and_set_colours(d_course_rainbow_road_packed_dl_2068, -0x6A, 0xFF, 0xFF, 0xFF);
             // d_course_rainbow_road_packed_dl_1E18
-            find_vtx_and_set_colours(0x07001E18, -0x6A, 0xFF, 0xFF, 0xFF);
+            find_vtx_and_set_colours(d_course_rainbow_road_packed_dl_1E18, -0x6A, 0xFF, 0xFF, 0xFF);
             // d_course_rainbow_road_packed_dl_1318
-            find_vtx_and_set_colours(0x07001318, -1, 0xFF, 0xFF, 0);
+            find_vtx_and_set_colours(d_course_rainbow_road_packed_dl_1318, -1, 0xFF, 0xFF, 0);
             break;
         case COURSE_WARIO_STADIUM:
             vec3f_set(position, -131.0f, 83.0f, 286.0f);
@@ -374,25 +370,25 @@ void func_80003040(void) {
             vec3f_set(position, -2622.0f, 79.0f, 739.0f);
             add_actor_to_empty_slot(position, rotation, velocity, ACTOR_WARIO_SIGN);
             // d_course_wario_stadium_packed_dl_C50
-            find_vtx_and_set_colours(0x07000C50, 0x64, 0xFF, 0xFF, 0xFF);
+            find_vtx_and_set_colours(d_course_wario_stadium_packed_dl_C50, 0x64, 0xFF, 0xFF, 0xFF);
             // d_course_wario_stadium_packed_dl_BD8
-            find_vtx_and_set_colours(0x07000BD8, 0x64, 0xFF, 0xFF, 0xFF);
+            find_vtx_and_set_colours(d_course_wario_stadium_packed_dl_BD8, 0x64, 0xFF, 0xFF, 0xFF);
             // d_course_wario_stadium_packed_dl_B60
-            find_vtx_and_set_colours(0x07000B60, 0x64, 0xFF, 0xFF, 0xFF);
+            find_vtx_and_set_colours(d_course_wario_stadium_packed_dl_B60, 0x64, 0xFF, 0xFF, 0xFF);
             // d_course_wario_stadium_packed_dl_AE8
-            find_vtx_and_set_colours(0x07000AE8, 0x64, 0xFF, 0xFF, 0xFF);
+            find_vtx_and_set_colours(d_course_wario_stadium_packed_dl_AE8, 0x64, 0xFF, 0xFF, 0xFF);
             // d_course_wario_stadium_packed_dl_CC8
-            find_vtx_and_set_colours(0x07000CC8, 0x64, 0xFF, 0xFF, 0xFF);
+            find_vtx_and_set_colours(d_course_wario_stadium_packed_dl_CC8, 0x64, 0xFF, 0xFF, 0xFF);
             // d_course_wario_stadium_packed_dl_D50
-            find_vtx_and_set_colours(0x07000D50, 0x64, 0xFF, 0xFF, 0xFF);
+            find_vtx_and_set_colours(d_course_wario_stadium_packed_dl_D50, 0x64, 0xFF, 0xFF, 0xFF);
             // d_course_wario_stadium_packed_dl_DD0
-            find_vtx_and_set_colours(0x07000DD0, 0x64, 0xFF, 0xFF, 0xFF);
+            find_vtx_and_set_colours(d_course_wario_stadium_packed_dl_DD0, 0x64, 0xFF, 0xFF, 0xFF);
             // d_course_wario_stadium_packed_dl_E48
-            find_vtx_and_set_colours(0x07000E48, 0x64, 0xFF, 0xFF, 0xFF);
+            find_vtx_and_set_colours(d_course_wario_stadium_packed_dl_E48, 0x64, 0xFF, 0xFF, 0xFF);
             break;
         case COURSE_DK_JUNGLE:
             // d_course_dks_jungle_parkway_packed_dl_3FA8
-            find_vtx_and_set_colours(0x07003FA8, 0x78, 0xFF, 0xFF, 0xFF);
+            find_vtx_and_set_colours(d_course_dks_jungle_parkway_packed_dl_3FA8, 0x78, 0xFF, 0xFF, 0xFF);
             break;
         default:
             break;

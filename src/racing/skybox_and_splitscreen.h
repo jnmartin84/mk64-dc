@@ -10,7 +10,7 @@
 
 void func_802A4A0C(Vtx*, struct UnkStruct_800DC5EC*, s32, s32, f32*);
 
-void func_802A3730(struct UnkStruct_800DC5EC*);
+void set_the_scissor(struct UnkStruct_800DC5EC*);
 void func_802A38AC(void);
 void func_802A38B4(void);
 void func_802A39E0(struct UnkStruct_800DC5EC*);
@@ -27,7 +27,7 @@ void func_802A40DC(void);
 s32 set_viewport2(void);
 void set_viewport(void);
 void select_framebuffer(void);
-void func_802A4300(void);
+void draw_splitscreen_separators(void);
 void course_set_skybox_colours(Vtx*);
 void func_802A487C(Vtx*, struct UnkStruct_800DC5EC*, s32, s32, f32*);
 void set_perspective_and_aspect_ratio(void);
@@ -52,8 +52,8 @@ void render_player_three_3p_4p_screen(void);
 void render_player_four_3p_4p_screen(void);
 void func_802A74BC(void);
 void copy_framebuffer(s32, s32, s32, s32, u16*, u16*);
-void func_802A7728(void);
-void func_802A7940(void);
+void wario_jumbotron(void);
+void luigi_jumbotron(void);
 
 extern Vp D_802B8880[];
 

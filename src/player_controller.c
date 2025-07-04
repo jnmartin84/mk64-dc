@@ -1050,7 +1050,7 @@ void func_8002A194(Player* player, f32 arg1, f32 arg2, f32 arg3) {
 }
 
 // Near identical to adjust_pos_orthogonally in memory.c
-void func_8002A5F4(Vec3f arg0, f32 arg1, Vec3f arg2, f32 arg3, f32 arg4) {
+void apply_terrain_aligned_vector_adjustment(Vec3f arg0, f32 arg1, Vec3f arg2, f32 arg3, f32 arg4) {
     f32 temp_f0;
     f32 temp_f2;
     f32 temp_f12;
@@ -1672,7 +1672,7 @@ void func_8002BF4C(Player* player, s8 arg1) {
             playerBorrow = &players[i];
             if (((player != playerBorrow) && ((playerBorrow->type & PLAYER_INVISIBLE_OR_BOMB) == 0) &&
                  (playerBorrow->type & PLAYER_EXISTS)) &&
-                ((var_a2 = func_8001FD78(player, playerBorrow->pos[0], playerBorrow->pos[1], playerBorrow->pos[2]),
+                ((var_a2 = xz_in_triangle(player, playerBorrow->pos[0], playerBorrow->pos[1], playerBorrow->pos[2]),
                   var_a2 == 1))) {
                 player->unk_0E2 += 1;
                 if (player->unk_0E2 >= 0x3D) {

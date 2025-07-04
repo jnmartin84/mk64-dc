@@ -106,6 +106,7 @@ void crash_screen_draw_square(u16* framebuffer) {
 #define BLACK_COLOUR 0x0001
 
 void crash_screen_draw_info(u16* framebuffer, OSThread* thread) {
+#if 0
     __OSThreadContext* context = &thread->context;
     s32 i, j, x, y, h;
     uintptr_t faultedAddr;
@@ -170,9 +171,11 @@ void crash_screen_draw_info(u16* framebuffer, OSThread* thread) {
     }
     osWritebackDCacheAll();
     osViSwapBuffer(framebuffer);
+#endif
 }
 
 OSThread* get_faulted_thread(void) {
+#if 0
     OSThread* thread;
 
     thread = __osGetCurrFaultedThread();
@@ -182,6 +185,7 @@ OSThread* get_faulted_thread(void) {
         }
         thread = thread->tlnext;
     }
+#endif
     return NULL;
 }
 
@@ -190,6 +194,7 @@ OSThread* get_faulted_thread(void) {
  * Button sequence: L, Up, Left, Down, Right, R, L, B, A
  **/
 void thread9_crash_screen(UNUSED void* arg0) {
+#if 0
     static OSThread* thread;
     OSMesg mesg;
 
@@ -236,19 +241,26 @@ void thread9_crash_screen(UNUSED void* arg0) {
             }
         }
     }
+#endif
 }
 
 void crash_screen_set_framebuffer(u16* framebuffer) {
+#if 0
     pFramebuffer = framebuffer;
+#endif
 }
 
 extern void thread9_crash_screen(void*);
 
 void create_debug_thread(void) {
+#if 0
     osCreateMesgQueue(&D_80162D40, &D_80162D58, 1);
     osCreateThread((OSThread*) &D_80162790, 9, (void*) thread9_crash_screen, 0, &D_80162D40, 0x7F);
+#endif
 }
 
 void start_debug_thread(void) {
+#if 0
     osStartThread(&D_80162790);
+#endif
 }

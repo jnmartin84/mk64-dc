@@ -165,6 +165,8 @@ const union GameModePack sSoundMenuPack = { { SOUND_STEREO, SOUND_HEADPHONES, SO
 
 /**************************/
 
+extern int in_intro;
+
 /**
  * General menu main handler
  * Includes opening logo and splash screens
@@ -199,32 +201,40 @@ void update_menus(void) {
             osViSetSpecialFeatures(sVIGammaOffDitherOn);
             switch (gMenuSelection) {
                 case OPTIONS_MENU:
+                    in_intro = 0;
                     options_menu_act(&gControllers[controllerIdx], controllerIdx);
                     break;
                 case DATA_MENU:
+                    in_intro = 0;
                     data_menu_act(&gControllers[controllerIdx], controllerIdx);
                     break;
                 case COURSE_DATA_MENU:
+                    in_intro = 0;
                     course_data_menu_act(&gControllers[controllerIdx], controllerIdx);
                     break;
                 case LOGO_INTRO_MENU:
+                    in_intro = 1;
                     logo_intro_menu_act(&gControllers[controllerIdx], controllerIdx);
                     break;
                 case CONTROLLER_PAK_MENU:
+                    in_intro = 0;
                     if (controllerIdx == PLAYER_ONE) {
                         controller_pak_menu_act(&gControllers[controllerIdx], controllerIdx);
                     }
                     break;
                 case START_MENU_FROM_QUIT:
                 case START_MENU:
+                    in_intro = 0;
                     splash_menu_act(&gControllers[controllerIdx], controllerIdx);
                     break;
                 case MAIN_MENU_FROM_QUIT:
                 case MAIN_MENU:
+                    in_intro = 0;
                     main_menu_act(&gControllers[controllerIdx], controllerIdx);
                     break;
                 case PLAYER_SELECT_MENU_FROM_QUIT:
                 case CHARACTER_SELECT_MENU:
+                    in_intro = 0;
                     player_select_menu_act(&gControllers[controllerIdx], controllerIdx);
                     break;
                 case COURSE_SELECT_MENU_FROM_QUIT:
@@ -883,6 +893,9 @@ void controller_pak_menu_act(struct Controller* controller, UNUSED u16 controlle
     s32 selectedTableRow;
     UNUSED s8 pad;
 
+    gControllerPakMenuSelection = CONTROLLER_PAK_MENU_ERASE_ERROR_NO_PAK;
+    return;
+#if 0
     btnAndStick = controller->buttonPressed | controller->stickPressed;
     if (is_screen_being_faded() == 0) {
         switch (gControllerPakMenuSelection) {
@@ -1024,6 +1037,7 @@ void controller_pak_menu_act(struct Controller* controller, UNUSED u16 controlle
                 break;
         }
     }
+#endif
 }
 
 /**

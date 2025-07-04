@@ -1,3 +1,4 @@
+#if 0
 #include <ultra64.h>
 #include <macros.h>
 #include <segments.h>
@@ -10,3 +11,4 @@
  * @warning should not really be used.
  */
 u8 sMemoryPool[MEMORY_POOL_SIZE];
+#endif
