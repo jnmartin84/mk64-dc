@@ -29,7 +29,7 @@ s8 gRenderingFramebufferByPlayer[] = { 0x00, 0x02, 0x00, 0x01, 0x00, 0x01, 0x00,
 s32 gPlayersToRenderCount = 0;
 
 // Can't find anything that actually references these...
-UNUSED void* D_800DDB5C[3] = { gFramebuffer0, gFramebuffer1, gFramebuffer2 };
+//UNUSED void* D_800DDB5C[3] = { gFramebuffer0, gFramebuffer1, gFramebuffer2 };
 
 s16 gPlayersToRenderPlayerId[8];
 s16 gPlayersToRenderScreenId[8];

@@ -238,7 +238,7 @@ extern void gfx_run(Gfx *commands);
 extern void thread5_game_loop(void *arg);
 
 void game_loop_one_iteration(void) {
-    StartAudioFrame();
+    //StartAudioFrame();
     gfx_start_frame();
 
     func_800CB2C4();
@@ -260,7 +260,7 @@ void game_loop_one_iteration(void) {
     display_and_vsync();
 
     gfx_end_frame();
-    EndAudioFrame();
+    //EndAudioFrame();
 }
 
 void send_display_list(struct SPTask *spTask) {
@@ -492,7 +492,7 @@ void setup_audio_data(void) {
         _sequencesSegmentRomStart = SEQUENCES_BUF;
     }
 
-#if 1
+#if 0
     _AudioInit();
     audio_init();
     sound_init();

@@ -97,6 +97,7 @@ extern u16 gZBuffer[4];
 // level_script.c assumes that the frame buffers are adjacent, while game.c's
 // -g codegen implies that they are separate variables. This is impossible to
 // reconcile without undefined behavior. Avoid that when possible.
+#if 0
 #ifdef AVOID_UB
 extern u16 gFramebuffers[3][SCREEN_WIDTH * SCREEN_HEIGHT];
 #define gFramebuffer0 gFramebuffers[0]
@@ -106,6 +107,7 @@ extern u16 gFramebuffers[3][SCREEN_WIDTH * SCREEN_HEIGHT];
 extern u16 gFramebuffer0[SCREEN_WIDTH * SCREEN_HEIGHT];
 extern u16 gFramebuffer1[SCREEN_WIDTH * SCREEN_HEIGHT];
 extern u16 gFramebuffer2[SCREEN_WIDTH * SCREEN_HEIGHT];
+#endif
 #endif
 
 #endif // BUFFERS_H
