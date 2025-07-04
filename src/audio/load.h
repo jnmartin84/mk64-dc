@@ -20,16 +20,14 @@ struct SharedDma {
     /*0xD*/ u8 reuseIndex;    // position in sSampleDmaReuseQueue1/2, if ttl == 0
     /*0xE*/ u8 ttl;           // duration after which the DMA can be discarded
 }; // size = 0x10
-
-void audio_dma_copy_immediate(u8* devAddr, void* vAddr, size_t nbytes);
-void audio_dma_copy_async(uintptr_t, void*, size_t, OSMesgQueue*, OSIoMesg*);
-void audio_dma_partial_copy_async(uintptr_t*, u8**, ssize_t*, OSMesgQueue*, OSIoMesg*);
+void audio_dma_copy_immediate(u8*, void*, size_t);
+void audio_dma_partial_copy_async(uintptr_t*, u8**, size_t*, OSMesgQueue*, OSIoMesg*);
 void decrease_sample_dma_ttls(void);
 void* dma_sample_data(uintptr_t, u32, s32, u8*);
 void func_800BB030(s32);
-s32 func_800BB304(struct AudioBankSample*);
+void func_800BB304(struct AudioBankSample*);
 s32 func_800BB388(s32 bankId, s32 instId, s32 arg2);
-void func_800BB43C(ALSeqFile*, u8*);
+void func_800BB43C(ALSeqFile*, u8*, u8);
 void patch_sound(struct AudioBankSound* sound, u8* memBase, u8* offsetBase);
 void func_800BB584(s32);
 void patch_audio_bank(struct AudioBank* mem, u8* offset, u32 numInstruments, u32 numDrums);

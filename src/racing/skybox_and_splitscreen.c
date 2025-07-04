@@ -1469,7 +1469,7 @@ void copy_framebuffer(s32 arg0, s32 arg1, s32 width, s32 height, u16* source, u1
         }
     }
 }
-extern uint16_t vram_s[];
+#include <kos.h>
 static inline uint16_t rgb565_to_rgba5551(uint16_t rgb565) {
     // Extract components from RGB565
     uint8_t r5 = (rgb565 >> 11) & 0x1F;         // 5 bits red

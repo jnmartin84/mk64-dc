@@ -8,19 +8,36 @@
 #include "audio/load.h"
 #include "audio/heap.h"
 #include "audio/data.h"
+static inline uint32_t Swap32(uint32_t val)
+{
+	return ((((val)&0xff000000) >> 24) | (((val)&0x00ff0000) >> 8) |
+		(((val)&0x0000ff00) << 8) | (((val)&0x000000ff) << 24));
+}
 
-OSMesgQueue D_801937C0;
-OSMesgQueue D_801937D8;
-OSMesgQueue D_801937F0;
-OSMesgQueue D_80193808;
+static inline short SwapShort(short dat)
+{
+        return ((((dat << 8) | (dat >> 8 & 0xff)) << 16) >> 16);
+}
 
-struct EuAudioCmd sAudioCmd[0x100];
+s32 AosSendMesg( OSMesgQueue *mq,  OSMesg msg,  s32 flag);
+s32 AosRecvMesg( OSMesgQueue *mq,  OSMesg *msg,  s32 flag);
+
+volatile s32 gThing = 0;
+volatile s32 gThingSent = 0;
+
+
+OSMesgQueue D_801937C0 = {0};
+OSMesgQueue D_801937D8 = {0};
+OSMesgQueue D_801937F0 = {0};
+OSMesgQueue D_80193808 = {0};
+
+struct EuAudioCmd sAudioCmd[0x100] = {0};
 
 // Seems oversized by 1
-OSMesg D_80194020[2];
-OSMesg D_80194028[4];
-OSMesg D_80194038[1];
-OSMesg D_8019403C[1];
+OSMesg D_80194020[8] = {0};
+OSMesg D_80194028[16] = {0};
+OSMesg D_80194038[4] = {0};
+OSMesg D_8019403C[4] = {0};
 
 u8 D_800EA3A0[] = { 0, 0, 0, 0 };
 
@@ -45,18 +62,67 @@ char port_eu_unused_string6[] = "AudioSend: %d -> %d (%d)\n";
 s32 D_800EA4A4 = 0;
 
 char port_eu_unused_string7[] = "Undefined Port Command %d\n";
+extern volatile s32 gPresetId;
+extern volatile s32 gPresetSent;
+
+void create_next_audio_buffer(s16* samples, u32 num_samples) {
+//    static s32 gMaxAbiCmdCnt = 128;   
+    s32 abiCmdCount = 0;
+//    OSMesg specId;
+    OSMesg msg = {0};
+
+    gAudioFrameCount++;
+    gCurrAiBufferIndex %= 3;
+
+    gCurrAudioFrameDmaCount = 0;
+    decrease_sample_dma_ttls();
+
+    if (gPresetSent) {
+        gPresetSent = 0;
+        gAudioResetPresetIdToLoad = (u8)gPresetId;
+        gAudioResetStatus = 5;
+    }
+    
+//    if (AosRecvMesg(D_800EA3B0, &specId, 0) != -1) {
+//        gAudioResetPresetIdToLoad = (u8) (u32)specId;
+//        gAudioResetStatus = 5;
+//    }
+
+    if (gAudioResetStatus != 0) {
+        if (audio_shut_down_and_reset_step() == 0) {
+//            if (gAudioResetStatus == 0) {
+//                AosSendMesg(D_800EA3B4, (OSMesg) (u32) gAudioResetPresetIdToLoad/* OS_MESG_8(gAudioResetPresetIdToLoad) */, OS_MESG_NOBLOCK);
+//            }
+            return;  
+        }
+    }
+
+    if (gThingSent) {
+        msg = (u32)gThing;
+        gThingSent = 0;
+        func_800CBCB0((u32) msg);
+    }
+
+//    if (AosRecvMesg(D_800EA3AC, &msg, 0) != -1) {
+//        func_800CBCB0((u32)msg);
+//    }
+
+    gAudioCmd = gAudioCmdBuffers[gAudioTaskIndex]; 
+    gAudioCmd = synthesis_execute((Acmd*) gAudioCmd, &abiCmdCount, samples, num_samples);
+    gAudioRandom = osGetCount() * (gAudioRandom + gAudioFrameCount);
+}
 
 struct SPTask* create_next_audio_frame_task(void) {
-    u32 samplesRemainingInAI;
-    s32 writtenCmds;
-    s32 index;
-    OSTask_t* task;
-    s32 var_s0;
-    s16* currAiBuffer;
-    s32 oldDmaCount;
-    OSMesg sp58;
-    OSMesg sp54;
-    s32 writtenCmdsCopy;
+    u32 samplesRemainingInAI = 0;
+    s32 writtenCmds = 0;
+    s32 index = 0;
+    OSTask_t* task = NULL;
+    s32 var_s0 = 0;
+    s16* currAiBuffer = NULL;
+    s32 oldDmaCount = 0;
+    OSMesg sp58 = {0};
+    OSMesg sp54 = {0};
+    s32 writtenCmdsCopy = 0;
 
     gAudioFrameCount++;
     if ((gAudioFrameCount % gAudioBufferParameters.presetUnk4) != 0) {
@@ -119,7 +185,10 @@ struct SPTask* create_next_audio_frame_task(void) {
     if (gAiBufferLengths[index] > gAudioBufferParameters.maxAiBufferLength) {
         gAiBufferLengths[index] = gAudioBufferParameters.maxAiBufferLength;
     }
-    if (osRecvMesg(D_800EA3AC, &sp54, 0) != -1) {
+//    if (osRecvMesg(D_800EA3AC, &sp54, 0) != -1) {
+    if (gThingSent) {
+        sp54 = (u32)gThing;
+        gThingSent = 0;
         func_800CBCB0((u32) sp54);
     }
     gAudioCmd = synthesis_execute((Acmd*) gAudioCmd, &writtenCmds, currAiBuffer, gAiBufferLengths[index]);
@@ -157,7 +226,7 @@ struct SPTask* create_next_audio_frame_task(void) {
 }
 
 void eu_process_audio_cmd(struct EuAudioCmd* cmd) {
-    s32 i;
+    s32 i = 0;
 
     switch (cmd->u.s.op) {
         case 0x81:
@@ -167,7 +236,7 @@ void eu_process_audio_cmd(struct EuAudioCmd* cmd) {
         case 0x82:
         case 0x88:
             load_sequence(cmd->u.s.bankId, cmd->u.s.arg2, cmd->u.s.arg3);
-            func_800CBA64(cmd->u.s.bankId, cmd->u2.as_s32);
+            func_800CBA64(cmd->u.s.bankId, Swap32(cmd->u2.as_s32));
             break;
 
         case 0x83:
@@ -175,13 +244,13 @@ void eu_process_audio_cmd(struct EuAudioCmd* cmd) {
                 if (cmd->u2.as_s32 == 0) {
                     sequence_player_disable(&gSequencePlayers[cmd->u.s.bankId]);
                 } else {
-                    seq_player_fade_to_zero_volume(cmd->u.s.bankId, cmd->u2.as_s32);
+                    seq_player_fade_to_zero_volume(cmd->u.s.bankId, Swap32(cmd->u2.as_s32));
                 }
             }
             break;
 
         case 0xf0:
-            gAudioLibSoundMode = cmd->u2.as_s32;
+            gAudioLibSoundMode = Swap32(cmd->u2.as_s32);
             break;
 
         case 0xf1:
@@ -204,7 +273,7 @@ void eu_process_audio_cmd(struct EuAudioCmd* cmd) {
 }
 
 void seq_player_fade_to_zero_volume(s32 arg0, s32 fadeOutTime) {
-    struct SequencePlayer* player;
+    struct SequencePlayer* player = NULL;
 
     if (fadeOutTime == 0) {
         fadeOutTime = 1;
@@ -216,7 +285,7 @@ void seq_player_fade_to_zero_volume(s32 arg0, s32 fadeOutTime) {
 }
 
 void func_800CBA64(s32 playerIndex, s32 fadeInTime) {
-    struct SequencePlayer* player;
+    struct SequencePlayer* player = NULL;
 
     if (fadeInTime != 0) {
         player = &gSequencePlayers[playerIndex];
@@ -246,6 +315,10 @@ void func_800CBB48(s32 arg0, s32* arg1) {
 
 void func_800CBB88(u32 arg0, f32 arg1) {
     func_800CBB48(arg0, (s32*) &arg1);
+   // struct EuAudioCmd* cmd = &sAudioCmd[D_800EA3A0[0] & 0xff];
+    //cmd->u.first = arg0;
+    //cmd->u2.as_f32 = arg1;
+    //D_800EA3A0[0]++;
 }
 
 void func_800CBBB8(u32 arg0, u32 arg1) {
@@ -257,11 +330,12 @@ void func_800CBBE8(u32 arg0, s8 arg1) {
     func_800CBB48(arg0, &sp34);
 }
 
+
 //! @todo clenanup, something's weird with the variables. D_800EA4A4 is probably EuAudioCmd bc of the + 0x100
 void func_800CBC24(void) {
-    s32 temp_t6;
-    s32 test;
-    OSMesg thing;
+    s32 temp_t6 = 0;
+    s32 test = 0;
+    OSMesg thing = {0};
     temp_t6 = D_800EA3A0[0] - D_800EA3A4[0];
     test = (u8) temp_t6;
     test = (test + 0x100) & 0xFF;
@@ -271,14 +345,17 @@ void func_800CBC24(void) {
         D_800EA4A4 = test;
     }
     thing = (OSMesg) ((D_800EA3A0[0] & 0xFF) | ((D_800EA3A4[0] & 0xFF) << 8));
-    osSendMesg(D_800EA3AC, thing, 0);
+//    osSendMesg(D_800EA3AC, thing, 0);
+    gThing = thing;
+    gThingSent = 1;
     D_800EA3A4[0] = D_800EA3A0[0];
 }
 
+
 void func_800CBCB0(u32 arg0) {
-    struct EuAudioCmd* cmd;
-    struct SequencePlayer* seqPlayer;
-    struct SequenceChannel* chan;
+    struct EuAudioCmd* cmd = NULL;
+    struct SequencePlayer* seqPlayer = NULL;
+    struct SequenceChannel* chan = NULL;
     u8 end = arg0 & 0xff;
     u8 i = (arg0 >> 8) & 0xff;
 
@@ -300,12 +377,13 @@ void func_800CBCB0(u32 arg0) {
             } else if ((cmd->u.s.op & 0x40) != 0) {
                 switch (cmd->u.s.op) {
                     case 0x41:
-                        seqPlayer->fadeVolumeScale = cmd->u2.as_f32;
+                        seqPlayer->fadeVolumeScale = Swap32(cmd->u2.as_f32);
                         seqPlayer->recalculateVolume = true;
                         break;
 
                     case 0x47:
-                        seqPlayer->tempo = cmd->u2.as_s32 * TATUMS_PER_BEAT;
+                        seqPlayer->tempo = Swap32(cmd->u2.as_s32) * TATUMS_PER_BEAT;
+                        printf("!!! TEMPO IS %08x\n", seqPlayer->tempo);
                         break;
 
                     case 0x48:
@@ -321,11 +399,13 @@ void func_800CBCB0(u32 arg0) {
                 if (IS_SEQUENCE_CHANNEL_VALID(chan)) {
                     switch (cmd->u.s.op) {
                         case 1:
-                            chan->volumeScale = cmd->u2.as_f32;
+                            chan->volumeScale = Swap32(cmd->u2.as_f32);
+                            printf("chan->volScale %f\n", chan->volumeScale);
                             chan->changes.as_bitfields.volume = true;
                             break;
                         case 2:
-                            chan->volume = cmd->u2.as_f32;
+                            chan->volume = Swap32(cmd->u2.as_f32);
+                            printf("chan->volume %f\n", chan->volume);
                             chan->changes.as_bitfields.volume = true;
                             break;
                         case 3:
@@ -333,7 +413,8 @@ void func_800CBCB0(u32 arg0) {
                             chan->changes.as_bitfields.pan = true;
                             break;
                         case 4:
-                            chan->freqScale = cmd->u2.as_f32;
+                            chan->freqScale = Swap32(cmd->u2.as_f32);
+                            printf("chan->freqScale %f\n", chan->freqScale);
                             chan->changes.as_bitfields.freqScale = true;
                             break;
                         case 5:

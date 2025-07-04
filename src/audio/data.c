@@ -312,17 +312,17 @@ f32 gDefaultPanVolume[128] = {
     0.086471f, 0.074143f, 0.061803f, 0.049454f, 0.037097f, 0.024734f, 0.012368f, 0.0f
 };
 
-s32 gAudioTaskIndex;
-s32 gCurrAiBufferIndex;
-Acmd *gAudioCmdBuffers[2]; // probably wrong
-Acmd *gAudioCmd;
-struct SPTask *gAudioTask; // gAudioTask?
-struct SPTask gAudioTasks[2]; // gAudioTasks?
-f32 D_803B7178;
-s32 gRefreshRate;
-s16 *gAiBuffers[NUMAIBUFFERS]; // unconfirmed, osAiSetNextBuffer vaddr
-s16 gAiBufferLengths[NUMAIBUFFERS]; // osAiSetNextBuffer nbytes
-u16 D_803B7192; // unconfirmed
-u32 gAudioRandom;
-s32 gAudioErrorFlags;
-u64 gAudioGlobalsEndMarker;
+s32 gAudioTaskIndex = 0;
+s32 gCurrAiBufferIndex = 0;
+Acmd *gAudioCmdBuffers[2] = {NULL, NULL}; // probably wrong
+Acmd *gAudioCmd = NULL;
+struct SPTask *gAudioTask = NULL; // gAudioTask?
+struct SPTask gAudioTasks[2] = {NULL, NULL}; // gAudioTasks?
+f32 D_803B7178 = 0.0f;
+s32 gRefreshRate = 0;
+s16 *gAiBuffers[NUMAIBUFFERS] = { NULL }; // unconfirmed, osAiSetNextBuffer vaddr
+s16 gAiBufferLengths[NUMAIBUFFERS] = { NULL }; // osAiSetNextBuffer nbytes
+u16 D_803B7192 = 0; // unconfirmed
+u32 gAudioRandom = 0;
+s32 gAudioErrorFlags = 0;
+u64 gAudioGlobalsEndMarker = 0;

@@ -215,15 +215,15 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
 }
 
 void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
-    int16_t tmp[32];
+    int16_t tmp[32] = {0};
     int16_t* in_initial = BUF_S16(rspa.in);
     int16_t* in = in_initial;
     int16_t* out = BUF_S16(rspa.out);
     int nbytes = ROUND_UP_16(rspa.nbytes);
-    uint32_t pitch_accumulator;
-    int i;
-    int16_t* tbl;
-    int32_t sample;
+    uint32_t pitch_accumulator = 0;
+    int i = 0;
+    int16_t* tbl = NULL;
+    int32_t sample = 0;
 
     //printf("aResampleImpl:\n");
     //printf("\t in: %08x\n", (uintptr_t)in);
@@ -319,8 +319,8 @@ void aMixImpl(int16_t gain, uint16_t in_addr, uint16_t out_addr, uint16_t count)
     int nbytes = ROUND_UP_32(ROUND_DOWN_16(count));
     int16_t* in = BUF_S16(in_addr);
     int16_t* out = BUF_S16(out_addr);
-    int i;
-    int32_t sample;
+    int i = 0;
+    int32_t sample = 0;
 
     if (gain == -0x8000) {
         while (nbytes > 0) {
@@ -532,14 +532,7 @@ void aFilterImpl(uint8_t flags, uint16_t count_or_buf, int16_t* state_or_filter)
         int16_t* buf = BUF_S16(count_or_buf);
 
         if (flags == A_INIT) {
-#ifndef __clang__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmemset-elt-size"
-#endif
             memset(tmp, 0, 8 * sizeof(int16_t));
-#ifndef __clang__
-#pragma GCC diagnostic pop
-#endif
             memset(tmp2, 0, 8 * sizeof(int16_t));
         } else {
             memcpy(tmp, state_or_filter, 8 * sizeof(int16_t));

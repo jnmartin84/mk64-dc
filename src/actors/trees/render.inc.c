@@ -4,38 +4,6 @@
 #include <assets/common_data.h>
 #include "courses/all_course_data.h"
 
-Vtx l_d_course_moo_moo_farm_tree_model[] = {
-    { { { 0, 95 * 3 / 5, 0 }, 0, { 1024, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { -50 * 3 / 5, 95 * 3 / 5, 0 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { -50 * 3 / 5, -5 * 3 / 5, 0 }, 0, { 0, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 0, -5 * 3 / 5, 0 }, 0, { 1024, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 50 * 3 / 5, 95 * 3 / 5, 0 }, 0, { 1023, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 0, 95 * 3 / 5, 0 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 0, -5 * 3 / 5, 0 }, 0, { 0, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 50 * 3 / 5, -5 * 3 / 5, 0 }, 0, { 1023, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-};
-
-Gfx l_d_course_moo_moo_farm_dl_tree[] = {
-    gsSPClearGeometryMode(G_LIGHTING),
-    gsDPSetCombineMode(G_CC_MODULATEIA, G_CC_MODULATEIA),
-    gsDPSetRenderMode(G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2),
-    gsSPTexture(0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON),
-    gsDPSetTextureLUT(G_TT_RGBA16),
-    gsDPTileSync(),
-    gsDPSetTile(G_IM_FMT_CI, G_IM_SIZ_8b, 4, 0x0000, G_TX_RENDERTILE, 0, G_TX_NOMIRROR | G_TX_CLAMP, 6, G_TX_NOLOD,
-                G_TX_NOMIRROR | G_TX_CLAMP, 5, G_TX_NOLOD),
-    gsDPSetTileSize(G_TX_RENDERTILE, 0, 0, 0x007C, 0x00FC),
-    gsDPLoadTextureBlock(0x03009000, G_IM_FMT_CI, G_IM_SIZ_8b, 32, 64, 0, G_TX_NOMIRROR | G_TX_CLAMP,
-                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD),
-    gsSPVertex(l_d_course_moo_moo_farm_tree_model, 8, 0),
-    gsSP2Triangles(0, 1, 2, 0, 0, 2, 3, 0),
-    gsDPLoadTextureBlock(0x03009800, G_IM_FMT_CI, G_IM_SIZ_8b, 32, 64, 0, G_TX_NOMIRROR | G_TX_CLAMP,
-                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD),
-    gsSP2Triangles(4, 5, 6, 0, 4, 6, 7, 0),
-    gsDPSetTextureLUT(G_TT_NONE),
-    gsSPEndDisplayList(),
-};
-
 /**
  * @brief Renders the tree actor in Mario rawceay.
  *
@@ -176,6 +144,38 @@ void render_actor_tree_moo_moo_farm(Camera* camera, Mat4 arg1, struct Actor* arg
     }
 }
 
+Vtx l_d_course_moo_moo_farm_tree_model[] = {
+    { { { 0, 95*3/5, 0 }, 0, { 1024, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -50*3/5, 95*3/5, 0 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -50*3/5, -5*3/5, 0 }, 0, { 0, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 0, -5*3/5, 0 }, 0, { 1024, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 50*3/5, 95*3/5, 0 }, 0, { 1023, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 0, 95*3/5, 0 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 0, -5*3/5, 0 }, 0, { 0, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 50*3/5, -5*3/5, 0 }, 0, { 1023, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+};
+
+Gfx l_d_course_moo_moo_farm_dl_tree[] = {
+    gsSPClearGeometryMode(G_LIGHTING),
+    gsDPSetCombineMode(G_CC_MODULATEIA, G_CC_MODULATEIA),
+    gsDPSetRenderMode(G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2),
+    gsSPTexture(0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON),
+    gsDPSetTextureLUT(G_TT_RGBA16),
+    gsDPTileSync(),
+    gsDPSetTile(G_IM_FMT_CI, G_IM_SIZ_8b, 4, 0x0000, G_TX_RENDERTILE, 0, G_TX_NOMIRROR | G_TX_CLAMP, 6, G_TX_NOLOD,
+                G_TX_NOMIRROR | G_TX_CLAMP, 5, G_TX_NOLOD),
+    gsDPSetTileSize(G_TX_RENDERTILE, 0, 0, 0x007C, 0x00FC),
+    gsDPLoadTextureBlock(0x03009000, G_IM_FMT_CI, G_IM_SIZ_8b, 32, 64, 0, G_TX_NOMIRROR | G_TX_CLAMP,
+                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD),
+    gsSPVertex(l_d_course_moo_moo_farm_tree_model, 8, 0),
+    gsSP2Triangles(0, 1, 2, 0, 0, 2, 3, 0),
+    gsDPLoadTextureBlock(0x03009800, G_IM_FMT_CI, G_IM_SIZ_8b, 32, 64, 0, G_TX_NOMIRROR | G_TX_CLAMP,
+                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD),
+    gsSP2Triangles(4, 5, 6, 0, 4, 6, 7, 0),
+    gsDPSetTextureLUT(G_TT_NONE),
+    gsSPEndDisplayList(),
+};
+
 // have all the properties of the tree
 void func_80299864(Camera* camera, Mat4 arg1, struct Actor* arg2) {
     f32 temp_f0;
@@ -200,13 +200,11 @@ void func_80299864(Camera* camera, Mat4 arg1, struct Actor* arg2) {
     arg1[3][2] = arg2->pos[2];
 
     if (render_set_position(arg1, 0) != 0) {
-        /* gDPLoadTLUT_pal256(gDisplayListHead++, common_tlut_trees_import);
-        // Why is a TLUT being used a DL here? That makes no sense
+        gDPLoadTLUT_pal256(gDisplayListHead++, common_tlut_trees_import);
+        gSPDisplayList(gDisplayListHead++, l_d_course_moo_moo_farm_dl_tree);
         // Based on the TLUT being loaded above, this ought to be be another
         // tree related DL, presumably one found in a course other than Moo Moo farm
         //                                 0x0600FC70
-        gSPDisplayList(gDisplayListHead++, d_course_moo_moo_farm_mole_tlut); */
-        gSPDisplayList(gDisplayListHead++, l_d_course_moo_moo_farm_dl_tree);
     }
 }
 
@@ -217,6 +215,8 @@ void func_80299864(Camera* camera, Mat4 arg1, struct Actor* arg2) {
  * @param arg1
  * @param arg2
  */
+
+
 void render_actor_tree_bowser_castle(Camera* camera, Mat4 arg1, struct Actor* arg2) {
     f32 temp_f0;
     s16 temp_v0 = arg2->flags;
@@ -241,7 +241,7 @@ void render_actor_tree_bowser_castle(Camera* camera, Mat4 arg1, struct Actor* ar
 
     if (render_set_position(arg1, 0) != 0) {
         gDPLoadTLUT_pal256(gDisplayListHead++, common_tlut_trees_import);
-        gSPDisplayList(gDisplayListHead++, d_course_royal_raceway_dl_castle_tree);
+        gSPDisplayList(gDisplayListHead++, l_d_course_moo_moo_farm_dl_tree);
     }
 }
 

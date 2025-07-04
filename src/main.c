@@ -70,6 +70,8 @@ const void *__kos_romdisk;
 
 void func_80091B78(void);
 void audio_init(void);
+void StartAudioFrame(void);
+void EndAudioFrame(void);
 void create_debug_thread(void);
 void start_debug_thread(void);
 struct SPTask* create_next_audio_frame_task(void);
@@ -224,7 +226,6 @@ int inited = 0;
 
 #include "gfx/gfx_pc.h"
 #include "gfx/gfx_opengl.h"
-#include "gfx/gfx_glx.h"
 #include "gfx/gfx_dc.h"
 
 extern struct GfxWindowManagerAPI gfx_glx;
@@ -237,6 +238,7 @@ extern void gfx_run(Gfx *commands);
 extern void thread5_game_loop(void *arg);
 
 void game_loop_one_iteration(void) {
+    StartAudioFrame();
     gfx_start_frame();
 
     func_800CB2C4();
@@ -258,6 +260,7 @@ void game_loop_one_iteration(void) {
     display_and_vsync();
 
     gfx_end_frame();
+    EndAudioFrame();
 }
 
 void send_display_list(struct SPTask *spTask) {
@@ -489,8 +492,8 @@ void setup_audio_data(void) {
         _sequencesSegmentRomStart = SEQUENCES_BUF;
     }
 
-#if 0
-//    _AudioInit();
+#if 1
+    _AudioInit();
     audio_init();
     sound_init();
 
@@ -527,7 +530,7 @@ int main(UNUSED int argc, UNUSED char **argv) {
 
     fclose(fntest);
 
-//    setup_audio_data();
+    setup_audio_data();
 
     thread5_game_loop(NULL);
 
@@ -2257,7 +2260,7 @@ void thread5_game_loop(UNUSED void* arg) {
     func_800C5CB8();
 	inited = 1;
 
-#if 0
+#if 1
     for(int mi=0;mi<6*1048576;mi+=65536) {
         void *test_m = malloc(mi);
         if (test_m != NULL) {
@@ -2285,6 +2288,99 @@ run_game_loop:
     while (true) {
         game_loop_one_iteration();
 		thd_pass();
+    }
+}
+
+/**
+ * Sound processing thread. Runs at 50 or 60 FPS according to osTvType.
+ */
+static struct {
+    kthread_t *thread;
+    condvar_t cv_to_thread;
+    condvar_t cv_from_thread;
+    mutex_t mutex;
+    uint8_t running;
+    uint8_t processing;
+} audio;
+
+
+#include "dcaudio/audio_api.h"
+#include "dcaudio/audio_dc.h"
+static struct AudioAPI *audio_api;
+#define SAMPLES_HIGH 448
+#define SAMPLES_LOW 432
+#define NUM_AUDIO_CHANNELS 2
+#define SAMPLES_PER_FRAME (SAMPLES_HIGH * NUM_AUDIO_CHANNELS * 2)
+int32_t AudioPlayerGetDesiredBuffered(void) {
+    return audio_api->get_desired_buffered();
+}
+
+int32_t AudioPlayerBuffered(void) {
+    return audio_api->buffered();
+}
+void AudioPlayerPlayFrame(void) {
+  //  printf("audio player play frame\n");
+    audio_api->play();
+}
+
+extern void create_next_audio_buffer(uint16_t *samples, uint32_t num_samples);
+
+void StartAudioFrame(void) {
+    mutex_lock(&audio.mutex);
+    audio.processing = 1;
+    mutex_unlock(&audio.mutex);
+    cond_signal(&audio.cv_to_thread);
+}
+            
+void EndAudioFrame(void) {
+    mutex_lock(&audio.mutex);
+    while (audio.processing) {
+        cond_wait(&audio.cv_from_thread, &audio.mutex);
+    }
+    mutex_unlock(&audio.mutex);
+}
+
+void HandleAudioThread(UNUSED void *arg) {
+    while (audio.running) {
+        mutex_lock(&audio.mutex);
+        while (!audio.processing && audio.running) {
+            cond_wait(&audio.cv_to_thread, &audio.mutex);
+        }
+        mutex_unlock(&audio.mutex);
+        if (!audio.running) {
+            break;
+        }
+        mutex_lock(&audio.mutex);
+        AudioPlayerPlayFrame();
+        audio.processing = 0;
+        cond_signal(&audio.cv_from_thread);
+        mutex_unlock(&audio.mutex);
+
+        thd_pass();
+    }
+}
+
+
+void _AudioInit(void) {
+    if (audio_api == NULL && audio_dc.init()) {
+        audio_api = &audio_dc;
+        audio_api->init();
+    }
+
+    if (!audio.running) {
+        mutex_init(&audio.mutex, MUTEX_TYPE_NORMAL);
+        cond_init(&audio.cv_from_thread);
+        cond_init(&audio.cv_to_thread);
+        audio.running = true;
+
+        kthread_attr_t main_attr;
+        main_attr.create_detached = 1;
+	    main_attr.stack_size = 8192;
+	    main_attr.stack_ptr = gAudioThreadStack;
+	    main_attr.prio = 15;
+	    main_attr.label = "AudioThread";
+        audio.thread = thd_create_ex(&main_attr, &HandleAudioThread, NULL);
+        printf("Audio thread started");
     }
 }
 

@@ -345,7 +345,7 @@ Vec3f* vec3f_set_xyz(Vec3f arg0, f32 arg1, f32 arg2, f32 arg3) {
     return (Vec3f*) &arg0;
 }
 
-Vec3f* vec3f_normalize(Vec3f dest) {
+Vec3f* MK64_vec3f_normalize(Vec3f dest) {
     f32 invsqrt = 1.0f / sqrtf(dest[0] * dest[0] + dest[1] * dest[1] + dest[2] * dest[2]);
 
     dest[0] = dest[0] * invsqrt;
@@ -864,11 +864,11 @@ void set_transform_matrix(Mat4 dest, Vec3f orientationVector, Vec3f positionVect
     Vec3f sp2C;
 
     vec3f_set_xyz(sp44, sins(rotationAngle), 0.0f, coss(rotationAngle));
-    vec3f_normalize(orientationVector);
+    MK64_vec3f_normalize(orientationVector);
     vec3f_cross_product(sp38, orientationVector, sp44);
-    vec3f_normalize(sp38);
+    MK64_vec3f_normalize(sp38);
     vec3f_cross_product(sp2C, sp38, orientationVector);
-    vec3f_normalize(sp2C);
+    MK64_vec3f_normalize(sp2C);
     dest[0][0] = sp38[0] * scaleFactor;
     dest[0][1] = sp38[1] * scaleFactor;
     dest[0][2] = sp38[2] * scaleFactor;

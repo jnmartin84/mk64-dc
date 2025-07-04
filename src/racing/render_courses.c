@@ -896,6 +896,14 @@ void render_luigi_raceway(struct UnkStruct_800DC5EC* arg0) {
 
     // Render only the first player camera onto the television billboard. Screen agnostic screens of other players).
     if ((gActiveScreenMode == SCREEN_MODE_1P) && (sp22 >= 10) && (sp22 < 17)) {
+        prevFrame = (s16) sRenderedFramebuffer - 1;
+
+        if (prevFrame < 0) {
+            prevFrame = 2;
+        } else if (prevFrame >= 3) {
+            prevFrame = 0;
+        }
+
         copy_framebuffer2(D_800DC5DC, D_800DC5E0, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
                           (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture68272C)));
         gfx_texture_cache_invalidate(gLRTexture68272C);
@@ -1163,6 +1171,13 @@ void render_wario_stadium(struct UnkStruct_800DC5EC* arg0) {
     D_800DC5DC = 88;
     D_800DC5E0 = 72;
     if (gActiveScreenMode == SCREEN_MODE_1P) {
+        prevFrame = (s16) sRenderedFramebuffer - 1;
+        if (prevFrame < 0) {
+            prevFrame = 2;
+        } else if (prevFrame >= 3) {
+            prevFrame = 0;
+        }
+
         copy_framebuffer2(D_800DC5DC, D_800DC5E0, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
                           (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture68272C));
         gfx_texture_cache_invalidate(gWSTexture68272C);
@@ -1515,6 +1530,7 @@ void func_80295D6C(void) {
 }
 
 extern CollisionTriangle allColTris[2048+1024];//2800];//2798];//2048+1024];
+#include <stdio.h>
 
 /**
  * @brief Also sets vertex colours for the course vtx data
@@ -1748,6 +1764,7 @@ void course_generate_collision_mesh(void) {
 #else
 
 #endif
+printf("generated mesh\n");
 }
 
 extern u16 gRRWTexture648508[];

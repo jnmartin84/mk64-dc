@@ -96,7 +96,7 @@ void* segmented_to_virtual(const void* addr) {
     if(segment > 0xf) {
         printf("%08x converts to bad segment %02x %08x\n", (uintptr_t)addr, segment, (uintptr_t)uip_addr);
             printf("\n");
-        arch_stk_trace(0);
+//        arch_stk_trace(0);
             printf("\n");
             while(1){}
         exit(-1);
@@ -474,6 +474,7 @@ void decompress_textures(UNUSED u32* arg0) {
     fclose(file);
 
     set_segment_base_addr(0x5, (void*)SEG5_BUF);
+    printf("loaded course textures\n");
 }
 static inline uint32_t Swap32(uint32_t val)
 {

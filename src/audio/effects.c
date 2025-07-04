@@ -6,10 +6,10 @@
 #include "audio/internal.h"
 #include "audio/load.h"
 #include "audio/data.h"
-
+#include <stdlib.h> 
 void sequence_channel_process_sound(struct SequenceChannel* seqChannel, s32 recalculateVolume) {
-    f32 channelVolume;
-    s32 i;
+    f32 channelVolume = 0.0f;
+    s32 i = 0;
 
     if (seqChannel->changes.as_bitfields.volume || recalculateVolume) {
         channelVolume = seqChannel->volume * seqChannel->volumeScale * seqChannel->seqPlayer->appliedFadeVolume;
@@ -26,13 +26,28 @@ void sequence_channel_process_sound(struct SequenceChannel* seqChannel, s32 reca
     for (i = 0; i < 4; ++i) {
         struct SequenceChannelLayer* layer = seqChannel->layers[i];
         if (layer != NULL && layer->enabled && layer->note != NULL) {
+            if ((uintptr_t)layer->note < (uintptr_t)0x8c010000) {
+                printf("effects.c INVALID NOTE %08x\n", (uintptr_t)layer->note);
+            printf("\n");
+            while(1){}
+                exit(-1);
+            }
+
             if (layer->notePropertiesNeedInit) {
+//                printf("need init layer %08x %f seqChan %f\n", &layer->freqScale, layer->freqScale, seqChannel->freqScale);
+               /// if (layer->freqScale >= 4294967296.0f) {
+                  //  layer->freqScale /= 4294967296.0f; //= //1.0f;
+                //}
+  //               if (layer->freqScale >= 32000) {
+    //                layer->freqScale = 1;
+      //          }
                 layer->noteFreqScale = layer->freqScale * seqChannel->freqScale;
                 layer->noteVelocity = layer->velocitySquare * seqChannel->appliedVolume;
                 layer->notePan = (seqChannel->pan + layer->pan * (0x80 - seqChannel->panChannelWeight)) >> 7;
                 layer->notePropertiesNeedInit = false;
             } else {
                 if (seqChannel->changes.as_bitfields.freqScale) {
+                   // printf("layer %f seqChannel->freqScale %f\n", layer->freqScale, seqChannel->freqScale);
                     layer->noteFreqScale = layer->freqScale * seqChannel->freqScale;
                 }
                 if (seqChannel->changes.as_bitfields.volume || recalculateVolume) {
@@ -48,7 +63,7 @@ void sequence_channel_process_sound(struct SequenceChannel* seqChannel, s32 reca
 }
 
 void sequence_player_process_sound(struct SequencePlayer* seqPlayer) {
-    s32 i;
+    s32 i = 0;
 
     if (seqPlayer->fadeRemainingFrames != 0) {
         seqPlayer->fadeVolume += seqPlayer->fadeVelocity;
@@ -84,8 +99,8 @@ void sequence_player_process_sound(struct SequencePlayer* seqPlayer) {
 }
 
 f32 get_portamento_freq_scale(struct Portamento* p) {
-    u32 v0;
-    f32 result;
+    u32 v0 = 0;
+    f32 result = 0.0f;
 
     p->cur += p->speed;
     v0 = (u32) p->cur;
@@ -95,20 +110,23 @@ f32 get_portamento_freq_scale(struct Portamento* p) {
     }
 
     result = US_FLOAT(1.0) + p->extent * (gPitchBendFrequencyScale[v0 + 128] - US_FLOAT(1.0));
+
+    //printf("\n\nRETURNING %f\n\n", result);
+
     return result;
 }
 
 s16 get_vibrato_pitch_change(struct VibratoState* vib) {
-    s32 index;
+    s32 index = 0;
     vib->time += (s32) vib->rate;
     index = (vib->time >> 10) & 0x3F;
     return vib->curve[index] >> 8;
 }
 
 f32 get_vibrato_freq_scale(struct VibratoState* vib) {
-    s32 pitchChange;
-    f32 extent;
-    f32 result;
+    s32 pitchChange = 0;
+    f32 extent = 0;
+    f32 result = 0;
 
     if (vib->delay != 0) {
         vib->delay--;
@@ -164,8 +182,8 @@ void note_vibrato_update(struct Note* note) {
 }
 
 void note_vibrato_init(struct Note* note) {
-    struct VibratoState* vib;
-    UNUSED struct SequenceChannel* seqChannel;
+    struct VibratoState* vib = NULL;
+    UNUSED struct SequenceChannel* seqChannel = NULL;
     struct NotePlaybackState* seqPlayerState = (struct NotePlaybackState*) &note->priority;
 
     note->vibratoFreqScale = 1.0f;
@@ -215,7 +233,7 @@ f32 adsr_update(struct AdsrState* adsr) {
                 adsr->state = ADSR_STATE_HANG;
                 break;
             }
-            // fallthrough
+            __attribute__ ((fallthrough));
         }
 
         case ADSR_STATE_START_LOOP:

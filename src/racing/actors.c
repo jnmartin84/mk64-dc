@@ -400,19 +400,21 @@ void func_802977E4(Player* arg0) {
 
 // Invert green and red on green shell texture
 void init_red_shell_texture(void) {
-    s16* red_shell_texture = (s16*) &gTLUTRedShell[0];
-    s16* green_shell_texture = (s16*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[SEGMENT_NUMBER2(common_tlut_green_shell)] +
-                                                           SEGMENT_OFFSET(common_tlut_green_shell));
-    s16 color_pixel, red_color, green_color, blue_color, alpha_color;
+    u16* red_shell_texture = (u16*) &gTLUTRedShell[0];
+    u16* green_shell_texture = (u16*) segmented_to_virtual(common_tlut_green_shell);
+    u16 color_pixel, red_color, green_color, blue_color, alpha_color;
     s32 i;
     for (i = 0; i < 256; i++) {
         color_pixel = *green_shell_texture;
+        color_pixel = (color_pixel << 8) | ((color_pixel >> 8)&0xff);
         red_color = color_pixel & 0xF800;
         green_color = color_pixel & 0x7C0;
         blue_color = color_pixel & 0x3E;
         alpha_color = color_pixel & 0x1;
 
-        *red_shell_texture = (red_color >> 5) | (green_color << 5) | blue_color | alpha_color; // Invert green to red
+        uint16_t rc = ((red_color >> 5)& 0x7C0) | (green_color << 5) | blue_color | alpha_color; // Invert green to red
+        rc = (rc << 8) | ((rc >> 8)&0xff);
+        *red_shell_texture = rc;
         green_shell_texture++;
         red_shell_texture++;
     }
@@ -475,10 +477,10 @@ void render_cows(Camera* camera, Mat4 arg1, UNUSED struct Actor* actor) {
     struct ActorSpawnData* var_s5;
     Vec3f sp88;
     u32 soundThing = SOUND_ARG_LOAD(0x19, 0x01, 0x90, 0x4D);
-    s32 segment = SEGMENT_NUMBER2(d_course_moo_moo_farm_cow_spawn);
-    s32 offset = SEGMENT_OFFSET(d_course_moo_moo_farm_cow_spawn);
+    //s32 segment = SEGMENT_NUMBER2(d_course_moo_moo_farm_cow_spawn);
+    //s32 offset = SEGMENT_OFFSET(d_course_moo_moo_farm_cow_spawn);
 
-    var_t1 = (struct ActorSpawnData*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
+    var_t1 = (struct ActorSpawnData*)segmented_to_virtual(d_course_moo_moo_farm_cow_spawn);
     D_8015F704 = 6.4e7f;
     gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON);
     gDPSetCombineMode(gDisplayListHead++, G_CC_MODULATEIDECALA, G_CC_MODULATEIDECALA);
@@ -544,9 +546,9 @@ void render_cows(Camera* camera, Mat4 arg1, UNUSED struct Actor* actor) {
 
 void evaluate_collision_player_palm_trees(Player* player) {
     Vec3f pos;
-    s32 segment = SEGMENT_NUMBER2(d_course_dks_jungle_parkway_tree_spawn);
-    s32 offset = SEGMENT_OFFSET(d_course_dks_jungle_parkway_tree_spawn);
-    struct UnkActorSpawnData* data = (struct UnkActorSpawnData*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
+//    s32 segment = SEGMENT_NUMBER2(d_course_dks_jungle_parkway_tree_spawn);
+  //  s32 offset = SEGMENT_OFFSET(d_course_dks_jungle_parkway_tree_spawn);
+    struct UnkActorSpawnData* data = (struct UnkActorSpawnData*)segmented_to_virtual(d_course_dks_jungle_parkway_tree_spawn);
 
     while (data->pos[0] != END_OF_SPAWN_DATA) {
         pos[0] = data->pos[0] * gCourseDirection;
@@ -580,11 +582,8 @@ void evaluate_collision_players_palm_trees(void) {
 }
 
 void func_80298D10(void) {
-    s32 segment = SEGMENT_NUMBER2(d_course_dks_jungle_parkway_tree_spawn);
-    s32 offset = SEGMENT_OFFSET(d_course_dks_jungle_parkway_tree_spawn);
-    struct UnkActorSpawnData* temp_v1 =
-        (struct UnkActorSpawnData*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
-
+    struct UnkActorSpawnData* temp_v1 = 
+    	(struct UnkActorSpawnData*)segmented_to_virtual(d_course_dks_jungle_parkway_tree_spawn);
     while (temp_v1->pos[0] != END_OF_SPAWN_DATA) {
         temp_v1->pos[1] = temp_v1->unk8;
         temp_v1->someId &= 0xF;
@@ -593,10 +592,8 @@ void func_80298D10(void) {
 }
 
 void render_palm_trees(Camera* camera, Mat4 arg1, UNUSED struct Actor* actor) {
-    s32 segment = SEGMENT_NUMBER2(d_course_dks_jungle_parkway_tree_spawn);
-    s32 offset = SEGMENT_OFFSET(d_course_dks_jungle_parkway_tree_spawn);
     struct UnkActorSpawnData* var_s1 =
-        (struct UnkActorSpawnData*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
+        (struct UnkActorSpawnData*) segmented_to_virtual(d_course_dks_jungle_parkway_tree_spawn);
     UNUSED s32 pad;
     Vec3f spD4;
     f32 var_f22;
@@ -679,7 +676,7 @@ void render_palm_trees(Camera* camera, Mat4 arg1, UNUSED struct Actor* actor) {
 #include "actors/trees/render.inc.c"
 
 #include "actors/kiwano_fruit/render.inc.c"
-
+extern void gfx_texture_cache_invalidate(void *addr);
 void render_actor_shell(Camera* camera, Mat4 matrix, struct ShellActor* shell) {
     UNUSED s16 pad;
     u16 temp_t8;
@@ -719,7 +716,7 @@ void render_actor_shell(Camera* camera, Mat4 matrix, struct ShellActor* shell) {
     if (maxObjectsReached) {
         return;
     }
-
+gfx_texture_cache_invalidate((void*)phi_t3);
     gDPLoadTextureBlock(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(phi_t3), G_IM_FMT_CI, G_IM_SIZ_8b, 32, 32, 0,
                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
                         G_TX_NOLOD);
@@ -814,9 +811,9 @@ UNUSED void func_8029AE14() {
 #include "actors/falling_rock/render.inc.c"
 
 void spawn_piranha_plants(struct ActorSpawnData* spawnData) {
-    s32 segment = SEGMENT_NUMBER2(spawnData);
-    s32 offset = SEGMENT_OFFSET(spawnData);
-    struct ActorSpawnData* temp_s0 = (struct ActorSpawnData*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
+//    s32 segment = SEGMENT_NUMBER2(spawnData);
+  //  s32 offset = SEGMENT_OFFSET(spawnData);
+    struct ActorSpawnData* temp_s0 = (struct ActorSpawnData*) segmented_to_virtual(spawnData);
     struct PiranhaPlant* temp_v1;
     UNUSED s32 pad;
     Vec3f startingPos;
@@ -846,9 +843,7 @@ void spawn_piranha_plants(struct ActorSpawnData* spawnData) {
 }
 
 void spawn_palm_trees(struct ActorSpawnData* spawnData) {
-    s32 segment = SEGMENT_NUMBER2(spawnData);
-    s32 offset = SEGMENT_OFFSET(spawnData);
-    struct ActorSpawnData* temp_s0 = (struct ActorSpawnData*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
+    struct ActorSpawnData* temp_s0 = (struct ActorSpawnData*) segmented_to_virtual(spawnData);
     struct PalmTree* temp_v1;
     Vec3f startingPos;
     Vec3f startingVelocity;
@@ -873,27 +868,24 @@ void spawn_palm_trees(struct ActorSpawnData* spawnData) {
 }
 
 #include "actors/falling_rock/update.inc.c"
-
+#include <stdio.h>
 // Trees, cacti, shrubs, etc.
 void spawn_foliage(struct ActorSpawnData* arg0) {
-    UNUSED s32 pad[4];
-    Vec3f position;
-    Vec3f velocity;
-    Vec3s rotation;
-    UNUSED s16 pad2;
-    s16 actorType;
-    struct Actor* temp_s0;
-    struct ActorSpawnData* var_s3;
-    s32 segment = SEGMENT_NUMBER2(arg0);
-    s32 offset = SEGMENT_OFFSET(arg0);
+    Vec3f position={0};
+    Vec3f velocity={0};
+    Vec3s rotation={0};
+    s16 actorType=0;
+    struct Actor* temp_s0=NULL;
+    struct ActorSpawnData* var_s3=NULL;
 
-    var_s3 = (struct ActorSpawnData*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
+    var_s3 = (struct ActorSpawnData*) segmented_to_virtual(arg0);
     vec3f_set(velocity, 0.0f, 0.0f, 0.0f);
     rotation[0] = 0x4000;
     rotation[1] = 0;
     rotation[2] = 0;
 
-    while (var_s3->pos[0] != END_OF_SPAWN_DATA) {
+    while (var_s3->pos[0] != -32768) { //END_OF_SPAWN_DATA) {
+        //printf("var_s3->pos[0] %04x\n", var_s3->pos[0]);
         position[0] = var_s3->pos[0] * gCourseDirection;
         position[2] = var_s3->pos[2];
         position[1] = var_s3->pos[1];
@@ -958,14 +950,12 @@ void spawn_foliage(struct ActorSpawnData* arg0) {
 }
 
 void spawn_all_item_boxes(struct ActorSpawnData* spawnData) {
-    s32 segment = SEGMENT_NUMBER2(spawnData);
-    s32 offset = SEGMENT_OFFSET(spawnData);
     s16 temp_s1;
     f32 temp_f0;
     Vec3f startingPos;
     Vec3f startingVelocity;
     Vec3s startingRot;
-    struct ActorSpawnData* temp_s0 = (struct ActorSpawnData*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
+    struct ActorSpawnData* temp_s0 = (struct ActorSpawnData*) segmented_to_virtual(spawnData);
     // struct ItemBox *itemBox;
 
     if ((gModeSelection == TIME_TRIALS) || (gPlaceItemBoxes == 0)) {
@@ -1056,9 +1046,9 @@ void spawn_course_actors(void) {
 #if !ENABLE_CUSTOM_COURSE_ENGINE
     switch (gCurrentCourseId) {
         case COURSE_MARIO_RACEWAY:
-            spawn_foliage(d_course_mario_raceway_tree_spawns);
-            spawn_piranha_plants(d_course_mario_raceway_piranha_plant_spawns);
-            spawn_all_item_boxes(d_course_mario_raceway_item_box_spawns);
+            spawn_foliage(segmented_to_virtual(d_course_mario_raceway_tree_spawns));
+            spawn_piranha_plants(segmented_to_virtual(d_course_mario_raceway_piranha_plant_spawns));
+            spawn_all_item_boxes(segmented_to_virtual(d_course_mario_raceway_item_box_spawns));
             vec3f_set(position, 150.0f, 40.0f, -1300.0f);
             position[0] *= gCourseDirection;
             add_actor_to_empty_slot(position, rotation, velocity, ACTOR_MARIO_SIGN);
@@ -1068,53 +1058,53 @@ void spawn_course_actors(void) {
             actor->flags |= 0x4000;
             break;
         case COURSE_CHOCO_MOUNTAIN:
-            spawn_all_item_boxes(d_course_choco_mountain_item_box_spawns);
-            spawn_falling_rocks(d_course_choco_mountain_falling_rock_spawns);
+            spawn_all_item_boxes(segmented_to_virtual(d_course_choco_mountain_item_box_spawns));
+            spawn_falling_rocks(segmented_to_virtual(d_course_choco_mountain_falling_rock_spawns));
             break;
         case COURSE_BOWSER_CASTLE:
-            spawn_foliage(d_course_bowsers_castle_tree_spawn);
-            spawn_all_item_boxes(d_course_bowsers_castle_item_box_spawns);
+            spawn_foliage(segmented_to_virtual(d_course_bowsers_castle_tree_spawn));
+            spawn_all_item_boxes(segmented_to_virtual(d_course_bowsers_castle_item_box_spawns));
             break;
         case COURSE_BANSHEE_BOARDWALK:
-            spawn_all_item_boxes(d_course_banshee_boardwalk_item_box_spawns);
+            spawn_all_item_boxes(segmented_to_virtual(d_course_banshee_boardwalk_item_box_spawns));
             break;
         case COURSE_YOSHI_VALLEY:
-            spawn_foliage(d_course_yoshi_valley_tree_spawn);
-            spawn_all_item_boxes(d_course_yoshi_valley_item_box_spawns);
+            spawn_foliage(segmented_to_virtual(d_course_yoshi_valley_tree_spawn));
+            spawn_all_item_boxes(segmented_to_virtual(d_course_yoshi_valley_item_box_spawns));
             vec3f_set(position, -2300.0f, 0.0f, 634.0f);
             position[0] *= gCourseDirection;
             add_actor_to_empty_slot(position, rotation, velocity, ACTOR_YOSHI_EGG);
             break;
         case COURSE_FRAPPE_SNOWLAND:
-            spawn_foliage(d_course_frappe_snowland_tree_spawns);
-            spawn_all_item_boxes(d_course_frappe_snowland_item_box_spawns);
+            spawn_foliage(segmented_to_virtual(d_course_frappe_snowland_tree_spawns));
+            spawn_all_item_boxes(segmented_to_virtual(d_course_frappe_snowland_item_box_spawns));
             break;
         case COURSE_KOOPA_BEACH:
             init_actor_hot_air_balloon_item_box(328.0f * gCourseDirection, 70.0f, 2541.0f);
-            spawn_all_item_boxes(d_course_koopa_troopa_beach_item_box_spawns);
-            spawn_palm_trees(d_course_koopa_troopa_beach_tree_spawn);
+            spawn_all_item_boxes(segmented_to_virtual(d_course_koopa_troopa_beach_item_box_spawns));
+            spawn_palm_trees(segmented_to_virtual(d_course_koopa_troopa_beach_tree_spawn));
             break;
         case COURSE_ROYAL_RACEWAY:
-            spawn_foliage(d_course_royal_raceway_tree_spawn);
-            spawn_all_item_boxes(d_course_royal_raceway_item_box_spawns);
-            spawn_piranha_plants(d_course_royal_raceway_piranha_plant_spawn);
+            spawn_foliage(segmented_to_virtual(d_course_royal_raceway_tree_spawn));
+            spawn_all_item_boxes(segmented_to_virtual(d_course_royal_raceway_item_box_spawns));
+            spawn_piranha_plants(segmented_to_virtual(d_course_royal_raceway_piranha_plant_spawn));
             break;
         case COURSE_LUIGI_RACEWAY:
-            spawn_foliage(d_course_luigi_raceway_tree_spawn);
-            spawn_all_item_boxes(d_course_luigi_raceway_item_box_spawns);
+            spawn_foliage(segmented_to_virtual(d_course_luigi_raceway_tree_spawn));
+            spawn_all_item_boxes(segmented_to_virtual(d_course_luigi_raceway_item_box_spawns));
             break;
         case COURSE_MOO_MOO_FARM:
             if (gPlayerCountSelection1 != 4) {
-                spawn_foliage(d_course_moo_moo_farm_tree_spawn);
+                spawn_foliage(segmented_to_virtual(d_course_moo_moo_farm_tree_spawn));
             }
-            spawn_all_item_boxes(d_course_moo_moo_farm_item_box_spawns);
+            spawn_all_item_boxes(segmented_to_virtual(d_course_moo_moo_farm_item_box_spawns));
             break;
         case COURSE_TOADS_TURNPIKE:
-            spawn_all_item_boxes(d_course_toads_turnpike_item_box_spawns);
+            spawn_all_item_boxes(segmented_to_virtual(d_course_toads_turnpike_item_box_spawns));
             break;
         case COURSE_KALAMARI_DESERT:
-            spawn_foliage(d_course_kalimari_desert_cactus_spawn);
-            spawn_all_item_boxes(d_course_kalimari_desert_item_box_spawns);
+            spawn_foliage(segmented_to_virtual(d_course_kalimari_desert_cactus_spawn));
+            spawn_all_item_boxes(segmented_to_virtual(d_course_kalimari_desert_item_box_spawns));
             vec3f_set(position, -1680.0f, 2.0f, 35.0f);
             position[0] *= gCourseDirection;
             rrxing = (struct RailroadCrossing*) &gActorList[add_actor_to_empty_slot(position, rotation, velocity,
@@ -1138,13 +1128,13 @@ void spawn_course_actors(void) {
             rrxing->crossingId = 0;
             break;
         case COURSE_SHERBET_LAND:
-            spawn_all_item_boxes(d_course_sherbet_land_item_box_spawns);
+            spawn_all_item_boxes(segmented_to_virtual(d_course_sherbet_land_item_box_spawns));
             break;
         case COURSE_RAINBOW_ROAD:
-            spawn_all_item_boxes(d_course_rainbow_road_item_box_spawns);
+            spawn_all_item_boxes(segmented_to_virtual(d_course_rainbow_road_item_box_spawns));
             break;
         case COURSE_WARIO_STADIUM:
-            spawn_all_item_boxes(d_course_wario_stadium_item_box_spawns);
+            spawn_all_item_boxes(segmented_to_virtual(d_course_wario_stadium_item_box_spawns));
             vec3f_set(position, -131.0f, 83.0f, 286.0f);
             position[0] *= gCourseDirection;
             add_actor_to_empty_slot(position, rotation, velocity, ACTOR_WARIO_SIGN);
@@ -1156,21 +1146,21 @@ void spawn_course_actors(void) {
             add_actor_to_empty_slot(position, rotation, velocity, ACTOR_WARIO_SIGN);
             break;
         case COURSE_BLOCK_FORT:
-            spawn_all_item_boxes(d_course_block_fort_item_box_spawns);
+            spawn_all_item_boxes(segmented_to_virtual(d_course_block_fort_item_box_spawns));
             break;
         case COURSE_SKYSCRAPER:
-            spawn_all_item_boxes(d_course_skyscraper_item_box_spawns);
+            spawn_all_item_boxes(segmented_to_virtual(d_course_skyscraper_item_box_spawns));
             break;
         case COURSE_DOUBLE_DECK:
-            spawn_all_item_boxes(d_course_double_deck_item_box_spawns);
+            spawn_all_item_boxes(segmented_to_virtual(d_course_double_deck_item_box_spawns));
             break;
         case COURSE_DK_JUNGLE:
-            spawn_all_item_boxes(d_course_dks_jungle_parkway_item_box_spawns);
+            spawn_all_item_boxes(segmented_to_virtual(d_course_dks_jungle_parkway_item_box_spawns));
             init_kiwano_fruit();
             func_80298D10();
             break;
         case COURSE_BIG_DONUT:
-            spawn_all_item_boxes(d_course_big_donut_item_box_spawns);
+            spawn_all_item_boxes(segmented_to_virtual(d_course_big_donut_item_box_spawns));
             break;
     }
 #else
@@ -1480,24 +1470,7 @@ struct test {
     Vec3s thing;
 };
 
-UNUSED void prototype_actor_spawn_data(Player* player, uintptr_t arg1) {
-    Vec3f sp64;
-    struct test* var_s0;
-    s32 segment = SEGMENT_NUMBER2(arg1);
-    s32 offset = SEGMENT_OFFSET(arg1);
-
-    var_s0 = (struct test*) VIRTUAL_TO_PHYSICAL2(gSegmentTable[segment] + offset);
-    while (var_s0->thing[0] != END_OF_SPAWN_DATA) {
-        sp64[0] = var_s0->thing[0] * gCourseDirection;
-        sp64[1] = var_s0->thing[1];
-        sp64[2] = var_s0->thing[2];
-        if (arg1 & arg1) {}
-        query_and_resolve_collision_player_actor(player, sp64, 5.0f, 40.0f, 0.8f);
-        var_s0++;
-    }
-}
-
-bool query_and_resolve_collision_player_actor(Player* player, Vec3f pos, f32 minDist, f32 dist, f32 arg4) {
+s32 query_and_resolve_collision_player_actor(Player* player, Vec3f pos, f32 minDist, f32 dist, f32 arg4) {
     f32 yDist;
     f32 sqrtDist;
     f32 zDist;
@@ -1579,7 +1552,7 @@ bool query_and_resolve_collision_player_actor(Player* player, Vec3f pos, f32 min
     return COLLISION;
 }
 
-bool collision_mario_sign(Player* player, struct Actor* marioRacewaySign) {
+s32 collision_mario_sign(Player* player, struct Actor* marioRacewaySign) {
     if (query_and_resolve_collision_player_actor(player, marioRacewaySign->pos, 7.0f, 200.0f, 0.8f) == COLLISION) {
         if ((player->type & PLAYER_HUMAN) != 0) {
             if ((player->effects & STAR_EFFECT) != 0) {
@@ -1591,12 +1564,12 @@ bool collision_mario_sign(Player* player, struct Actor* marioRacewaySign) {
                 func_800C9060(player - gPlayerOne, SOUND_ARG_LOAD(0x19, 0x00, 0x70, 0x1A));
             }
         }
-        return true;
+        return 1;
     }
-    return false;
+    return 0;
 }
 
-bool collision_piranha_plant(Player* player, struct PiranhaPlant* plant) {
+s32 collision_piranha_plant(Player* player, struct PiranhaPlant* plant) {
     if (query_and_resolve_collision_player_actor(player, plant->pos, plant->boundingBoxSize, plant->boundingBoxSize,
                                                  2.5f) == COLLISION) {
         if ((player->type & PLAYER_HUMAN) != 0) {
@@ -1609,12 +1582,12 @@ bool collision_piranha_plant(Player* player, struct PiranhaPlant* plant) {
                 func_800C9060(player - gPlayerOne, SOUND_ARG_LOAD(0x19, 0x00, 0xA0, 0x52));
             }
         }
-        return true;
+        return 1;
     }
-    return false;
+    return 0;
 }
 
-bool collision_yoshi_egg(Player* player, struct YoshiValleyEgg* egg) {
+s32 collision_yoshi_egg(Player* player, struct YoshiValleyEgg* egg) {
     UNUSED f32 pad[5];
     f32 z_dist;
     f32 xz_dist;
@@ -1626,34 +1599,34 @@ bool collision_yoshi_egg(Player* player, struct YoshiValleyEgg* egg) {
 
     x_dist = egg->pos[0] - player->pos[0];
     if ((x_dist < minDist) && (x_dist < -maxDist)) {
-        return false;
+        return 0;
     }
     if (x_dist > maxDist) {
-        return false;
+        return 0;
     }
 
     z_dist = egg->pos[2] - player->pos[2];
     if ((z_dist < minDist) && (z_dist < -maxDist)) {
-        return false;
+        return 0;
     }
     if (z_dist > maxDist) {
-        return false;
+        return 0;
     }
 
     xz_dist = sqrtf((x_dist * x_dist) + (z_dist * z_dist));
     if (xz_dist > maxDist) {
-        return false;
+        return 0;
     }
     func_802977B0(player);
 
     y_dist = player->pos[1] - egg->pos[1];
     if (y_dist < minDist) {
-        return false;
+        return 0;
     }
 
     totalBox = player->boundingBoxSize + egg->boundingBoxSize;
     if (totalBox < xz_dist) {
-        return false;
+        return 0;
     }
 
     if ((player->type & PLAYER_HUMAN) != 0) {
@@ -1672,10 +1645,10 @@ bool collision_yoshi_egg(Player* player, struct YoshiValleyEgg* egg) {
         apply_hit_sound_effect(player, player - gPlayerOne);
     }
 
-    return true;
+    return 1;
 }
 
-bool collision_tree(Player* player, struct Actor* actor) {
+s32 collision_tree(Player* player, struct Actor* actor) {
     f32 x_dist;
     f32 y_dist;
     f32 z_dist;
@@ -1692,33 +1665,33 @@ bool collision_tree(Player* player, struct Actor* actor) {
     var_f16 = actor->unk_08;
     x_dist = actor->pos[0] - player->pos[0];
     if ((x_dist < 0.0f) && (x_dist < -var_f16)) {
-        return false;
+        return 0;
     }
     if (var_f16 < x_dist) {
-        return false;
+        return 0;
     }
     z_dist = actor->pos[2] - player->pos[2];
     if ((z_dist < 0.0f) && (z_dist < -var_f16)) {
-        return false;
+        return 0;
     }
     if (var_f16 < z_dist) {
-        return false;
+        return 0;
     }
     y_dist = player->pos[1] - actor->pos[1];
     if (y_dist < 0.0f) {
-        return false;
+        return 0;
     }
     if ((f32) actor->state < y_dist) {
-        return false;
+        return 0;
     }
     xz_dist = sqrtf((x_dist * x_dist) + (z_dist * z_dist));
     if (var_f16 < xz_dist) {
-        return false;
+        return 0;
     }
     func_802977B0(player);
     var_f16 = player->boundingBoxSize + actor->boundingBoxSize;
     if (var_f16 < xz_dist) {
-        return false;
+        return 0;
     }
     sp48 = player->velocity[0];
     sp44 = player->velocity[2];
@@ -1727,7 +1700,7 @@ bool collision_tree(Player* player, struct Actor* actor) {
             actor->flags |= 0x400;
             func_800C98B8(player->pos, player->velocity, SOUND_ARG_LOAD(0x19, 0x01, 0x80, 0x10));
             func_800C90F4(player - gPlayerOne, (player->characterId * 0x10) + SOUND_ARG_LOAD(0x29, 0x00, 0x80, 0x0D));
-            return true;
+            return 1;
         }
         if (!(player->type & PLAYER_INVISIBLE_OR_BOMB)) {
             func_800C9060(player - gPlayerOne, SOUND_ARG_LOAD(0x19, 0x00, 0x70, 0x18));
@@ -1760,7 +1733,7 @@ bool collision_tree(Player* player, struct Actor* actor) {
             player->pos[2] = actorPos[2] - (z_dist * var_f16 * 1.2f);
             player->velocity[0] = 0;
             player->velocity[2] = 0;
-            return true;
+            return 1;
         }
         temp_f12 = ((x_dist * sp48) + (z_dist * sp44)) / temp_f0_4;
         temp_f12 = temp_f0_4 * temp_f12 * 1.5f;
@@ -1770,10 +1743,10 @@ bool collision_tree(Player* player, struct Actor* actor) {
         player->pos[0] += x_dist * temp_f2 * 0.5f;
         player->pos[2] += z_dist * temp_f2 * 0.5f;
     }
-    return true;
+    return 1;
 }
 
-bool query_collision_player_vs_actor_item(Player* arg0, struct Actor* arg1) {
+s32 query_collision_player_vs_actor_item(Player* arg0, struct Actor* arg1) {
     f32 temp_f0;
     f32 dist;
     f32 yDist;
@@ -1812,7 +1785,7 @@ bool query_collision_player_vs_actor_item(Player* arg0, struct Actor* arg1) {
     return COLLISION;
 }
 
-bool query_collision_actor_vs_actor(struct Actor* arg0, struct Actor* arg1) {
+s32 query_collision_actor_vs_actor(struct Actor* arg0, struct Actor* arg1) {
     f32 temp_f0;
     f32 dist;
     f32 dist_y;

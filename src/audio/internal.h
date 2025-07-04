@@ -3,6 +3,8 @@
 
 #include <ultra64.h>
 
+#define ssize_t s32
+
 #define SEQUENCE_PLAYERS 4
 #define SEQUENCE_CHANNELS 48
 #define SEQUENCE_LAYERS 64
@@ -53,7 +55,9 @@
 #ifdef __sgi
 #define stubbed_printf
 #else
+#include <stdio.h>
 #define stubbed_printf(...)
+//printf(__VA_ARGS__)
 #endif
 
 #define eu_stubbed_printf_0(msg) stubbed_printf(msg)
@@ -63,7 +67,7 @@
 
 struct NotePool;
 
-struct AudioListItem {
+struct __attribute__((aligned(32))) AudioListItem {
     // A node in a circularly linked list. Each node is either a head or an item:
     // - Items can be either detached (prev = NULL), or attached to a list.
     //   'value' points to something of interest.
@@ -126,7 +130,7 @@ struct AdpcmLoop {
 struct AdpcmBook {
     s32 order;
     s32 npredictors;
-    s16 book[1]; // size 8 * order * npredictors. 8-byte aligned
+    s16 book[512]; // size 8 * order * npredictors. 8-byte aligned
 };
 
 struct AudioBankSample {
@@ -164,7 +168,7 @@ struct Drum {
 
 struct AudioBank {
     struct Drum** drums;
-    struct Instrument* instruments[1];
+    struct Instrument* instruments[512];
 }; // dynamic size
 
 struct CtlEntry {
@@ -225,7 +229,7 @@ struct SequencePlayer {
     /*0x11C, 0x124*/ OSIoMesg bankDmaIoMesg;
     /*0x130, 0x13C*/ u8* bankDmaCurrMemAddr;
     /*0x138, 0x140*/ uintptr_t bankDmaCurrDevAddr;
-    /*0x13C, 0x144*/ ssize_t bankDmaRemaining;
+    /*0x13C, 0x144*/ size_t bankDmaRemaining;
 }; // size = 0x140, 0x148 on EU, 0x14C on SH
 
 struct AdsrSettings {
@@ -294,10 +298,17 @@ struct SequenceChannel {
     /*0x00, ????*/ u8 unused : 1;     // never read, set to 0
     /*    , 0x01*/ union {
         struct {
+#if 1
             u8 freqScale : 1;
             u8 volume : 1;
             u8 pan : 1;
-        } as_bitfields;
+#else
+            u8 padout : 5;
+            u8 pan : 1;
+            u8 volume : 1;
+            u8 freqScale : 1;
+#endif
+            } as_bitfields;
         u8 as_u8;
     } changes;
     /*0x01, 0x02*/ u8 noteAllocPolicy;
@@ -599,10 +610,10 @@ struct EuAudioCmd {
 struct EuAudioCmd {
     union {
         struct {
-            u8 op;
-            u8 bankId;
-            u8 arg2;
             u8 arg3;
+            u8 arg2;
+            u8 bankId;
+            u8 op;
         } s;
         u32 first;
     } u;
@@ -610,8 +621,14 @@ struct EuAudioCmd {
         s32 as_s32;
         u32 as_u32;
         f32 as_f32;
-        u8 as_u8;
-        s8 as_s8;
+        struct {
+            u8 pad0[3];
+            u8 as_u8;
+        };
+        struct {
+            u8 pad1[3];
+            s8 as_s8;
+        };
     } u2;
 };
 

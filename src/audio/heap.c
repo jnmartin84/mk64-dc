@@ -1,3 +1,21 @@
+#include <kos.h>
+#undef CONT_C
+#undef CONT_B
+#undef CONT_A
+#undef CONT_START
+#undef CONT_DPAD_UP
+#undef CONT_DPAD_DOWN
+#undef CONT_DPAD_LEFT
+#undef CONT_DPAD_RIGHT
+#undef CONT_Z
+#undef CONT_Y
+#undef CONT_X
+#undef CONT_D
+#undef CONT_DPAD2_UP
+#undef CONT_DPAD2_DOWN
+#undef CONT_DPAD2_LEFT
+#undef CONT_DPAD2_RIGHT
+#undef bool
 #include <ultra64.h>
 #include <macros.h>
 
@@ -8,42 +26,64 @@
 #include "audio/synthesis.h"
 #include "audio/playback.h"
 #include "audio/seqplayer.h"
+#include <stdio.h>
 
-s16 gVolume;
-s8 gUseReverb;
-s8 gNumSynthesisReverbs;
-struct NoteSubEu* gNoteSubsEu;
+#include <stdio.h>
+#include <string.h>
+extern void *segmented_to_virtual(void *addr);
+#if 0
+#define dma_copy(x, y, z) internal_dma_copy((x), (y), (z), arch_get_ret_addr(), __FILE__,__LINE__)
+static inline void internal_dma_copy(u8* dest, u8* romAddr, size_t size, uintptr_t retaddr, const char *file, int line) {
+    if (0) { //file[4] == 'a') {
+    printf("dma_copy called from %s:%d returning to %08x\n", file, line, (uintptr_t)retaddr);
+    printf("\tsrc: %08x -> %08x\n", (uintptr_t)(romAddr), (uintptr_t)segmented_to_virtual(romAddr));
+    printf("\tdst: %08x -> %08x\n", (uintptr_t)(dest), (uintptr_t)segmented_to_virtual(dest));
+    printf("\tsize: %d\n", size);
+    }
+    memcpy(segmented_to_virtual(dest), segmented_to_virtual(romAddr), size);
+}
+//void audio_dma_copy_immediate(u8* devAddr, void* vAddr, size_t nbytes);
+//void audio_dma_copy_async(uintptr_t, void*, size_t, OSMesgQueue*, OSIoMesg*);
+//#define audio_dma_copy_immediate(s,d,n) dma_copy((d),(s),(n))
+//#define audio_dma_copy_async(s,d,n,mq,iom) dma_copy((d),(s),(n))
+#endif
 
-struct SoundAllocPool gAudioSessionPool;
-struct SoundAllocPool gAudioInitPool;
-struct SoundAllocPool gNotesAndBuffersPool;
-u8 sAudioHeapPad[0x20]; // probably two unused pools
-struct SoundAllocPool gSeqAndBankPool;
-struct SoundAllocPool gPersistentCommonPool;
-struct SoundAllocPool gTemporaryCommonPool;
 
-struct SoundMultiPool gSeqLoadedPool;
-struct SoundMultiPool gBankLoadedPool;
-struct SoundMultiPool gUnusedLoadedPool;
+s16 gVolume = 0;
+s8 gUseReverb = 0;
+s8 gNumSynthesisReverbs = 0;
+struct NoteSubEu* gNoteSubsEu = NULL;
 
-struct Unk1Pool gUnkPool1;
+struct SoundAllocPool gAudioSessionPool = { 0 };
+struct SoundAllocPool gAudioInitPool = { 0 };
+struct SoundAllocPool gNotesAndBuffersPool = { 0 };
+u8 sAudioHeapPad[0x20] = { 0 }; // probably two unused pools
+struct SoundAllocPool gSeqAndBankPool = {0};
+struct SoundAllocPool gPersistentCommonPool = {0};
+struct SoundAllocPool gTemporaryCommonPool = {0};
 
-struct PoolSplit sSessionPoolSplit;
-struct PoolSplit2 sSeqAndBankPoolSplit;
-struct PoolSplit sPersistentCommonPoolSplit;
-struct PoolSplit sTemporaryCommonPoolSplit;
+struct SoundMultiPool gSeqLoadedPool = {0};
+struct SoundMultiPool gBankLoadedPool = {0};
+struct SoundMultiPool gUnusedLoadedPool = {0};
 
-u8 gUnkLoadStatus[0x40];
-u8 gBankLoadStatus[0x40];
-u8 gSeqLoadStatus[0x100];
+struct Unk1Pool gUnkPool1 = {0};
 
-volatile u8 gAudioResetStatus;
-u8 gAudioResetPresetIdToLoad;
-s32 gAudioResetFadeOutFramesLeft;
+struct PoolSplit sSessionPoolSplit = {0};
+struct PoolSplit2 sSeqAndBankPoolSplit = {0};
+struct PoolSplit sPersistentCommonPoolSplit = {0};
+struct PoolSplit sTemporaryCommonPoolSplit = {0};
 
-u8 gAudioUnusedBuffer[0x1000];
+u8 gUnkLoadStatus[0x40] = {0};
+u8 gBankLoadStatus[0x40] = {0};
+u8 gSeqLoadStatus[0x100] = {0};
 
-struct Note* gNotes;
+volatile u8 gAudioResetStatus = 0;
+u8 gAudioResetPresetIdToLoad = 0;
+s32 gAudioResetFadeOutFramesLeft = 0;
+
+u8 gAudioUnusedBuffer[0x1000] = {0};
+
+struct Note* gNotes = NULL;
 
 /**
  * Given that (almost) all of these are format strings, it is highly likely
@@ -94,7 +134,7 @@ char heapAudioString38[] = "Write %d\n";
 extern u8 gUnkLoadStatus[];
 
 void reset_bank_and_seq_load_status(void) {
-    s32 i;
+    s32 i = 0;
     for (i = 0; i < 64; i++) {
         if (gBankLoadStatus[i] != 5) {
             gBankLoadStatus[i] = 0;
@@ -115,7 +155,7 @@ void reset_bank_and_seq_load_status(void) {
 }
 
 void discard_bank(s32 bankId) {
-    s32 i;
+    s32 i = 0;
 
     for (i = 0; i < gMaxSimultaneousNotes; i++) {
         struct Note* note = &gNotes[i];
@@ -137,7 +177,7 @@ void discard_bank(s32 bankId) {
 }
 
 void discard_sequence(s32 seqId) {
-    s32 i;
+    s32 i = 0;
 
     for (i = 0; i < SEQUENCE_PLAYERS; i++) {
         if (gSequencePlayers[i].enabled && gSequencePlayers[i].seqId == seqId) {
@@ -147,8 +187,8 @@ void discard_sequence(s32 seqId) {
 }
 
 void* soundAlloc(struct SoundAllocPool* pool, u32 size) {
-    u8* start;
-    u8* pos;
+    u8* start = NULL;
+    u8* pos = NULL;
     u32 alignedSize = ALIGN16(size);
 
     start = pool->cur;
@@ -235,16 +275,16 @@ void temporary_pools_init(struct PoolSplit* a) {
 }
 
 void* alloc_bank_or_seq(struct SoundMultiPool* arg0, s32 arg1, s32 size, s32 arg3, s32 id) {
-    struct TemporaryPool* tp;
-    struct SoundAllocPool* pool;
-    void* ret;
-    u16 UNUSED _firstVal;
-    u16 UNUSED _secondVal;
-    u16 firstVal;
-    u16 secondVal;
-    s32 var_v1_2;
-    u8* table;
-    u8 isSound;
+    struct TemporaryPool* tp = NULL;
+    struct SoundAllocPool* pool = NULL;
+    void* ret = NULL;
+    u16 UNUSED _firstVal = 0;
+    u16 UNUSED _secondVal = 0;
+    u16 firstVal = 0;
+    u16 secondVal = 0;
+    s32 var_v1_2 = 0;
+    u8* table = NULL;
+    u8 isSound = 0;
 
     if (arg3 == 0) {
         tp = &arg0->temporary;
@@ -456,8 +496,7 @@ void* alloc_bank_or_seq(struct SoundMultiPool* arg0, s32 arg1, s32 size, s32 arg
 }
 
 void* get_bank_or_seq(s32 poolIdx, s32 arg1, s32 id) {
-    void* ret;
-
+    void* ret = NULL;
     ret = unk_pool1_lookup(poolIdx, id);
     if (ret != NULL) {
         return ret;
@@ -466,10 +505,10 @@ void* get_bank_or_seq(s32 poolIdx, s32 arg1, s32 id) {
 }
 
 void* get_bank_or_seq_inner(s32 poolIdx, s32 arg1, s32 bankId) {
-    u32 i;
-    struct SoundMultiPool* loadedPool;
-    struct TemporaryPool* temporary;
-    struct PersistentPool* persistent;
+    u32 i = 0;
+    struct SoundMultiPool* loadedPool = NULL;
+    struct TemporaryPool* temporary = NULL;
+    struct PersistentPool* persistent = NULL;
 
     switch (poolIdx) {
         case 0:
@@ -510,8 +549,8 @@ void* get_bank_or_seq_inner(s32 poolIdx, s32 arg1, s32 bankId) {
 }
 
 void func_800B9BE4(f32 arg0, f32 arg1, u16* arg2) {
-    s32 i;
-    f32 tmp[16];
+    s32 i = 0;
+    f32 tmp[16] = { 0 };
 
     tmp[0] = arg1 * 262159.0f;
     tmp[8] = arg0 * 262159.0f;
@@ -530,15 +569,15 @@ void func_800B9BE4(f32 arg0, f32 arg1, u16* arg2) {
 }
 
 void decrease_reverb_gain(void) {
-    s32 i;
+    s32 i = 0;
     for (i = 0; i < gNumSynthesisReverbs; i++) {
         gSynthesisReverbs[i].reverbGain -= gSynthesisReverbs[i].reverbGain / 4;
     }
 }
 
 s32 audio_shut_down_and_reset_step(void) {
-    s32 i;
-    s32 j;
+    s32 i = 0;
+    s32 j = 0;
 
     switch (gAudioResetStatus) {
         case 5:
@@ -596,15 +635,15 @@ s32 audio_shut_down_and_reset_step(void) {
 }
 
 void audio_reset_session(void) {
-    s32 var_s1;
-    s32 var_s5;
-    s32 temp;
-    u32 totalMem;
-    u32 temporaryMem;
-    u32 persistentMem;
-    s16* mem;
-    struct SynthesisReverb* reverb;
-    struct ReverbSettingsEU* reverbSettings;
+    s32 var_s1 = 0;
+    s32 var_s5 = 0;
+    s32 temp = 0;
+    u32 totalMem = 0;
+    u32 temporaryMem = 0;
+    u32 persistentMem = 0;
+    s16* mem = NULL;
+    struct SynthesisReverb* reverb = NULL;
+    struct ReverbSettingsEU* reverbSettings = NULL;
     struct AudioSessionSettingsEU* temp_s6 = &gAudioSessionPresets[gAudioResetPresetIdToLoad];
 
     gSampleDmaNumListItems = 0;
@@ -699,7 +738,7 @@ void audio_reset_session(void) {
 }
 
 void* unk_pool1_lookup(s32 poolIdx, s32 id) {
-    s32 i;
+    s32 i = 0;
 
     for (i = 0; i < gUnkPool1.pool.numAllocatedEntries; i++) {
         if (gUnkPool1.entries[i].poolIndex == poolIdx && gUnkPool1.entries[i].id == id) {
@@ -713,12 +752,12 @@ void* unk_pool1_lookup(s32 poolIdx, s32 id) {
 // comparable to this one, not a clue what
 // this one is doing.
 void func_800BA8B0(s32 poolIdx, s32 id) {
-    ALSeqFile* sp3C;
-    s32 temp_a2;
-    u32 temp_a1;
-    u8* var_a3;
-    UNUSED u8* temp_v0;
-    UNUSED s32 pad;
+    ALSeqFile* sp3C = NULL;
+    s32 temp_a2 = 0;
+    u32 temp_a1 = 0;
+    u8* var_a3 = NULL;
+    UNUSED u8* temp_v0 = NULL;
+    UNUSED s32 pad = 0;
 
     switch (poolIdx) { /* irregular */
         case 0:
@@ -743,6 +782,7 @@ void func_800BA8B0(s32 poolIdx, s32 id) {
         }
         gUnkPool1.entries[temp_a2].ptr = soundAlloc(&gUnkPool1.pool, temp_a1);
         if (gUnkPool1.entries[temp_a2].ptr != NULL) {
+            printf("about to copy to gUnkPool1.entries[temp_a2].ptr %08x\n", (uintptr_t)gUnkPool1.entries[temp_a2].ptr);
             audio_dma_copy_immediate(var_a3, gUnkPool1.entries[temp_a2].ptr, temp_a1);
             gUnkPool1.entries[temp_a2].poolIndex = poolIdx;
             gUnkPool1.entries[temp_a2].id = id;

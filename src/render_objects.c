@@ -2618,7 +2618,12 @@ void func_8004F950(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
 
 void print_timer_rainbow(s32 arg0, s32 arg1, s32 arg2) {
     gSPDisplayList(gDisplayListHead++, D_0D007F38);
+#if 0
     setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 128, 128, 128, 255);
+#else
+    // jnmartin84 - use 0 instead of 128 until I fix color combining
+    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 0, 0, 0, 255);
+#endif
     load_texture_block_rgba16_mirror((u8*) common_texture_hud_normal_digit, 104, 16);
     func_8004F6D0(arg2);
     func_8004F8CC(arg0, arg1);
