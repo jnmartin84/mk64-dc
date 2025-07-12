@@ -240,7 +240,7 @@ static bool audio_dc_init(void) {
 	main_attr.label = "snd_thread";
     g_audio_poll_thread_handle = thd_create_ex(&main_attr, snd_thread, NULL);
     #endif
-#if 1
+#if 0
     g_audio_poll_thread_handle = thd_create(false, snd_thread, NULL);
 
     if (!g_audio_poll_thread_handle) {
@@ -285,8 +285,8 @@ static void audio_dc_play(/* const */ uint8_t *buf, size_t len) {
         cb_clear();
        // return;
     }
-//    if(audio_started)
-  //      snd_stream_poll(shnd);
+    if(audio_started)
+        snd_stream_poll(shnd);
 }
 
 struct AudioAPI audio_dc = {
