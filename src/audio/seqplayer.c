@@ -59,7 +59,7 @@ char seqplayer_unused_string25[] = "Group:Undefined Command\n";
 // sequence_channel_init
 void sequence_channel_init(struct SequenceChannel* seqChannel) {
     s32 i = 0;
-
+    ////printf("%s(%08x)\n", __func__, seqChannel);
     seqChannel->enabled = 0;
     seqChannel->finished = 0;
     seqChannel->stopScript = 0;
@@ -100,6 +100,7 @@ void sequence_channel_init(struct SequenceChannel* seqChannel) {
 
 s32 seq_channel_set_layer(struct SequenceChannel* seqChannel, s32 layerIndex) {
     struct SequenceChannelLayer* layer = NULL;
+    //printf("%s(%08x,%d)\n", __func__, seqChannel, layerIndex);
 
 //    printf ("\nseq_channel_set_layer %08x\n", seqChannel->layers[layerIndex]);
 
@@ -143,6 +144,7 @@ s32 seq_channel_set_layer(struct SequenceChannel* seqChannel, s32 layerIndex) {
 }
 
 void seq_channel_layer_disable(struct SequenceChannelLayer* layer) {
+    //printf("%s(%08x)\n", __func__, layer);
     if (layer != NULL) {
         seq_channel_layer_note_decay(layer);
         layer->enabled = 0;
@@ -152,6 +154,7 @@ void seq_channel_layer_disable(struct SequenceChannelLayer* layer) {
 
 void seq_channel_layer_free(struct SequenceChannel* seqChannel, s32 layerIndex) {
     struct SequenceChannelLayer* layer = seqChannel->layers[layerIndex];
+    //printf("%s(%08x,%d)\n", __func__, seqChannel, layerIndex);
 
     if (layer != NULL) {
         audio_list_push_back(&gLayerFreeList, &layer->listItem);
@@ -162,6 +165,10 @@ void seq_channel_layer_free(struct SequenceChannel* seqChannel, s32 layerIndex) 
 
 void sequence_channel_disable(struct SequenceChannel* seqChannel) {
     s32 i = 0;
+
+    //printf("%s(%08x)\n", __func__, seqChannel);
+
+
     for (i = 0; i < LAYERS_MAX; i++) {
         seq_channel_layer_free(seqChannel, i);
     }
@@ -173,6 +180,9 @@ void sequence_channel_disable(struct SequenceChannel* seqChannel) {
 
 struct SequenceChannel* allocate_sequence_channel(void) {
     s32 i = 0;
+
+    //printf("%s()\n", __func__);
+
     for (i = 0; i < SEQUENCE_CHANNELS; i++) {
         if (gSequenceChannels[i].seqPlayer == NULL) {
             //printf("returning &gSequenceChannels[%d] == %08x\n", i, &gSequenceChannels[i]);
@@ -186,6 +196,7 @@ struct SequenceChannel* allocate_sequence_channel(void) {
 void sequence_player_init_channels(struct SequencePlayer* seqPlayer, u16 channelBits) {
     struct SequenceChannel* seqChannel = NULL;
     s32 i = 0;
+    //printf("%s(%08x,%04x)\n", __func__, seqPlayer, channelBits);
 
     for (i = 0; i < CHANNELS_MAX; i++) {
         if (channelBits & 1) {
@@ -215,6 +226,7 @@ void sequence_player_init_channels(struct SequencePlayer* seqPlayer, u16 channel
 void sequence_player_disable_channels(struct SequencePlayer* seqPlayer, u16 channelBits) {
     struct SequenceChannel* seqChannel = NULL;
     s32 i = 0;
+    //printf("%s(%08x,%04x)\n", __func__, seqPlayer, channelBits);
 
     // eu_stubbed_printf_0("SUBTRACK DIM\n");
     for (i = 0; i < CHANNELS_MAX; i++) {
@@ -237,6 +249,7 @@ void sequence_player_disable_channels(struct SequencePlayer* seqPlayer, u16 chan
 void sequence_channel_enable(struct SequencePlayer* seqPlayer, u8 channelIndex, void* script) {
     struct SequenceChannel* seqChannel = seqPlayer->channels[channelIndex];
     s32 i = 0;
+    //printf("%s(%08x,%u,%08x)\n", __func__, seqPlayer, channelIndex, script);
     if (IS_SEQUENCE_CHANNEL_VALID(seqChannel) == 0) {
         // stubbed_printf("SEQID %d,BANKID %d\n", seqPlayer->seqId, seqPlayer->defaultBank[0]);
         // stubbed_printf("ERR:SUBTRACK %d NOT ALLOCATED\n", channelIndex);
@@ -259,6 +272,7 @@ void sequence_player_disable(struct SequencePlayer* seqPlayer) {
     note_pool_clear(&seqPlayer->notePool);
     seqPlayer->finished = 1;
     seqPlayer->enabled = 0;
+    //printf("%s(%08x)\n", __func__, seqPlayer);
 
     if (IS_SEQ_LOAD_COMPLETE(seqPlayer->seqId) && gSeqLoadStatus[seqPlayer->seqId] != 5) {
         gSeqLoadStatus[seqPlayer->seqId] = SOUND_LOAD_STATUS_DISCARDABLE;
@@ -337,6 +351,10 @@ u16 m64_read_compressed_u16(struct M64ScriptState* state) {
     }
     return ret;
 }
+static inline short SwapShort(short dat)
+{
+    return (((dat) & 0xff) << 8 | (((dat) >> 8) & 0xff));
+}
 
 void seq_channel_layer_process_script(struct SequenceChannelLayer* layer) {
     struct SequencePlayer* seqPlayer = NULL;
@@ -359,6 +377,7 @@ void seq_channel_layer_process_script(struct SequenceChannelLayer* layer) {
     f32 freqScale = 0;
     f32 temp_f12 = 0;
     f32 temp_f2 = 0;
+//    //printf("%s(%08x)\n", __func__, layer);
 
     sameSound = 1;
     if (layer->enabled == 0) {
@@ -515,7 +534,7 @@ void seq_channel_layer_process_script(struct SequenceChannelLayer* layer) {
 
                 // If special, the next param is u8 instead of var
                 if (PORTAMENTO_IS_SPECIAL(layer->portamento)) {
-                    layer->portamentoTime = *((state)->pc++);
+                    layer->portamentoTime = /*SwapShort*/ (*((state)->pc++));
                     break;
                 }
 
@@ -636,9 +655,18 @@ void seq_channel_layer_process_script(struct SequenceChannelLayer* layer) {
                         layer->pan = drum->pan;
                     }
                     layer->sound = &drum->sound;
-                    // MAYBE
-//                    printf("layer->sound->tuning %f\n", layer->sound->tuning);
-                    layer->freqScale = Swap32(layer->sound->tuning);
+                    //printf("the drum is %08x\n", drum);
+                    //printf("the layer is %08x\n", layer);
+                    //printf("the sound is %08x\n", layer->sound);
+
+                    float _tuning = layer->sound->tuning;
+                    uint32_t *stuning = (uint32_t *)&_tuning;
+                    //printf("original l s tuning is %f\n", _tuning);
+                    //printf("original l s tuning is %08x\n", *stuning);
+                    *stuning = Swap32(*stuning);
+
+                    //printf("INIT_FREQ_SCALE: layer->sound->tuning %f\n", _tuning);
+                    layer->freqScale = _tuning;
                 }
             } else { // instrument
                 // cmd is reused for the instrument semitone
@@ -664,7 +692,9 @@ void seq_channel_layer_process_script(struct SequenceChannelLayer* layer) {
                             sound = instrument_get_audio_bank_sound(instrument, vel);
                             sameSound = (sound == layer->sound);
                             layer->sound = sound;
-                            tuning = Swap32(sound->tuning);
+                            tuning = sound->tuning;
+                            uint32_t *stuning = (uint32_t *)&tuning;
+                            *stuning = Swap32(*stuning);
                         } else {
                             layer->sound = NULL;
                             tuning = 1.0f;
@@ -698,9 +728,10 @@ void seq_channel_layer_process_script(struct SequenceChannelLayer* layer) {
                             portamento->speed = US_FLOAT(127.0) / FLOAT_CAST(layer->portamentoTime);
                         }
                         portamento->cur = 0.0f;
-                        //printf("freqScale %f\n", freqScale);
 
+                        //printf("INIT_FREQ_SCALE: freqScale %f\n", freqScale);
                         layer->freqScale = freqScale;
+
                         if (PORTAMENTO_MODE(layer->portamento) == PORTAMENTO_MODE_5) {
                             layer->portamentoTargetNote = cmd;
                         }
@@ -708,15 +739,16 @@ void seq_channel_layer_process_script(struct SequenceChannelLayer* layer) {
                         sound = instrument_get_audio_bank_sound(instrument, cmd);
                         sameSound = (sound == layer->sound);
                         layer->sound = sound;
-//                                                //printf("gNoteFrequencies[cmd] * sound->tuning %f\n", gNoteFrequencies[cmd] * sound->tuning);
-//printf("sound->tuning %f\n", sound->tuning);
-//printf("gNoteFrequencies[cmd] %f\n", gNoteFrequencies[cmd]);
-layer->freqScale = gNoteFrequencies[cmd] * Swap32(sound->tuning);
+
+                        float _tuning = sound->tuning;
+                        uint32_t *stuning = (uint32_t *)&_tuning;
+                        *stuning = Swap32(*stuning);
+                        layer->freqScale = gNoteFrequencies[cmd] * _tuning;
+                        //printf("INIT_FREQ_SCALE: %f * %f == %f\n", gNoteFrequencies[cmd],_tuning, layer->freqScale);
                     } else {
                         layer->sound = NULL;
-                           //printf("gNoteFrequencies[cmd] %f\n", gNoteFrequencies[cmd]);
-
                         layer->freqScale = gNoteFrequencies[cmd];
+                        //printf("INIT_FREQ_SCALE: %f\n", gNoteFrequencies[cmd]);
                     }
                 }
             }
@@ -747,12 +779,12 @@ layer->freqScale = gNoteFrequencies[cmd] * Swap32(sound->tuning);
 
     if (cmd != 0) {
         layer->note = alloc_note(layer);
-        //printf("alloc layer->note %08x\n", layer->note);
     }
 
     if (layer->note != NULL && layer->note->parentLayer == layer) {
         note_vibrato_init(layer->note);
     }
+
     if (seqChannel) {}
 }
 
@@ -805,9 +837,11 @@ void sequence_channel_process_script(struct SequenceChannel* seqChannel) {
     u8* seqData=NULL;
 
     if (!seqChannel->enabled) {
+        //printf("seqChannel %08x not enabled\n", (uintptr_t)seqChannel);
         return;
     }
     if (seqChannel->stopScript) {
+        //printf("seqChannel %08x stop script\n", (uintptr_t)seqChannel);
         for (i = 0; i < LAYERS_MAX; i++) {
             if (seqChannel->layers[i] != NULL) {
                 seq_channel_layer_process_script(seqChannel->layers[i]);
@@ -816,9 +850,9 @@ void sequence_channel_process_script(struct SequenceChannel* seqChannel) {
         return;
     }
 
-//    //printf("\nsequence_channel_process_script(%08x)\n", seqChannel);
     seqPlayer = seqChannel->seqPlayer;
     if (seqPlayer->muted && ((seqChannel->muteBehavior & 0x80) != 0)) {
+        //printf("seqPlayer %08x muted and returning\n", (uintptr_t)seqChannel);
         return;
     }
     if (seqChannel->delay != 0) {
@@ -828,7 +862,9 @@ void sequence_channel_process_script(struct SequenceChannel* seqChannel) {
     if (seqChannel->delay == 0) {
         for (;;) {
             cmd = m64_read_u8(state);
+            //printf("next cmd %02x\n", (unsigned)cmd);
             if (cmd > 0xc0) {
+                //printf("state->pc == %08x\n", state->pc);
                 switch (cmd) {
                     case 0xFF:
                         if (state->depth == 0) {
@@ -844,6 +880,7 @@ void sequence_channel_process_script(struct SequenceChannel* seqChannel) {
 
                     case 0xFD:
                         seqChannel->delay = m64_read_compressed_u16(state);
+                        //printf("seqChannel->delay == %02x\n", seqChannel->delay);
                         goto out;
 
                     case 0xEA:
@@ -923,7 +960,6 @@ void sequence_channel_process_script(struct SequenceChannel* seqChannel) {
                         if (value != (s8)(-1)) {
                             seqData = (*seqChannel->dynTable)[value];
                             sp38 = (u16) ((seqData[0] << 8) + seqData[1]);
-                            //printf("sp38 is %08x\n", sp38);
                             seqChannel->dynTable = (void*) (seqPlayer->seqData + sp38);
                         }
                         break;
@@ -963,14 +999,12 @@ void sequence_channel_process_script(struct SequenceChannel* seqChannel) {
                     case 0xDE:
                         sp5A = m64_read_s16(state);
                         seqChannel->freqScale = ((f32) ((s32) sp5A)) / 32768.0f;
-                        //printf("new freqscale %04x\n", sp5A);
                         seqChannel->changes.as_bitfields.freqScale = 1;
                         break;
 
                     case 0xD3:
                         cmd = m64_read_u8(state) + 127;
                         seqChannel->freqScale = gPitchBendFrequencyScale[cmd];
-                        //printf("new freqscale %fx\n",  gPitchBendFrequencyScale[cmd]);
                         seqChannel->changes.as_bitfields.freqScale = 1;
                         break;
 
@@ -1244,34 +1278,6 @@ void sequence_player_process_sequence(struct SequencePlayer* seqPlayer) {
 
     if (seqPlayer->enabled == 0) {
         return;
-    }
-
-    if (seqPlayer->bankDmaInProgress == 1) {
-        //if (osRecvMesg(&seqPlayer->bankDmaMesgQueue, NULL, 0) == -1) {
-          //  return;
-        //}
-        if (1) {//seqPlayer->bankDmaRemaining == 0) {
-            seqPlayer->bankDmaInProgress = 0;
-            func_800BB584(seqPlayer->loadingBankId);
-            if (gBankLoadStatus[seqPlayer->loadingBankId] != 5) {
-                gBankLoadStatus[seqPlayer->loadingBankId] = 2;
-            }
-        }/* else {
-            audio_dma_partial_copy_async(&seqPlayer->bankDmaCurrDevAddr, &seqPlayer->bankDmaCurrMemAddr,
-                                         &seqPlayer->bankDmaRemaining, &seqPlayer->bankDmaMesgQueue,
-                                         &seqPlayer->bankDmaIoMesg);
-        }*/
-        return;
-    }
-
-    if (seqPlayer->seqDmaInProgress == 1) {
-        if (osRecvMesg(&seqPlayer->seqDmaMesgQueue, NULL, 0) == -1) {
-            return;
-        }
-        seqPlayer->seqDmaInProgress = 0;
-        if (gSeqLoadStatus[seqPlayer->seqId] != 5) {
-            gSeqLoadStatus[seqPlayer->seqId] = 2;
-        }
     }
 
     // If discarded, bail out.

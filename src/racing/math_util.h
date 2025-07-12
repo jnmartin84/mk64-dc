@@ -64,6 +64,25 @@ s16 func_802B7F34(f32, f32, f32, f32);
 void func_802B7F7C(Vec3f, Vec3f, Vec3s);
 f32 sins(u16);
 f32 coss(u16);
+//#include <kos.h>
+#if 0
+#define F_PI 3.1415926f
+static inline f32 sins(u16 arg0) {
+//    return gSineTable[arg0 >> 4];
+    float farg0 = ((float)(arg0 / 16.0f) / 1024.0f) * F_PI * 0.5f;
+    return sinf(farg0);
+}
+
+//#define gCosineTable (gSineTable + 0x400)
+
+static inline f32 coss(u16 arg0) {
+//    return gCosineTable[arg0 >> 4];
+    float farg0 = ((float)(arg0 / 16.0f) / 1024.0f) * F_PI * 0.5f;
+    return cosf(farg0);
+}
+#undef F_PI
+#endif
+
 s32 is_visible_between_angle(u16, u16, u16);
 f32 is_within_render_distance(Vec3f, Vec3f, u16, f32, f32, f32);
 

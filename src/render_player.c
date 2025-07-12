@@ -1655,6 +1655,7 @@ void render_kart(Player* player, s8 playerId, s8 screenId, s8 arg3) {
 
     mtxf_translate_rotate(kart_matrix, result_pos, orientation);
     mtxf_scale2(kart_matrix, gCharacterSize[player->characterId] * player->size);
+
     convert_to_fixed_point_matrix(&gGfxPool->mtxKart[playerId + (screenId * 8)], kart_matrix);
 
     if ((player->effects & BOO_EFFECT) == BOO_EFFECT) {

@@ -56,7 +56,7 @@
 #define stubbed_printf
 #else
 #include <stdio.h>
-#define stubbed_printf(...)
+#define stubbed_printf(...) 
 //printf(__VA_ARGS__)
 #endif
 
@@ -177,7 +177,7 @@ struct CtlEntry {
     u8 numDrums;
     struct Instrument** instruments;
     struct Drum** drums;
-}; // size = 0xC
+}; // size = 0xC -- no? its 0xB ... wtf
 
 struct M64ScriptState {
     u8* pc;

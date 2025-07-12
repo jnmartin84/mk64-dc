@@ -8,7 +8,11 @@ void guTranslateF(float m[4][4], float x, float y, float z) {
 }
 
 void guTranslate(Mtx* m, float x, float y, float z) {
+#ifndef GBI_FLOATS
     float mf[4][4];
     guTranslateF(mf, x, y, z);
     guMtxF2L(mf, m);
+#else
+    guTranslateF(m->m, x, y, z);
+#endif
 }

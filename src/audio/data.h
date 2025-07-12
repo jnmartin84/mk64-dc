@@ -44,7 +44,7 @@ extern s16 gTatumsPerBeat;          // D_800EA5CC
 extern volatile s32 gAudioLoadLock; // D_800EA5DC
 
 extern s32 gAudioTaskIndex;
-extern s32 gCurrAiBufferIndex;
+//extern s32 gCurrAiBufferIndex;
 extern Acmd* gAudioCmdBuffers[2];    // probably wrong
 extern Acmd* gAudioCmd;              // D_803B70D0
 extern struct SPTask* gAudioTask;    // D_803B70D4

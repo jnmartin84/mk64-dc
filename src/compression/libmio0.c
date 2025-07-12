@@ -29,6 +29,74 @@ int mio0_decode_header(const unsigned char *buf, mio0_header_t *head)
 }
 
 void gfx_texture_cache_invalidate(void *orig_addr);
+
+// --- Platform-independent endian swap ---
+static inline uint32_t swap32(uint32_t x) {
+    return ((x & 0xFF000000) >> 24) |
+           ((x & 0x00FF0000) >> 8)  |
+           ((x & 0x0000FF00) << 8)  |
+           ((x & 0x000000FF) << 24);
+}
+
+static inline uint16_t swap16(uint16_t x) {
+    return (x >> 8) | (x << 8);
+}
+
+// --- Optimized MIO0 decoder ---
+//void mio0_decode(const uint8_t *src, uint8_t *dst) {
+int mio0decode(const unsigned char *src, unsigned char *dst) {
+    if (memcmp(src, "MIO0", 4) != 0) {
+        fprintf(stderr, "Invalid MIO0 magic!\n");
+        return -2;
+    }
+    int count = 0;
+    uint32_t out_size = swap32(*(uint32_t*)(src + 4));
+    uint32_t ctrl_off = swap32(*(uint32_t*)(src + 8));
+    uint32_t raw_off  = swap32(*(uint32_t*)(src +12));
+    uint32_t back_off = swap32(*(uint32_t*)(src +16));
+
+    const uint8_t *ctrl = src + ctrl_off;
+    const uint8_t *raw  = src + raw_off;
+    const uint8_t *back = src + back_off;
+
+    uint8_t *out = dst;
+    uint8_t *out_end = dst + out_size;
+
+    uint32_t ctrl_bits = 0;
+    int bits_left = 0;
+
+    while (out < out_end) {
+        if (bits_left == 0) {
+            ctrl_bits = swap32(*(uint32_t*)ctrl);
+            ctrl += 4;
+            bits_left = 32;
+        }
+
+        if (ctrl_bits & 0x80000000) {
+            // Literal byte
+            *out++ = *raw++;
+            count++;
+        } else {
+            // Backreference
+            uint16_t pair = swap16(*(uint16_t*)back);
+            back += 2;
+
+            uint16_t offset = pair >> 4;
+            uint16_t length = (pair & 0xF) + 3;
+
+            uint8_t *ref = out - offset;
+            for (int i = 0; i < length; ++i)
+                *out++ = *ref++;
+            count += length;
+         }
+
+        ctrl_bits <<= 1;
+        bits_left--;
+    }
+    return count;
+}
+
+#if 0
 int mio0decode(const unsigned char *in, unsigned char *out) 
 {
    mio0_header_t head;
@@ -38,14 +106,14 @@ int mio0decode(const unsigned char *in, unsigned char *out)
    int uncomp_idx = 0;
    int valid;
 //	printf("%s(%08x,%08x)%s",__func__,in,out,"\n");
-   gfx_texture_cache_invalidate(out);
+//   gfx_texture_cache_invalidate(out);
    // extract header
    valid = mio0_decode_header(in, &head);
    // verify MIO0 header
    if (!valid) {
       printf("invalid header aborting from libmio0?\n");
       printf("\n");
-      while(1){}
+     // while(1){}
       exit(-1);
       return -2;
    }
@@ -76,3 +144,4 @@ int mio0decode(const unsigned char *in, unsigned char *out)
 
    return bytes_written;
 }
+#endif

@@ -217,7 +217,7 @@ s16 find_closest_pathPoint_track_section(f32 posX, f32 posY, f32 posZ, u16 track
     s32 var_a1;
     s32 var_t1;
     s32 considerPathIndex;
-    s32 var_t4;
+    s32 var_t4=0;
     s16 nearestPathPointIndex;
 
     minimumSquaredDistance = 1000000.0f;

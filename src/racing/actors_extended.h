@@ -16,7 +16,7 @@ void drop_banana_in_banana_bunch(struct BananaBunchParent*);
 void func_802B0788(s16, struct BananaBunchParent*, Player*);
 s32 func_802B09C0(s16);
 void update_actor_banana_bunch(struct BananaBunchParent*);
-bool is_shell_exist(s16);
+s32 is_shell_exist(s16);
 void update_actor_triple_shell(TripleShellParent*, s16);
 s32 use_banana_bunch_item(Player*);
 s32 use_triple_shell_item(Player*, s16);

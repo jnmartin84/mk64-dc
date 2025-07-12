@@ -19,7 +19,11 @@ void guOrthoF(float m[4][4], float left, float right, float bottom, float top, f
 }
 
 void guOrtho(Mtx* m, float left, float right, float bottom, float top, float near, float far, float scale) {
+#ifndef GBI_FLOATS
     float sp28[4][4];
     guOrthoF(sp28, left, right, bottom, top, near, far, scale);
     guMtxF2L(sp28, m);
+#else
+    guOrthoF(m->m, left, right, bottom, top, near, far, scale);
+#endif
 }

@@ -896,6 +896,7 @@ void render_luigi_raceway(struct UnkStruct_800DC5EC* arg0) {
 
     // Render only the first player camera onto the television billboard. Screen agnostic screens of other players).
     if ((gActiveScreenMode == SCREEN_MODE_1P) && (sp22 >= 10) && (sp22 < 17)) {
+#if 0
         prevFrame = (s16) sRenderedFramebuffer - 1;
 
         if (prevFrame < 0) {
@@ -903,7 +904,6 @@ void render_luigi_raceway(struct UnkStruct_800DC5EC* arg0) {
         } else if (prevFrame >= 3) {
             prevFrame = 0;
         }
-
         copy_framebuffer2(D_800DC5DC, D_800DC5E0, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
                           (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture68272C)));
         gfx_texture_cache_invalidate(gLRTexture68272C);
@@ -932,7 +932,7 @@ void render_luigi_raceway(struct UnkStruct_800DC5EC* arg0) {
                           (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
                           (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture683118)));
         gfx_texture_cache_invalidate(gLRTexture683118);
-#if 0
+#else
         prevFrame = (s16) sRenderedFramebuffer - 1;
 
         if (prevFrame < 0) {
@@ -950,34 +950,40 @@ void render_luigi_raceway(struct UnkStruct_800DC5EC* arg0) {
          */
         switch (currentScreenSection) {
             case 0:
-                copy_framebuffer(D_800DC5DC, D_800DC5E0, 64, 32,
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0xF800));
+                copy_framebuffer2(D_800DC5DC, D_800DC5E0, 64, 32,
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
+                                  (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture68272C)));
+                gfx_texture_cache_invalidate(gLRTexture68272C);
                 break;
             case 1:
-                copy_framebuffer(D_800DC5DC + 64, D_800DC5E0, 64, 32,
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0x10800));
+                copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0, 64, 32,
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
+                                  (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture682928)));
+                gfx_texture_cache_invalidate(gLRTexture682928);
                 break;
             case 2:
-                copy_framebuffer(D_800DC5DC, D_800DC5E0 + 32, 64, 32,
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0x11800));
+                copy_framebuffer2(D_800DC5DC, D_800DC5E0 + 32, 64, 32,
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
+                                  (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture682B24)));
+                gfx_texture_cache_invalidate(gLRTexture682B24);
                 break;
             case 3:
-                copy_framebuffer(D_800DC5DC + 64, D_800DC5E0 + 32, 64, 32,
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0x12800));
+                copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0 + 32, 64, 32,
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
+                                  (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture682D20)));
+                gfx_texture_cache_invalidate(gLRTexture682D20);
                 break;
             case 4:
-                copy_framebuffer(D_800DC5DC, D_800DC5E0 + 64, 64, 32,
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0x13800));
+                copy_framebuffer2(D_800DC5DC, D_800DC5E0 + 64, 64, 32,
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
+                                  (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture682F1C)));
+                gfx_texture_cache_invalidate(gLRTexture682F1C);
                 break;
             case 5:
-                copy_framebuffer(D_800DC5DC + 64, D_800DC5E0 + 64, 64, 32,
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0x14800));
+                copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0 + 64, 64, 32,
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
+                                  (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture683118)));
+                gfx_texture_cache_invalidate(gLRTexture683118);
                 break;
         }
 #endif
@@ -1171,6 +1177,7 @@ void render_wario_stadium(struct UnkStruct_800DC5EC* arg0) {
     D_800DC5DC = 88;
     D_800DC5E0 = 72;
     if (gActiveScreenMode == SCREEN_MODE_1P) {
+#if 0
         prevFrame = (s16) sRenderedFramebuffer - 1;
         if (prevFrame < 0) {
             prevFrame = 2;
@@ -1206,7 +1213,7 @@ void render_wario_stadium(struct UnkStruct_800DC5EC* arg0) {
                           (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
                           (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture683118)); // gSegmentTable[5] + 0xD800));
         gfx_texture_cache_invalidate(gWSTexture683118);
-#if 0
+#else
         prevFrame = (s16) sRenderedFramebuffer - 1;
         if (prevFrame < 0) {
             prevFrame = 2;
@@ -1219,34 +1226,41 @@ void render_wario_stadium(struct UnkStruct_800DC5EC* arg0) {
         }
         switch (currentScreenSection) {
             case 0:
-                copy_framebuffer(D_800DC5DC, D_800DC5E0, 64, 32,
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0x8800));
+                copy_framebuffer2(D_800DC5DC, D_800DC5E0, 64, 32,
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture68272C));
+                gfx_texture_cache_invalidate(gWSTexture68272C);
                 break;
             case 1:
-                copy_framebuffer(D_800DC5DC + 64, D_800DC5E0, 64, 32,
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0x9800));
+                copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0, 64, 32,
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture682928)); // gSegmentTable[5] + 0x9800));
+                gfx_texture_cache_invalidate(gWSTexture682928);
                 break;
             case 2:
-                copy_framebuffer(D_800DC5DC, D_800DC5E0 + 32, 64, 32,
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0xA800));
+                copy_framebuffer2(D_800DC5DC, D_800DC5E0 + 32, 64, 32,
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture682B24)); // gSegmentTable[5] + 0xA800));
+                gfx_texture_cache_invalidate(gWSTexture682B24);
                 break;
             case 3:
-                copy_framebuffer(D_800DC5DC + 64, D_800DC5E0 + 32, 64, 32,
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0xB800));
+                copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0 + 32, 64, 32,
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture682D20)); // gSegmentTable[5] + 0xB800));
+                gfx_texture_cache_invalidate(gWSTexture682D20);
                 break;
             case 4:
-                copy_framebuffer(D_800DC5DC, D_800DC5E0 + 64, 64, 32,
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0xC800));
+                copy_framebuffer2(D_800DC5DC, D_800DC5E0 + 64, 64, 32,
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture682F1C)); // gSegmentTable[5] + 0xC800));
+                gfx_texture_cache_invalidate(gWSTexture682F1C);
+
                 break;
             case 5:
-                copy_framebuffer(D_800DC5DC + 64, D_800DC5E0 + 64, 64, 32,
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
-                                 (u16*) PHYSICAL_TO_VIRTUAL(gSegmentTable[5] + 0xD800));
+                copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0 + 64, 64, 32,
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[prevFrame]),
+                                  (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture683118)); // gSegmentTable[5] + 0xD800));
+                gfx_texture_cache_invalidate(gWSTexture683118);
                 break;
         }
 #endif
@@ -1529,7 +1543,7 @@ void func_80295D6C(void) {
     D_8015F6F6 = -3000;
 }
 
-extern CollisionTriangle allColTris[2048+1024];//2800];//2798];//2048+1024];
+extern CollisionTriangle allColTris[2800];//2048+1024];//2800];//2798];//2048+1024];
 #include <stdio.h>
 
 /**

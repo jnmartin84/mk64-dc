@@ -177,7 +177,7 @@ s16 func_802B3FD0(Player* owner, struct ShellActor* shell) {
         playerToShellDistance = func_802B51E8(player->pos, shell->pos);
         if (playerToShellDistance < smallestDistance) {
             smallestDistance = playerToShellDistance;
-            playerId = player - gPlayerOne;
+            playerId = player - gPlayers;//One;
         }
     }
 
@@ -346,7 +346,7 @@ void update_actor_red_blue_shell(struct ShellActor* shell) {
                     shell->targetPlayer = gPlayerPositionLUT[0];
                     shell->state = BLUE_SHELL_LOCK_ON;
                     shell->shellId = 1000.0f;
-                    temp_v0 = gNearestPathPointByPlayerId[player - gPlayerOne] + 8;
+                    temp_v0 = gNearestPathPointByPlayerId[player - gPlayers/* One */] + 8;
                     if ((s32) gSelectedPathCount < temp_v0) {
                         temp_v0 -= gSelectedPathCount;
                     }
@@ -367,7 +367,7 @@ void update_actor_red_blue_shell(struct ShellActor* shell) {
                     if (player->currentRank == 0) {
                         shell->state = TRIPLE_GREEN_SHELL;
                         shell->someTimer = 0x0258;
-                        temp_v0 = gNearestPathPointByPlayerId[player - gPlayerOne] + 8;
+                        temp_v0 = gNearestPathPointByPlayerId[player - gPlayers/* One */] + 8;
                         if ((s32) gSelectedPathCount < temp_v0) {
                             temp_v0 -= gSelectedPathCount;
                         }
@@ -375,7 +375,7 @@ void update_actor_red_blue_shell(struct ShellActor* shell) {
                     } else if (player->currentRank >= 5) {
                         shell->state = GREEN_SHELL_HIT_A_RACER;
                         shell->shellId = 1000.0f;
-                        temp_v0 = gNearestPathPointByPlayerId[player - gPlayerOne] + 8;
+                        temp_v0 = gNearestPathPointByPlayerId[player - gPlayers/* One */] + 8;
                         if ((s32) gSelectedPathCount < temp_v0) {
                             temp_v0 -= gSelectedPathCount;
                         }

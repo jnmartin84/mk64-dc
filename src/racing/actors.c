@@ -421,6 +421,24 @@ void init_red_shell_texture(void) {
 }
 
 UNUSED void func_80297944(void) {};
+//gDPSetCombineLERP(gDisplayListHead++, 0, 0, 0, PRIMITIVE, TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, PRIMITIVE, TEXEL0, 0,
+     //                 PRIMITIVE, 0);
+  //  gDPSetPrimColor(gDisplayListHead++, 0, 0, red, green, blue, alpha);
+
+// this DL draws tree shadows
+Gfx l_D_0D007B20[] = {
+    gsSPDisplayList(D_0D007A08),
+    gsDPSetTextureFilter(G_TF_BILERP),
+//    gsDPSetRenderMode(G_RM_ZB_CLD_SURF, G_RM_ZB_CLD_SURF2),
+    gsDPSetRenderMode(G_RM_AA_ZB_XLU_SURF, G_RM_AA_ZB_XLU_SURF2),
+    gsDPSetPrimColor(0, 0, 0x14, 0x14, 0x14, 0x7F),
+    gsDPSetCombineLERP(0, 0, 0, PRIMITIVE, TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, PRIMITIVE, TEXEL0, 0,
+                      PRIMITIVE, 0),
+    gsDPLoadTextureBlock_4b(common_shadow_i4, G_IM_FMT_I, 16, 16, 0, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD),
+    gsSPDisplayList(D_0D006980),
+    gsSPTexture(0x8000, 0x8000, 0, G_TX_RENDERTILE, G_OFF),
+    gsSPEndDisplayList(),
+};
 
 void func_8029794C(Vec3f pos, Vec3s rot, f32 scale) {
     Mat4 sp20;
@@ -429,7 +447,7 @@ void func_8029794C(Vec3f pos, Vec3s rot, f32 scale) {
     mtxf_pos_rotation_xyz(sp20, pos, rot);
     mtxf_scale(sp20, scale);
     if (render_set_position(sp20, 0) != 0) {
-        gSPDisplayList(gDisplayListHead++, D_0D007B20);
+        gSPDisplayList(gDisplayListHead++, l_D_0D007B20);
         pos[1] -= 2.0f;
     }
 }
@@ -557,12 +575,12 @@ void evaluate_collision_player_palm_trees(Player* player) {
         if (query_and_resolve_collision_player_actor(player, pos, 5.0f, 40.0f, 0.8f) == COLLISION) {
             if ((player->effects & STAR_EFFECT) != 0) {
                 func_800C98B8(player->pos, player->velocity, SOUND_ARG_LOAD(0x19, 0x01, 0x80, 0x10));
-                func_800C90F4((u8) (player - gPlayerOne),
+                func_800C90F4((u8) (player - gPlayers/*One*/),
                               (player->characterId * 0x10) + SOUND_ARG_LOAD(0x29, 0x00, 0x80, 0x0D));
                 data->someId |= 0x400;
             }
             if ((player->type & PLAYER_INVISIBLE_OR_BOMB) == 0) {
-                func_800C9060((u8) (player - gPlayerOne), SOUND_ARG_LOAD(0x19, 0x00, 0x70, 0x18));
+                func_800C9060((u8) (player - gPlayers/*One*/), SOUND_ARG_LOAD(0x19, 0x00, 0x70, 0x18));
             }
             break;
         }
@@ -1180,7 +1198,7 @@ extern u8 __attribute__((aligned(32))) SEG3_BUF[/*98304*/100352];
 void init_actors_and_load_textures(void) {
     set_segment_base_addr(3, (void*) SEG3_BUF + 0x9000);
     ROVING_SEG3_BUF = SEG3_BUF + 0x9000;
-
+#if 0
     D_802BA050 = dma_textures(gTextureGreenShell0, 0x00000257U, 0x00000400U);
     dma_textures(gTextureGreenShell1, 0x00000242U, 0x00000400U);
     dma_textures(gTextureGreenShell2, 0x00000259U, 0x00000400U);
@@ -1189,6 +1207,16 @@ void init_actors_and_load_textures(void) {
     dma_textures(gTextureGreenShell5, 0x0000025EU, 0x00000400U);
     dma_textures(gTextureGreenShell6, 0x0000025CU, 0x00000400U);
     dma_textures(gTextureGreenShell7, 0x00000254U, 0x00000400U);
+#else
+    D_802BA050 = dma_textures(gTextureGreenShell0, 0x0000024EU, 0x00000400U);
+    dma_textures(gTextureGreenShell1, 0x00000250U, 0x00000400U);
+    dma_textures(gTextureGreenShell2, 0x00000258U, 0x00000400U);
+    dma_textures(gTextureGreenShell3, 0x0000025EU, 0x00000400U);
+    dma_textures(gTextureGreenShell4, 0x00000258U, 0x00000400U);
+    dma_textures(gTextureGreenShell5, 0x00000269U, 0x00000400U);
+    dma_textures(gTextureGreenShell6, 0x00000260U, 0x00000400U);
+    dma_textures(gTextureGreenShell7, 0x00000254U, 0x00000400U);
+#endif
     D_802BA054 = dma_textures(gTextureBlueShell0, 0x0000022AU, 0x00000400U);
     dma_textures(gTextureBlueShell1, 0x00000237U, 0x00000400U);
     dma_textures(gTextureBlueShell2, 0x0000023EU, 0x00000400U);
@@ -1558,10 +1586,10 @@ s32 collision_mario_sign(Player* player, struct Actor* marioRacewaySign) {
             if ((player->effects & STAR_EFFECT) != 0) {
                 marioRacewaySign->flags |= 0x400;
                 func_800C98B8(player->pos, player->velocity, SOUND_ARG_LOAD(0x19, 0x01, 0x80, 0x10));
-                func_800C90F4(player - gPlayerOne,
+                func_800C90F4(player - gPlayers/*One*/,
                               (player->characterId * 0x10) + SOUND_ARG_LOAD(0x29, 0x00, 0x80, 0x0D));
             } else if ((player->type & PLAYER_INVISIBLE_OR_BOMB) == 0) {
-                func_800C9060(player - gPlayerOne, SOUND_ARG_LOAD(0x19, 0x00, 0x70, 0x1A));
+                func_800C9060(player - gPlayers/*One*/, SOUND_ARG_LOAD(0x19, 0x00, 0x70, 0x1A));
             }
         }
         return 1;
@@ -1576,10 +1604,10 @@ s32 collision_piranha_plant(Player* player, struct PiranhaPlant* plant) {
             if ((player->effects & STAR_EFFECT) != 0) {
                 plant->flags |= 0x400;
                 func_800C98B8(player->pos, player->velocity, SOUND_ARG_LOAD(0x19, 0x01, 0xA2, 0x4A));
-                func_800C90F4(player - gPlayerOne,
+                func_800C90F4(player - gPlayers/*One*/,
                               (player->characterId * 0x10) + SOUND_ARG_LOAD(0x29, 0x00, 0x80, 0x0D));
             } else if ((player->type & PLAYER_INVISIBLE_OR_BOMB) == 0) {
-                func_800C9060(player - gPlayerOne, SOUND_ARG_LOAD(0x19, 0x00, 0xA0, 0x52));
+                func_800C9060(player - gPlayers/*One*/, SOUND_ARG_LOAD(0x19, 0x00, 0xA0, 0x52));
             }
         }
         return 1;
@@ -1634,15 +1662,15 @@ s32 collision_yoshi_egg(Player* player, struct YoshiValleyEgg* egg) {
             egg->flags |= 0x400;
             egg->pathCenter[1] = 8.0f;
             func_800C98B8(player->pos, player->velocity, SOUND_ARG_LOAD(0x19, 0x01, 0x80, 0x10));
-            func_800C90F4(player - gPlayerOne, (player->characterId * 0x10) + SOUND_ARG_LOAD(0x29, 0x00, 0x80, 0x0D));
+            func_800C90F4(player - gPlayers/*One*/, (player->characterId * 0x10) + SOUND_ARG_LOAD(0x29, 0x00, 0x80, 0x0D));
         } else {
-            apply_hit_sound_effect(player, player - gPlayerOne);
+            apply_hit_sound_effect(player, player - gPlayers/*One*/);
             if ((gModeSelection == TIME_TRIALS) && ((player->type & PLAYER_CPU) == 0)) {
                 D_80162DF8 = 1;
             }
         }
     } else {
-        apply_hit_sound_effect(player, player - gPlayerOne);
+        apply_hit_sound_effect(player, player - gPlayers/*One*/);
     }
 
     return 1;
@@ -1699,11 +1727,11 @@ s32 collision_tree(Player* player, struct Actor* actor) {
         if (player->effects & STAR_EFFECT) {
             actor->flags |= 0x400;
             func_800C98B8(player->pos, player->velocity, SOUND_ARG_LOAD(0x19, 0x01, 0x80, 0x10));
-            func_800C90F4(player - gPlayerOne, (player->characterId * 0x10) + SOUND_ARG_LOAD(0x29, 0x00, 0x80, 0x0D));
+            func_800C90F4(player - gPlayers/*One*/, (player->characterId * 0x10) + SOUND_ARG_LOAD(0x29, 0x00, 0x80, 0x0D));
             return 1;
         }
         if (!(player->type & PLAYER_INVISIBLE_OR_BOMB)) {
-            func_800C9060(player - gPlayerOne, SOUND_ARG_LOAD(0x19, 0x00, 0x70, 0x18));
+            func_800C9060(player - gPlayers/*One*/, SOUND_ARG_LOAD(0x19, 0x00, 0x70, 0x18));
         }
     }
     if (!(player->effects & STAR_EFFECT)) {
@@ -2047,7 +2075,7 @@ void evaluate_collision_between_player_actor(Player* player, struct Actor* actor
     f32 temp_f0;
     f32 temp_f2;
 
-    temp_lo = player - gPlayerOne;
+    temp_lo = player - gPlayers/*One*/;
     switch (actor->type) {
         case ACTOR_YOSHI_EGG:
             if (!(player->effects & BOO_EFFECT) && !(player->type & PLAYER_INVISIBLE_OR_BOMB)) {
@@ -2183,7 +2211,7 @@ void evaluate_collision_between_player_actor(Player* player, struct Actor* actor
                     if (player->effects & STAR_EFFECT) {
                         actor->velocity[1] = 10.0f;
                     } else {
-                        apply_hit_sound_effect(player, player - gPlayerOne);
+                        apply_hit_sound_effect(player, player - gPlayers/*One*/);
                     }
                 }
             }
@@ -2226,7 +2254,7 @@ void evaluate_collision_between_player_actor(Player* player, struct Actor* actor
                 actor->flags = -0x8000;
                 actor->unk_04 = 0;
                 if (player->type & PLAYER_HUMAN) {
-                    func_8007ABFC(player - gPlayerOne, 7);
+                    func_8007ABFC(player - gPlayers/*One*/, 7);
                 }
             } else if (actor->state == 0) {
                 actor->state = 1;
@@ -2239,7 +2267,7 @@ void evaluate_collision_between_player_actor(Player* player, struct Actor* actor
                 actor->flags = -0x8000;
                 actor->unk_04 = 0;
                 if (player->type & PLAYER_HUMAN) {
-                    func_8007ABFC(player - gPlayerOne, 0);
+                    func_8007ABFC(player - gPlayers/*One*/, 0);
                 }
             } else if (actor->state == 0) {
                 actor->state = 1;
@@ -2424,13 +2452,14 @@ void render_item_boxes(struct UnkStruct_800DC5EC* arg0) {
         }
     }
 }
-
+extern void setup_actor_tree_mario_raceway();
+extern void finish_actor_tree_mario_raceway();
 void render_course_actors(struct UnkStruct_800DC5EC* arg0) {
     Camera* camera = arg0->camera;
     u16 pathCounter = arg0->pathCounter;
     UNUSED s32 pad[12];
     s32 i;
-
+    s16 last_actor_type = -1;
     struct Actor* actor;
     UNUSED Vec3f sp4C = { 0.0f, 5.0f, 10.0f };
     f32 sp48 = sins(camera->rot[1] - 0x8000); // unk26;
@@ -2459,15 +2488,27 @@ void render_course_actors(struct UnkStruct_800DC5EC* arg0) {
     }
     D_8015F8E0 = 0;
 
+/*     int ever_mario_treed = 0; */
+
     for (i = 0; i < ACTOR_LIST_SIZE; i++) {
         actor = &gActorList[i];
 
         if (actor->flags == 0) {
             continue;
         }
+#if 0
+        if (/* ever_mario_treed &&  */(actor->type != ACTOR_TREE_MARIO_RACEWAY) && (last_actor_type == ACTOR_TREE_MARIO_RACEWAY)) {
+            finish_actor_tree_mario_raceway();
+        } else if ((actor->type == ACTOR_TREE_MARIO_RACEWAY) && (last_actor_type != ACTOR_TREE_MARIO_RACEWAY)) {
+            setup_actor_tree_mario_raceway();
+            /* ever_mario_treed = 1; */
+        }
+#endif
         switch (actor->type) {
             case ACTOR_TREE_MARIO_RACEWAY:
+          //  setup_actor_tree_mario_raceway();
                 render_actor_tree_mario_raceway(camera, D_801502C0, actor);
+          //  finish_actor_tree_mario_raceway();
                 break;
             case ACTOR_TREE_YOSHI_VALLEY:
                 render_actor_tree_yoshi_valley(camera, D_801502C0, actor);
@@ -2478,8 +2519,8 @@ void render_course_actors(struct UnkStruct_800DC5EC* arg0) {
             case ACTOR_TREE_MOO_MOO_FARM:
                 render_actor_tree_moo_moo_farm(camera, D_801502C0, actor);
                 break;
-            case ACTOR_UNKNOWN_0x1A:
-                func_80299864(camera, D_801502C0, actor);
+            case ACTOR_TREE_LUIGI_RACEWAY:
+                render_actor_tree_luigi_raceway(camera, D_801502C0, actor);
                 break;
             case ACTOR_TREE_BOWSERS_CASTLE:
                 render_actor_tree_bowser_castle(camera, D_801502C0, actor);
@@ -2566,6 +2607,7 @@ void render_course_actors(struct UnkStruct_800DC5EC* arg0) {
                 render_actor_yoshi_egg(camera, D_801502C0, (struct YoshiValleyEgg*) actor, pathCounter);
                 break;
         }
+        last_actor_type = actor->type;
     }
     switch (gCurrentCourseId) {
         case COURSE_MOO_MOO_FARM:
@@ -2653,7 +2695,7 @@ void update_course_actors(void) {
             case ACTOR_TREE_ROYAL_RACEWAY:
             case ACTOR_TREE_MOO_MOO_FARM:
             case ACTOR_PALM_TREE:
-            case ACTOR_UNKNOWN_0x1A: // A plant?
+            case ACTOR_TREE_LUIGI_RACEWAY: // A plant?
             case ACTOR_UNKNOWN_0x1B:
             case ACTOR_TREE_BOWSERS_CASTLE:
             case ACTOR_TREE_FRAPPE_SNOWLAND:

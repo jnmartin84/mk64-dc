@@ -122,8 +122,8 @@ void cpu_behaviour_end(s32 playerIndex, Player* player) {
 }
 
 void cpu_behaviour(s32 playerIndex) {
-    Player* player = gPlayerOne + playerIndex;
-
+    Player* player = //gPlayerOne + playerIndex;
+        &gPlayers[playerIndex];
     switch (cpu_BehaviourState[playerIndex]) {
         case cpu_BEHAVIOUR_STATE_NONE:
             break;

@@ -36,7 +36,11 @@ void guRotateF(float m[4][4], float a, float x, float y, float z) {
 }
 
 void guRotate(Mtx* m, float a, float x, float y, float z) {
+#ifndef GBI_FLOATS
     float mf[4][4];
     guRotateF(mf, a, x, y, z);
     guMtxF2L(mf, m);
+#else
+    guRotateF(m->m, a, x, y, z);
+#endif
 }

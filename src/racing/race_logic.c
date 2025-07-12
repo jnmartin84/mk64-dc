@@ -103,11 +103,11 @@ void update_player_battle_status(void) {
         // If player has no balloons left
         if (gPlayerBalloonCount[playerIndex] < 0) {
             player->type |= PLAYER_CINEMATIC_MODE;
-            playersDead[deadCounter] = (s16) (player - gPlayerOne);
+            playersDead[deadCounter] = (s16) (player - gPlayers/*One*/);
             deadCounter++;
             func_800CA118((u8) playerIndex); // play sad character sound?
         } else {
-            playersAlive[aliveCounter] = (s16) (player - gPlayerOne);
+            playersAlive[aliveCounter] = (s16) (player - gPlayers/*One*/);
             aliveCounter++;
         }
     }
@@ -919,9 +919,9 @@ void func_8028FCBC(void) {
             D_800DC5B4 = 1;
             D_802BA034 = 0.008f;
             D_8015F894 = 0;
-            if (gScreenModeSelection != SCREEN_MODE_1P) {
-                func_8005C64C(&D_8018D2AC);
-            }
+//            if (gScreenModeSelection != SCREEN_MODE_1P) {
+//                func_8005C64C(&D_8018D2AC);
+//            }
             for (i = 0; i < NUM_PLAYERS; i++) {
                 if ((ply->type & PLAYER_EXISTS) == 0) {
                     continue;

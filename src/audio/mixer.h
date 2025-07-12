@@ -49,18 +49,19 @@ void aEnvMixerImpl(uint16_t in_addr, uint16_t n_samples, bool swap_reverb,
                    bool neg_left, bool neg_right,
                    uint16_t dry_left_addr, uint16_t dry_right_addr,
                    uint16_t wet_left_addr, uint16_t wet_right_addr);
+void aSMixImpl(uint16_t in_addr, uint16_t out_addr, uint16_t count);
 void aMixImpl(int16_t gain, uint16_t in_addr, uint16_t out_addr, uint16_t count);
-void aS8DecImpl(uint8_t flags, ADPCM_STATE state);
-void aAddMixerImpl(uint16_t count, uint16_t in_addr, uint16_t out_addr);
-void aDuplicateImpl(uint16_t count, uint16_t in_addr, uint16_t out_addr);
 void aDMEMMove2Impl(uint8_t t, uint16_t in_addr, uint16_t out_addr, uint16_t count);
 void aDownsampleHalfImpl(uint16_t n_samples, uint16_t in_addr, uint16_t out_addr);
-void aResampleZohImpl(uint16_t pitch, uint16_t start_fract);
-void aInterlImpl(uint16_t in_addr, uint16_t out_addr, uint16_t n_samples);
-void aFilterImpl(uint8_t flags, uint16_t count_or_buf, int16_t* state_or_filter);
-void aHiLoGainImpl(uint8_t g, uint16_t count, uint16_t addr);
-void aUnkCmd3Impl(uint16_t a, uint16_t b, uint16_t c);
-void aUnkCmd19Impl(uint8_t f, uint16_t count, uint16_t out_addr, uint16_t in_addr);
+//void aS8DecImpl(uint8_t flags, ADPCM_STATE state);
+//void aResampleZohImpl(uint16_t pitch, uint16_t start_fract);
+//void aAddMixerImpl(uint16_t count, uint16_t in_addr, uint16_t out_addr);
+//void aDuplicateImpl(uint16_t count, uint16_t in_addr, uint16_t out_addr);
+//void aInterlImpl(uint16_t in_addr, uint16_t out_addr, uint16_t n_samples);
+//void aFilterImpl(uint8_t flags, uint16_t count_or_buf, int16_t* state_or_filter);
+//void aHiLoGainImpl(uint8_t g, uint16_t count, uint16_t addr);
+//void aUnkCmd3Impl(uint16_t a, uint16_t b, uint16_t c);
+//void aUnkCmd19Impl(uint8_t f, uint16_t count, uint16_t out_addr, uint16_t in_addr);
 
 #define aSegment(pkt, s, b) \
     do {                    \
@@ -80,15 +81,16 @@ void aUnkCmd19Impl(uint8_t f, uint16_t count, uint16_t out_addr, uint16_t in_add
 #define aEnvSetup2(pkt, initialVolLeft, initialVolRight) aEnvSetup2Impl(initialVolLeft, initialVolRight)
 #define aEnvMixer(pkt, inBuf, nSamples, swapReverb, negLeft, negRight, dryLeft, dryRight, wetLeft, wetRight) \
     aEnvMixerImpl(inBuf, nSamples, swapReverb, negLeft, negRight, dryLeft, dryRight, wetLeft, wetRight)
+#define aSMix(pkt, g, i, o, c) aSMixImpl(i, o, c)
 #define aMix(pkt, g, i, o, c) aMixImpl(g, i, o, c)
-#define aS8Dec(pkt, f, s) aS8DecImpl(f, s)
-#define aAddMixer(pkt, s, d, c) aAddMixerImpl(s, d, c)
-#define aDuplicate(pkt, s, d, c) aDuplicateImpl(s, d, c)
 #define aDMEMMove2(pkt, t, i, o, c) aDMEMMove2Impl(t, i, o, c)
-#define aResampleZoh(pkt, pitch, startFract) aResampleZohImpl(pitch, startFract)
-#define aInterl(pkt, dmemi, dmemo, count) aInterlImpl(dmemi, dmemo, count)
-#define aFilter(pkt, f, countOrBuf, addr) aFilterImpl(f, countOrBuf, addr)
 #define aDownsampleHalf(pkt, nSamples, i, o) aDownsampleHalfImpl(nSamples, i, o)
-#define aHiLoGain(pkt, g, buflen, i, a4) aHiLoGainImpl(g, buflen, i)
-#define aUnkCmd3(pkt, a1, a2, a3) aUnkCmd3Impl(a1, a2, a3)
-#define aUnkCmd19(pkt, a1, a2, a3, a4) aUnkCmd19Impl(a1, a2, a3, a4)
+//#define aS8Dec(pkt, f, s) aS8DecImpl(f, s)
+//#define aAddMixer(pkt, s, d, c) aAddMixerImpl(s, d, c)
+//#define aDuplicate(pkt, s, d, c) aDuplicateImpl(s, d, c)
+//#define aResampleZoh(pkt, pitch, startFract) aResampleZohImpl(pitch, startFract)
+//#define aInterl(pkt, dmemi, dmemo, count) aInterlImpl(dmemi, dmemo, count)
+//#define aFilter(pkt, f, countOrBuf, addr) aFilterImpl(f, countOrBuf, addr)
+//#define aHiLoGain(pkt, g, buflen, i, a4) aHiLoGainImpl(g, buflen, i)
+//#define aUnkCmd3(pkt, a1, a2, a3) aUnkCmd3Impl(a1, a2, a3)
+//#define aUnkCmd19(pkt, a1, a2, a3, a4) aUnkCmd19Impl(a1, a2, a3, a4)

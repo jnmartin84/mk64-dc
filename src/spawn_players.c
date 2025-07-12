@@ -44,18 +44,18 @@ s16 D_80165340;
 UNUSED s32 D_80165348[29];
 Player* D_801653C0[8];
 
-bool gPlayerIsThrottleActive[8];
+s8 gPlayerIsThrottleActive[8];
 s32 D_80165400[8];
 s32 gFrameSinceLastACombo[8];
 s32 gCountASwitch[8];
-bool gIsPlayerTripleAButtonCombo[8];
+s8 gIsPlayerTripleAButtonCombo[8];
 s32 gTimerBoostTripleACombo[8];
 
-bool gPlayerIsBrakeActive[8];
+s8 gPlayerIsBrakeActive[8];
 s32 D_801654C0[8];
 s32 gFrameSinceLastBCombo[8];
 s32 gCountBChangement[8];
-bool gIsPlayerTripleBButtonCombo[8];
+s8 gIsPlayerTripleBButtonCombo[8];
 s32 gTimerBoostTripleBCombo[8];
 
 s16 cpu_chooseCharacters[7];
@@ -268,11 +268,11 @@ void spawn_player(Player* player, s8 playerIndex, f32 startingRow, f32 startingC
 
     gFrameSinceLastACombo[idx] = 0;
     gCountASwitch[idx] = 0;
-    gIsPlayerTripleAButtonCombo[idx] = false;
+    gIsPlayerTripleAButtonCombo[idx] = 0;
     gTimerBoostTripleACombo[idx] = 0;
     gFrameSinceLastBCombo[idx] = 0;
     gCountBChangement[idx] = 0;
-    gIsPlayerTripleBButtonCombo[idx] = false;
+    gIsPlayerTripleBButtonCombo[idx] = 0;
     gTimerBoostTripleBCombo[playerIndex] = 0;
     D_8018D900[0] = 0;
 
@@ -1190,7 +1190,7 @@ void func_8003CD98(Player* player, Camera* camera, s8 playerId, s8 screenId) {
 }
 
 void func_8003D080(void) {
-    UNUSED s32 pad;
+//    UNUSED s32 pad;
     Player* player = &gPlayers[0];
 
     load_race_common_tex();

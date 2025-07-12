@@ -313,7 +313,7 @@ f32 gDefaultPanVolume[128] = {
 };
 
 s32 gAudioTaskIndex = 0;
-s32 gCurrAiBufferIndex = 0;
+//s32 gCurrAiBufferIndex = 0;
 Acmd *gAudioCmdBuffers[2] = {NULL, NULL}; // probably wrong
 Acmd *gAudioCmd = NULL;
 struct SPTask *gAudioTask = NULL; // gAudioTask?

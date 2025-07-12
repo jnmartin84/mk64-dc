@@ -2687,6 +2687,24 @@ typedef union {
 // Why... Why... Why... This function is so bad it's not going in the header.
 void func_80095AE0(MTX_TYPE* arg0, f32 arg1, f32 arg2, f32 arg3, f32 arg4) {
 #ifdef AVOID_UB
+#ifdef GBI_FLOATS
+    arg0->m[0][0] = arg3;
+    arg0->m[0][1] = 0.0f;
+    arg0->m[0][2] = 0.0f;
+    arg0->m[0][3] = 0.0f;
+    arg0->m[1][0] = 0.0f;
+    arg0->m[1][1] = arg4;
+    arg0->m[1][2] = 0.0f;
+    arg0->m[1][3] = 0.0f;
+    arg0->m[2][0] = 0.0f;
+    arg0->m[2][1] = 0.0f;
+    arg0->m[2][2] = 1.0f;
+    arg0->m[2][3] = 0.0f;
+    arg0->m[3][0] = arg1;
+    arg0->m[3][1] = arg2;
+    arg0->m[3][2] = 0.0f;
+    arg0->m[3][3] = 1.0f;
+#else
     // Use Mat4 array to set matrix values using guMtxF2L. This helps little-endian systems.
     Mat4 src;
     src[0][0] = arg3;
@@ -2706,6 +2724,7 @@ void func_80095AE0(MTX_TYPE* arg0, f32 arg1, f32 arg2, f32 arg3, f32 arg4) {
     src[3][2] = 0.0f;
     src[3][3] = 1.0f;
     guMtxF2L(src, arg0);
+#endif
 #else
     TheWhyUnion sp14;
     TheWhyUnion sp10;
@@ -2862,9 +2881,11 @@ Gfx* func_80095E10(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, s32 arg4, 
             gDPLoadTextureTile(displayListHead++, argA, arg1, G_IM_SIZ_16b, argB, 0, var_a1_2, var_s3,
                                var_a1_2 + var_s2, var_s3 + var_s4, 0, G_TX_NOMIRROR | G_TX_WRAP,
                                G_TX_NOMIRROR | G_TX_WRAP, sp68, sp64, G_TX_NOLOD, G_TX_NOLOD);
+     //                           var_a1_2 + var_s2 - 1, var_s3 + var_s4 - 1, 0, G_TX_NOMIRROR | G_TX_WRAP,
+       //                         G_TX_NOMIRROR | G_TX_WRAP, 0, 0, G_TX_NOLOD, G_TX_NOLOD);
             gSPTextureRectangle(displayListHead++, arg8 * 4, arg9 * 4, (arg8 + var_s2) * 4, (arg9 + var_s4) * 4, 0,
                                 (var_a1_2 * 32) & 0xFFFF, (var_s3 * 32) & 0xFFFF, arg2, arg3);
-
+            
             arg8 += var_t0;
         }
 
@@ -3577,7 +3598,7 @@ void load_menu_img_comp_type(MenuTexture* addr, s32 compType) {
                 case LOAD_MENU_IMG_MIO0_FORCE:
                     // check 3
                     mio0decode((u8*) gMenuCompressedBuffer, (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
-                    gfx_texture_cache_invalidate((u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
+                    //gfx_texture_cache_invalidate((u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
                     break;
                 case LOAD_MENU_IMG_TKMK00_ONCE:
                 case LOAD_MENU_IMG_TKMK00_FORCE:
@@ -3586,10 +3607,10 @@ void load_menu_img_comp_type(MenuTexture* addr, s32 compType) {
                     } else {
                         clearBit = 1;
                     }
-                    if (1) {}
+//                    if (1) {}
                     tkmk00decode(gMenuCompressedBuffer, sTKMK00_LowResBuffer,
                                  &gMenuTextureBuffer[sMenuTextureBufferIndex], clearBit);
-                    gfx_texture_cache_invalidate((u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
+                    //gfx_texture_cache_invalidate((u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
                     break;
             }
 
@@ -3683,7 +3704,7 @@ void func_80099AEC(void) {
 //    osPiStartDma(&mb, 0, 0, texPtr->textureData, gMenuCompressedBuffer, cacheSize, &gDmaMesgQueue);
     dma_copy(gMenuCompressedBuffer, texPtr->textureData, cacheSize);
 
-osRecvMesg(&gDmaMesgQueue, &sp64, 1);
+    osRecvMesg(&gDmaMesgQueue, &sp64, 1);
 
     while (1) {
         if ((var_s1 + 1)->texture == NULL) {
@@ -4286,7 +4307,7 @@ void func_8009B998(void) {
 Gfx* func_8009B9D0(Gfx* displayListHead, MenuTexture* textures) {
     Gfx* displayList;
     UNUSED s32 pad;
-    bool found;
+    s32 found;
     s32 index;
 
     found = 0;
@@ -4333,8 +4354,13 @@ Gfx* render_menu_textures(Gfx* arg0, MenuTexture* arg1, s32 column, s32 row) {
                 break;
         }
         temp_v0_3 = (u8*) func_8009B8C4(temp_v0->textureData);
-        if (temp_v0_3 != 0) {
+
+//        if (D_8018E7AC[4] == 4) {
+        if (temp_v0_3 != 0 && arg1 != gMenuTexturesBackground[0] && arg1 != gMenuTexturesBackground[1]) {
             gfx_texture_cache_invalidate(temp_v0_3);
+        }
+
+        if (temp_v0_3 != 0) {
             if (D_8018E7AC[4] != 4) {
                 arg0 =
                     func_80095E10(arg0, var_s4, 0x00000400, 0x00000400, 0, 0, temp_v0->width, temp_v0->height,
@@ -5392,7 +5418,7 @@ void clear_menus(void) {
 u16 last_r;
 u16 last_g;
 u16 last_b;
-
+#include <stdlib.h>
 void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
     MenuItem* menuItem;
     s8 temp_a1;
@@ -5407,7 +5433,9 @@ void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
         }
         i++;
         if (i > ARRAY_COUNT(gMenuItems)) {
-            while (1) {}
+            printf("something bad in add menu item\n");
+            exit(-1);
+            //            while (1) {}
         }
         menuItem++;
     }
@@ -5697,7 +5725,7 @@ void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
         case MENU_ITEM_TYPE_0B2:
         case MENU_ITEM_TYPE_0B3:
         case MENU_ITEM_TYPE_0B4: {
-            bool var_v1_3;
+            s32 var_v1_3;
             UNUSED s32 pad2;
             s32 temp_a3 = type - MENU_ITEM_TYPE_0B1;
             UNUSED s32 pad[0x3];
@@ -5762,7 +5790,7 @@ void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
             D_8018ED90 = 0;
             break;
         case MENU_ITEM_TYPE_130: {
-            bool var_v0_2;
+            s32 var_v0_2;
             temp_a1 = D_800EFD64[D_802874D8.unk1E];
             if (D_802874D8.unk1D >= 3) {
                 var_v0_2 = 1;
@@ -10121,6 +10149,9 @@ MenuItem* get_menu_item_player_count(void) {
         }
     }
 
+    printf("something bad in get_menu_item_player_count\n");
+    exit(-1);
+
     // Something VERY wrong has occurred
     while (1) {
         ;
@@ -10142,6 +10173,8 @@ MenuItem* get_menu_item_character(s32 characterId) {
             goto escape;
         }
     }
+    printf("something bad in get_menu_item_character\n");
+    exit(-1);
 
     // Something VERY wrong has occurred
     while (1) {
@@ -10168,6 +10201,8 @@ MenuItem* find_menu_items_dupe(s32 type) {
             goto escape;
         }
     }
+    printf("something bad in find_menu_items_dupe\n");
+    exit(-1);
 
     // Something VERY wrong has occurred
     while (1) {
@@ -10206,7 +10241,7 @@ void hover_cursor_over_character_portrait(MenuItem* arg0, s32 characterId) {
 
 s32 func_800AAFCC(s32 characterId) {
     s32 someIndex = 0;
-    bool ret = 0;
+    s32 ret = 0;
 
     for (; someIndex < ARRAY_COUNT(gCharacterGridSelections); someIndex++) {
         if ((characterId + 1) == gCharacterGridSelections[someIndex]) {

@@ -31,23 +31,6 @@
 #include <stdio.h>
 #include <string.h>
 extern void *segmented_to_virtual(void *addr);
-#if 0
-#define dma_copy(x, y, z) internal_dma_copy((x), (y), (z), arch_get_ret_addr(), __FILE__,__LINE__)
-static inline void internal_dma_copy(u8* dest, u8* romAddr, size_t size, uintptr_t retaddr, const char *file, int line) {
-    if (0) { //file[4] == 'a') {
-    printf("dma_copy called from %s:%d returning to %08x\n", file, line, (uintptr_t)retaddr);
-    printf("\tsrc: %08x -> %08x\n", (uintptr_t)(romAddr), (uintptr_t)segmented_to_virtual(romAddr));
-    printf("\tdst: %08x -> %08x\n", (uintptr_t)(dest), (uintptr_t)segmented_to_virtual(dest));
-    printf("\tsize: %d\n", size);
-    }
-    memcpy(segmented_to_virtual(dest), segmented_to_virtual(romAddr), size);
-}
-//void audio_dma_copy_immediate(u8* devAddr, void* vAddr, size_t nbytes);
-//void audio_dma_copy_async(uintptr_t, void*, size_t, OSMesgQueue*, OSIoMesg*);
-//#define audio_dma_copy_immediate(s,d,n) dma_copy((d),(s),(n))
-//#define audio_dma_copy_async(s,d,n,mq,iom) dma_copy((d),(s),(n))
-#endif
-
 
 s16 gVolume = 0;
 s8 gUseReverb = 0;
@@ -81,9 +64,9 @@ volatile u8 gAudioResetStatus = 0;
 u8 gAudioResetPresetIdToLoad = 0;
 s32 gAudioResetFadeOutFramesLeft = 0;
 
-u8 gAudioUnusedBuffer[0x1000] = {0};
 
 struct Note* gNotes = NULL;
+u8 gAudioUnusedBuffer[0x1000] = {0};
 
 /**
  * Given that (almost) all of these are format strings, it is highly likely
@@ -701,7 +684,7 @@ void audio_reset_session(void) {
     for (var_s5 = 0; var_s5 < 4; var_s5++) {
         gSynthesisReverbs[var_s5].useReverb = 0;
     }
-    gNumSynthesisReverbs = temp_s6->numReverbs;
+    gNumSynthesisReverbs = 0;//temp_s6->numReverbs;
     for (var_s5 = 0; var_s5 < gNumSynthesisReverbs; var_s5++) {
         reverb = &gSynthesisReverbs[var_s5];
         reverbSettings = &temp_s6->reverbSettings[var_s5];

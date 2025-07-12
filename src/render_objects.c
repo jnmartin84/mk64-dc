@@ -1305,7 +1305,7 @@ void func_8004A630(Collision* arg0, Vec3f arg1, f32 arg2) {
         gSPDisplayList(gDisplayListHead++, D_0D007B98);
     }
 }
-
+extern Gfx l_D_0D007B20[];
 void func_8004A6EC(s32 objectIndex, f32 scale) {
     Object* object;
 
@@ -1316,7 +1316,7 @@ void func_8004A6EC(s32 objectIndex, f32 scale) {
         D_80183E50[1] = object->surfaceHeight + 0.8;
         D_80183E50[2] = object->pos[2];
         rsp_set_matrix_transformation(D_80183E50, object->unk_0B8, scale);
-        gSPDisplayList(gDisplayListHead++, D_0D007B20);
+        gSPDisplayList(gDisplayListHead++, l_D_0D007B20);
     }
 }
 
@@ -1332,7 +1332,7 @@ void func_8004A7AC(s32 objectIndex, f32 arg1) {
         D_80183E98[1] = 0;
         D_80183E98[2] = 0;
         rsp_set_matrix_transformation(D_80183E50, D_80183E98, arg1);
-        gSPDisplayList(gDisplayListHead++, D_0D007B20);
+        gSPDisplayList(gDisplayListHead++, l_D_0D007B20);
     }
 }
 
@@ -2475,7 +2475,7 @@ void draw_minimap_character(s32 arg0, s32 playerId, s32 characterId) {
     f32 thing1;
     s16 x;
     s16 y;
-    Player *player = &gPlayerOne[playerId];
+    Player *player = &gPlayers/* One */[playerId];
 
     if (player->type & (1 << 15)) {
         thing0 = player->pos[0] * gMiniMapMarkerScale;
@@ -2501,7 +2501,7 @@ void draw_minimap_character(s32 arg0, s32 playerId, s32 characterId) {
 
 // WTF is up with the gPlayerOne access in this function?
 void func_8004F3E4(s32 arg0) {
-    UNUSED Player* player;
+    Player* player;
     s32 playerId;
     s32 idx;
 
@@ -2509,20 +2509,22 @@ void func_8004F3E4(s32 arg0) {
         case GRAND_PRIX:
             for (idx = D_8018D158 - 1; idx >= 0; idx--) {
                 playerId = gGPCurrentRacePlayerIdByRank[idx];
-                if ((gPlayerOne + playerId)->type & PLAYER_CPU) {
+                player = &gPlayers[playerId];
+                if (/* (gPlayerOne + playerId) */player->type & PLAYER_CPU) {
                     draw_minimap_character(arg0, playerId, 8);
                 }
             }
             for (idx = D_8018D158 - 1; idx >= 0; idx--) {
                 playerId = gGPCurrentRacePlayerIdByRank[idx];
-                if (((gPlayerOne + playerId)->type & PLAYER_CPU) != PLAYER_CPU) {
-                    draw_minimap_character(arg0, playerId, (gPlayerOne + playerId)->characterId);
+                player = &gPlayers[playerId];
+                if ((/* (gPlayerOne + playerId) */player->type & PLAYER_CPU) != PLAYER_CPU) {
+                    draw_minimap_character(arg0, playerId, /* (gPlayerOne + playerId) */player->characterId);
                 }
             }
             break;
         case TIME_TRIALS:
             for (idx = 0; idx < 8; idx++) {
-                if (((gPlayerOne + idx)->type & PLAYER_INVISIBLE_OR_BOMB) == PLAYER_INVISIBLE_OR_BOMB) {
+                if ((/* (gPlayerOne + idx)->type */gPlayers[idx].type & PLAYER_INVISIBLE_OR_BOMB) == PLAYER_INVISIBLE_OR_BOMB) {
                     draw_minimap_character(arg0, idx, 8);
                 }
             }
@@ -2531,13 +2533,14 @@ void func_8004F3E4(s32 arg0) {
         case VERSUS:
             for (idx = gPlayerCountSelection1 - 1; idx >= 0; idx--) {
                 playerId = gGPCurrentRacePlayerIdByRank[idx];
-                draw_minimap_character(arg0, playerId, (gPlayerOne + playerId)->characterId);
+                player = &gPlayers[playerId];
+                draw_minimap_character(arg0, playerId, /* (gPlayerOne + playerId) */player->characterId);
             }
             break;
         case BATTLE:
             for (idx = 0; idx < gPlayerCountSelection1; idx++) {
-                if (!((gPlayerOne + idx)->type & PLAYER_UNKNOWN_0x40)) {
-                    draw_minimap_character(arg0, idx, (gPlayerOne + idx)->characterId);
+                if (!(/* (gPlayerOne + idx)->type */gPlayers[idx].type & PLAYER_UNKNOWN_0x40)) {
+                    draw_minimap_character(arg0, idx, /* (gPlayerOne + idx)->type */gPlayers[idx].characterId);
                 }
             }
             break;
@@ -2763,7 +2766,7 @@ void func_80050320(void) {
                 }
                 temp_v0 = gGPCurrentRacePlayerIdByRank[var_s0];
                 // ????
-                characterId = (gPlayerOne + temp_v0)->characterId;
+                characterId = /* (gPlayerOne + temp_v0)-> */gPlayers[temp_v0].characterId;
                 lapCount = gLapCountByPlayerId[temp_v0];
                 if (temp_v0 == 0) {
                     func_8004FDB4(D_8018D028[var_s0], D_8018D050[var_s0], var_s0, lapCount, characterId, 0x000000FF, 1,
@@ -2954,14 +2957,14 @@ void func_80050E34(s32 playerId, s32 arg1) {
     s32 objectIndex;
     s32 spD0;
     s32 spCC;
-    Player *dummy = &gPlayerOne[playerId];
+    Player *dummy = &gPlayers/* One */[playerId];
     s32 spC4;
     s32 lapCount;
     s32 characterId;
     s32 spB8;
     s32 temp_v0_2;
     Object* object;
-    Player *player = &gPlayerOne[playerId];
+    Player *player = &gPlayers/* One */[playerId];
 
     lapCount = gLapCountByPlayerId[playerId];
     characterId = player->characterId;
@@ -3044,7 +3047,7 @@ void func_800514BC(void) {
     }
     for (var_s0 = var_s3 - 1, var_s1 = 0; var_s1 < var_s3; var_s1++, var_s0--) {
         temp_a0 = gGPCurrentRacePlayerIdByRank[var_s0];
-        player = &gPlayerOne[temp_a0];
+        player = &gPlayers/* One */[temp_a0];
         if ((player->type & PLAYER_EXISTS) && ((temp_a0 != 0) || (gPlayerCountSelection1 != 1))) {
             func_80050E34(temp_a0, var_s0);
         }
@@ -3369,7 +3372,7 @@ void render_object_trash_bin(s32 cameraId) {
 void func_8005285C(s32 arg0) {
     Player* temp_v0;
 
-    temp_v0 = &gPlayerOne[arg0];
+    temp_v0 = &gPlayers/* One */[arg0];
     D_80183E40[0] = temp_v0->pos[0];
     D_80183E40[1] = temp_v0->pos[1];
     D_80183E40[2] = temp_v0->pos[2];
@@ -3449,7 +3452,7 @@ void func_80052D70(s32 playerId) {
     s32 test;
     Player* temp_v1;
 
-    temp_v1 = &gPlayerOne[playerId];
+    temp_v1 = &gPlayers/* One */[playerId];
     test = gIndexLakituList[playerId];
     if (func_80072320(test, 8) != 0) {
         D_80183E40[0] = temp_v1->pos[0];
@@ -3478,12 +3481,12 @@ void func_80052E30(UNUSED s32 arg0) {
 }
 
 void render_object_snowmans_list_2(s32 cameraId) {
-    UNUSED s32 stackPadding[2];
+//    UNUSED s32 stackPadding[2];
     Camera* sp44;
     s32 someIndex;
     s32 objectIndex;
     Object* object;
-
+//return;
     sp44 = &camera1[cameraId];
     load_texture_and_tlut(d_course_frappe_snowland_snow_tlut, d_course_frappe_snowland_snow, 0x00000020, 0x00000020);
     for (someIndex = 0; someIndex < gObjectParticle2_SIZE; someIndex++) {
@@ -3503,7 +3506,7 @@ void render_object_snowmans_list_2(s32 cameraId) {
     gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
 }
 
-void render_object_snowmans_list_1(s32 cameraId) {
+void OLD_render_object_snowmans_list_1(s32 cameraId) {
     s32 var_s4;
     s32 objectIndex;
     Camera* camera;
@@ -3535,6 +3538,106 @@ void render_object_snowmans_list_1(s32 cameraId) {
         }
     }
 }
+#if 0
+void draw_2d_texture_at(Vec3f arg0, Vec3su arg1, f32 arg2, u8* tlut, u8* texture, Vtx* arg5, s32 arg6, s32 arg7,
+                        s32 arg8, s32 arg9) {
+    rsp_set_matrix_transformation(arg0, arg1, arg2);
+    gSPDisplayList(gDisplayListHead++, D_0D007D78);
+    draw_rectangle_texture_overlap(tlut, texture, arg5, arg6, arg7, arg8, arg9);
+}
+void draw_rectangle_texture_overlap(u8* tlut, u8* texture, Vtx* arg2, UNUSED s32 arg3, s32 arg4, s32 width,
+                                    s32 height) {
+    s32 heightIndex;
+    s32 vertexIndex = 0;
+    u8* img = texture;
+
+    gDPLoadTLUT_pal256(gDisplayListHead++, tlut);
+    for (heightIndex = 0; heightIndex < arg4 / height; heightIndex++) {
+        gfx_texture_cache_invalidate(img);
+        rsp_load_texture(img, width, height);
+        gSPVertex(gDisplayListHead++, &arg2[vertexIndex], 4, 0);
+        gSPDisplayList(gDisplayListHead++, common_rectangle_display);
+        img += width * (height - 1);
+        vertexIndex += 4;
+    }
+    gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
+}
+#endif
+
+void render_object_snowmans_list_1(s32 cameraId) {
+    s32 var_s4;
+    s32 objectIndex;
+    Camera* camera;
+
+    int slice = 0;
+    int initialized_tex = 0;
+    u8* img[2];// = gObjectList[objectIndex].activeTexture;
+    u8* img2[2];// = gObjectList[objectIndex].activeTexture + (0x40 * 0x20);
+    //    gfx_texture_cache_invalidate(img);
+  //  gfx_texture_cache_invalidate(img2);
+
+    camera = &camera1[cameraId];
+    gSPDisplayList(gDisplayListHead++, D_0D007D78);
+
+    for (var_s4 = 0; var_s4 < NUM_SNOWMEN; var_s4++) {
+        objectIndex = indexObjectList1[var_s4];
+        if (gObjectList[objectIndex].state >= 2) {
+
+            func_8008A364(objectIndex, cameraId, 0x2AABU, 0x00000258);
+            if (is_obj_flag_status_active(objectIndex, VISIBLE) != 0) {
+                D_80183E80[0] = (s16) gObjectList[objectIndex].orientation[0];
+                D_80183E80[1] =
+                    func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
+                D_80183E80[2] = (u16) gObjectList[objectIndex].orientation[2];
+
+                if (is_obj_flag_status_active(objectIndex, 0x00000010) != 0) {
+                    if (initialized_tex < 2) {
+                            img[0] = gObjectList[objectIndex].activeTexture;
+                            img[1] = gObjectList[objectIndex].activeTexture + (0x40 * (0x20-1));
+                            gfx_texture_cache_invalidate(img[0]);
+                            gfx_texture_cache_invalidate(img[1]);
+                            gDPLoadTLUT_pal256(gDisplayListHead++, (u8*) gObjectList[objectIndex].activeTLUT);
+                            initialized_tex++;
+                    }
+                    rsp_set_matrix_transformation(gObjectList[objectIndex].pos, (u16*) D_80183E80,
+                                        gObjectList[objectIndex].sizeScaling);
+
+                    rsp_load_texture(img[0], 0x00000040, 0x00000020);
+                    gSPVertex(gDisplayListHead++, &gObjectList[objectIndex].vertex[0], 4, 0);
+                    gSPDisplayList(gDisplayListHead++, common_rectangle_display);
+
+                    rsp_load_texture(img[1], 0x00000040, 0x00000020);
+                    gSPVertex(gDisplayListHead++, &gObjectList[objectIndex].vertex[4], 4, 0);
+                    gSPDisplayList(gDisplayListHead++, common_rectangle_display);
+                }
+
+                objectIndex = indexObjectList2[var_s4];
+                D_80183E80[0] = (s16) gObjectList[objectIndex].orientation[0];
+                D_80183E80[2] = (u16) gObjectList[objectIndex].orientation[2];
+
+                rsp_set_matrix_transformation(gObjectList[objectIndex].pos, (u16*) D_80183E80,
+                                       gObjectList[objectIndex].sizeScaling);
+                if (initialized_tex < 2) {
+                        img2[0] = gObjectList[objectIndex].activeTexture;
+                        img2[1] = gObjectList[objectIndex].activeTexture + (0x40 * (0x20-1));
+                        gfx_texture_cache_invalidate(img2[0]);
+                        gfx_texture_cache_invalidate(img2[1]);
+                        initialized_tex++;
+                }
+
+                rsp_load_texture(img2[0], 0x00000040, 0x00000020);
+                gSPVertex(gDisplayListHead++, &gObjectList[objectIndex].vertex[0], 4, 0);
+                gSPDisplayList(gDisplayListHead++, common_rectangle_display);
+
+                rsp_load_texture(img2[1], 0x00000040, 0x00000020);
+                gSPVertex(gDisplayListHead++, &gObjectList[objectIndex].vertex[4], 4, 0);
+                gSPDisplayList(gDisplayListHead++, common_rectangle_display);
+            }
+        }
+    }
+    gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
+}
+
 
 void render_object_snowmans(s32 arg0) {
     render_object_snowmans_list_1(arg0);
@@ -3648,7 +3751,7 @@ void render_object_thwomps(s32 cameraId) {
         }
     }
 
-    func_800534A4(objectIndex);
+    func_800534A4(0);//objectIndex);
     for (i = 0; i < gNumActiveThwomps; i++) {
         objectIndex = indexObjectList1[i];
         minusone = gObjectList[objectIndex].unk_0DF - 1;
@@ -4472,7 +4575,7 @@ void func_800568A0(s32 objectIndex, s32 playerId) {
     Mat4 sp30;
     Player* player;
 
-    player = &gPlayerOne[playerId];
+    player = &gPlayers/* One */[playerId];
     D_80183E50[0] = gObjectList[objectIndex].pos[0];
     D_80183E50[1] = gObjectList[objectIndex].surfaceHeight + 0.8;
     D_80183E50[2] = gObjectList[objectIndex].pos[2];
@@ -4515,7 +4618,7 @@ void render_object_bomb_kart(s32 cameraId) {
         object = &gObjectList[temp_s0];
         if (object->state != 0) {
             temp_s1 = object->primAlpha;
-            temp_v0 = &gPlayerOne[payerId];
+            temp_v0 = &gPlayers/* One */[payerId];
             object->pos[0] = temp_v0->pos[0];
             object->pos[1] = temp_v0->pos[1] - 2.0;
             object->pos[2] = temp_v0->pos[2];

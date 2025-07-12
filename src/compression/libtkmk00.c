@@ -45,8 +45,6 @@ static int32_t SRL(int32_t val, int amount)
 // a1[out]: pointer to output (1 byte per pixel)
 // a2[out]: pointer to output (RGBA16, 2 bytes per pixel)
 // a3[in]: RGBA color to set alpha to 0, values observed: 0x01, 0xBE
-void gfx_texture_cache_invalidate(void *orig_addr);
-
 void tkmk00decode(uint32_t *_tkmk, uint8_t *tmp_buf, uint16_t *_rgba16, int32_t alpha_color)  // 800405D0/0411D0
 {
    unsigned offset;
@@ -60,23 +58,17 @@ void tkmk00decode(uint32_t *_tkmk, uint8_t *tmp_buf, uint16_t *_rgba16, int32_t 
    uint16_t rgba1;
 
    uint8_t red0, red1, green0, green1, blue0, blue1;
-//	printf("%s(%08x,%08x,%08x,%d%s",__func__,tkmk,tmp_buf,rgba16,alpha_color,"\n");
-//gfx_texture_cache_invalidate(_rgba16);
-uint8_t *tkmk = (uint8_t*)_tkmk;
-uint8_t *rgba16 = (uint8_t*)_rgba16;
+   uint8_t *tkmk = (uint8_t*)_tkmk;
+   uint8_t *rgba16 = (uint8_t*)_rgba16;
    width = read_u16_be(&tkmk[0x8]);
    height = read_u16_be(&tkmk[0xA]);
-//printf("\ttkmk %08x w %d h %d\n",tkmk,width,height);
 
-   alpha = alpha_color;
+   alpha = alpha_color ? 0xFF : 0x00;
    header6 = tkmk[0x6];
    pixels = width * height;
    memset(rgba_buf, 0xFF, sizeof(rgba_buf));
-//   printf("\trgba_Buf %08x\n", rgba_buf);
    memset(rgba16, 0x0, 2 * pixels);
-//   printf("\trgba16 %08x\n", rgba16);
-      memset(tmp_buf, 0x0, pixels);
-//   printf("\ttmp_Buf %08x\n", tmp_buf);
+   memset(tmp_buf, 0x0, pixels);
    for (i = 0; i < 8; i++) {
        offset = read_u32_be(&tkmk[0xC + i*4]);
        if (0 == (header6 & (0x1 << i))) {
@@ -84,7 +76,7 @@ uint8_t *rgba16 = (uint8_t*)_rgba16;
        }
        some_ptrs[i] = tkmk + offset;
    }
-//	printf("some_u16s %08x\n", some_u16s);
+
    memset(some_u16s, 0, sizeof(some_u16s));
 
    some_offset = 0x0; // no idea, used in proc_80040A60

@@ -276,7 +276,7 @@ void func_8008C73C(Player* player, s8 arg1) {
         D_80165190[3][arg1] = 1;
         D_80165280[arg1] = player->currentSpeed;
         gTimerBoostTripleACombo[arg1] = 0;
-        gIsPlayerTripleAButtonCombo[arg1] = false;
+        gIsPlayerTripleAButtonCombo[arg1] = 0;
         gCountASwitch[arg1] = 0;
         gFrameSinceLastACombo[arg1] = 0;
         D_8018D920[arg1] = 0;
@@ -306,7 +306,7 @@ void func_8008C8C4(Player* player, s8 playerId) {
 
     player->unk_046 &= 0xFFBF;
 
-    if ((gIsPlayerTripleAButtonCombo[playerId] == true) && ((player->type & PLAYER_HUMAN) == PLAYER_HUMAN)) {
+    if ((gIsPlayerTripleAButtonCombo[playerId] == 1) && ((player->type & PLAYER_HUMAN) == PLAYER_HUMAN)) {
         player->currentSpeed = (f32) (player->currentSpeed + 100.0f);
     }
     if ((gModeSelection == VERSUS) && ((player->type & PLAYER_CPU) == PLAYER_CPU) && (!gDemoMode) &&
@@ -361,7 +361,7 @@ void func_8008C9EC(Player* player, s8 arg1) {
             }
         }
     }
-    if ((gIsPlayerTripleAButtonCombo[arg1] == true) && ((player->type & PLAYER_HUMAN) == PLAYER_HUMAN)) {
+    if ((gIsPlayerTripleAButtonCombo[arg1] == 1) && ((player->type & PLAYER_HUMAN) == PLAYER_HUMAN)) {
         gTimerBoostTripleACombo[arg1] = 0x00000078;
         if (player->currentSpeed <= 90.0f) {
             player->currentSpeed = 90.0f;
@@ -959,7 +959,7 @@ void func_8008E4A4(Player* player, s8 arg1) {
         player->unk_042 = 0;
         player->type &= ~0x80;
 
-        if ((gIsPlayerTripleAButtonCombo[arg1] == true) && ((player->type & PLAYER_HUMAN) == PLAYER_HUMAN)) {
+        if ((gIsPlayerTripleAButtonCombo[arg1] == 1) && ((player->type & PLAYER_HUMAN) == PLAYER_HUMAN)) {
             player->currentSpeed += 100.0f;
         }
         if (gModeSelection == BATTLE) {
@@ -982,7 +982,7 @@ void func_8008E4A4(Player* player, s8 arg1) {
                 if (gModeSelection == BATTLE) {
                     func_8006B8B4(player, arg1);
                 }
-                if ((gIsPlayerTripleAButtonCombo[arg1] == true) && ((player->type & PLAYER_HUMAN) == PLAYER_HUMAN)) {
+                if ((gIsPlayerTripleAButtonCombo[arg1] == 1) && ((player->type & PLAYER_HUMAN) == PLAYER_HUMAN)) {
                     player->currentSpeed += 100.0f;
                 }
 
@@ -1028,7 +1028,7 @@ void apply_reverse_sound_effect(Player* player, s8 arg1) {
     player->soundEffects &= ~(REVERSE_SOUND_EFFECT | 0x80000);
     player->unk_0B6 |= 0x40;
     gTimerBoostTripleACombo[arg1] = 0;
-    gIsPlayerTripleAButtonCombo[arg1] = false;
+    gIsPlayerTripleAButtonCombo[arg1] = 0;
     gCountASwitch[arg1] = 0;
     gFrameSinceLastACombo[arg1] = 0;
 }
@@ -1069,7 +1069,7 @@ void apply_hit_by_item_effect(Player* player, s8 arg1) {
         D_80165190[2][arg1] = 1;
         player->unk_042 = 0;
 
-        if ((gIsPlayerTripleAButtonCombo[arg1] == true) && ((player->type & PLAYER_HUMAN) == PLAYER_HUMAN)) {
+        if ((gIsPlayerTripleAButtonCombo[arg1] == 1) && ((player->type & PLAYER_HUMAN) == PLAYER_HUMAN)) {
             player->currentSpeed += 100.0f;
         }
 
@@ -1089,7 +1089,7 @@ void apply_hit_by_item_effect(Player* player, s8 arg1) {
                 D_80165190[2][arg1] = 1;
                 D_80165190[3][arg1] = 1;
                 player->unk_042 = 0;
-                if ((gIsPlayerTripleAButtonCombo[arg1] == true) && ((player->type & PLAYER_HUMAN) == PLAYER_HUMAN)) {
+                if ((gIsPlayerTripleAButtonCombo[arg1] == 1) && ((player->type & PLAYER_HUMAN) == PLAYER_HUMAN)) {
                     player->currentSpeed += 100.0f;
                 }
 
@@ -1129,7 +1129,7 @@ void apply_hit_by_item_sound_effect(Player* player, s8 arg1) {
     player->soundEffects &= ~0x01000002;
 
     gTimerBoostTripleACombo[arg1] = 0;
-    gIsPlayerTripleAButtonCombo[arg1] = false;
+    gIsPlayerTripleAButtonCombo[arg1] = 0;
     gCountASwitch[arg1] = 0;
     gFrameSinceLastACombo[arg1] = 0;
 }
@@ -1975,13 +1975,13 @@ void func_80090970(Player* player, s8 playerId, s8 arg2) {
         BOOST_RAMP_ASPHALT_EFFECT | 0x20000 | 0x10000 | 0x4000 | 0x800 | 0x400 | STAR_EFFECT | 0x80 | 0x40 | \
         BOOST_RAMP_WOOD_EFFECT
 
-bool prevent_item_use(Player* player) {
+s32 prevent_item_use(Player* player) {
     s32 phi_v0 = 0;
     if ((((((player->unk_0CA & 2) == 2) || ((player->unk_0CA & 8) == 8)) ||
           ((player->type & PLAYER_UNKNOWN_0x40) != 0)) ||
          ((player->type & PLAYER_CINEMATIC_MODE) != 0)) ||
         ((player->type & PLAYER_EXISTS) == 0)) {
-        return true;
+        return 1;
     }
 
     switch (player->currentItemCopy) {
@@ -1990,7 +1990,7 @@ bool prevent_item_use(Player* player) {
         case ITEM_TRIPLE_MUSHROOM:
         case ITEM_SUPER_MUSHROOM:
             if ((player->effects & 8) != 0) {
-                return true;
+                return 1;
             }
             phi_v0 = EFFECT_BLACKLIST_USE_ITEM;
             goto prevent_item_use_label;
@@ -2001,9 +2001,9 @@ bool prevent_item_use(Player* player) {
         prevent_item_use_label:
         default:
             if ((player->effects & phi_v0) != 0) {
-                return true;
+                return 1;
             }
-            return false;
+            return 0;
     }
 }
 

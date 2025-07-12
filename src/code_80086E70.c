@@ -969,7 +969,7 @@ UNUSED void func_8008900C(Player* player) {
 void func_80089020(s32 playerId, f32* arg1) {
     f32 var_f0;
     f32 var_f2;
-    Player* player = &gPlayerOne[playerId];
+    Player* player = &gPlayers/* One */[playerId];
 
     if (*arg1 >= 0.0f) {
         var_f2 = *arg1;
@@ -1037,7 +1037,7 @@ f32 func_8008933C(Player* player, s32 objectIndex, f32 arg2, f32 arg3) {
     Object* object;
     struct_D_8018CE10* temp_v1;
 
-    playerId = player - gPlayerOne;
+    playerId = player - gPlayers/* One */;
     temp_v1 = &D_8018CE10[playerId];
     var_f2 = 0.0f;
     if (temp_v1->unk_18[6] == 0) {
@@ -1066,7 +1066,7 @@ void func_80089474(s32 objectIndex, s32 playerId, f32 arg2, f32 arg3, u32 soundB
     UNUSED s32 stackPadding;
     Player* player;
 
-    player = &gPlayerOne[playerId];
+    player = &gPlayers/* One */[playerId];
     if (is_obj_flag_status_active(objectIndex, 0x04000000) != 0) {
         func_80072180();
     }
@@ -1079,7 +1079,7 @@ void func_80089538(s32 objectIndex, s32 playerId, f32 arg2, f32 arg3, u32 soundB
     UNUSED s32 stackPadding;
     Player* player;
 
-    player = &gPlayerOne[playerId];
+    player = &gPlayers/* One */[playerId];
     if ((func_8008933C(player, objectIndex, arg2, arg3) >= 4.0) && ((player->type & PLAYER_CPU) != PLAYER_CPU)) {
         func_800C9060((u8) playerId, soundBits);
     }
@@ -1091,7 +1091,7 @@ s32 func_800895E4(s32 objectIndex) {
     s32 var_s6;
 
     var_s6 = 0;
-    player = gPlayerOne;
+    player = gPlayers/* One */;
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++) {
             if ((gObjectList[objectIndex].state != 0) &&
@@ -1110,7 +1110,7 @@ void func_800896D4(s32 objectIndex, f32 arg1, f32 arg2) {
     Player* player;
     s32 var_s1;
 
-    player = gPlayerOne;
+    player = gPlayers/* One */;
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++) {
             if ((gObjectList[objectIndex].state != 0) && !(player->effects & (STAR_EFFECT | BOO_EFFECT)) &&
@@ -1128,7 +1128,7 @@ void func_80089820(s32 objectIndex, f32 arg1, f32 arg2, u32 arg3) {
     Player* player;
     s32 var_s1;
 
-    player = gPlayerOne;
+    player = gPlayers/* One */;
     set_object_flag_status_false(objectIndex, 0x02000000);
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++) {
@@ -1156,7 +1156,7 @@ void func_80089A04(s32 objectIndex, f32 arg1, f32 arg2) {
     Player* player;
     s32 var_s1;
 
-    player = gPlayerOne;
+    player = gPlayers/*One*/;
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++) {
             if ((gObjectList[objectIndex].state != 0) && !(player->effects & (BOO_EFFECT | STAR_EFFECT)) &&
@@ -1178,7 +1178,7 @@ s32 func_80089B50(s32 objectIndex) {
 
     test = 0;
     sp40 = 0;
-    player = gPlayerOne;
+    player = gPlayers/*One*/;
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++, test++) {
             if ((gObjectList[objectIndex].state != 0) && !(player->effects & (BOO_EFFECT | UNKNOWN_EFFECT_0x1000000)) &&
@@ -1205,7 +1205,7 @@ s32 func_80089CBC(s32 objectIndex, f32 arg1) {
     s32 var_s7;
 
     var_s7 = 0;
-    player = gPlayerOne;
+    player = gPlayers/*One*/;
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++) {
             if ((gObjectList[objectIndex].state != 0) && !(player->effects & (BOO_EFFECT | UNKNOWN_EFFECT_0x1000000))) {
@@ -1231,7 +1231,7 @@ s32 func_80089E18(s32 objectIndex) {
     s32 var_s6;
 
     var_s6 = 0;
-    player = gPlayerOne;
+    player = gPlayers/*One*/;
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++) {
             if ((gObjectList[objectIndex].state != 0) && !(player->effects & 0x800000C0) &&
@@ -1253,7 +1253,7 @@ s32 func_80089F24(s32 objectIndex) {
     s32 var_s7;
 
     var_s7 = 0;
-    player = gPlayerOne;
+    player = gPlayers/*One*/;
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++) {
             if ((gObjectList[objectIndex].state != 0) && !(player->effects & 0x800002C0)) {
@@ -1302,28 +1302,26 @@ s32 func_8008A0B4(s32 objectIndex, Player* player, Camera* camera, u16 arg3) {
 }
 
 uint8_t is_object_visible_on_camera(s32 objectIndex, Camera* camera, u16 angle) {
-    u16 temp_t2;
-    s32 var_t0;
-
-    var_t0 = 0;
-    temp_t2 = (get_angle_between_xy(camera->pos[0], gObjectList[objectIndex].pos[0], camera->pos[2],
+    u16 temp_t2 = (get_angle_between_xy(camera->pos[0], gObjectList[objectIndex].pos[0], camera->pos[2],
                                     gObjectList[objectIndex].pos[2]) +
-               ((s32) angle / 2)) -
+//               ((s32) angle / 2)) -
+               ((s32) angle >> 1)) -
               camera->rot[1];
     if ((temp_t2 >= 0) && (angle >= temp_t2)) {
-        var_t0 = 1;
+        return 1;
     }
-    return var_t0;
+    return 0;
 }
 
 void func_8008A1D0(s32 objectIndex, s32 cameraId, s32 arg2, s32 arg3) {
+    Camera* camera = &camera1[cameraId];
     u32 temp_v0;
     u16 var_a2;
-    Camera* camera;
 
-    camera = &camera1[cameraId];
     set_object_flag_status_false(objectIndex, 0x00100000 | VISIBLE);
+
     temp_v0 = get_horizontal_distance_to_camera(objectIndex, camera);
+
     if (temp_v0 < 0x2711U) {
         var_a2 = 0x5555;
     } else if (temp_v0 < 0x9C41U) {
@@ -1331,6 +1329,7 @@ void func_8008A1D0(s32 objectIndex, s32 cameraId, s32 arg2, s32 arg3) {
     } else {
         var_a2 = 0x2AAB;
     }
+
     if ((is_object_visible_on_camera(objectIndex, camera, var_a2) != 0) && ((u32) (arg3 * arg3) >= temp_v0)) {
         set_object_flag_status_true(objectIndex, VISIBLE);
         if (temp_v0 >= (u32) (arg2 * arg2)) {
@@ -1339,6 +1338,7 @@ void func_8008A1D0(s32 objectIndex, s32 cameraId, s32 arg2, s32 arg3) {
     }
 }
 
+#if 0
 // This function is really cool, it tests the value of an unitialized local variable
 UNUSED void func_8008A2CC(s32 objectIndex, s32 cameraId, u16 arg2) {
     Camera* camera;
@@ -1358,6 +1358,7 @@ UNUSED void func_8008A2CC(s32 objectIndex, s32 cameraId, u16 arg2) {
         set_object_flag_status_true(objectIndex, VISIBLE);
     }
 }
+#endif
 
 s32 func_8008A364(s32 objectIndex, s32 cameraId, u16 arg2, s32 arg3) {
     Camera* camera;

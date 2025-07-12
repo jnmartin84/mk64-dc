@@ -45,7 +45,7 @@
 #define SOUND_BANK_COUNT 6
 
 // Almost certainly an expanded version of struct Sound from SM64
-struct Sound {
+struct __attribute__((aligned(32))) Sound {
     /* 0x00 */ u32 soundBits;
     /* 0x04 */ Vec3f* position;
     /* 0x08 */ u8 cameraId; // playerId? some indicator of "who" the sound is desitned for

@@ -35,18 +35,16 @@ void render_actor_train_engine(Camera* camera, struct TrainCar* actor) {
     }
 
     if (distance < 122500.0f) {
-
         gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_1C0F0);
         gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_1B978);
-
     } else if (distance < 640000.0f) {
-
         gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_1D670);
         gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_1D160);
     } else {
         gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_1E910);
         gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_1E480);
     }
+
     if (1440000.0f < distance) {
         return;
     }

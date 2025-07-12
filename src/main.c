@@ -161,7 +161,7 @@ struct SPTask* gGfxSPTask;
 s32 D_801502A0;
 s32 D_801502A4;
 u16* gPhysicalFramebuffers[3];
-uintptr_t gPhysicalZBuffer;
+uintptr_t gPhysicalZBuffer = &gZBuffer;
 UNUSED u32 D_801502B8;
 UNUSED u32 D_801502BC;
 Mat4 D_801502C0;
@@ -181,12 +181,12 @@ u16 D_80152308;
 //OSThread gGameLoopThread;
 //ALIGNED8 u8 gGameLoopThreadStack[STACKSIZE];
 //OSThread gAudioThread;
-ALIGNED8 u8 gAudioThreadStack[STACKSIZE];
+//ALIGNED8 u8 gAudioThreadStack[STACKSIZE];
 //UNUSED OSThread D_8015CD30;
 //UNUSED ALIGNED8 u8 D_8015CD30_Stack[STACKSIZE / 2];
 
-ALIGNED8 u8 gGfxSPTaskYieldBuffer[4352];
-ALIGNED8 u32 gGfxSPTaskStack[256];
+//ALIGNED8 u8 gGfxSPTaskYieldBuffer[4352];
+//ALIGNED8 u32 gGfxSPTaskStack[256];
 OSMesg gPIMesgBuf[32];
 OSMesgQueue gPIMesgQueue;
 
@@ -236,9 +236,22 @@ static struct GfxRenderingAPI *rendering_api = &gfx_opengl_api;
 extern void gfx_run(Gfx *commands);
 
 extern void thread5_game_loop(void *arg);
+#define SAMPLES_HIGH 454
+#define SAMPLES_LOW 438
+#include "dcaudio/audio_api.h"
+#include "dcaudio/audio_dc.h"
+extern void create_next_audio_buffer(s16* samples, u32 num_samples);
+
+extern s16 audio_buffer[SAMPLES_HIGH * 2 * 2] __attribute__((aligned(64)));
+static struct AudioAPI *audio_api = NULL;
+
+static int frameno = 0;
+static int even_frame;
 
 void game_loop_one_iteration(void) {
-    //StartAudioFrame();
+    even_frame = !((frameno++) & 1);
+//    StartAudioFrame();
+
     gfx_start_frame();
 
     func_800CB2C4();
@@ -254,13 +267,21 @@ void game_loop_one_iteration(void) {
     read_controllers();
 
     game_state_handler();
-
     end_master_display_list();
 
     display_and_vsync();
 
     gfx_end_frame();
-    //EndAudioFrame();
+#if 1
+    u32 num_audio_samples = even_frame ? SAMPLES_HIGH : SAMPLES_LOW;
+    irq_disable();
+    create_next_audio_buffer(audio_buffer + 0 * (num_audio_samples * 2), num_audio_samples);
+    create_next_audio_buffer(audio_buffer + 1 * (num_audio_samples * 2), num_audio_samples);
+    irq_enable();
+    audio_api->play((u8 *)audio_buffer, 2 * num_audio_samples * 2 * 2);
+#endif
+
+//    EndAudioFrame();
 }
 
 void send_display_list(struct SPTask *spTask) {
@@ -492,7 +513,7 @@ void setup_audio_data(void) {
         _sequencesSegmentRomStart = SEQUENCES_BUF;
     }
 
-#if 0
+#if 1
     _AudioInit();
     audio_init();
     sound_init();
@@ -501,6 +522,9 @@ void setup_audio_data(void) {
 //    create_thread(&gAudioThread,4,&thread4_audio,NULL,&gAudioThreadStack,10);
 #endif
 }
+
+#include "dcprofiler.h"
+
 s32 osAppNmiBuffer[16];
 void isPrintfInit(void);
 int main(UNUSED int argc, UNUSED char **argv) {
@@ -531,6 +555,9 @@ int main(UNUSED int argc, UNUSED char **argv) {
     fclose(fntest);
 
     setup_audio_data();
+
+//    profiler_init("/pc/gmon.out");
+  //  profiler_start();
 
     thread5_game_loop(NULL);
 
@@ -717,8 +744,12 @@ ucheld = 0; stick = 0;
         return;
     state = maple_dev_status(cont);
 
-if ((state->buttons & CONT_START) && state->ltrig && state->rtrig)
-		exit(0);
+if ((state->buttons & CONT_START) && state->ltrig && state->rtrig) {
+//profiler_stop();
+//    profiler_clean_up();
+
+    exit(0);
+}
 
     const char stickH =state->joyx;
     const char stickV = 0xff-((uint8_t)(state->joyy));
@@ -900,8 +931,7 @@ void end_master_display_list(void) {
 }
 
 // clear_frame_buffer from SM64, with a few edits
-//! @todo Why did void* work for matching
-void* clear_framebuffer(s32 color) {
+void clear_framebuffer(s32 color) {
     gDPPipeSync(gDisplayListHead++);
 
     gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
@@ -1640,7 +1670,7 @@ void race_logic_loop(void) {
             }
             func_8005A070();
             sNumVBlanks = 0;
-            profiler_log_thread5_time(LEVEL_SCRIPT_EXECUTE);
+//            profiler_log_thread5_time(LEVEL_SCRIPT_EXECUTE);
             D_8015F788 = 0;
             render_player_one_1p_screen();
             if (!gEnableDebugMode) {
@@ -2294,24 +2324,24 @@ run_game_loop:
 /**
  * Sound processing thread. Runs at 50 or 60 FPS according to osTvType.
  */
-static struct {
+struct audstruct_s {
     kthread_t *thread;
     condvar_t cv_to_thread;
     condvar_t cv_from_thread;
     mutex_t mutex;
     uint8_t running;
     uint8_t processing;
-} audio;
+};
 
+struct audstruct_s audio;
+#if 1
+//#define SAMPLES_HIGH 448
+//#define SAMPLES_LOW 432
+//#define NUM_AUDIO_CHANNELS 2
+//#define SAMPLES_PER_FRAME (SAMPLES_HIGH * NUM_AUDIO_CHANNELS * 2)
 
-#include "dcaudio/audio_api.h"
-#include "dcaudio/audio_dc.h"
-static struct AudioAPI *audio_api;
-#define SAMPLES_HIGH 448
-#define SAMPLES_LOW 432
-#define NUM_AUDIO_CHANNELS 2
-#define SAMPLES_PER_FRAME (SAMPLES_HIGH * NUM_AUDIO_CHANNELS * 2)
-int32_t AudioPlayerGetDesiredBuffered(void) {
+#if 0
+ AudioPlayerGetDesiredBuffered(void) {
     return audio_api->get_desired_buffered();
 }
 
@@ -2324,7 +2354,7 @@ void AudioPlayerPlayFrame(void) {
 }
 
 extern void create_next_audio_buffer(uint16_t *samples, uint32_t num_samples);
-
+#endif
 void StartAudioFrame(void) {
     mutex_lock(&audio.mutex);
     audio.processing = 1;
@@ -2351,7 +2381,13 @@ void HandleAudioThread(UNUSED void *arg) {
             break;
         }
         mutex_lock(&audio.mutex);
-        AudioPlayerPlayFrame();
+        u32 num_audio_samples = even_frame ? SAMPLES_HIGH : SAMPLES_LOW;
+//        irq_disable();
+        create_next_audio_buffer(audio_buffer + 0 * (num_audio_samples * 2), num_audio_samples);
+        create_next_audio_buffer(audio_buffer + 1 * (num_audio_samples * 2), num_audio_samples);
+  //      irq_enable();
+        audio_api->play((u8 *)audio_buffer, 2 * num_audio_samples * 2 * 2);
+
         audio.processing = 0;
         cond_signal(&audio.cv_from_thread);
         mutex_unlock(&audio.mutex);
@@ -2359,14 +2395,14 @@ void HandleAudioThread(UNUSED void *arg) {
         thd_pass();
     }
 }
-
+#endif
 
 void _AudioInit(void) {
-    if (audio_api == NULL && audio_dc.init()) {
+    if (audio_api == NULL/*  && audio_dc.init() */) {
         audio_api = &audio_dc;
         audio_api->init();
     }
-
+#if 0
     if (!audio.running) {
         mutex_init(&audio.mutex, MUTEX_TYPE_NORMAL);
         cond_init(&audio.cv_from_thread);
@@ -2375,13 +2411,14 @@ void _AudioInit(void) {
 
         kthread_attr_t main_attr;
         main_attr.create_detached = 1;
-	    main_attr.stack_size = 8192;
-	    main_attr.stack_ptr = gAudioThreadStack;
+	    main_attr.stack_size = 32768;
+	    main_attr.stack_ptr = NULL;//gAudioThreadStack;
 	    main_attr.prio = 15;
 	    main_attr.label = "AudioThread";
         audio.thread = thd_create_ex(&main_attr, &HandleAudioThread, NULL);
         printf("Audio thread started");
     }
+#endif        
 }
 
 /**

@@ -130,7 +130,7 @@ void credits_loop(void) {
 
 extern char *fnpre;
 extern uint8_t __attribute__((aligned(32))) CEREMONY_BUF[36232];
-extern CollisionTriangle __attribute__((aligned(32))) allColTris[2048+1024];//2800];//2798];//2048+1024];
+extern CollisionTriangle __attribute__((aligned(32))) allColTris[2800];//2048+1024];//2800];//2798];//2048+1024];
 void load_credits(void) {
     Camera* camera = &cameras[0];
 
@@ -159,7 +159,7 @@ void load_credits(void) {
         if (!file) {
             perror("fopen");
             printf("\n");
-            while(1){}
+//            while(1){}
             exit(-1);
         }
 
@@ -174,9 +174,9 @@ void load_credits(void) {
         while (didread < toread) {
             long rv = fread(&CEREMONY_BUF[didread], 1, toread - didread, file);
             if (rv == -1) {
-                printf("FILE IS FUCKED\n");
-            printf("\n");
-            while(1){}
+            perror("fread");
+            printf("couldnt read into ceremony buf\n");
+//            while(1){}
                 exit(-1);
             }
             toread -= rv;

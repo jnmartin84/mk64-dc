@@ -23,6 +23,10 @@
 #include "macros.h"
 #include "gl_fast_vert.h"
 
+#ifndef GL_MIRRORED_REPEAT
+#define GL_MIRRORED_REPEAT      0x2902
+#endif
+
 enum MixType {
     SH_MT_NONE,
     SH_MT_TEXTURE,
@@ -71,32 +75,12 @@ static void* scale_buf = NULL;
 static int scale_buf_size = 0;
 #endif
 
+int in_intro;
+
+
 static float c_mix[] = { 0.f, 0.f, 0.f, 1.f };
 static float c_invmix[] = { 1.f, 1.f, 1.f, 1.f };
 static const float c_white[] = { 1.f, 1.f, 1.f, 1.f };
-
-static void resample_32bit(const uint32_t* in, const int inwidth, const int inheight, uint32_t* out, const int outwidth,
-                           const int outheight) {
-    int i, j;
-    const uint32_t* inrow;
-    uint32_t frac, fracstep;
-
-    fracstep = inwidth * 0x10000 / outwidth;
-    for (i = 0; i < outheight; i++, out += outwidth) {
-        inrow = in + inwidth * (i * inheight / outheight);
-        frac = fracstep >> 1;
-        for (j = 0; j < outwidth; j += 4) {
-            out[j] = inrow[frac >> 16];
-            frac += fracstep;
-            out[j + 1] = inrow[frac >> 16];
-            frac += fracstep;
-            out[j + 2] = inrow[frac >> 16];
-            frac += fracstep;
-            out[j + 3] = inrow[frac >> 16];
-            frac += fracstep;
-        }
-    }
-}
 
 static void resample_16bit(const unsigned short* in, int inwidth, int inheight, unsigned short* out, int outwidth,
                            int outheight) {
@@ -150,6 +134,9 @@ static inline GLenum texenv_set_texture(UNUSED struct ShaderProgram* prg) {
 
 static inline GLenum texenv_set_texture_color(struct ShaderProgram* prg) {
     GLenum mode = GL_MODULATE;
+//    if (in_intro) {
+//        return mode;
+//    }
 #if 1
     // HACK: lord forgive me for this, but this is easier
     switch (prg->shader_id) {
@@ -243,14 +230,14 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
     if (!prg->enabled) {
         // we only need to do this once
         prg->enabled = 1;
-
+#if 0
         if (prg->shader_id & SHADER_OPT_TEXTURE_EDGE) {
             glEnable(GL_ALPHA_TEST);
             glAlphaFunc(GL_GREATER, /*1.0f / 3.0f*/ 0.8f);
         } else {
             glDisable(GL_ALPHA_TEST);
         }
-
+#endif
         // configure texenv
         GLenum mode;
         switch (prg->mix) {
@@ -376,105 +363,51 @@ static void gfx_opengl_select_texture(int tile, uint32_t texture_id) {
 }
 
 /* Used for rescaling textures ROUGHLY into pow2 dims */
-static unsigned int __attribute__((aligned(16))) scaled[64 * 64 * sizeof(unsigned int)]; /* 16kb */
-
-#if 0
-void gfx_opengl_replace_texture(const uint8_t* rgba32_buf, int width, int height, unsigned int type) {
-    if (!gl_npot) {
-        // we don't support non power of two textures, scale to next power of two if necessary
-        if ((!is_pot(width) || !is_pot(height)) || (width < 8) || (height < 8)) {
-            int pwidth = next_pot(width);
-            int pheight = next_pot(height);
-            /*@Note: Might not need texture max sizes */
-            if (pwidth > 512) {
-                pwidth = 512;
-            }
-            if (pheight > 512) {
-                pheight = 512;
-            }
-
-            /* Need texture min sizes */
-            if (pwidth < 8) {
-                pwidth = 8;
-            }
-            if (pheight < 8) {
-                pheight = 8;
-            }
-            if (type == GL_RGBA) {
-                resample_32bit((const uint32_t*) rgba32_buf, width, height, (uint32_t*) scaled, pwidth, pheight);
-            } else {
-                resample_16bit((const uint16_t*) rgba32_buf, width, height, (uint16_t*) scaled, pwidth, pheight);
-            }
-            rgba32_buf = (uint8_t*) scaled;
-            width = pwidth;
-            height = pheight;
-        }
-    }
-
-    if (type == GL_RGBA) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba32_buf);
-    } else {
-        GLint intFormat;
-        if (type == GL_UNSIGNED_SHORT_1_5_5_5_REV) {
-            intFormat = GL_ARGB1555_KOS;
-        } else {
-            intFormat = GL_ARGB4444_KOS;
-        }
-        glTexImage2D(GL_TEXTURE_2D, 0, intFormat, width, height, 0, GL_BGRA, type, rgba32_buf);
-    }
-}
-#endif
+static unsigned int __attribute__((aligned(16))) scaled[64 * 64 * 4];//sizeof(unsigned int)]; /* 16kb */
 
 static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int height, unsigned int type) {
-    if (!gl_npot) {
-        // we don't support non power of two textures, scale to next power of two if necessary
-        if ((!is_pot(width) || !is_pot(height)) || (width < 8) || (height < 8)) {
-            int pwidth = next_pot(width);
-            int pheight = next_pot(height);
-            /*@Note: Might not need texture max sizes */
-            if (pwidth > 512) {
-                pwidth = 512;
-            }
-            if (pheight > 512) {
-                pheight = 512;
-            }
+    // we don't support non power of two textures, scale to next power of two if necessary
+    if ((!is_pot(width) || !is_pot(height)) || (width < 8) || (height < 8)) {
+        int pwidth = next_pot(width);
+        int pheight = next_pot(height);
+        /*@Note: Might not need texture max sizes */
+        /*             if (pwidth > 256) {
+                        pwidth = 256;
+                    }
+                    if (pheight > 256) {
+                        pheight = 256;
+                    } */
 
-            /* Need texture min sizes */
-            if (pwidth < 8) {
-                pwidth = 8;
-            }
-            if (pheight < 8) {
-                pheight = 8;
-            }
-            if (type == GL_RGBA) {
-                resample_32bit((const uint32_t*) rgba32_buf, width, height, (uint32_t*) scaled, pwidth, pheight);
-            } else {
-                resample_16bit((const uint16_t*) rgba32_buf, width, height, (uint16_t*) scaled, pwidth, pheight);
-            }
-            rgba32_buf = (uint8_t*) scaled;
-            width = pwidth;
-            height = pheight;
+        /* Need texture min sizes */
+        if (pwidth < 8) {
+            pwidth = 8;
         }
+        if (pheight < 8) {
+            pheight = 8;
+        }
+
+        resample_16bit((const uint16_t*) rgba32_buf, width, height, (uint16_t*) scaled, pwidth, pheight);
+        rgba32_buf = (uint8_t*) scaled;
+        width = pwidth;
+        height = pheight;
     }
 
-    if (type == GL_RGBA) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba32_buf);
+    GLint intFormat;
+
+    if (type == GL_UNSIGNED_SHORT_1_5_5_5_REV) {
+        intFormat = GL_ARGB1555_KOS;
     } else {
-        GLint intFormat;
-        if (type == GL_UNSIGNED_SHORT_1_5_5_5_REV) {
-            intFormat = GL_ARGB1555_KOS;
-        } else {
-            intFormat = GL_ARGB4444_KOS;
-        }
-        glTexImage2D(GL_TEXTURE_2D, 0, intFormat, width, height, 0, GL_BGRA, type, rgba32_buf);
+        intFormat = GL_ARGB4444_KOS;
     }
+
+    glTexImage2D(GL_TEXTURE_2D, 0, intFormat, width, height, 0, GL_BGRA, type, rgba32_buf);
 }
 
 static inline GLenum gfx_cm_to_opengl(uint32_t val) {
     if (val & G_TX_CLAMP)
         return GL_CLAMP;
+
     return (val & G_TX_MIRROR) ? GL_MIRRORED_REPEAT : GL_REPEAT;
-    // return  GL_REPEAT;
 }
 
 static inline void gfx_opengl_apply_tmu_state(const int tile) {
@@ -486,7 +419,6 @@ static inline void gfx_opengl_apply_tmu_state(const int tile) {
 
 static void gfx_opengl_set_sampler_parameters(int tile, uint8_t linear_filter, uint32_t cms, uint32_t cmt) {
     const GLenum filter = linear_filter ? GL_LINEAR : GL_NEAREST;
-    // printf("ssp %d\n", tile);
     const GLenum wrap_s = gfx_cm_to_opengl(cms);
     const GLenum wrap_t = gfx_cm_to_opengl(cmt);
 
@@ -556,66 +488,40 @@ static void gfx_opengl_set_use_alpha(uint8_t use_alpha) {
 // on top of the normal tris and blends them to achieve sort of the same effect
 // as fog would
 static inline void gfx_opengl_pass_fog(void) {
-#ifndef TARGET_DC
-    // if texturing is enabled, disable it, since we're blending colors
-    if (cur_shader->texture_used[0] || cur_shader->texture_used[1])
-        glDisable(GL_TEXTURE_2D);
-
-    glEnableClientState(GL_COLOR_ARRAY);                      // enable color array temporarily
-    glColorPointer(4, GL_FLOAT, cur_buf_stride, cur_fog_ofs); // set fog colors as primary colors
-    if (!gl_blend)
-        glEnable(GL_BLEND); // enable blending temporarily
-    glDepthFunc(GL_LEQUAL); // Z is the same as the base triangles
-
-    glDrawArrays(GL_TRIANGLES, 0, 3 * cur_buf_num_tris);
-
-    glDepthFunc(GL_LESS); // set back to default
-    if (!gl_blend)
-        glDisable(GL_BLEND);              // disable blending if it was disabled
-    glDisableClientState(GL_COLOR_ARRAY); // will get reenabled later anyway
-
-    // if texturing was enabled, re-enable it
-    if (cur_shader->texture_used[0] || cur_shader->texture_used[1])
-        glEnable(GL_TEXTURE_2D);
-#endif
+    ;
 }
 
 // this assumes the two textures are combined like so:
 // result = mix(tex0.rgb, tex1.rgb, vertex.rgb)
 static inline void gfx_opengl_pass_mix_texture(int buf_vbo_num_tris) {
-    // #ifndef TARGET_DC
-    //  set second texture
-    glBindTexture(GL_TEXTURE_2D, tmu_state[cur_shader->texture_ord[1]].tex);
-    gfx_opengl_apply_tmu_state(cur_shader->texture_ord[1]);
-
-    if (!gl_blend)
-        glEnable(GL_BLEND);      // enable blending temporarily
-    glBlendFunc(GL_ONE, GL_ONE); // additive blending
-    glDepthFunc(GL_LEQUAL);      // Z is the same as the base triangles
-
-    // draw the same triangles, but with the inverse of the mix color
-    glColor3f(c_invmix[0], c_invmix[1], c_invmix[2]);
-    glDrawArrays(GL_TRIANGLES, 0, 3 * buf_vbo_num_tris);
-    glColor3f(1.f, 1.f, 1.f); // reset color
-
-    glDepthFunc(GL_LESS);                              // set back to default
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // same here
-    if (!gl_blend)
-        glDisable(GL_BLEND); // disable blending if it was disabled
-
-    // set old texture
-    glBindTexture(GL_TEXTURE_2D, tmu_state[cur_shader->texture_ord[0]].tex);
-    gfx_opengl_apply_tmu_state(cur_shader->texture_ord[0]);
-    // #endif
+    ;
 }
-// 4 of them
-extern u8 common_texture_particle_smoke[][1024];
+
+
+    // toads turnpike used shaders
+    // 01200200, 01045200, 07a00a00, 03200045, 05141548, 01045551, 05a00a00
+    // lakitu sprites
+    // if (cur_shader->shader_id != 0x05a00a00)
+    // ????
+    // if (cur_shader->shader_id != 0x01045551)
+    // the kart
+    // if (cur_shader->shader_id != 0x05141548)
+    // the entire world basically except guardrails
+    // if (cur_shader->shader_id != 0x03200045)
+    // the guardrails
+    // if (cur_shader->shader_id != 0x07a00a00)
+    // 4 bit font AND the stars, goddamnit
+    // if (cur_shader->shader_id != 0x01045200)
+
+// prim color
 extern int pr,pg,pb,pa;
+// env color
 extern int er,eg,eb,ea;
+// "stars" over Toad's Turnpike/Wario Stadium skybox
 extern u8 D_0D0293D8[];
 extern void* segmented_to_virtual(void* addr);
-
-extern u8 gRRTextureRainbow[];
+// Rainbow Road road surface texture, for blending tricks
+//extern u8 gRRTextureRainbow[];
 
 static void gfx_opengl_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len, size_t buf_vbo_num_tris) {
     cur_buf = (void*) buf_vbo;
@@ -627,21 +533,18 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len
         glBindTexture(GL_TEXTURE_2D, tmu_state[cur_shader->texture_ord[0]].tex);
     }
 
-/*      if (cur_shader->texture_used[1] || cur_shader->texture_used[0] ) {
-             if (tmu_state[cur_shader->texture_ord[0]].srcaddr == (GLuint)segmented_to_virtual(gRRTextureRainbow)) {
-                glEnable(GL_BLEND);
-                glBlendFunc(GL_ONE, GL_ONE);
-        }
-     } */
-
-    if (cur_shader->shader_id == 0x01200200) { // skybox
+    // skybox
+    if (/* !in_intro &&  */cur_shader->shader_id == 0x01200200) {
         glDepthMask(GL_FALSE);
         glDepthFunc(GL_LEQUAL);
         glDisable(GL_BLEND);
         glDisable(GL_FOG);
-    }
+    }/*  else if (cur_shader->shader_id == 0x01200200) {
+        glEnable(GL_BLEND);
+    } */
 
-    if (cur_shader->shader_id == 0x01a00200) { // clouds over skybox
+    // clouds over skybox
+    if (cur_shader->shader_id == 0x01a00200) { 
         glEnable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
         glDepthMask(GL_TRUE);
@@ -661,70 +564,47 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len
         glTranslatef(0.0f, 2.1f, 0.9f); // magic values need fine tuning.
     }
 
-    // toads turnpike used shaders
-    // 01200200, 01045200, 07a00a00, 03200045, 05141548, 01045551, 05a00a00
-    // lakitu sprites
-    // if (cur_shader->shader_id != 0x05a00a00)
-    // ????
-    // if (cur_shader->shader_id != 0x01045551)
-    // the kart
-    // if (cur_shader->shader_id != 0x05141548)
-    // the entire world basically except guardrails
-    // if (cur_shader->shader_id != 0x03200045)
-    // the guardrails
-    // if (cur_shader->shader_id != 0x07a00a00)
-    // 4 bit font AND the stars, goddamnit
-    // if (cur_shader->shader_id != 0x01045200)
-
+    // this is pretty fine-tuned at this point
+    // this shader id covers lots of "smoke" effects
+    // some of those effects we would like to brighten
     if (cur_shader->shader_id == 0x01045551) {
+        // the outer test here discards kart smoke and other white smokes
         if (!((pr == 251) && (pg == 255) && (pb == 251))) {
-            /* if(pb < 135) {
-                printf("*** E%d E%d E%d E%d\n", er, eg, eb, ea);
-                printf("*** P%d P%d P%d P%d\n", pr, pg, pb, pa);
-            } */
+            // discard other gray smokes
             if (!((pr == pg) && (pr == pb))) {
-            if( (pb > 50 && pb < 135) || 
-                // DK Jungle flames
-                ((er == 255) && (eg == 95) && (eb == 0)) ||
-                // green shell trail
-                ((er == 255) && (eg == 0) && (eb == 0)) ||
-                // blue shell trail
-                ((er == 0) && (eg == 0) && (eb == 255))) {
-                //if (eg == 95) {
-                //    glDisable(GL_DEPTH_TEST);
-                //}
-//                printf("E%d E%d E%d E%d\n", er, eg, eb, ea);
-  //              printf("P%d P%d P%d P%d\n", pr, pg, pb, pa);
-                glEnable(GL_BLEND);
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-            }/*  else {
-                printf("E%d E%d E%d E%d\n", er, eg, eb, ea);
-                printf("P%d P%d P%d P%d\n", pr, pg, pb, pa);
-            } */
-        }
+                // boost flames
+                if( (pb > 50 && pb < 135) || 
+                    // flames on the cave wall in DK Jungle
+                    ((er == 255) && (eg == 95) && (eb == 0)) ||
+                    // green shell trail
+                    ((er == 255) && (eg == 0) && (eb == 0)) ||
+                    // blue shell trail
+                    ((er == 0) && (eg == 0) && (eb == 255))) {
+
+                    // MAKE IT BRIGHT MAKE IT BURN
+                    glEnable(GL_BLEND);
+                    glBlendFunc(GL_ONE, GL_ONE);
+                }
+            }
         }
     }
 
-    // star effect? I hope
+    // star item effect
     if (cur_shader->shader_id == 0x09045551) {
-
+        // shades of orange for the player when star item active
         if (pr > 200 && pg > 200 && pb < 150) {
-glEnable(GL_BLEND);
+            glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-           
         } else if (pr < 190 && pg < 190 && pb < 190) {
             if (!((eg+60) < er && (4*eb) < eg)) {
                 if (!((eg + 30) < er && (eb + 30) < eg)) {
-                printf("*** E%d E%d E%d E%d\n", er, eg, eb, ea);
-                printf("*** P%d P%d P%d P%d\n", pr, pg, pb, pa);
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+                    // I don't know this actually runs
+                    // can't remember why it is here
+                    glEnable(GL_BLEND);
+                    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+                }
             }
         }
-        } else {
-
-        }
-
     }
 
     // this fixes the twinkling stars on Toads Turnpike and Wario Stadium
@@ -732,14 +612,20 @@ glEnable(GL_BLEND);
         (cur_shader->texture_used[0] || cur_shader->texture_used[1]) &&
         (tmu_state[0].srcaddr == (GLuint) segmented_to_virtual(D_0D0293D8) ||
          tmu_state[1].srcaddr == (GLuint) segmented_to_virtual(D_0D0293D8))) {
-            glEnable(GL_BLEND);
+
+        // like the clouds over skybox
+        glEnable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
         glDepthMask(GL_TRUE);
         glDepthFunc(GL_LEQUAL);
         glPushMatrix();
         glTranslatef(0.0f, 0.0f, -3500.0f);
     }
-    
+    /* 
+    if (in_intro) {
+        glEnable(GL_BLEND);        
+    } */
+
     glDrawArrays(GL_TRIANGLES, 0, 3 * buf_vbo_num_tris);
 
     if (is_zmode_decal) {
@@ -747,25 +633,20 @@ glEnable(GL_BLEND);
         glDepthFunc(GL_LESS); // Reset depth function
     }
 
-#if 0
-    // pretty sure this is needed)
-    if (cur_shader->shader_id == 0x0000038D) {
-        glDisable(GL_BLEND);
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-    }
-#endif
-
-    if (cur_shader->shader_id == 0x01200200) { // skybox
+    // skybox
+    if (cur_shader->shader_id == 0x01200200) {
         glDepthMask(GL_TRUE);
         glDepthFunc(GL_LESS);
         glEnable(GL_BLEND);
         glEnable(GL_FOG);
     }
 
+    // clouds over skybox
     if (cur_shader->shader_id == 0x01a00200) {
         glPopMatrix();
     }
 
+    // twinkling stars on Toads Turnpike and Wario Stadium
     if (cur_shader->shader_id == 0x01045200 &&
         (cur_shader->texture_used[0] || (cur_shader->texture_used[1])) &&
         (tmu_state[0].srcaddr == (GLuint) segmented_to_virtual(D_0D0293D8) ||
@@ -773,35 +654,35 @@ glEnable(GL_BLEND);
         glPopMatrix();
     }
 
+    // this is pretty fine-tuned at this point
+    // this shader id covers lots of "smoke" effects
+    // some of those effects we would like to brighten
     if (cur_shader->shader_id == 0x01045551) {
+        // boost flames
         if( (pb > 50 && pb < 135) || 
-            // DK Jungle flames
+            // flames on the cave wall in DK Jungle
             ((er == 255) && (eg == 95) && (eb == 0)) ||
             // green shell trail
             ((er == 255) && (eg == 0) && (eb == 0)) ||
             // blue shell trail
             ((er == 0) && (eg == 0) && (eb == 255))) {
-            //if (eg == 95) {
-            //    glEnable(GL_DEPTH_TEST);
-            //}
+
+            // restore default blend mode
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         }
     }
 
-    // star effect? I hope
+    // star effect
+    // doesn't matter if we actually changed the blend before
+    // just setting it back to default
     if (cur_shader->shader_id == 0x09045551) {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
-
-
-    // if there's two textures, draw polys with the second texture
-    //if (cur_shader->texture_used[1]) gfx_opengl_pass_mix_texture(buf_vbo_num_tris);
 }
 
 #if 1
-int in_intro;
 extern void gfx_opengl_2d_projection(void);
 extern void gfx_opengl_reset_projection(void);
 void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size_t buf_vbo_num_tris) {
@@ -879,6 +760,8 @@ void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size
         glPopMatrix();
     }
 #endif
+//    glEnable(GL_BLEND);
+
     gfx_opengl_reset_projection();
 }
 #endif
@@ -929,9 +812,9 @@ static void gfx_opengl_init(void) {
     config.autosort_enabled = GL_TRUE;
     config.fsaa_enabled = GL_FALSE;
     /*@Note: These should be adjusted at some point */
-    config.initial_op_capacity = 512;
-    config.initial_pt_capacity = 512;
-    config.initial_tr_capacity = 512;
+    config.initial_op_capacity = 128;
+    config.initial_pt_capacity = 32;
+    config.initial_tr_capacity = 256;
     config.initial_immediate_capacity = 0;
     glKosInitEx(&config);
     // glKosInit();

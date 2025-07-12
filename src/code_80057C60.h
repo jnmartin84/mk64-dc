@@ -533,7 +533,7 @@ extern s32 D_8018D204;
 extern s16 D_8018D208;
 extern s32 D_8018D20C;
 extern s16 D_8018D210;
-extern bool D_8018D214;
+extern s8 D_8018D214;
 extern s16 D_8018D218;
 extern s32 D_8018D21C;
 extern u8 (*D_8018D220)[1024];

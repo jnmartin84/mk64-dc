@@ -12,8 +12,8 @@ typedef s16 Vec3s[3];
 typedef u16 Vec3su[3];
 typedef s16 Vec4s[4];
 
-typedef f32 Mat3[3][3];
-typedef f32 Mat4[4][4];
+typedef f32 /* __attribute__((aligned(32))) */ Mat3[3][3];
+typedef f32 __attribute__((aligned(32))) Mat4[4][4];
 
 // might not be real, used by func_8002C954
 typedef struct {

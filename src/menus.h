@@ -202,13 +202,13 @@ void controller_pak_menu_act(struct Controller*, u16);
 void splash_menu_act(struct Controller*, u16);
 void setup_selected_game_mode(void);
 void main_menu_act(struct Controller*, u16);
-bool is_character_spot_free(s32);
+s32 is_character_spot_free(s32);
 void player_select_menu_act(struct Controller*, u16);
 void course_select_menu_act(struct Controller*, u16);
 void load_menu_states(s32);
 void reset_cycle_flash_menu(void);
 void set_sound_mode(void);
-bool is_screen_being_faded(void);
+s32 is_screen_being_faded(void);
 
 /* data */
 extern s32 gIntroModelZEye;

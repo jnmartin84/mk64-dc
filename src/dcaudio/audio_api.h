@@ -10,7 +10,7 @@ struct AudioAPI {
     bool (*init)(void);
     int (*buffered)(void);
     int (*get_desired_buffered)(void);
-    void (*play)(void);
+    void (*play)(uint8_t*,size_t);
 };
 
 #endif

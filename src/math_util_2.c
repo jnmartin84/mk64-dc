@@ -13,7 +13,8 @@
 #include "defines.h"
 #include "camera.h"
 
-#pragma intrinsic(sqrtf)
+#if 0
+//#pragma intrinsic(sqrtf)
 
 UNUSED void operator_or(s32* arg0, s32 arg1) {
     *arg0 = (s32) (*arg0 | arg1);
@@ -46,6 +47,7 @@ UNUSED s32 func_80040EA4(s32* arg0, s32 arg1) {
     }
     return phi_v1;
 }
+#endif
 
 void vec3f_copy(Vec3f dest, Vec3f arg1) {
     dest[0] = arg1[0];
@@ -67,6 +69,7 @@ s32 f32_step_up_towards(f32* value, f32 target, f32 step) {
 }
 
 s32 f32_step_down_towards(f32* value, f32 target, f32 step) {
+#if 0
     s32 targetReached = 0;
 
     if (target < *value) {
@@ -77,11 +80,26 @@ s32 f32_step_down_towards(f32* value, f32 target, f32 step) {
         }
     }
     return targetReached;
+#else
+    f32 fValue = *value;
+    s32 targetReached = 0;
+
+    if (target < fValue) {
+        fValue -= step;
+        if (fValue <= target) {
+            fValue = target;
+            targetReached = 1;
+        }
+        *value = fValue;
+    }
+    return targetReached;
+#endif
 }
 
 s32 s32_step_up_towards(s32* value, s32 target, s32 step) {
+#if 0
     s32 targetReached = 0;
-
+    
     if (*value < target) {
         *value = *value + step;
         targetReached = 0;
@@ -91,9 +109,25 @@ s32 s32_step_up_towards(s32* value, s32 target, s32 step) {
         }
     }
     return targetReached;
+#else
+    s32 sValue = *value;
+    s32 targetReached = 0;
+    
+    if (sValue < target) {
+        sValue = sValue + step;
+        targetReached = 0;
+        if (sValue >= target) {
+            sValue = target;
+            targetReached = 1;
+        }
+        *value = sValue;
+    }
+    return targetReached;
+#endif
 }
 
 s32 s32_step_down_towards(s32* value, s32 target, s32 step) {
+#if 0
     s32 targetReached = 0;
 
     if (target < *value) {
@@ -105,9 +139,24 @@ s32 s32_step_down_towards(s32* value, s32 target, s32 step) {
         }
     }
     return targetReached;
+#else
+    s32 sValue = *value;
+    s32 targetReached = 0;
+
+    if (target < sValue) {
+        sValue = sValue - step;
+        if (target >= sValue) {
+            sValue = target;
+            targetReached = 1;
+        }
+        *value = sValue;
+    }
+    return targetReached;
+#endif
 }
 
 s32 s16_step_up_towards(s16* value, s16 target, s16 step) {
+#if 0
     s32 targetReached = 0;
 
     if (*value < target) {
@@ -118,30 +167,48 @@ s32 s16_step_up_towards(s16* value, s16 target, s16 step) {
         }
     }
     return targetReached;
+#else
+    s16 sValue = *value;
+    s32 targetReached = 0;
+
+    if (sValue < target) {
+        sValue = sValue + step;
+        if (sValue >= target) {
+            sValue = target;
+            targetReached = 1;
+        }
+        *value = sValue;
+    }
+    return targetReached;
+#endif
 }
 
 s32 u16_step_up_towards(u16* value, u16 target, u16 step) {
+    u16 uValue = *value;
     s32 targetReached = 0;
 
-    if (*value < target) {
-        *value += step;
-        if (*value >= target) {
-            *value = target;
+    if (uValue < target) {
+        uValue += step;
+        if (uValue >= target) {
+            uValue = target;
             targetReached = 1;
         }
+        *value = uValue;
     }
     return targetReached;
 }
 
 s32 s16_step_down_towards(s16* value, s16 target, s16 step) {
+    s16 sValue = *value;
     s32 targetReached = 0;
 
-    if (target < *value) {
-        *value -= step;
-        if (target >= *value) {
-            *value = target;
+    if (target < sValue) {
+        sValue -= step;
+        if (target >= sValue) {
+            sValue = target;
             targetReached = 1;
         }
+        *value = sValue;
     }
     return targetReached;
 }
@@ -162,6 +229,7 @@ s32 u16_step_down_towards(u16* value, s32 target, s32 step) {
     return targetReached;
 }
 
+#if 0
 UNUSED s32 f32_step_up_towards_alternate(f32* value, f32 target, f32* step) {
     s32 targetReached = 0;
 
@@ -239,34 +307,38 @@ UNUSED s32 s16_step_down_towards_alternate(s16* value, s16 target, s16* step) {
     }
     return targetReached;
 }
+#endif
 
 s32 s16_step_towards(s16* value, s16 target, s16 step) {
+    s16 sValue = *value;
     s32 targetReached = 0;
 
-    if (*value < target) {
+    if (sValue < target) {
         if (step >= 0) {
-            *value += step;
+            sValue += step;
         } else {
-            *value -= step;
+            sValue -= step;
         }
-        if (*value >= target) {
-            *value = target;
+        if (sValue >= target) {
+            sValue = target;
             targetReached = 1;
         }
-    } else if (target < *value) {
+    } else if (target < sValue) {
         if (step >= 0) {
-            *value -= step;
+            sValue -= step;
         } else {
-            *value += step;
+            sValue += step;
         }
-        if (target >= *value) {
-            *value = target;
+        if (target >= sValue) {
+            sValue = target;
             targetReached = 1;
         }
     }
+    *value = sValue;
     return targetReached;
 }
 
+#if 0
 UNUSED s32 s32_step_towards(s32* value, s32 target, s32 step) {
     s32 temp_v0;
     s32 targetReached;
@@ -297,31 +369,34 @@ UNUSED s32 s32_step_towards(s32* value, s32 target, s32 step) {
     }
     return targetReached;
 }
+#endif
 
 s32 f32_step_towards(f32* value, f32 target, f32 step) {
+    f32 fValue = *value;
     s32 targetReached = 0;
 
-    if (*value < target) {
+    if (fValue < target) {
         if (step >= 0.0f) {
-            *value += step;
+            fValue += step;
         } else {
-            *value -= step;
+            fValue -= step;
         }
-        if (target <= *value) {
-            *value = target;
+        if (target <= fValue) {
+            fValue = target;
             targetReached = 1;
         }
-    } else if (target < *value) {
+    } else if (target < fValue) {
         if (step >= 0.0f) {
-            *value -= step;
+            fValue -= step;
         } else {
-            *value += step;
+            fValue += step;
         }
-        if (*value <= target) {
-            *value = target;
+        if (fValue <= target) {
+            fValue = target;
             targetReached = 1;
         }
     }
+    *value = fValue;
     return targetReached;
 }
 
@@ -345,12 +420,17 @@ Vec3f* vec3f_set_xyz(Vec3f arg0, f32 arg1, f32 arg2, f32 arg3) {
     return (Vec3f*) &arg0;
 }
 
+#include <kos.h>
 Vec3f* MK64_vec3f_normalize(Vec3f dest) {
+#if 0
     f32 invsqrt = 1.0f / sqrtf(dest[0] * dest[0] + dest[1] * dest[1] + dest[2] * dest[2]);
 
     dest[0] = dest[0] * invsqrt;
     dest[1] = dest[1] * invsqrt;
     dest[2] = dest[2] * invsqrt;
+    return (Vec3f*) &dest;
+#endif
+    vec3f_normalize(dest[0],dest[1],dest[2]);
     return (Vec3f*) &dest;
 }
 
@@ -363,6 +443,7 @@ Vec3f* vec3f_cross_product(Vec3f dest, Vec3f arg1, Vec3f arg2) {
     return (Vec3f*) &dest;
 }
 
+#if 0
 UNUSED s32 is_within_distance_2d(f32 x1, f32 y1, f32 x2, f32 y2, f32 distance) {
     f32 x;
     f32 y;
@@ -375,11 +456,13 @@ UNUSED s32 is_within_distance_2d(f32 x1, f32 y1, f32 x2, f32 y2, f32 distance) {
     }
     return ret;
 }
+#endif
 
 s32 func_80041658(f32 arg0, f32 arg1) {
     return -atan2s(arg0, arg1) & 0xFFFF;
 }
 
+#if 0
 UNUSED s32 func_80041680(f32 arg0, f32 arg1) {
     return atan2s(arg1, arg0);
 }
@@ -387,6 +470,7 @@ UNUSED s32 func_80041680(f32 arg0, f32 arg1) {
 UNUSED s32 func_800416AC(f32 arg0, f32 arg1) {
     return atan2s(arg1, arg0);
 }
+#endif
 
 f32 func_800416D8(f32 x, f32 z, u16 angle) {
     f32 cosAngle;
@@ -452,12 +536,13 @@ s32 func_80041924(Collision* arg0, Vec3f arg1) {
     return ret;
 }
 
-bool is_particle_on_screen(Vec3f arg0, Camera* arg1, u16 arg2) {
+s32 is_particle_on_screen(Vec3f arg0, Camera* arg1, u16 arg2) {
     u16 temp_t9;
     s32 ret;
 
     ret = false;
-    temp_t9 = (get_angle_between_xy(arg1->pos[0], arg0[0], arg1->pos[2], arg0[2]) + (arg2 / 2)) - arg1->rot[1];
+//    temp_t9 = (get_angle_between_xy(arg1->pos[0], arg0[0], arg1->pos[2], arg0[2]) + (arg2 / 2)) - arg1->rot[1];
+    temp_t9 = (get_angle_between_xy(arg1->pos[0], arg0[0], arg1->pos[2], arg0[2]) + (arg2 >> 1)) - arg1->rot[1];
     if ((temp_t9 >= 0) && (arg2 >= temp_t9)) {
         ret = true;
     }
@@ -547,6 +632,7 @@ void mtxf_scale_x_y(Mat4 dest, f32 scale) {
     dest[1][1] = scale;
 }
 
+#if 0
 UNUSED void mtxf_rotate_z_scale_x_y(Mat4 dest, u16 angle, f32 scale) {
     f32 sin_theta = sins(angle);
     f32 cos_theta = coss(angle) * scale;
@@ -568,6 +654,7 @@ UNUSED void mtxf_rotate_z_scale_x_y(Mat4 dest, u16 angle, f32 scale) {
     dest[2][2] = 1.0f;
     dest[3][3] = 1.0f;
 }
+#endif
 
 /**
  * @brief arg1 and arg2 are s32's into floats?!?
@@ -637,7 +724,7 @@ void set_matrix_hud_screen(void) {
 }
 
 // void convert_to_fixed_point_matrix(Mtx*, Mat4);
-
+#if 0
 UNUSED void func_80041F54(s32 x, s32 y) {
     Mat4 matrix;
 
@@ -692,6 +779,7 @@ UNUSED void func_800421FC(s32 x, s32 y, f32 scale) {
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxHud[gMatrixHudCount++]),
               G_MTX_NOPUSH | G_MTX_MUL | G_MTX_MODELVIEW);
 }
+#endif
 
 void func_80042330(s32 x, s32 y, u16 angle, f32 scale) {
     Mat4 matrix;
@@ -701,6 +789,7 @@ void func_80042330(s32 x, s32 y, u16 angle, f32 scale) {
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
 }
 
+#if 0
 UNUSED void func_800423F0(Mat4 arg0, u16 arg1, u16 arg2, u16 arg3) {
     f32 sp3C;
     f32 temp_f20;
@@ -750,6 +839,7 @@ UNUSED void func_8004252C(Mat4 arg0, u16 arg1, u16 arg2) {
     arg0[1][2] = sp2C * cos_theta_y;
     arg0[2][2] = sp28 * cos_theta_y;
 }
+#endif
 
 void mtxf_set_matrix_transformation(Mat4 transformMatrix, Vec3f translationVector, Vec3su rotationVector,
                                     f32 scalingFactor) {
@@ -839,6 +929,7 @@ void mtxf_set_matrix_gObjectList(s32 objectIndex, Mat4 transformMatrix) {
     transformMatrix[3][3] = 1.0f;
 }
 
+#if 0
 UNUSED void mtxf_mult_first_column(Mat4 arg0, f32 arg1) {
     arg0[0][0] *= arg1;
     arg0[1][0] *= arg1;
@@ -856,6 +947,7 @@ UNUSED void mtxf_mult_third_column(Mat4 arg0, f32 arg1) {
     arg0[1][2] *= arg1;
     arg0[2][2] *= arg1;
 }
+#endif
 
 void set_transform_matrix(Mat4 dest, Vec3f orientationVector, Vec3f positionVector, u16 rotationAngle,
                           f32 scaleFactor) {
@@ -887,6 +979,7 @@ void set_transform_matrix(Mat4 dest, Vec3f orientationVector, Vec3f positionVect
     dest[3][3] = 1.0f;
 }
 
+#if 0
 // aplly to position a rotation and put in dest
 UNUSED void vec3f_rotate(Vec3f dest, Vec3f pos, Vec3s rot) {
     f32 sp74;
@@ -925,6 +1018,7 @@ UNUSED void vec3f_rotate(Vec3f dest, Vec3f pos, Vec3s rot) {
     dest[1] = sp70 + sp64 + sp58;
     dest[2] = sp6C + sp60 + sp54;
 }
+#endif
 
 // apply to position a rotation x y only and put in dest
 void vec3f_rotate_x_y(Vec3f dest, Vec3f pos, Vec3s rot) {
@@ -963,7 +1057,7 @@ void rsp_set_matrix_transformation(Vec3f translate, Vec3su orientation, f32 scal
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxHud[gMatrixHudCount++]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
 }
-
+#if 0
 UNUSED void rsp_set_matrix_diff_translation_scale(Vec3f pos1, Vec3f pos2, f32 scale) {
     Mat4 matrix;
 
@@ -972,7 +1066,7 @@ UNUSED void rsp_set_matrix_diff_translation_scale(Vec3f pos1, Vec3f pos2, f32 sc
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxHud[gMatrixHudCount++]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
 }
-
+#endif
 void rsp_set_matrix_transformation_inverted_x_y_orientation(Vec3f arg0, Vec3su arg1, f32 arg2) {
     Mat4 matrix;
     Vec3su orientation;

@@ -76,6 +76,59 @@ uintptr_t set_segment_base_addr(s32 segment, void* addr) {
 void* get_segment_base_addr(s32 segment) {
     return (void*) (gSegmentTable[segment]);
 }
+
+extern const char etext[];
+
+__attribute__((noinline)) void stacktrace() {
+	uint32 sp=0, pr=0;
+	__asm__ __volatile__(
+		"mov	r15,%0\n"
+		"sts	pr,%1\n"
+		: "+r" (sp), "+r" (pr)
+		:
+		: );
+	printf("%s\n", "MARIO KART 64");
+	printf("Stack trace: %08X ", (uintptr_t)pr);
+	int found = 0;
+	if(!(sp & 3) && sp > 0x8c000000 && sp < _arch_mem_top) {
+		char** sp_ptr = (char**)sp;
+		for (int so = 0; so < 16384; so++) {
+			if ((uintptr_t)(&sp_ptr[so]) >= _arch_mem_top) {
+				printf("(@@%08X) ", (uintptr_t)&sp_ptr[so]);
+				break;
+			}
+			if (sp_ptr[so] > (char*)0x8c000000 && sp_ptr[so] < etext) {
+				uintptr_t addr = (uintptr_t)(sp_ptr[so]);
+				// candidate return pointer
+				if (addr & 1) {
+					// dbglog(DBG_CRITICAL, "Stack trace: %p (@%p): misaligned\n", (void*)sp_ptr[so], &sp_ptr[so]);
+					continue;
+				}
+
+				uint16_t* instrp = (uint16_t*)addr;
+
+				uint16_t instr = instrp[-2];
+				// BSR or BSRF or JSR @Rn ?
+				if (((instr & 0xf000) == 0xB000) || ((instr & 0xf0ff) == 0x0003) || ((instr & 0xf0ff) == 0x400B)) {
+					printf("%08X ", (uintptr_t)instrp);
+					if (found++ > 24) {
+						printf("(@%08X) ", (uintptr_t)&sp_ptr[so]);
+						break;
+					}
+				} else {
+					// dbglog(DBG_CRITICAL, "%p:%04X ", instrp, instr);
+				}
+			} else {
+				// dbglog(DBG_CRITICAL, "Stack trace: %p (@%p): out of range\n", (void*)sp_ptr[so], &sp_ptr[so]);
+			}
+		}
+		printf("end\n");
+	} else {
+		printf("(@%08X)\n", (uintptr_t)sp);
+	}
+}
+
+
 /**
  * @brief converts an RSP segment + offset address to a normal memory address
  */
@@ -96,6 +149,7 @@ void* segmented_to_virtual(const void* addr) {
     if(segment > 0xf) {
         printf("%08x converts to bad segment %02x %08x\n", (uintptr_t)addr, segment, (uintptr_t)uip_addr);
             printf("\n");
+            stacktrace();
 //        arch_stk_trace(0);
             printf("\n");
             while(1){}

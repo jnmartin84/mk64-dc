@@ -35,6 +35,8 @@
 #include "cpu_vehicles_camera_path.h"
 #include "menu_items.h"
 
+#define PLAYER_SOUND_DEBUGGING 1
+
 s32 AosSendMesg( OSMesgQueue *mq,  OSMesg msg,  s32 flag);
 s32 AosRecvMesg( OSMesgQueue *mq,  OSMesg *msg,  s32 flag);
 
@@ -177,20 +179,36 @@ void func_800C13F0(void) {
 
 volatile s32 gPresetId = 0;
 volatile s32 gPresetSent = 0;
+extern volatile u8 gAudioResetStatus;
+extern u8 gAudioResetPresetIdToLoad;
+extern s32 gAudioResetFadeOutFramesLeft;
 
 void audio_reset_session_eu(OSMesg presetId) {
 //    OSMesg mesg;
 //    AosRecvMesg(D_800EA3B4, &mesg, 0);
+//    AosSendMesg(D_800EA3B0, presetId, 0);
+//    AosRecvMesg(D_800EA3B4, &mesg, 1);
+//    if (mesg != presetId) {
+//        AosRecvMesg(D_800EA3B4, &mesg, 1);
+//    }
+
+//    OSMesg mesg;
+//    AosRecvMesg(D_800EA3B4, &mesg, 0);
     gPresetId = (s32)presetId;
     gPresetSent = 1;
-  //  while(gPresetSent) {}
+ 
+//    AosSendMesg(D_800EA3B0, presetId, 1);
+
+//    gAudioResetStatus = 5;
+//    thd_sleep(100);
+ //  while(gPresetSent) {}
 //printf("d")
     //  AosSendMesg(D_800EA3B0, presetId, 0);
     //gPresetId;
-    //AosRecvMesg(D_800EA3B4, &mesg, 1);
-    //if (mesg != presetId) {
-     //   AosRecvMesg(D_800EA3B4, &mesg, 1);
-    //}
+//    AosRecvMesg(D_800EA3B4, &mesg, 1);
+//    if (mesg != presetId) {
+//        AosRecvMesg(D_800EA3B4, &mesg, 1);
+//    }
 }
 
 f32 func_800C1480(u8 bank, u8 soundId) {
@@ -910,7 +928,7 @@ void func_800C2A2C(u32 cmd) {
             seqId = cmd & 0xFF;
             subArgs = (cmd & 0xFF00) >> 8;
             D_800EA1C0 = subArgs;
-            audio_reset_session_eu((void*)(u32)seqId);
+//            audio_reset_session_eu((void*)(u32)seqId);
             D_800EA1F4[0] = seqId;
             func_800CBBE8(0x46020000, subArgs);
             func_800C5C40();
@@ -1231,6 +1249,7 @@ void func_800C400C(void) {
     }
 }
 
+#if 0
 // Appears to be an unused combo of sound_banks_enable and sound_banks_disable
 void func_800C4084(u16 bankMask) {
     u8 bank = 0;
@@ -1244,6 +1263,7 @@ void func_800C4084(u16 bankMask) {
         bankMask = bankMask >> 1;
     }
 }
+#endif
 
 void func_800C40F0(u8 arg0) {
     D_800EA1C4 &= ((1 << (arg0)) ^ (u16) -1);
@@ -1257,20 +1277,17 @@ void play_sound(u32 soundBits, Vec3f* position, u8 cameraId, f32* arg3, f32* arg
     u8 bank = 0;
     struct Sound* temp_v0 = NULL;
 
-    //printf("soundbits %08x\n", soundBits);
-
     bank = soundBits >> 0x1C;
-    //printf("bank %08x\n", bank);
 
     if (sSoundBankDisabled[bank] == 0) {
-        temp_v0 = &sSoundRequests[sSoundRequestCount];
-        temp_v0->soundBits = soundBits;
-        temp_v0->position = position;
-        temp_v0->cameraId = cameraId;
-        temp_v0->unk0C = arg3;
-        temp_v0->unk10 = arg4;
-        temp_v0->unk14 = arg5;
-        sSoundRequestCount += 1;
+    temp_v0 = &sSoundRequests[sSoundRequestCount];
+    temp_v0->soundBits = soundBits;
+    temp_v0->position = position;
+    temp_v0->cameraId = cameraId;
+    temp_v0->unk0C = arg3;
+    temp_v0->unk10 = arg4;
+    temp_v0->unk14 = arg5;
+    sSoundRequestCount += 1;
     }
 }
 
@@ -1435,8 +1452,7 @@ struct ActiveSfx {
     u32 priority;
     u8 soundIndex;
 };
-#include <stdio.h>
-#include <kos/thread.h>
+
 #define AUDIO_MK_CMD(b0,b1,b2,b3) ((((b0) & 0xFF) << 0x18) | (((b1) & 0xFF) << 0x10) | (((b2) & 0xFF) << 0x8) | (((b3) & 0xFF) << 0))
 void func_800C4888(u8 bankId) {
     u8 j = 0;
@@ -1464,8 +1480,6 @@ void func_800C4888(u8 bankId) {
 
     k = 0;
     while (soundIndex != 0xFF) {
-//        printf(".\n");
-//        thd_pass();
         if ((sSoundBanks[bankId][soundIndex].soundStatus == 1) && ((sSoundBanks[bankId][soundIndex].soundBits & 0x08000000) == 0x08000000)) {
             sSoundBanks[bankId][soundIndex].freshness -= 1;
         }
@@ -3003,6 +3017,7 @@ void func_800C92CC(u8 playerId, u32 soundBits) {
                                     (u8) var_s0, soundBits);
             if (temp_v0 != NULL) {
                 temp_v0->unk34 = 170.0f;
+#if PLAYER_SOUND_DEBUGGING
                 if (((gPlayers[playerId].effects & 0x40000000) == 0x40000000) && ((s32) D_800E9F2C[playerId] >= 0x1F)) {
                     play_sound((gPlayers[playerId].characterId * 0x10) + soundBits, &temp_v0->unk18, var_s0,
                                &D_800EA150, &D_800EA1D4, (s8*) &D_800EA06C[playerId].unk0C);
@@ -3010,6 +3025,7 @@ void func_800C92CC(u8 playerId, u32 soundBits) {
                     play_sound((gPlayers[playerId].characterId * 0x10) + soundBits, &temp_v0->unk18, var_s0,
                                &temp_v0->unk2C, &D_800EA1D4, (s8*) &D_800EA06C[playerId].unk0C);
                 }
+#endif
             }
         }
     }
@@ -3099,9 +3115,11 @@ void func_800C94A4(u8 playerId) {
                         }
                         break;
                 }
+#if PLAYER_SOUND_DEBUGGING                
                 play_sound(var_a0, &D_800E9F7C[playerId].pos, playerId, &D_800E9F7C[playerId].unk_0C,
                            &D_800E9F7C[playerId].unk_10, (s8*) &D_800E9F7C[playerId].unk_14);
-                break;
+#endif
+                           break;
             default:
                 break;
         }
@@ -3380,9 +3398,11 @@ void func_800CA49C(u8 arg0) {
 
 void func_800CA59C(u8 playerId) {
     if ((D_800EA0EC[playerId] == 0) && (D_800EA108 == 0)) {
+#if PLAYER_SOUND_DEBUGGING
         play_sound((gPlayers[playerId].characterId * 0x10) + 0x29008001, &D_800E9F7C[playerId].pos, playerId,
                    &D_800EA1D4, &D_800EA1D4, (s8*) &D_800E9F7C[playerId].unk_14);
-        D_800EA164 = 1;
+#endif
+                   D_800EA164 = 1;
         if ((s32) D_800EA1C0 >= 2) {
             func_800C8F80(playerId, 0x0100FF2C);
         } else {
@@ -3408,9 +3428,11 @@ void func_800CA59C(u8 playerId) {
 void func_800CA730(u8 arg0) {
     if (D_800EA0EC[arg0] == 0) {
         if ((D_800EA108 == 0) && (D_800EA10C[arg0] != 0)) {
+#if PLAYER_SOUND_DEBUGGING
             play_sound(gPlayers[arg0].characterId * 0x10 + SOUND_ARG_LOAD(0x29, 0x00, 0x80, 0x08),
                        &D_800E9F7C[arg0].pos, arg0, &D_800EA1D4, &D_800EA1D4, (s8*) &D_800E9F7C[arg0].unk_14);
-            if (D_800EA10C[arg0] != 0) {
+#endif
+                       if (D_800EA10C[arg0] != 0) {
                 if ((s32) D_800EA1C0 >= 2) {
                     func_800C9018(arg0, SOUND_ARG_LOAD(0x01, 0x00, 0xFF, 0x2C));
                 } else {

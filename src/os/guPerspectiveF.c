@@ -31,7 +31,11 @@ void guPerspectiveF(float mf[4][4], u16* perspNorm, float fovy, float aspect, fl
 }
 
 void guPerspective(Mtx* m, u16* perspNorm, float fovy, float aspect, float near, float far, float scale) {
+#ifndef GBI_FLOATS
     float mat[4][4];
     guPerspectiveF(mat, perspNorm, fovy, aspect, near, far, scale);
     guMtxF2L(mat, m);
+#else
+    guPerspectiveF(m->m, perspNorm, fovy, aspect, near, far, scale);
+#endif
 }

@@ -155,15 +155,12 @@ void func_8006EEE8(s32 courseId) {
 extern u8 __attribute__((aligned(32))) backing_gCourseOutline[0x15][128*96/2];
 void func_8006EF60(void) {
     s32 i;
-    // `huh`'s and `i`'s types have to differ, for some reason
-    s16 huh;
-    u8* wut;
 
-    wut = (u8*) &gMenuCompressedBuffer[0];//0x3FFFC000];
-    // clang-format off
-    // God forgive me for my sins...
-    huh = 0x14; if (0) {} for (i = 0; i < huh; i++) { D_8018D248[i] = dma_copy_base_misc_textures(gCourseOutlineTextures[i], backing_gCourseOutline[i], D_800E5520[i], D_800E5520[i]); wut += D_800E5520[i]; }
-    // clang-format on
+    for (i = 0; i < 0x14; i++) {
+        D_8018D248[i] = dma_copy_base_misc_textures(
+            gCourseOutlineTextures[i], backing_gCourseOutline[i], 
+            D_800E5520[i], D_800E5520[i]);
+    }
 }
 
 void gfx_texture_cache_invalidate(void *arg);
@@ -537,7 +534,7 @@ void reset_all_kinds_of_stuff(void) {
     D_80165804 = 0;
     D_801657FC = 0;
     D_8018D174 = D_8018D17C = D_8018D16C = D_8018D184 = D_8018D18C = -1;
-    player = gPlayerOne;
+    player = gPlayers;//One;
     for (i = 0; i < NUM_PLAYERS; i++) {
         D_8018D0F0[i] = D_8018D050[i] = -32.0f;
         D_8018CE10[i].unk_04[0] = D_8018CE10[i].unk_04[1] = D_8018CE10[i].unk_04[2] = 0.0f;

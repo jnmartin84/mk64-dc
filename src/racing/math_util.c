@@ -46,6 +46,7 @@ s32 render_set_position(Mat4 arg0, s32 arg1) {
     if (gMatrixObjectCount >= MTX_OBJECT_POOL_SIZE) {
         return 0;
     }
+
     mtxf_to_mtx(&gGfxPool->mtxObject[gMatrixObjectCount], arg0);
     switch (arg1) { /* irregular */
         case 0:
@@ -588,9 +589,10 @@ void mtxf_translate_vec3f_mat3(Vec3f pos, Mat3 mat) {
     pos[1] = new_y;
     pos[2] = new_z;
 }
-
+#include <kos.h>
 // translate the vector with a matrix (with a matrix 4x4)
 void mtxf_translate_vec3f_mat4(Vec3f pos, Mat4 mat) {
+#if 0
     f32 new_x;
     f32 new_y;
     f32 new_z;
@@ -602,6 +604,11 @@ void mtxf_translate_vec3f_mat4(Vec3f pos, Mat4 mat) {
     pos[0] = new_x;
     pos[1] = new_y;
     pos[2] = new_z;
+#else
+    pos[0] = fipr(mat[0][0],mat[0][1],mat[0][2],0,pos[0],pos[1],pos[2],0);
+    pos[1] = fipr(mat[1][0],mat[1][1],mat[1][2],0,pos[0],pos[1],pos[2],0);
+    pos[2] = fipr(mat[2][0],mat[2][1],mat[2][2],0,pos[0],pos[1],pos[2],0);
+#endif
 }
 
 UNUSED void func_802B64B0(UNUSED s32 arg0, UNUSED s32 arg1, UNUSED s32 arg2, UNUSED s32 arg3) {
@@ -684,6 +691,7 @@ void calculate_orientation_matrix(Mat3 dest, f32 arg1, f32 arg2, f32 arg3, s16 r
     dest[2][2] = (mtx_rot_y[2][0] * matrix[0][2]) + (mtx_rot_y[2][1] * matrix[1][2]) + (mtx_rot_y[2][2] * matrix[2][2]);
 }
 
+#if 0
 // include in calculate_orientation_matrix
 UNUSED void func_802B68F8(Mat3 matrix, f32 arg1, f32 arg2, f32 arg3) {
     s32 i, j;
@@ -714,6 +722,7 @@ UNUSED void func_802B68F8(Mat3 matrix, f32 arg1, f32 arg2, f32 arg3) {
         calculate_rotation_matrix(matrix, a, b, c, d);
     }
 }
+#endif
 
 void calculate_rotation_matrix(Mat3 destMatrix, s16 rotationAngle, f32 rotationX, f32 rotationY, f32 rotationZ) {
     f32 sinValue;
@@ -722,7 +731,7 @@ void calculate_rotation_matrix(Mat3 destMatrix, s16 rotationAngle, f32 rotationX
     f32 temp_f10;
     f32 temp_f2;
     f32 temp;
-    UNUSED s32 pad[2];
+//    UNUSED s32 pad[2];
 
     sinValue = sins((u16) rotationAngle);
     cossValue = coss((u16) rotationAngle);
@@ -819,7 +828,104 @@ void func_802B6D58(Mat4 arg0, Vec3f arg1, Vec3f arg2) {
     arg0[3][3] = 1.0f;
 }
 
+// thanks @FalcoGirgis
+inline static void fast_mat_store(matrix_t* mtx) {
+	asm volatile(
+		R"(
+			fschg
+			add            #64-8,%[mtx]
+			fmov.d    xd14,@%[mtx]
+			add            #-32,%[mtx]
+			pref    @%[mtx]
+			add         #32,%[mtx]
+			fmov.d    xd12,@-%[mtx]
+			fmov.d    xd10,@-%[mtx]
+			fmov.d    xd8,@-%[mtx]
+			fmov.d    xd6,@-%[mtx]
+			fmov.d    xd4,@-%[mtx]
+			fmov.d    xd2,@-%[mtx]
+			fmov.d    xd0,@-%[mtx]
+			fschg
+		)"
+		: [mtx] "+&r"(mtx), "=m"(*mtx)
+		:
+		:);
+}
+
+// thanks @FalcoGirgis
+inline static void fast_mat_load(const matrix_t* mtx) {
+	asm volatile(
+		R"(
+			fschg
+			fmov.d    @%[mtx],xd0
+			add        #32,%[mtx]
+			pref    @%[mtx]
+			add        #-(32-8),%[mtx]
+			fmov.d    @%[mtx]+,xd2
+			fmov.d    @%[mtx]+,xd4
+			fmov.d    @%[mtx]+,xd6
+			fmov.d    @%[mtx]+,xd8
+			fmov.d    @%[mtx]+,xd10
+			fmov.d    @%[mtx]+,xd12
+			fmov.d    @%[mtx]+,xd14
+			fschg
+		)"
+		: [mtx] "+r"(mtx)
+		:
+		:);
+}
+
+// thanks @FalcoGirgis
+inline static void mat_load_apply(const matrix_t* matrix1, const matrix_t* matrix2) {
+	unsigned int prefetch_scratch;
+
+	asm volatile("mov %[bmtrx], %[pref_scratch]\n\t"
+				 "add #32, %[pref_scratch]\n\t"
+				 "fschg\n\t"
+				 "pref @%[pref_scratch]\n\t"
+				 // back matrix
+				 "fmov.d @%[bmtrx]+, XD0\n\t"
+				 "fmov.d @%[bmtrx]+, XD2\n\t"
+				 "fmov.d @%[bmtrx]+, XD4\n\t"
+				 "fmov.d @%[bmtrx]+, XD6\n\t"
+				 "pref @%[fmtrx]\n\t"
+				 "fmov.d @%[bmtrx]+, XD8\n\t"
+				 "fmov.d @%[bmtrx]+, XD10\n\t"
+				 "fmov.d @%[bmtrx]+, XD12\n\t"
+				 "mov %[fmtrx], %[pref_scratch]\n\t"
+				 "add #32, %[pref_scratch]\n\t"
+				 "fmov.d @%[bmtrx], XD14\n\t"
+				 "pref @%[pref_scratch]\n\t"
+				 // front matrix
+				 // interleave loads and matrix multiply 4x4
+				 "fmov.d @%[fmtrx]+, DR0\n\t"
+				 "fmov.d @%[fmtrx]+, DR2\n\t"
+				 "fmov.d @%[fmtrx]+, DR4\n\t"
+				 "ftrv XMTRX, FV0\n\t"
+
+				 "fmov.d @%[fmtrx]+, DR6\n\t"
+				 "fmov.d @%[fmtrx]+, DR8\n\t"
+				 "ftrv XMTRX, FV4\n\t"
+
+				 "fmov.d @%[fmtrx]+, DR10\n\t"
+				 "fmov.d @%[fmtrx]+, DR12\n\t"
+				 "ftrv XMTRX, FV8\n\t"
+
+				 "fmov.d @%[fmtrx], DR14\n\t"
+				 "fschg\n\t"
+				 "ftrv XMTRX, FV12\n\t"
+				 "frchg\n"
+				 : [bmtrx] "+&r"((unsigned int) matrix1), [fmtrx] "+r"((unsigned int) matrix2),
+				   [pref_scratch] "=&r"(prefetch_scratch)
+				 : // no inputs
+				 : "fr0", "fr1", "fr2", "fr3", "fr4", "fr5", "fr6", "fr7", "fr8", "fr9", "fr10", "fr11", "fr12", "fr13",
+				   "fr14", "fr15");
+}
+
 void mtxf_multiplication(Mat4 dest, Mat4 mat1, Mat4 mat2) {
+    mat_load_apply(mat2, mat1);
+    fast_mat_store(dest);
+#if 0
     Mat4 product;
     product[0][0] =
         (mat1[0][0] * mat2[0][0]) + (mat1[0][1] * mat2[1][0]) + (mat1[0][2] * mat2[2][0]) + (mat1[0][3] * mat2[3][0]);
@@ -854,6 +960,88 @@ void mtxf_multiplication(Mat4 dest, Mat4 mat1, Mat4 mat2) {
     product[3][3] =
         (mat1[3][0] * mat2[0][3]) + (mat1[3][1] * mat2[1][3]) + (mat1[3][2] * mat2[2][3]) + (mat1[3][3] * mat2[3][3]);
     mtxf_copy_n_element((s32*) dest, (s32*) product, 16);
+#endif
+/*     dest[0][0] = fipr(mat1[0][0], mat1[0][1], mat1[0][2], mat1[0][3],
+        mat2[0][0], mat2[1][0], mat2[2][0], mat1[3][0]); 
+
+    dest[0][1] = fipr(mat1[0][0], mat1[0][1], mat1[0][2], mat1[0][3],
+        mat2[0][1], mat2[1][1], mat2[2][1], mat1[3][1]); 
+
+    dest[0][2] = fipr(mat1[0][0], mat1[0][1], mat1[0][2], mat1[0][3],
+        mat2[0][2], mat2[1][2], mat2[2][2], mat1[3][2]); 
+
+    dest[0][3] = fipr(mat1[0][0], mat1[0][1], mat1[0][2], mat1[0][3],
+        mat2[0][3], mat2[1][3], mat2[2][3], mat1[3][3]); 
+
+    dest[1][0] = fipr(mat1[1][0], mat1[1][1], mat1[1][2], mat1[1][3],
+        mat2[0][0], mat2[1][0], mat2[2][0], mat1[3][0]); 
+
+    dest[1][1] = fipr(mat1[1][0], mat1[1][1], mat1[1][2], mat1[1][3],
+        mat2[0][1], mat2[1][1], mat2[2][1], mat1[3][1]); 
+
+    dest[1][2] = fipr(mat1[1][0], mat1[1][1], mat1[1][2], mat1[1][3],
+        mat2[0][2], mat2[1][2], mat2[2][2], mat1[3][2]); 
+
+    dest[1][3] = fipr(mat1[1][0], mat1[1][1], mat1[1][2], mat1[1][3],
+        mat2[0][3], mat2[1][3], mat2[2][3], mat1[3][3]); 
+
+    dest[2][0] = fipr(mat1[2][0], mat1[2][1], mat1[2][2], mat1[2][3],
+        mat2[0][0], mat2[1][0], mat2[2][0], mat1[3][0]); 
+
+    dest[2][1] = fipr(mat1[2][0], mat1[2][1], mat1[2][2], mat1[2][3],
+        mat2[0][1], mat2[1][1], mat2[2][1], mat1[3][1]); 
+
+    dest[2][2] = fipr(mat1[2][0], mat1[2][1], mat1[2][2], mat1[2][3],
+        mat2[0][2], mat2[1][2], mat2[2][2], mat1[3][2]); 
+
+    dest[2][3] = fipr(mat1[2][0], mat1[2][1], mat1[2][2], mat1[2][3],
+        mat2[0][3], mat2[1][3], mat2[2][3], mat1[3][3]); 
+
+    dest[3][0] = fipr(mat1[3][0], mat1[3][1], mat1[3][2], mat1[3][3],
+        mat2[0][0], mat2[1][0], mat2[2][0], mat1[3][0]); 
+
+    dest[3][1] = fipr(mat1[3][0], mat1[3][1], mat1[3][2], mat1[3][3],
+        mat2[0][1], mat2[1][1], mat2[2][1], mat1[3][1]); 
+
+    dest[3][2] = fipr(mat1[3][0], mat1[3][1], mat1[3][2], mat1[3][3],
+        mat2[0][2], mat2[1][2], mat2[2][2], mat1[3][2]); 
+
+    dest[3][3] = fipr(mat1[3][0], mat1[3][1], mat1[3][2], mat1[3][3],
+        mat2[0][3], mat2[1][3], mat2[2][3], mat1[3][3]);  */
+#if 0
+    dest[0][0] =
+        (mat1[0][0] * mat2[0][0]) + (mat1[0][1] * mat2[1][0]) + (mat1[0][2] * mat2[2][0]) + (mat1[0][3] * mat2[3][0]);
+    dest[0][1] =
+        (mat1[0][0] * mat2[0][1]) + (mat1[0][1] * mat2[1][1]) + (mat1[0][2] * mat2[2][1]) + (mat1[0][3] * mat2[3][1]);
+    dest[0][2] =
+        (mat1[0][0] * mat2[0][2]) + (mat1[0][1] * mat2[1][2]) + (mat1[0][2] * mat2[2][2]) + (mat1[0][3] * mat2[3][2]);
+    dest[0][3] =
+        (mat1[0][0] * mat2[0][3]) + (mat1[0][1] * mat2[1][3]) + (mat1[0][2] * mat2[2][3]) + (mat1[0][3] * mat2[3][3]);
+    dest[1][0] =
+        (mat1[1][0] * mat2[0][0]) + (mat1[1][1] * mat2[1][0]) + (mat1[1][2] * mat2[2][0]) + (mat1[1][3] * mat2[3][0]);
+    dest[1][1] =
+        (mat1[1][0] * mat2[0][1]) + (mat1[1][1] * mat2[1][1]) + (mat1[1][2] * mat2[2][1]) + (mat1[1][3] * mat2[3][1]);
+    dest[1][2] =
+        (mat1[1][0] * mat2[0][2]) + (mat1[1][1] * mat2[1][2]) + (mat1[1][2] * mat2[2][2]) + (mat1[1][3] * mat2[3][2]);
+    dest[1][3] =
+        (mat1[1][0] * mat2[0][3]) + (mat1[1][1] * mat2[1][3]) + (mat1[1][2] * mat2[2][3]) + (mat1[1][3] * mat2[3][3]);
+    dest[2][0] =
+        (mat1[2][0] * mat2[0][0]) + (mat1[2][1] * mat2[1][0]) + (mat1[2][2] * mat2[2][0]) + (mat1[2][3] * mat2[3][0]);
+    dest[2][1] =
+        (mat1[2][0] * mat2[0][1]) + (mat1[2][1] * mat2[1][1]) + (mat1[2][2] * mat2[2][1]) + (mat1[2][3] * mat2[3][1]);
+    dest[2][2] =
+        (mat1[2][0] * mat2[0][2]) + (mat1[2][1] * mat2[1][2]) + (mat1[2][2] * mat2[2][2]) + (mat1[2][3] * mat2[3][2]);
+    dest[2][3] =
+        (mat1[2][0] * mat2[0][3]) + (mat1[2][1] * mat2[1][3]) + (mat1[2][2] * mat2[2][3]) + (mat1[2][3] * mat2[3][3]);
+    dest[3][0] =
+        (mat1[3][0] * mat2[0][0]) + (mat1[3][1] * mat2[1][0]) + (mat1[3][2] * mat2[2][0]) + (mat1[3][3] * mat2[3][0]);
+    dest[3][1] =
+        (mat1[3][0] * mat2[0][1]) + (mat1[3][1] * mat2[1][1]) + (mat1[3][2] * mat2[2][1]) + (mat1[3][3] * mat2[3][1]);
+    dest[3][2] =
+        (mat1[3][0] * mat2[0][2]) + (mat1[3][1] * mat2[1][2]) + (mat1[3][2] * mat2[2][2]) + (mat1[3][3] * mat2[3][2]);
+    dest[3][3] =
+        (mat1[3][0] * mat2[0][3]) + (mat1[3][1] * mat2[1][3]) + (mat1[3][2] * mat2[2][3]) + (mat1[3][3] * mat2[3][3]);
+#endif
 }
 
 /**
@@ -866,6 +1054,9 @@ void mtxf_multiplication(Mat4 dest, Mat4 mat1, Mat4 mat2) {
  * and no crashes occur.
  */
 void mtxf_to_mtx(Mtx* dest, Mat4 src) {
+#ifdef GBI_FLOATS
+    memcpy(dest, src, sizeof(Mtx));
+#else
 #ifdef AVOID_UB
     // Avoid type-casting which is technically UB by calling the equivalent
     // guMtxF2L function. This helps little-endian systems, as well.
@@ -883,6 +1074,7 @@ void mtxf_to_mtx(Mtx* dest, Mat4 src) {
         *t0++ = GET_LOW_S16_OF_32(asFixedPoint);  // fraction part
     }
 #endif
+#endif
 }
 
 /**
@@ -892,9 +1084,32 @@ void mtxf_to_mtx(Mtx* dest, Mat4 src) {
  * the resulting angle is in range [0, 0x2000] (1/8 of a circle).
  */
 
+// if 2pi is a full circle
+// the output range is [0, 2pi / 8 -> pi/4] is the range
+
+//
+// only works for positive x
+#define approx_recip(x) (1.0f / sqrtf((x)*(x)))
+#define scaleatanval 10430.37806022f
+#define qprecip 1.27323951f
+#define quarterpi_i754 0.785398185253143310546875f
+#define halfpi_i754 1.57079637050628662109375f
+#define pi_i754 3.1415927410125732421875f
+#define twopi_i754 6.283185482025146484375f
+static inline float bump_atan2f(const float y, const float x)
+{
+	float abs_y = fabsf(y) + 1e-10f;
+	float absy_plus_absx = abs_y + fabsf(x);
+	float inv_absy_plus_absx = approx_recip(absy_plus_absx);
+	float angle = halfpi_i754 - copysignf(quarterpi_i754, x);
+	float r = (x - copysignf(abs_y, x)) * inv_absy_plus_absx;
+	angle += (0.1963f * r * r - 0.9817f) * r;
+	return copysignf(angle, y) * scaleatanval;
+}
+
 u16 atan2_lookup(f32 y, f32 x) {
     u16 ret;
-
+#if 1
     if (x == 0) {
         ret = gArctanTable[0];
     } else {
@@ -909,6 +1124,9 @@ u16 atan2_lookup(f32 y, f32 x) {
         }
     }
     return ret;
+#else
+    return (u16)bump_atan2f(y,x); 
+#endif
 }
 
 /**
@@ -957,6 +1175,7 @@ f32 atan2f(f32 arg0, f32 arg1) {
     return atan2s(arg0, arg1);
 }
 
+#if 0
 #ifndef NON_MATCHING // The decomp does not support fabs
 UNUSED f32 func_802B79F0(f32 arg0, f32 arg1) {
     f64 halfpi;
@@ -1007,14 +1226,17 @@ UNUSED u16 func_802B7B50(f32 arg0, f32 arg1) {
 UNUSED void func_802B7C18(f32 arg0) {
     atan2f(arg0, 1.0f);
 }
+#endif
 
 s16 func_802B7C40(f32 arg0) {
     return atan2s(arg0, 1.0f);
 }
 
+#if 0
 UNUSED void func_802B7C6C(f32 arg0) {
     atan2f(arg0, sqrtf(1.0 - (arg0 * arg0)));
 }
+#endif
 
 s16 func_802B7CA8(f32 arg0) {
     return atan2s(arg0, sqrtf(1.0 - (arg0 * arg0)));
@@ -1024,9 +1246,11 @@ f32 calculate_vector_angle_xy(f32 vectorX) {
     return atan2f(sqrtf(1.0 - (vectorX * vectorX)), vectorX);
 }
 
+#if 0
 UNUSED s16 func_802B7D28(f32 arg0) {
     return atan2f(sqrtf(1.0 - (f64) (arg0 * arg0)), arg0) * 32768.0f / M_PI;
 }
+#endif
 
 u16 random_u16(void) {
     u16 temp1, temp2;
@@ -1056,6 +1280,11 @@ u16 random_u16(void) {
     return gRandomSeed16;
 }
 
+//#define recip65535 0.00001526f
+
+//u16 random_int(u16 arg0) {
+//    return arg0 * (((f32) random_u16()) * recip65535);
+//}
 u16 random_int(u16 arg0) {
     return arg0 * (((f32) random_u16()) / 65535.0);
 }
@@ -1081,15 +1310,27 @@ void func_802B7F7C(Vec3f arg0, Vec3f arg1, Vec3s dest) {
 // if you want to use instrinsics...
 //    float farg0 = ((float)(arg0 / 16.0f) / 1024.0f) * F_PI * 0.5f;
 //    return sinf(farg0);
+//    return cosf(farg0);
+
+//#define gCosineTable (gSineTable + 0x400)
+#define TRIG_ARG_SCALE 0.00009587f
 
 f32 sins(u16 arg0) {
+#if 0
     return gSineTable[arg0 >> 4];
+#else
+    float farg0 = (float)arg0 * TRIG_ARG_SCALE;
+    return sinf(farg0);
+#endif
 }
 
-#define gCosineTable (gSineTable + 0x400)
-
 f32 coss(u16 arg0) {
+#if 0
     return gCosineTable[arg0 >> 4];
+#else
+    float farg0 = (float)arg0 * TRIG_ARG_SCALE;
+    return cosf(farg0);
+#endif
 }
 
 s32 is_visible_between_angle(u16 arg0, u16 arg1, u16 arg2) {
@@ -1124,7 +1365,7 @@ s32 is_visible_between_angle(u16 arg0, u16 arg1, u16 arg2) {
 f32 is_within_render_distance(Vec3f cameraPos, Vec3f objectPos, u16 orientationY, f32 minDistance, f32 fov,
                               f32 maxDistance) {
     u16 angleObject;
-    UNUSED u16 pad;
+//    UNUSED u16 pad;
     u16 temp_v0;
     f32 distanceX;
     f32 distance;
@@ -1132,7 +1373,7 @@ f32 is_within_render_distance(Vec3f cameraPos, Vec3f objectPos, u16 orientationY
     s32 plus_fov_angle;
     s32 minus_fov_angle;
     u16 temp;
-    UNUSED s32 pad2[3];
+//    UNUSED s32 pad2[3];
     u16 extended_fov = ((u16) fov * 0xB6);
 
     distanceX = objectPos[0] - cameraPos[0];
@@ -1184,6 +1425,7 @@ f32 is_within_render_distance(Vec3f cameraPos, Vec3f objectPos, u16 orientationY
     return -1.0f;
 }
 
+#if 0
 // No idea if arg1 is actually a Mat4 or not, but since this function is unused
 // its impossible to know with certainty either way, very close of set_course_lighting
 UNUSED void func_802B8414(uintptr_t addr, Mat4 arg1, s16 arg2, s16 arg3, s32 arg4) {
@@ -1211,9 +1453,10 @@ UNUSED void func_802B8414(uintptr_t addr, Mat4 arg1, s16 arg2, s16 arg3, s32 arg
         var_s0->l[0].l.dir[2] = sp3C[2];
     }
 }
+#endif
 
 void func_802B8614(Player* arg0) {
-    UNUSED f64 pad[4];
+//    UNUSED f64 pad[4];
     f64 corner1PosX = arg0->tyres[FRONT_RIGHT].pos[0];
     f64 corner1PosY = arg0->tyres[FRONT_RIGHT].baseHeight;
     f64 corner1PosZ = arg0->tyres[FRONT_RIGHT].pos[2];
@@ -1233,8 +1476,9 @@ void func_802B8614(Player* arg0) {
     f64 zValue = (corner0PosX - corner1PosX) * (corner3PosY - corner0PosY) -
                  (corner0PosY - corner1PosY) * (corner3PosX - corner0PosX);
 
-    f64 length = sqrtf((xValue * xValue) + (yValue * yValue) + (zValue * zValue));
+    f64 length = 1.0 / sqrtf((xValue * xValue) + (yValue * yValue) + (zValue * zValue));
 
+    // wtf?
     length = 0.0;
 
     if (length == 0.0) {

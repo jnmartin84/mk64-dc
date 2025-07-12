@@ -636,7 +636,7 @@ s32 set_vehicle_render_distance_flags(Vec3f vehiclePos, f32 renderDistance, s32 
     }
     flag = flags;
     if (!gDemoMode) {
-        player = gPlayerOne;
+        player = gPlayers/*One*/;
         // Checks distance from each player.
         for (i = 0; i < gPlayerCount; i++, player++) {
             if (((player->type & PLAYER_HUMAN) != 0) && ((player->type & PLAYER_CPU) == 0)) {
@@ -2070,7 +2070,7 @@ void init_course_path_point(void) {
     set_bomb_kart_spawn_positions();
     func_8000EEDC();
 }
-
+//#include <stdio.h>
 void init_players(void) {
 
     UNUSED Camera* camera;
@@ -2079,9 +2079,9 @@ void init_players(void) {
     TrackPositionFactorInstruction* var_s5;
     UNUSED s32 temp_v1;
     UNUSED s32 pad;
-
+//printf("init_players\n");
     for (i = 0; i < NUM_PLAYERS; i++) {
-        Player* player = &gPlayerOne[i];
+        Player* player = &gPlayers/*One*/[i];
 
         gPreviousAngleSteering[i] = 0;
         D_80162FF8[i] = 0;
@@ -2089,6 +2089,7 @@ void init_players(void) {
         if (gCurrentCourseId < (NUM_COURSES - 1)) {
             update_player_position_factor(i, 0, 0);
         }
+        //printf("update_player_position_factor(%d, 0, 0) done\n", i);
         cpu_TargetSpeed[i] = GET_COURSE_cpu_CurveTargetSpeed(gCCSelection);
         D_801630E8[i] = 0;
         D_80163100[i] = 0;
@@ -2099,8 +2100,8 @@ void init_players(void) {
         gCourseCompletionPercentByPlayerId[i] = 0.0f;
         gTimePlayerLastTouchedFinishLine[i] = 0.0f;
         if (gModeSelection == GRAND_PRIX) {
-            if (1) {};
-            if (1) {}; // Maybe some debug code?
+//            if (1) {};
+  //          if (1) {}; // Maybe some debug code?
             gGPCurrentRaceRankByPlayerId[i] = (s32) D_80165270[i];
             gPreviousGPCurrentRaceRankByPlayerId[i] = (s32) D_80165270[i];
         } else {
@@ -2126,6 +2127,7 @@ void init_players(void) {
         var_s5->current = 0.0f;
         var_s5->step = 0.015f;
         reset_cpu_behaviour_none(i);
+        //printf("reset_cpu_behaviour_none(%d) done\n", i);
         gSpeedCPUBehaviour[i] = 0;
         bInMultiPathSection[i] = 0;
         D_80163398[i] = 0;
@@ -2189,7 +2191,7 @@ void init_players(void) {
     }
 
     for (i = 0; i < NUM_PLAYERS; i++) {
-        if (1) {};
+//        if (1) {};
         gPathIndexByPlayerId[i] = 0;
         gNearestPathPointByPlayerId[i] =
             gPathCountByPathIndex[gPathIndexByPlayerId[i]] - gGPCurrentRaceRankByPlayerId[i] - 4;
@@ -2233,6 +2235,7 @@ void init_players(void) {
         }
     }
     copy_courses_cpu_behaviour();
+    //printf("out of copy courses cpu behavior\n");
 }
 
 #include "cpu_vehicles_camera_path/path_calc.inc.c"
@@ -2397,10 +2400,10 @@ void func_80015314(s32 playerId, UNUSED f32 arg1, s32 cameraId) {
 
     // wtf is up with the pointer accesses here?
     // What aren't they just doing thing = &some_pointer[some_index]?
-    temp_a1 = gPlayerOne;
-    temp_a0 = camera1;
-    temp_a1 += playerId;
-    temp_a0 += cameraId;
+    temp_a1 = &gPlayers[playerId];//One;
+    temp_a0 = &camera1[cameraId];
+//    temp_a1 += playerId;
+ //   temp_a0 += cameraId;
     temp_a0->unk_2C = temp_a1->rotation[1];
     func_80015390(temp_a0, temp_a1, 0);
 }
@@ -2424,8 +2427,9 @@ void func_80015390(Camera* camera, UNUSED Player* player, UNUSED s32 arg2) {
     temp_s1 = &gPlayerOne[camera->playerId];
     leads to some regalloc differences
     */
-    temp_s1 = gPlayerOne;
-    temp_s1 += camera->playerId;
+//    temp_s1 = gPlayerOne;
+//    temp_s1 += camera->playerId;
+    temp_s1 = &gPlayers[camera->playerId];
     if (temp_s1->unk_078 == 0) {
         var_a2 = 0x0064;
     } else if (temp_s1->unk_078 < 0) {
@@ -2498,8 +2502,8 @@ void func_8001577C(Camera* camera, UNUSED Player* playerArg, UNUSED s32 arg2, s3
 
     playerId = camera->playerId;
     pathIndex = gPathIndexByPlayerId[playerId];
-    player = gPlayerOne;
-    player += playerId;
+    player = &gPlayers[playerId];//One;
+//    player += playerId;
     gNearestPathPointByCameraId[cameraId] =
         func_8000D33C(camera->pos[0], camera->pos[1], camera->pos[2], gNearestPathPointByCameraId[cameraId], pathIndex);
     playerPathPoint = gNearestPathPointByPlayerId[playerId];
@@ -2587,8 +2591,8 @@ void func_80015C94(Camera* camera, UNUSED Player* unusedPlayer, UNUSED s32 arg2,
     s32 pathIndex;
 
     playerId = camera->playerId;
-    player = gPlayerOne;
-    player += playerId;
+    player = &gPlayers[playerId];//One;
+//    player += playerId;
     D_80163238 = playerId;
     pathIndex = gPathIndexByPlayerId[playerId];
     gNearestPathPointByCameraId[cameraId] =
@@ -2695,11 +2699,12 @@ void func_80016494(Camera* camera, UNUSED Player* unusedPlayer, UNUSED s32 arg2,
     f32 temp_f2_5;
 
     playerId = camera->playerId;
-    player = gPlayerOne;
+    player = &gPlayers[playerId];//One;
+//    player += playerId;
     D_80164648[cameraId] += ((D_80164658[cameraId] - D_80164648[cameraId]) * 0.5f);
     D_80163238 = playerId;
     pathIndex = gPathIndexByPlayerId[playerId];
-    player += playerId;
+//    player += playerId;
     gNearestPathPointByCameraId[cameraId] =
         func_8000D33C(camera->pos[0], camera->pos[1], camera->pos[2], gNearestPathPointByCameraId[cameraId], pathIndex);
     temp_f2_5 = (gTrackPositionFactor[playerId] - D_80164688[cameraId]);
@@ -2982,12 +2987,13 @@ void func_800178F4(Camera* camera, UNUSED Player* unusedPlayer, UNUSED s32 arg2,
     s32 pathPointCount;
 
     playerId = camera->playerId;
-    player = gPlayerOne;
+    player = &gPlayers[playerId];//One;
+//    player += playerId;
     D_80164688[cameraId] = gTrackPositionFactor[playerId];
     D_80164648[cameraId] += ((D_80164658[cameraId] - D_80164648[cameraId]) / 2.0f);
     D_80163238 = playerId;
     pathIndex = gPathIndexByPlayerId[playerId];
-    player += playerId;
+//    player += playerId;
     pathPointCount = gPathCountByPathIndex[pathIndex];
     gNearestPathPointByCameraId[cameraId] =
         func_8000D33C(camera->pos[0], camera->pos[1], camera->pos[2], gNearestPathPointByCameraId[cameraId], pathIndex);
@@ -3097,13 +3103,14 @@ void func_800180F0(Camera* camera, UNUSED Player* unusedPlayer, UNUSED s32 arg2,
     s32 pathPointCount;
 
     playerId = camera->playerId;
-    player = gPlayerOne;
+    player =&gPlayers[playerId];//One;
+//    player += playerId;
     D_80164688[cameraId] = gTrackPositionFactor[playerId];
     D_80164648[cameraId] += ((D_80164658[cameraId] - D_80164648[cameraId]) * 0.5f);
     D_80163238 = playerId;
     pathIndex = gPathIndexByPlayerId[playerId];
     pathPointCount = gPathCountByPathIndex[pathIndex];
-    player += playerId;
+//    player += playerId;
     gNearestPathPointByCameraId[cameraId] =
         func_8000D33C(camera->pos[0], camera->pos[1], camera->pos[2], gNearestPathPointByCameraId[cameraId], pathIndex);
     playerPathPoint = ((gNearestPathPointByPlayerId[playerId] + pathPointCount) - 2) % pathPointCount;
@@ -3211,8 +3218,9 @@ void func_800188F4(Camera* camera, UNUSED Player* unusePlayer, UNUSED s32 arg2, 
     s32 pathIndex;
     s32 pathPointCount;
 
-    player = gPlayerOne;
     playerId = camera->playerId;
+    player = &gPlayers[playerId];//One;
+//    player += playerId;
     pathIndex = gPathIndexByPlayerId[playerId];
     pathPointCount = gPathCountByPathIndex[pathIndex];
     D_80164648[cameraId] = gPlayers[playerId].speed;
@@ -3247,7 +3255,7 @@ void func_800188F4(Camera* camera, UNUSED Player* unusePlayer, UNUSED s32 arg2, 
         }
     }
     D_80163238 = playerId;
-    player += playerId;
+//    player += playerId;
     gNearestPathPointByCameraId[cameraId] =
         func_8000D33C(camera->pos[0], camera->pos[1], camera->pos[2], gNearestPathPointByCameraId[cameraId], pathIndex);
     playerPathPoint = gNearestPathPointByPlayerId[playerId];
@@ -3345,8 +3353,8 @@ void func_8001933C(Camera* camera, UNUSED Player* playerArg, UNUSED s32 arg2, s3
 
     playerId = camera->playerId;
     pathIndex = gPathIndexByPlayerId[playerId];
-    player = gPlayerOne;
-    player += playerId;
+    player = &gPlayers[playerId];//One;
+//    player += playerId;
     pathPointCount = gPathCountByPathIndex[pathIndex];
     gNearestPathPointByCameraId[cameraId] =
         func_8000D33C(camera->pos[0], camera->pos[1], camera->pos[2], gNearestPathPointByCameraId[cameraId], 0);
@@ -3888,7 +3896,7 @@ void func_8001AAAC(s16 arg0, s16 arg1, s16 arg2) {
 #include "cpu_vehicles_camera_path/cpu_item_strategy.inc.c"
 
 void cpu_use_item_strategy(s32 playerId) {
-    Player* player = &gPlayerOne[playerId];
+    Player* player = &gPlayers/* One */[playerId];
     struct Actor* actor;
     CpuItemStrategyData* cpuStrategy = &cpu_ItemStrategy[playerId];
     TrackPathPoint* pathPoint;
@@ -4471,7 +4479,7 @@ void func_8001BE78(void) {
 
     init_players();
     for (i = 0; i < 4; i++) {
-        temp_s1 = &gPlayerOne[i];
+        temp_s1 = &gPlayers/* One */[i];
         temp_s1->type &= 0xDFFF;
         gPathIndexByPlayerId[i] = i;
         gPlayerTrackPositionFactorInstruction[i].unkC = 0.0f;
@@ -4501,6 +4509,7 @@ void func_8001BE78(void) {
         temp_s1++;
         D_80163410[i] = 0;
     }
+    //printf("exiting func_8001BE78\n");
 }
 
 void func_8001C05C(void) {
@@ -4548,7 +4557,7 @@ void func_8001C14C(void) {
             break;
         }
 
-        temp_s0 = &gPlayerOne[playerId];
+        temp_s0 = &gPlayers/* One */[playerId];
         update_player(playerId);
         if (!(temp_s0->type & 0x2000)) {
             temp_f0 = D_80163418[playerId] - temp_s0->pos[0];

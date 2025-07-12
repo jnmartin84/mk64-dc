@@ -11,6 +11,39 @@
  * @param arg1
  * @param arg2
  */
+Gfx l_d_course_mario_raceway_dl_tree_setup[] = {
+    gsSPClearGeometryMode(G_LIGHTING),
+    gsDPSetCombineMode(G_CC_MODULATEIA, G_CC_MODULATEIA),
+    gsDPSetRenderMode(G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2),
+    gsSPTexture(0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON),
+    gsDPSetTextureLUT(G_TT_RGBA16),
+    gsDPTileSync(),
+    gsDPSetTile(G_IM_FMT_CI, G_IM_SIZ_8b, 4, 0x0000, G_TX_RENDERTILE, 0, G_TX_NOMIRROR | G_TX_CLAMP, 6, G_TX_NOLOD,
+                G_TX_NOMIRROR | G_TX_CLAMP, 5, G_TX_NOLOD),
+    gsDPSetTileSize(G_TX_RENDERTILE, 0, 0, 0x007C, 0x00FC),
+    gsDPLoadTextureBlock(0x03009000, G_IM_FMT_CI, G_IM_SIZ_8b, 32, 64, 0, G_TX_NOMIRROR | G_TX_CLAMP,
+                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD),
+    gsSPEndDisplayList(),
+};
+
+#if 0
+Gfx l_d_course_mario_raceway_dl_tree[] = {
+    gsSPVertex(d_course_mario_raceway_tree_model, 4, 0),
+    gsSP1Triangle(0, 1, 2, 0),
+    gsSP1Triangle(0, 2, 3, 0),
+    gsSPEndDisplayList(),
+};
+#endif
+
+void setup_actor_tree_mario_raceway(void) {
+    gDPLoadTLUT_pal256(gDisplayListHead++, common_tlut_trees_import);
+    gSPDisplayList(gDisplayListHead++, l_d_course_mario_raceway_dl_tree_setup);
+}
+
+void finish_actor_tree_mario_raceway(void) {
+    gDPSetTextureLUT(gDisplayListHead++, G_TT_NONE);
+}
+
 void render_actor_tree_mario_raceway(Camera* camera, Mat4 arg1, struct Actor* arg2) {
     f32 temp_f0;
     s16 temp_v0 = arg2->flags;
@@ -36,6 +69,10 @@ void render_actor_tree_mario_raceway(Camera* camera, Mat4 arg1, struct Actor* ar
     if (render_set_position(arg1, 0) != 0) {
         gDPLoadTLUT_pal256(gDisplayListHead++, common_tlut_trees_import);
         gSPDisplayList(gDisplayListHead++, d_course_mario_raceway_dl_tree);
+
+        //        gSPVertex(gDisplayListHead++, d_course_mario_raceway_tree_model, 4, 0);
+  //      gSP1Triangle(gDisplayListHead++, 0, 1, 2, 0);
+    //    gSP1Triangle(gDisplayListHead++, 0, 2, 3, 0);
     }
 }
 
@@ -145,14 +182,14 @@ void render_actor_tree_moo_moo_farm(Camera* camera, Mat4 arg1, struct Actor* arg
 }
 
 Vtx l_d_course_moo_moo_farm_tree_model[] = {
-    { { { 0, 95*3/5, 0 }, 0, { 1024, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { -50*3/5, 95*3/5, 0 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { -50*3/5, -5*3/5, 0 }, 0, { 0, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 0, -5*3/5, 0 }, 0, { 1024, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 50*3/5, 95*3/5, 0 }, 0, { 1023, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 0, 95*3/5, 0 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 0, -5*3/5, 0 }, 0, { 0, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 50*3/5, -5*3/5, 0 }, 0, { 1023, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 0, 95*3/7, 0 }, 0, { 1024, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -50*3/7, 95*3/7, 0 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -50*3/7, -5*3/7, 0 }, 0, { 0, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 0, -5*3/7, 0 }, 0, { 1024, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 50*3/7, 95*3/7, 0 }, 0, { 1023, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 0, 95*3/7, 0 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 0, -5*3/7, 0 }, 0, { 0, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 50*3/7, -5*3/7, 0 }, 0, { 1023, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
 };
 
 Gfx l_d_course_moo_moo_farm_dl_tree[] = {
@@ -177,7 +214,7 @@ Gfx l_d_course_moo_moo_farm_dl_tree[] = {
 };
 
 // have all the properties of the tree
-void func_80299864(Camera* camera, Mat4 arg1, struct Actor* arg2) {
+void render_actor_tree_luigi_raceway(Camera* camera, Mat4 arg1, struct Actor* arg2) {
     f32 temp_f0;
     s16 temp_v0 = arg2->flags;
 

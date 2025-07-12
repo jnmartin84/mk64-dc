@@ -28,20 +28,15 @@ void sequence_channel_process_sound(struct SequenceChannel* seqChannel, s32 reca
         if (layer != NULL && layer->enabled && layer->note != NULL) {
             if ((uintptr_t)layer->note < (uintptr_t)0x8c010000) {
                 printf("effects.c INVALID NOTE %08x\n", (uintptr_t)layer->note);
-            printf("\n");
-            while(1){}
+          //  printf("\n");
+            //while(1){}
                 exit(-1);
+            //}
+//continue;
             }
-
             if (layer->notePropertiesNeedInit) {
-//                printf("need init layer %08x %f seqChan %f\n", &layer->freqScale, layer->freqScale, seqChannel->freqScale);
-               /// if (layer->freqScale >= 4294967296.0f) {
-                  //  layer->freqScale /= 4294967296.0f; //= //1.0f;
-                //}
-  //               if (layer->freqScale >= 32000) {
-    //                layer->freqScale = 1;
-      //          }
                 layer->noteFreqScale = layer->freqScale * seqChannel->freqScale;
+            //    printf("need init: %f * %f == %f\n", layer->freqScale, seqChannel->freqScale, layer->noteFreqScale);
                 layer->noteVelocity = layer->velocitySquare * seqChannel->appliedVolume;
                 layer->notePan = (seqChannel->pan + layer->pan * (0x80 - seqChannel->panChannelWeight)) >> 7;
                 layer->notePropertiesNeedInit = false;
@@ -49,6 +44,7 @@ void sequence_channel_process_sound(struct SequenceChannel* seqChannel, s32 reca
                 if (seqChannel->changes.as_bitfields.freqScale) {
                    // printf("layer %f seqChannel->freqScale %f\n", layer->freqScale, seqChannel->freqScale);
                     layer->noteFreqScale = layer->freqScale * seqChannel->freqScale;
+                    //printf("changes: %f * %f == %f\n", layer->freqScale, seqChannel->freqScale, layer->noteFreqScale);
                 }
                 if (seqChannel->changes.as_bitfields.volume || recalculateVolume) {
                     layer->noteVelocity = layer->velocitySquare * seqChannel->appliedVolume;

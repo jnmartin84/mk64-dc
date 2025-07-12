@@ -139,7 +139,7 @@ UNUSED bool ease_out_transition(s16* var, s16 dest, s16 speed_factor) {
 }
 
 // Calculates fade in/out
-bool adjust_f32_value_transition(f32* var, f32 dest, f32 speed_factor) {
+s32 adjust_f32_value_transition(f32* var, f32 dest, f32 speed_factor) {
     f32 temp_f0 = dest - *var;
 
     if (speed_factor < 0.0f) {
@@ -163,12 +163,12 @@ bool adjust_f32_value_transition(f32* var, f32 dest, f32 speed_factor) {
     }
 
     if (dest == *var) {
-        return false;
+        return 0;
     }
-    return true;
+    return 1;
 }
 
-bool adjust_s16_value_transition(s16* var, s16 goal, s16 speed_factor) {
+s32 adjust_s16_value_transition(s16* var, s16 goal, s16 speed_factor) {
     s16 temp_v0 = goal - *var;
 
     if (speed_factor < 0) {
@@ -191,9 +191,9 @@ bool adjust_s16_value_transition(s16* var, s16 goal, s16 speed_factor) {
     }
 
     if (goal == *var) {
-        return false;
+        return 0;
     }
-    return true;
+    return 1;
 }
 
 void reset_spline(void) {

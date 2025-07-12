@@ -1138,11 +1138,13 @@ void func_8001F87C(s32 cameraId) {
     // Why?
     s32 id = cameraId;
 
+    Player *player = &gPlayers[playerIndex];
+
     if (gPlayerOne) {}
     if (gActiveScreenMode == SCREEN_MODE_1P) {
         if (gModeSelection == GRAND_PRIX) {
             for (playerIndex = 0; playerIndex < NUM_PLAYERS; playerIndex++) {
-                if ((gPlayerOne[playerIndex].type & 0x200) || (gPlayerOne[playerIndex].type & 0x80)) {
+                if ((player->type & 0x200) || (/* gPlayerOne[playerIndex]. */player->type & 0x80)) {
                     break;
                 }
                 if (playerIndex == 7) {
@@ -1151,8 +1153,8 @@ void func_8001F87C(s32 cameraId) {
                 if ((playerIndex == 7) && (D_80164A2C == 0x0000003C)) {
                     D_80164A28 = 2;
                     D_80152300[id] = 1;
-                    cameras[id].rot[1] = gPlayerOne[playerIndex].rotation[1];
-                    cameras[id].unk_2C = gPlayerOne[playerIndex].rotation[1];
+                    cameras[id].rot[1] = /* gPlayerOne[playerIndex]. */player->rotation[1];
+                    cameras[id].unk_2C = /* gPlayerOne[playerIndex]. */player->rotation[1];
                 }
             }
         }

@@ -25,16 +25,19 @@ u8 __attribute__((aligned(32))) CEREMONY_BUF[36232];
 uint8_t __attribute__((aligned(32))) COMP_VERT_BUF[65536];
 uint8_t __attribute__((aligned(32))) DECOMP_VERT_BUF[228656];
 
-u16 __attribute__((aligned(32))) colls[16384];
-CollisionTriangle __attribute__((aligned(32))) allColTris[2048+1024];
+u16 __attribute__((aligned(32))) colls[2800];//16384];
+CollisionTriangle __attribute__((aligned(32))) allColTris[2800];//2048+1024];
 
 struct __attribute__((aligned(32))) GfxPool gGfxPools[2];
 
-u8 __attribute__((aligned(32))) backing_gCourseOutline[0x15][128*96/2];
+u8 __attribute__((aligned(32))) backing_gCourseOutline[0x16][128*96/2];
 u8 __attribute__((aligned(32))) backing_gMenuTextureBuffer[0x000900B0];
 u8 __attribute__((aligned(32))) backing_gMenuCompressedBuffer[65536];
 u8 __attribute__((aligned(32))) backing_sTKMK00_LowResBuffer[320*240];
 u8 __attribute__((aligned(32))) backing_gSomeDLBuffer[0x1000];
+
+#define SAMPLES_HIGH 454
+s16 audio_buffer[SAMPLES_HIGH * 2 * 2] __attribute__((aligned(64)));
 
 extern u8 d_course_koopa_troopa_beach_palm_frond[];
 extern Vtx d_course_koopa_troopa_beach_unknown_model4[];

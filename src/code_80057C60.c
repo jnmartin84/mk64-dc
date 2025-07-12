@@ -306,7 +306,7 @@ Collision D_8018C0B0[4];
  *   Segments of the fire breath from the statues in Bowser's Castle
  *   Potentially other things
  */
-s32 gObjectParticle1[gObjectParticle2_SIZE];
+s32 __attribute__((aligned(32))) gObjectParticle1[gObjectParticle2_SIZE];
 Collision D_8018C3B0;
 /**
  * List of object list indices used for:
@@ -314,34 +314,34 @@ Collision D_8018C3B0;
  * - Train index 0 smoke in Kalimari Desert
  * - Ferry index 0 smoke in DK Jungle
  */
-s32 gObjectParticle2[gObjectParticle2_SIZE];
+s32 __attribute__((aligned(32))) gObjectParticle2[gObjectParticle2_SIZE];
 // Maybe some unused Collision?
-UNUSED Collision D_8018C5F0;
+//UNUSED Collision D_8018C5F0;
 /**
  * List of object list indices used for:
  * - Train index 1 smoke in Kalimari Desert
  * - Ferry index 1 smoke in DK Jungle
  */
-s32 gObjectParticle3[gObjectParticle3_SIZE];
+s32 __attribute__((aligned(32))) gObjectParticle3[gObjectParticle3_SIZE];
 Collision D_8018C830;
 /**
  * List of object list indices. Used both for the fires in the DK Jungle cave
  * and, seemingly for the trail that shells leave behind them.
  * I think they're using the same texture, which would explain the dual use
  */
-s32 gObjectParticle4[gObjectParticle4_SIZE];
+s32 __attribute__((aligned(32))) gObjectParticle4[gObjectParticle4_SIZE];
 /**
  * Seemingly a list of object list indices used for the leaves that sometimes fall
  * trees when you bonk into them
  */
-s32 gLeafParticle[gLeafParticle_SIZE];
+s32 __attribute__((aligned(32))) gLeafParticle[gLeafParticle_SIZE];
 hud_player playerHUD[4];
 /**
  * List of object list indices used by the clouds and stars in some stages
  * Also used for snowflakes like gObjectParticle1? Not sure what's up with that
  */
-s32 D_8018CC80[D_8018CC80_SIZE];
-struct_D_8018CE10 D_8018CE10[8];
+s32 __attribute__((aligned(32))) D_8018CC80[D_8018CC80_SIZE];
+struct_D_8018CE10 __attribute__((aligned(32))) D_8018CE10[8];
 //! Unknown object index, only set for Kalimari Desert, never read
 s32 D_8018CF10;
 Camera* D_8018CF14;
@@ -405,6 +405,14 @@ s32 D_800E480C[] = {
     MAKE_RGB(0x60, 0x30, 0x11), MAKE_RGB(0x80, 0x40, 0x10), MAKE_RGB(0x70, 0x90, 0xA0), MAKE_RGB(0xA0, 0x60, 0x30),
     MAKE_RGB(0xA0, 0x70, 0x10), MAKE_RGB(0x30, 0x10, 0x11), MAKE_RGB(0xB0, 0xA0, 0x80), MAKE_RGB(0x80, 0x60, 0x10),
 };
+//#include <stdio.h>
+static inline void increment_matrix_effect_count(UNUSED const char *funcstr) {
+    gMatrixEffectCount += 1;
+//    if (gMatrixEffectCount >= MTX_EFFECT_POOL_SIZE) {
+  //      printf("overflow effect matrix in %s\n", funcstr);
+    //    while(1) {}
+    //}
+}
 
 // UI Code?
 void func_80057C60(void) {
@@ -1193,7 +1201,7 @@ void render_hud_4p_multi(void) {
 void func_80059820(s32 playerId) {
     hud_player* temp_v0;
 
-    D_8018CF1C = &gPlayerOne[playerId];
+    D_8018CF1C = &gPlayers/* One */[playerId];
     D_8018CF14 = &camera1[playerId];
     temp_v0 = &playerHUD[playerId];
     temp_v0->posXInt = (s32) D_8018CF1C->pos[0];
@@ -1295,7 +1303,9 @@ void func_80059C50(void) {
     for (someIndex = 0; someIndex < NUM_PLAYERS; someIndex++) {
         playerId = gGPCurrentRacePlayerIdByRank[someIndex];
         // I hate this dumb pointer access here
-        gGPCurrentRaceCharacterIdByRank[someIndex] = (gPlayerOne + playerId)->characterId;
+        gGPCurrentRaceCharacterIdByRank[someIndex] = //(gPlayerOne + playerId)->characterId;
+            //gPlayerOne[playerId].characterId;
+        gPlayers[playerId].characterId;
     }
     for (someIndex = 0; someIndex < NUM_PLAYERS; someIndex++) {
         D_8018CF98[someIndex] = gGPCurrentRaceRankByPlayerId[someIndex];
@@ -1437,7 +1447,7 @@ void func_8005A14C(s32 playerId) {
     Player* player;
     UNUSED s32 stackPadding;
 
-    player = &gPlayerOne[playerId];
+    player = &gPlayers/* One */[playerId];
     objectIndex = D_8018CE10[playerId].objectIndex;
     lapCount = gLapCountByPlayerId[playerId];
     if (player->type & PLAYER_EXISTS) {
@@ -1540,7 +1550,7 @@ void func_8005A3C0(void) {
                         D_801657F0 = (D_801657F0 + 1) & 1;
                     }
                     D_801657E4 = (D_801657E4 + 1) & 1;
-                    b = true;
+                    b = 1;
                 }
                 break;
             case 4:
@@ -2518,7 +2528,7 @@ void func_8005C980(void) {
         if (D_80165590 == 0) {
             D_8018CF98[var_v0] = temp_v1;
         }
-        D_8018CF28[temp_v1] = &gPlayerOne[sp0];
+        D_8018CF28[temp_v1] = &gPlayers/* One */[sp0];
         if (sp0 == 0) {
             D_80165794 = temp_v1;
         }
@@ -2528,7 +2538,8 @@ void func_8005C980(void) {
         sp0 = gGPCurrentRacePlayerIdByRank[var_v0];
         D_8018CF50[var_v0] = sp0;
         if (D_80165590 == 0) {
-            gGPCurrentRaceCharacterIdByRank[var_v0] = (gPlayerOne + sp0)->characterId;
+            gGPCurrentRaceCharacterIdByRank[var_v0] = //(gPlayerOne + sp0)->characterId;
+                gPlayers[sp0].characterId;
         }
     }
 
@@ -2550,7 +2561,7 @@ void func_8005CB60(s32 playerId, s32 lapCount) {
     s8* huhthedeuce;
     Player* player;
 
-    player = &gPlayerOne[playerId];
+    player = &gPlayers/* One */[playerId];
     huh = &playerHUD[playerId].alsoLapCount;
     huhthedeuce = &playerHUD[playerId].lapCount;
     if (playerHUD[playerId].lapCount < D_8018D320) {
@@ -2743,7 +2754,7 @@ void func_8005D1F4(s32 arg0) {
 
 extern u8 *ROVING_SEG3_BUF;
 
-extern u8 __attribute__((aligned(32))) OTHER_BUF[0x21000];
+extern u8 __attribute__((aligned(32))) OTHER_BUF[96*1024];
 
 // Appears to load GP Mode race staging balloons and kart shadows.
 void load_race_common_tex(void) {
@@ -5030,7 +5041,12 @@ void func_8006538C(Player* player, s8 arg1, s16 arg2, s8 arg3) {
             func_8004B72C(primRed, primGreen, primBlue, envRed, envGreen, envBlue, primAlpha);
             gSPDisplayList(gDisplayListHead++, D_0D008E48);
         }
-        gMatrixEffectCount += 1;
+//        gMatrixEffectCount += 1;
+  //      if (gMatrixEffectCount >= MTX_EFFECT_POOL_SIZE) {
+    //        printf("overflow effect matrix\n");
+      //      while(1) {}
+       // }
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5060,7 +5076,8 @@ void func_800658A0(Player* player, UNUSED s8 arg1, s16 arg2, s8 arg3) {
                             G_TX_NOLOD);
         func_8004B35C(red, green, blue, alpha);
         gSPDisplayList(gDisplayListHead++, D_0D008E48);
-        gMatrixEffectCount += 1;
+        //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5113,7 +5130,9 @@ void func_80065AB0(Player* player, UNUSED s8 arg1, s16 arg2, s8 arg3) {
             gDPSetRenderMode(gDisplayListHead++, G_RM_ZB_XLU_SURF, G_RM_ZB_XLU_SURF2);
             gSPDisplayList(gDisplayListHead++, D_0D008E48);
         }
-        gMatrixEffectCount += 1;
+        //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
+
     }
 }
 
@@ -5167,7 +5186,8 @@ void func_80065F0C(Player* player, UNUSED s8 arg1, s16 arg2, s8 arg3) {
             gSPVertex(gDisplayListHead++, D_800E8C00, 4, 0);
             gSPDisplayList(gDisplayListHead++, D_0D008DA0);
         }
-        gMatrixEffectCount += 1;
+        //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5198,7 +5218,8 @@ void func_800664E0(Player* player, UNUSED s8 arg1, s16 arg2, s8 arg3) {
                             G_TX_NOLOD);
         func_8004B35C(red, green, blue, alpha);
         gSPDisplayList(gDisplayListHead++, D_0D008E48);
-        gMatrixEffectCount += 1;
+        //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5231,7 +5252,8 @@ void func_80066714(Player* player, UNUSED s32 arg1, s16 arg2, s8 arg3) {
         gDPSetRenderMode(gDisplayListHead++, G_RM_ZB_XLU_SURF, G_RM_ZB_XLU_SURF2);
         gSPVertex(gDisplayListHead++, D_800E8B00, 4, 0);
         gSPDisplayList(gDisplayListHead++, D_0D008DA0);
-        gMatrixEffectCount += 1;
+        //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5261,7 +5283,8 @@ void func_80066998(Player* player, UNUSED s8 arg1, s16 arg2, s8 arg3) {
                             G_TX_NOLOD);
         func_8004B35C(red, green, blue, alpha);
         gSPDisplayList(gDisplayListHead++, D_0D008E48);
-        gMatrixEffectCount += 1;
+        //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5316,7 +5339,8 @@ void func_80066BAC(Player* player, UNUSED s8 arg1, s16 arg2, s8 arg3) {
             gSPVertex(gDisplayListHead++, &D_800E8900[1][player->unk_258[arg2].unk_038], 4, 0);
             gSPDisplayList(gDisplayListHead++, D_0D008DA0);
         }
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5357,7 +5381,8 @@ void func_80067280(Player* player, UNUSED s8 arg1, s16 arg2, s8 arg3) {
             func_8004B35C(red, green, blue, alpha & 0xFFFFFFFF); // huh?
             gSPDisplayList(gDisplayListHead++, D_0D008E48);
         }
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5389,7 +5414,8 @@ void func_80067604(Player* player, UNUSED s8 arg1, s16 arg2, s8 arg3) {
             func_8004B72C(0x000000FF, 0x000000FF, 0x000000DF, 0x000000FF, 0x0000005F, 0, 0x00000060);
             gSPDisplayList(gDisplayListHead++, D_0D008E48);
         }
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5420,7 +5446,8 @@ void func_80067964(Player* player, UNUSED s8 arg1, f32 arg2, UNUSED s8 arg3, s8 
                             G_TX_NOLOD, G_TX_NOLOD);
         gSPVertex(gDisplayListHead++, D_800E8800, 4, 0);
         gSPDisplayList(gDisplayListHead++, D_0D008DA0);
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5448,7 +5475,8 @@ void func_80067D3C(Player* player, s8 arg1, u8* texture, s8 arg3, f32 arg4, s32 
 
         set_shadow_color(red, green, blue, 0x000000FF);
         gSPDisplayList(gDisplayListHead++, D_0D008E20);
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5476,7 +5504,8 @@ void func_8006801C(Player* player, s8 arg1, u8* texture, s8 arg3, f32 arg4, s32 
 
         set_shadow_color(red, green, blue, 0x000000FF);
         gSPDisplayList(gDisplayListHead++, D_0D008E20);
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5506,7 +5535,8 @@ void func_80068310(Player* player, UNUSED s8 arg1, UNUSED f32 arg2, s8 arg3, s8 
                             G_TX_NOLOD, G_TX_NOLOD);
         gSPVertex(gDisplayListHead++, D_800E88C0, 4, 0);
         gSPDisplayList(gDisplayListHead++, D_0D008DA0);
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5536,7 +5566,8 @@ void func_80068724(Player* player, UNUSED s8 arg1, UNUSED f32 arg2, s8 arg3, s8 
                             G_TX_NOLOD);
         gSPVertex(gDisplayListHead++, D_800E8A40, 4, 0);
         gSPDisplayList(gDisplayListHead++, D_0D008DA0);
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5561,7 +5592,8 @@ void func_80068AA4(Player* player, UNUSED s8 arg1, UNUSED f32 arg2, s8 arg3, s8 
         gDPSetRenderMode(gDisplayListHead++, G_RM_ZB_CLD_SURF, G_RM_ZB_CLD_SURF2);
         gSPVertex(gDisplayListHead++, D_800E8B40, 4, 0);
         gSPDisplayList(gDisplayListHead++, D_0D008DA0);
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5590,7 +5622,8 @@ void func_80068DA0(Player* player, UNUSED s8 arg1, UNUSED f32 arg2, s8 arg3, s8 
                             G_TX_NOLOD);
         gSPVertex(gDisplayListHead++, D_800E8BC0, 4, 0);
         gSPDisplayList(gDisplayListHead++, D_0D008DA0);
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5661,7 +5694,8 @@ void func_80069444(Player* player, UNUSED s8 arg1, s16 arg2, s8 arg3) {
         test = envRed;
         func_8004B72C(primRed, primGreen, primBlue, (s16) test, envGreen, envBlue, primAlpha);
         gSPDisplayList(gDisplayListHead++, D_0D008E48);
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5688,7 +5722,8 @@ void func_800696CC(Player* player, UNUSED s8 arg1, s16 arg2, s8 arg3, f32 arg4) 
         gDPSetRenderMode(gDisplayListHead++, G_RM_ZB_CLD_SURF, G_RM_ZB_CLD_SURF2);
         gSPVertex(gDisplayListHead++, D_800E87C0, 4, 0);
         gSPDisplayList(gDisplayListHead++, D_0D008DA0);
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5715,7 +5750,8 @@ void func_80069938(Player* player, UNUSED s8 arg1, s16 arg2, s8 arg3) {
         gDPSetRenderMode(gDisplayListHead++, G_RM_ZB_CLD_SURF, G_RM_ZB_CLD_SURF2);
         gSPVertex(gDisplayListHead++, D_800E87C0, 4, 0);
         gSPDisplayList(gDisplayListHead++, D_0D008DA0);
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5745,7 +5781,8 @@ void func_80069BA8(Player* player, UNUSED s8 arg1, s16 arg2, s8 arg3) {
                             G_TX_NOLOD);
         func_8004B35C(red, green, blue, alpha);
         gSPDisplayList(gDisplayListHead++, D_0D008E48);
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5771,7 +5808,8 @@ void func_80069DB8(Player* player, UNUSED s8 arg1, s16 arg2, s8 arg3) {
         gDPSetRenderMode(gDisplayListHead++, G_RM_ZB_CLD_SURF, G_RM_ZB_CLD_SURF2);
         gSPVertex(gDisplayListHead++, D_800E8740, 4, 0);
         gSPDisplayList(gDisplayListHead++, D_0D008DA0);
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -5828,7 +5866,8 @@ void func_8006A280(Player* player, UNUSED s8 arg1, s16 arg2, s8 arg3) {
         gDPSetRenderMode(gDisplayListHead++, G_RM_ZB_CLD_SURF, G_RM_ZB_CLD_SURF2);
         gSPVertex(gDisplayListHead++, D_800E8780, 4, 0);
         gSPDisplayList(gDisplayListHead++, D_0D008DA0);
-        gMatrixEffectCount += 1;
+                //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
     }
 }
 
@@ -6148,7 +6187,8 @@ void render_balloon(Vec3f arg0, f32 arg1, s16 arg2, s16 arg3) {
     gSPVertex(gDisplayListHead++, gBalloonVertexPlane2, 4, 0);
     gSPDisplayList(gDisplayListHead++, common_square_plain_render);
     gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
-    gMatrixEffectCount += 1;
+            //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
 }
 
 void func_8006C0C8(Vec3f arg0, f32 arg1, s32 rgb, s16 alpha) {
@@ -6175,7 +6215,8 @@ void func_8006C0C8(Vec3f arg0, f32 arg1, s32 rgb, s16 alpha) {
     // ???????????????????????????????????
     func_8004B35C(red, green, blue, alpha);
     gSPDisplayList(gDisplayListHead++, D_0D008E48);
-    gMatrixEffectCount += 1;
+            //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
 }
 
 void func_8006C294(Vec3f arg0, f32 arg1, s32 rgb, s16 alpha) {
@@ -6202,7 +6243,8 @@ void func_8006C294(Vec3f arg0, f32 arg1, s32 rgb, s16 alpha) {
     gDPSetRenderMode(gDisplayListHead++, G_RM_ZB_CLD_SURF, G_RM_ZB_CLD_SURF2);
     gSPVertex(gDisplayListHead++, D_800E87C0, 4, 0);
     gSPDisplayList(gDisplayListHead++, D_0D008DA0);
-    gMatrixEffectCount += 1;
+            //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
 }
 
 void func_8006C4D4(Vec3f arg0, f32 arg1, s32 rgb, s16 alpha, s16 arg4) {
@@ -6227,7 +6269,8 @@ void func_8006C4D4(Vec3f arg0, f32 arg1, s32 rgb, s16 alpha, s16 arg4) {
                         G_TX_NOLOD);
     set_shadow_color(red, green, blue, alpha);
     gSPDisplayList(gDisplayListHead++, D_0D008E48);
-    gMatrixEffectCount += 1;
+            //gMatrixEffectCount += 1;
+        increment_matrix_effect_count(__func__);
 }
 
 void func_8006C6AC(Player* player, s16 arg1, s8 arg2, s8 arg3) {

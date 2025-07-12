@@ -2,7 +2,7 @@
 #include <main.h>
 #include <defines.h>
 #include <path.h>
-
+#include <kos.h>
 /**
  * @brief Updates the kiwano fruit actor.
  * Actor used in DK's Jungle Parkway.
@@ -11,6 +11,7 @@
  */
 void update_actor_kiwano_fruit(struct KiwanoFruit* fruit) {
     Player* player;
+    f32 tmplen;
     f32 temp_f2;
     f32 temp_f16;
     f32 temp_f14;
@@ -30,7 +31,7 @@ void update_actor_kiwano_fruit(struct KiwanoFruit* fruit) {
             fruit->state = 1;
             fruit->velocity[0] = 80.0f;
         case 1:
-            nearestPathPoint = gNearestPathPointByPlayerId[(u16) (player - gPlayerOne)];
+            nearestPathPoint = gNearestPathPointByPlayerId[(u16) (player - gPlayers/* One */)];
             temp_f2 = player->pos[0] - gCurrentTrackPath[nearestPathPoint].posX;
             temp_f16 = player->pos[1] - gCurrentTrackPath[nearestPathPoint].posY;
             temp_f14 = player->pos[2] - gCurrentTrackPath[nearestPathPoint].posZ;
@@ -49,14 +50,14 @@ void update_actor_kiwano_fruit(struct KiwanoFruit* fruit) {
                 fruit->velocity[1] = 2.3f;
                 fruit->velocity[2] = 0.0f;
                 if ((player->effects & STAR_EFFECT) != 0) {
-                    func_800C9060(player - gPlayerOne, SOUND_ARG_LOAD(0x19, 0x00, 0xA0, 0x52));
+                    func_800C9060(player - gPlayers/* One */, SOUND_ARG_LOAD(0x19, 0x00, 0xA0, 0x52));
                 } else {
                     player->effects |= 0x8000;
                     player->pos[0] -= temp_f2 * 4.0f;
                     player->pos[2] -= temp_f14 * 4.0f;
                     player->velocity[0] -= temp_f2 * 0.7f;
                     player->velocity[2] -= temp_f14 * 0.7f;
-                    func_800C9060(player - gPlayerOne, SOUND_ARG_LOAD(0x19, 0x00, 0x70, 0x18));
+                    func_800C9060(player - gPlayers/* One */, SOUND_ARG_LOAD(0x19, 0x00, 0x70, 0x18));
                     if (gModeSelection != GRAND_PRIX) {
                         D_80162DF8 = 1;
                     }

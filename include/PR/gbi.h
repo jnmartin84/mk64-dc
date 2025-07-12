@@ -1100,6 +1100,7 @@ typedef struct {
     unsigned char v[3];
 } Tri;
 
+#ifndef GBI_FLOATS
 /*
  * 4x4 matrix, fixed point s15.16 format.
  * First 8 words are integer portion of the 4x4 matrix
@@ -1111,7 +1112,13 @@ typedef union {
     Mtx_t m;
     long long int force_structure_alignment;
 } Mtx;
+#else
+typedef struct /* __attribute__((aligned(32))) */ {
+    float m[4][4];
+    long long int force_structure_alignment;
+} Mtx;
 
+#endif
 /*
  * Viewport
  */
@@ -1313,17 +1320,22 @@ typedef union {
  */
 
 typedef struct {
+    // 0
     unsigned char col[3]; /* diffuse light value (rgba) */
     char pad1;
+    // 4
     unsigned char colc[3]; /* copy of diffuse light value (rgba) */
     char pad2;
+    // 8
     signed char dir[3]; /* direction of light (normalized) */
     char pad3;
 } Light_t;
 
 typedef struct {
+    // 0
     unsigned char col[3]; /* ambient light value (rgba) */
     char pad1;
+    // 4
     unsigned char colc[3]; /* copy of ambient light value (rgba) */
     char pad2;
 } Ambient_t;

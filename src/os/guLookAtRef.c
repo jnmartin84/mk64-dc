@@ -104,6 +104,7 @@ void guLookAtReflectF(float mf[4][4], LookAt* l, float xEye, float yEye, float z
     mf[3][3] = 1;
 }
 
+#ifndef GBI_FLOATS
 void guLookAtReflect(Mtx* m, LookAt* l, float xEye, float yEye, float zEye, float xAt, float yAt, float zAt, float xUp,
                      float yUp, float zUp) {
     float mf[4][4];
@@ -112,3 +113,9 @@ void guLookAtReflect(Mtx* m, LookAt* l, float xEye, float yEye, float zEye, floa
 
     guMtxF2L(mf, m);
 }
+#else
+void guLookAtReflect(Mtx* m, LookAt* l, float xEye, float yEye, float zEye, float xAt, float yAt, float zAt, float xUp,
+                     float yUp, float zUp) {
+    guLookAtReflectF(m->m, l, xEye, yEye, zEye, xAt, yAt, zAt, xUp, yUp, zUp);
+}
+#endif

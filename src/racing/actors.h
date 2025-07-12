@@ -41,7 +41,7 @@ void render_actor_tree_mario_raceway(Camera*, Mat4, struct Actor*);
 void render_actor_tree_yoshi_valley(Camera*, Mat4, struct Actor*);
 void render_actor_tree_royal_raceway(Camera*, Mat4, struct Actor*);
 void render_actor_tree_moo_moo_farm(Camera*, Mat4, struct Actor*);
-void func_80299864(Camera*, Mat4, struct Actor*);
+void render_actor_tree_luigi_raceway(Camera*, Mat4, struct Actor*);
 void render_actor_tree_bowser_castle(Camera*, Mat4, struct Actor*);
 void render_actor_bush_bowser_castle(Camera*, Mat4, struct Actor*);
 void render_actor_tree_frappe_snowland(Camera*, Mat4, struct Actor*);

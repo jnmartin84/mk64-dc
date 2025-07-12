@@ -474,6 +474,15 @@ void course_set_skybox_colours(Vtx* skybox) {
 #endif
 }
 
+#ifdef GBI_FLOATS
+Mtx fD_0D008E98 = {
+{ {   1.0f, 0.0f, 0.0f, 0.0f}, 
+{    0.0f, 1.0f, 0.0f, 0.0f}, 
+{    0.0f, 0.0f, 1.0f, 0.0f}, 
+{    0.0f, 0.0f, 0.0f, 1.0f},
+}};
+#endif
+
 void func_802A487C(Vtx* arg0, UNUSED struct UnkStruct_800DC5EC* arg1, UNUSED s32 arg2, UNUSED s32 arg3,
                    UNUSED f32* arg4) {
 
@@ -486,7 +495,11 @@ void func_802A487C(Vtx* arg0, UNUSED struct UnkStruct_800DC5EC* arg1, UNUSED s32
         //gSPPerspNormalize(gDisplayListHead++, 0xFFFF);
         gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxScreen),
                   G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
+#ifndef GBI_FLOATS
         gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&D_0D008E98), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+#else
+        gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&fD_0D008E98), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+#endif
         gSPVertex(gDisplayListHead++, &arg0[4], 4, 0);
         gSP2Triangles(gDisplayListHead++, 0, 3, 1, 0, 1, 3, 2, 0);
     }
@@ -542,7 +555,11 @@ void func_802A4A0C(Vtx* vtx, struct UnkStruct_800DC5EC* arg1, UNUSED s32 arg2, U
     //gSPPerspNormalize(gDisplayListHead++, 0xFFFF);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxScreen),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
+#ifndef GBI_FLOATS
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&D_0D008E98), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+#else
+    gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&fD_0D008E98), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+#endif
     gSPVertex(gDisplayListHead++, &vtx[0], 4, 0);
     gSP2Triangles(gDisplayListHead++, 0, 3, 1, 0, 1, 3, 2, 0);
     if (gCurrentCourseId == COURSE_RAINBOW_ROAD) {
