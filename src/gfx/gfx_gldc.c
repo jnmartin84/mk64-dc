@@ -23,10 +23,6 @@
 #include "macros.h"
 #include "gl_fast_vert.h"
 
-#ifndef GL_MIRRORED_REPEAT
-#define GL_MIRRORED_REPEAT      0x2902
-#endif
-
 enum MixType {
     SH_MT_NONE,
     SH_MT_TEXTURE,

@@ -117,7 +117,7 @@ extern Gfx d_course_royal_raceway_packed_dl_23F8[];
 extern Gfx d_course_royal_raceway_packed_dl_2478[];
 
 
-extern CollisionTriangle __attribute__((aligned(32))) allColTris[2800];//2048+1024];//2800];//2798];//2048+1024];
+extern CollisionTriangle __attribute__((aligned(32))) allColTris[2800];
 extern uint8_t __attribute__((aligned(32))) CEREMONY_BUF[36232];
 extern uint8_t __attribute__((aligned(32))) COURSE_BUF[146464];
 #include <string.h>
@@ -146,18 +146,13 @@ void load_ceremony_cutscene(void) {
     gActiveScreenMode = SCREEN_MODE_1P;
     gModeSelection = GRAND_PRIX;
     load_course(gCurrentCourseId);
-//    set_segment_base_addr(0xB, (void*) decompress_segments((u8*) CEREMONY_DATA_ROM_START, (u8*) CEREMONY_DATA_ROM_END, CEREMONY_BUF));
     {
-#if 1
         sprintf(texfn, "%s/dc_data/ceremony_data.bin", fnpre);
-#else
-        sprintf(texfn, "/cd/dc_data/ceremony_data.bin");
-#endif
         FILE* file = fopen(texfn, "rb");
         if (!file) {
             perror("fopen");
             printf("\n");
-//            while(1){}
+            // while(1){}
             exit(-1);
         }
 
@@ -171,9 +166,9 @@ void load_ceremony_cutscene(void) {
         while (didread < toread) {
             long rv = fread(&CEREMONY_BUF[didread], 1, toread - didread, file);
             if (rv == -1) {
-            perror("fread");
-            printf("couldnt read into ceremony buf\n");
-//            while(1){}
+                perror("fread");
+                printf("couldnt read into ceremony buf\n");
+                // while(1){}
                 exit(-1);
             }
             toread -= rv;
@@ -185,16 +180,13 @@ void load_ceremony_cutscene(void) {
     }
 
     {
-#if 1
         sprintf(texfn, "%s/dc_data/banshee_boardwalk_data.bin", fnpre);
-#else
-            sprintf(texfn, "/cd/dc_data/banshee_boardwalk_data.bin");
-#endif
+
         FILE* file = fopen(texfn, "rb");
         if (!file) {
             perror("fopen");
             printf("\n");
-//            while(1){}
+            // while(1){}
             exit(-1);
         }
 
@@ -208,9 +200,9 @@ void load_ceremony_cutscene(void) {
         while (didread < toread) {
             long rv = fread(&COURSE_BUF[didread], 1, toread - didread, file);
             if (rv == -1) {
-            perror("fread");
-            printf("couldnt read into course buf\n");
-//            while(1){}
+                perror("fread");
+                printf("couldnt read into course buf\n");
+                //            while(1){}
                 exit(-1);
             }
             toread -= rv;
@@ -238,7 +230,7 @@ void load_ceremony_cutscene(void) {
     gCollisionMeshCount = (u16) 0;
     D_800DC5BC = (u16) 0;
     D_800DC5C8 = (u16) 0;
-    gCollisionMesh = (CollisionTriangle*) allColTris;//gNextFreeMemoryAddress;
+    gCollisionMesh = (CollisionTriangle*) allColTris; // gNextFreeMemoryAddress;
     //! @bug these segmented addresses need to be symbols for mobility
     // d_course_royal_raceway_packed_dl_67E8
     generate_collision_mesh_with_default_section_id((Gfx*) d_course_royal_raceway_packed_dl_67E8, -1);
@@ -259,7 +251,7 @@ void load_ceremony_cutscene(void) {
     // d_course_royal_raceway_packed_dl_23F8
     generate_collision_mesh_with_default_section_id((Gfx*) d_course_royal_raceway_packed_dl_23F8, 1);
     // d_course_royal_raceway_packed_dl_2478
-    generate_collision_mesh_with_default_section_id((Gfx*)d_course_royal_raceway_packed_dl_2478, 1);
+    generate_collision_mesh_with_default_section_id((Gfx*) d_course_royal_raceway_packed_dl_2478, 1);
     func_80295C6C();
     debug_switch_character_ceremony_cutscene();
     func_802818BC();
@@ -270,105 +262,22 @@ void load_ceremony_cutscene(void) {
     init_camera_podium_ceremony();
     func_80093E60();
     // gold
-    		uint16_t *reflp = (uint16_t *)segmented_to_virtual(0xb002f18);
-		for (int i=0;i<32*32;i++) {
-			uint16_t nextrp = reflp[i];
-			nextrp = (nextrp << 8) | ((nextrp >> 8)&0xff);
-			reflp[i] = nextrp;
-		}//brass
-    		reflp = (uint16_t *)segmented_to_virtual(0x0b003f18);
-		for (int i=0;i<32*32;i++) {
-			uint16_t nextrp = reflp[i];
-			nextrp = (nextrp << 8) | ((nextrp >> 8)&0xff);
-			reflp[i] = nextrp;
-		} //silver
-    		reflp = (uint16_t *)segmented_to_virtual(0x0b003718);
-		for (int i=0;i<32*32;i++) {
-			uint16_t nextrp = reflp[i];
-			nextrp = (nextrp << 8) | ((nextrp >> 8)&0xff);
-			reflp[i] = nextrp;
-		}
-
-
-//    init_course_path_point();
-//    D_801625F8 = (s32) gHeapEndPtr - gNextFreeMemoryAddress;
-//    D_801625FC = ((f32) D_801625F8 / 1000.0f);
+    uint16_t* reflp = (uint16_t*) segmented_to_virtual(0x0B002F18);
+    for (int i = 0; i < 32 * 32; i++) {
+        uint16_t nextrp = reflp[i];
+        nextrp = (nextrp << 8) | ((nextrp >> 8) & 0xff);
+        reflp[i] = nextrp;
+    } // brass
+    reflp = (uint16_t*) segmented_to_virtual(0x0B003F18);
+    for (int i = 0; i < 32 * 32; i++) {
+        uint16_t nextrp = reflp[i];
+        nextrp = (nextrp << 8) | ((nextrp >> 8) & 0xff);
+        reflp[i] = nextrp;
+    } // silver
+    reflp = (uint16_t*) segmented_to_virtual(0x0B003718);
+    for (int i = 0; i < 32 * 32; i++) {
+        uint16_t nextrp = reflp[i];
+        nextrp = (nextrp << 8) | ((nextrp >> 8) & 0xff);
+        reflp[i] = nextrp;
+    }
 }
-
-#if 0
-void load_ceremony_cutscene(void) {
-    Camera* camera = &cameras[0];
-
-    gCurrentCourseId = COURSE_ROYAL_RACEWAY;
-    D_800DC5B4 = (u16) 1;
-    gIsMirrorMode = 0;
-    gGotoMenu = 0xFFFF;
-    D_80287554 = 0;
-    set_perspective_and_aspect_ratio();
-    func_802A74BC();
-    camera->unk_B4 = 60.0f;
-    gCameraZoom[0] = 60.0f;
-    D_800DC5EC->screenWidth = SCREEN_WIDTH;
-    D_800DC5EC->screenHeight = SCREEN_HEIGHT;
-    D_800DC5EC->screenStartX = 160;
-    D_800DC5EC->screenStartY = 120;
-    gScreenModeSelection = SCREEN_MODE_1P;
-    gNextFreeMemoryAddress = (s32) gFreeMemoryResetAnchor;
-    gActiveScreenMode = SCREEN_MODE_1P;
-    gModeSelection = GRAND_PRIX;
-    load_course(gCurrentCourseId);
-    D_8015F730 = (s32) gNextFreeMemoryAddress;
-    set_segment_base_addr(0xB, (void*) decompress_segments((u8*) CEREMONY_DATA_ROM_START, (u8*) CEREMONY_DATA_ROM_END));
-    set_segment_base_addr(6, (void*) decompress_segments((u8*) &_course_banshee_boardwalk_dl_mio0SegmentRomStart,
-                                                         (u8*) &_course_yoshi_valley_dl_mio0SegmentRomStart));
-    D_8015F8E4 = -2000.0f;
-
-    gCourseMinX = -0x15A1;
-    gCourseMinY = -0x15A1;
-    gCourseMinZ = -0x15A1;
-
-    gCourseMaxX = 0x15A1;
-    gCourseMaxY = 0x15A1;
-    gCourseMaxZ = 0x15A1;
-
-    D_8015F59C = 0;
-    D_8015F5A0 = 0;
-    D_8015F58C = 0;
-    gCollisionMeshCount = (u16) 0;
-    D_800DC5BC = (u16) 0;
-    D_800DC5C8 = (u16) 0;
-    gCollisionMesh = (CollisionTriangle*) gNextFreeMemoryAddress;
-    //! @bug these segmented addresses need to be symbols for mobility
-    // d_course_royal_raceway_packed_dl_67E8
-    generate_collision_mesh_with_default_section_id((Gfx*) 0x070067E8, -1);
-    // d_course_royal_raceway_packed_dl_AEF8
-    generate_collision_mesh_with_default_section_id((Gfx*) 0x0700AEF8, -1);
-    // d_course_royal_raceway_packed_dl_A970
-    generate_collision_mesh_with_default_section_id((Gfx*) 0x0700A970, 8);
-    // d_course_royal_raceway_packed_dl_AC30
-    generate_collision_mesh_with_default_section_id((Gfx*) 0x0700AC30, 8);
-    // d_course_royal_raceway_packed_dl_CE0
-    generate_collision_mesh_with_default_section_id((Gfx*) 0x07000CE0, 0x10);
-    // d_course_royal_raceway_packed_dl_E88
-    generate_collision_mesh_with_default_section_id((Gfx*) 0x07000E88, 0x10);
-    // d_course_royal_raceway_packed_dl_A618
-    generate_collision_mesh_with_default_section_id((Gfx*) 0x0700A618, -1);
-    // d_course_royal_raceway_packed_dl_A618
-    generate_collision_mesh_with_default_section_id((Gfx*) 0x0700A618, -1);
-    // d_course_royal_raceway_packed_dl_23F8
-    generate_collision_mesh_with_default_section_id((Gfx*) 0x070023F8, 1);
-    // d_course_royal_raceway_packed_dl_2478
-    generate_collision_mesh_with_default_section_id((Gfx*) 0x07002478, 1);
-    func_80295C6C();
-    debug_switch_character_ceremony_cutscene();
-    func_802818BC();
-    func_8003D080();
-    init_hud();
-    func_8001C05C();
-    balloons_and_fireworks_init();
-    init_camera_podium_ceremony();
-    func_80093E60();
-    D_801625F8 = (s32) gHeapEndPtr - gNextFreeMemoryAddress;
-    D_801625FC = ((f32) D_801625F8 / 1000.0f);
-}
-#endif

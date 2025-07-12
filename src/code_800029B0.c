@@ -170,12 +170,14 @@ void func_800029B0(void) {
 }
 //#include <stdio.h>
 void nuke_everything();
-
+extern int must_inval_bg;
 void setup_race(void) {
     struct Controller* controller;
     int i;
 
     nuke_everything();
+    must_inval_bg = 1;
+
     gPlayerCountSelection1 = gPlayerCount;
     if (gGamestate != RACING) {
         gIsMirrorMode = 0;
@@ -319,10 +321,10 @@ void func_80003040(void) {
     // In other words, the first texture in segment 3 for credits should start at 0x9000
     // This is only required for moo moo farm.
     // This is also bad memory management practice as this could result in overwriting the wrong memory.
-    set_segment_base_addr(0x3, (void*)SEG3_BUF);// + 0x9000);// (gNextFreeMemoryAddress - 0x9000));
-	ROVING_SEG3_BUF = SEG3_BUF;// + 0x9000;
+    set_segment_base_addr(0x3, (void*)SEG3_BUF);
+	ROVING_SEG3_BUF = SEG3_BUF;
     destroy_all_actors();
-#if !ENABLE_CUSTOM_COURSE_ENGINE
+
     switch (gCurrentCourseId) {
         case COURSE_MARIO_RACEWAY:
             dma_textures(gTextureTrees1, 0x35B, 0x800);
@@ -401,8 +403,6 @@ void func_80003040(void) {
         default:
             break;
     }
-#else
 
-#endif
     gNumPermanentActors = gNumActors;
 }

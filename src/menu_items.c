@@ -57,16 +57,23 @@
 //! @todo Move gGfxPool out of main.h
 // Unfortunately that's not a small effort due to weird import structure in this project
 #include "main.h"
+extern u8 __attribute__((aligned(32))) backing_gCourseOutline[0x16][128*96/2];
+extern u8 __attribute__((aligned(32))) backing_gMenuTextureBuffer[0x000900B0];
+extern u8 __attribute__((aligned(32))) backing_gMenuCompressedBuffer[65536];
+extern u8 __attribute__((aligned(32))) backing_sTKMK00_LowResBuffer[320*240];
+extern u8 __attribute__((aligned(32))) backing_gSomeDLBuffer[0x1000];
+
+int must_inval_bg = 0;
 
 void gfx_texture_cache_invalidate(void *orig_addr);
 
 void guMtxCatL(Mtx* m, Mtx* n, Mtx* res);
 
-u16* gMenuTextureBuffer;
-u32* gMenuCompressedBuffer;
-u8* sTKMK00_LowResBuffer;
+u16* gMenuTextureBuffer = backing_gMenuTextureBuffer;
+u32* gMenuCompressedBuffer = backing_gMenuCompressedBuffer;
+u8* sTKMK00_LowResBuffer = backing_sTKMK00_LowResBuffer;
 u8* sGPPointsCopy;
-void* gSomeDLBuffer;
+void* gSomeDLBuffer = backing_gSomeDLBuffer;
 /**
  * List of bytes indexed by character ID
  * Indicates number of Grand Prix points that character
@@ -1235,10 +1242,6 @@ void swap_values(s32* arg0, s32* arg1) {
 
 extern s8 D_800E852C;
 
-extern u8 __attribute__((aligned(32))) backing_gMenuTextureBuffer[0x000900B0];
-extern u8 __attribute__((aligned(32))) backing_gMenuCompressedBuffer[0x0000CE00];
-extern u8 __attribute__((aligned(32))) backing_sTKMK00_LowResBuffer[320*240];
-extern u8 __attribute__((aligned(32))) backing_gSomeDLBuffer[0x1000];
 
 // save space by reusing this for startup
 extern u8 __attribute__((aligned(32))) CEREMONY_ACTOR_BUF[65536];//15200];//65536]; 
@@ -1247,6 +1250,7 @@ extern u16 reflection_map_brass[];
 
 extern u16 reflection_map_silver[];
 
+int converted_refls = 0;
 
 void func_80091B78(void) {
     s32 why = 0;
@@ -1267,7 +1271,7 @@ void func_80091B78(void) {
     if (gMenuSelection == LOGO_INTRO_MENU) {
 		void *startup_decomp = decompress_segments((u8*) STARTUP_LOGO_ROM_START, CEREMONY_ACTOR_BUF);
         set_segment_base_addr(6, startup_decomp);
-
+        if (!converted_refls) {
         uint16_t *reflp = (uint16_t *)segmented_to_virtual(reflection_map_gold);
 		for (int i=0;i<32*32;i++) {
 			uint16_t nextrp = reflp[i];
@@ -1286,6 +1290,8 @@ void func_80091B78(void) {
 			nextrp = (nextrp << 8) | ((nextrp >> 8)&0xff);
 			reflp[i] = nextrp;
 		}
+        converted_refls = 1;
+        }
     }
 
     // Hypothetically, this should be a ptr... But only hypothetically.
@@ -2198,10 +2204,10 @@ void func_80093E40(void) {
     func_80093C98(1);
 }
 
-extern u8 __attribute__((aligned(32))) backing_gMenuTextureBuffer[0x000900B0];
-extern u8 __attribute__((aligned(32))) backing_gMenuCompressedBuffer[0x0000CE00];
+/*extern u8 __attribute__((aligned(32))) backing_gMenuTextureBuffer[0x000900B0];
+extern u8 __attribute__((aligned(32))) backing_gMenuCompressedBuffer[0x0000FFFF];
 extern u8 __attribute__((aligned(32))) backing_sTKMK00_LowResBuffer[320*240];
-extern u8 __attribute__((aligned(32))) backing_gSomeDLBuffer[0x1000];
+extern u8 __attribute__((aligned(32))) backing_gSomeDLBuffer[0x1000];*/
 
 void func_80093E60(void) {
     s32 i;
@@ -2857,6 +2863,14 @@ Gfx* func_80095E10(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, s32 arg4, 
         return displayListHead;
     }
     sp7C = arg8;
+
+            if (must_inval_bg) {
+//                printf("%d\n", must_inval_bg);
+                must_inval_bg = 0;
+                gfx_texture_cache_invalidate(argA);
+//                printf("\t%d\n", must_inval_bg);
+            }
+
     for (var_s3 = arg5; var_s3 < (u32) arg7; var_s3 += temp_lo) {
 
         if ((u32) arg7 < temp_lo + var_s3) {
@@ -3204,7 +3218,7 @@ Gfx* func_80097AE4(Gfx* displayListHead, s8 fmt, s32 arg2, s32 arg3, u8* arg4, s
         return displayListHead;
     }
 
-    gfx_texture_cache_invalidate(arg4);
+//    gfx_texture_cache_invalidate(arg4);
 
     arg2Copy = arg2;
 
@@ -3246,7 +3260,7 @@ Gfx* func_80097E58(Gfx* displayListHead, s8 fmt, UNUSED u32 arg2, u32 arg3, UNUS
 
     arg6Copy = arg6;
 
-    gfx_texture_cache_invalidate(someTexture);
+//    gfx_texture_cache_invalidate(someTexture);
 
     lrs = arg9 / 2;
     spDC = arg9 - lrs;
@@ -4238,26 +4252,21 @@ void adjust_img_colour(s32 arg0, s32 arg1, u32 arg2, u32 arg3, u32 arg4) {
     u32 temp_t9;
     s32 var_v1;
     u16* color;
-#if 1
     color = &gMenuTextureBuffer[sMenuTextureMap[arg0].offset];
     for (var_v1 = 0; var_v1 != arg1; var_v1++) {
-		uint16_t c = *color;
-		red = ((c & 0xF800) >> 0xB) * 0x4D;
+        uint16_t c = *color;
+        red = ((c & 0xF800) >> 0xB) * 0x4D;
         green = ((c & 0x7C0) >> 6) * 0x96;
-		blue = ((c & 0x3E) >> 1) * 0x1D;
+        blue = ((c & 0x3E) >> 1) * 0x1D;
         alpha = c & 0x1;
         temp_t9 = red + green + blue;
         temp_t9 = temp_t9 >> 8;
         newred = ((temp_t9 * arg2) >> 8) << 0xB;
         newgreen = ((temp_t9 * arg3) >> 8) << 6;
         newblue = ((temp_t9 * arg4) >> 8) << 1;
-       u16 c2 = //*color++ = 
-       newred + newgreen + newblue + alpha;
-        *color++ = (c2 << 8) | ((c2 >> 8)&0xff);
+        u16 c2 = newred + newgreen + newblue + alpha;
+        *color++ = (c2 << 8) | ((c2 >> 8) & 0xff);
     }
-
-
-    #endif
 }
 
 u16* func_8009B8C4(u64* arg0) {
@@ -4320,8 +4329,8 @@ Gfx* func_8009B9D0(Gfx* displayListHead, MenuTexture* textures) {
     }
     if (found) {
         gSPDisplayList(displayListHead++, displayList);
-        return displayListHead;
     }
+    return displayListHead;
 }
 
 Gfx* render_menu_textures(Gfx* arg0, MenuTexture* arg1, s32 column, s32 row) {
@@ -4356,11 +4365,11 @@ Gfx* render_menu_textures(Gfx* arg0, MenuTexture* arg1, s32 column, s32 row) {
         temp_v0_3 = (u8*) func_8009B8C4(temp_v0->textureData);
 
 //        if (D_8018E7AC[4] == 4) {
-        if (temp_v0_3 != 0 && arg1 != gMenuTexturesBackground[0] && arg1 != gMenuTexturesBackground[1]) {
+        if (temp_v0_3 != NULL && arg1 != gMenuTexturesBackground[0] && arg1 != gMenuTexturesBackground[1]) {
             gfx_texture_cache_invalidate(temp_v0_3);
         }
 
-        if (temp_v0_3 != 0) {
+        if (temp_v0_3 != NULL) {
             if (D_8018E7AC[4] != 4) {
                 arg0 =
                     func_80095E10(arg0, var_s4, 0x00000400, 0x00000400, 0, 0, temp_v0->width, temp_v0->height,
@@ -4448,7 +4457,7 @@ Gfx* print_letter(Gfx* arg0, MenuTexture* glyphTexture, f32 arg2, f32 arg3, s32 
         } else {
             temp_v0_2 = (u8*) func_8009B8C4(var_s0->textureData);
             if (temp_v0_2 != 0) {
-                    gfx_texture_cache_invalidate(temp_v0_2);
+//                    gfx_texture_cache_invalidate(temp_v0_2);
                     switch (mode) { /* irregular */
                     case 1:
                         gSPDisplayList(arg0++, D_020077F8);
@@ -5415,9 +5424,10 @@ void clear_menus(void) {
     }
 }
 
-u16 last_r;
-u16 last_g;
-u16 last_b;
+u16 last_r=0;
+u16 last_g=0;
+u16 last_b=0;
+int last_bg_type = -1;
 #include <stdlib.h>
 void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
     MenuItem* menuItem;
@@ -5547,20 +5557,29 @@ void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
             u16 cur_r, cur_g, cur_b;
             load_menu_img_comp_type(gMenuTexturesBackground[has_unlocked_extra_mode()], LOAD_MENU_IMG_TKMK00_ONCE);
             load_menu_img_comp_type(D_02004B74, LOAD_MENU_IMG_TKMK00_ONCE);
-            convert_img_to_greyscale(0, 0x00000019);
-            adjust_img_colour(0, SCREEN_WIDTH * SCREEN_HEIGHT,
-                D_800E74E8[type - MAIN_MENU_BACKGROUND].red,
-                D_800E74E8[type - MAIN_MENU_BACKGROUND].green,
-                D_800E74E8[type - MAIN_MENU_BACKGROUND].blue);
-            cur_r = D_800E74E8[type - MAIN_MENU_BACKGROUND].red;
+            if (last_bg_type != (type - MAIN_MENU_BACKGROUND)) {
+                last_bg_type = type - MAIN_MENU_BACKGROUND;
+
+                convert_img_to_greyscale(0, 0x00000019);
+
+                adjust_img_colour(0, SCREEN_WIDTH * SCREEN_HEIGHT,
+                    D_800E74E8[type - MAIN_MENU_BACKGROUND].red,
+                    D_800E74E8[type - MAIN_MENU_BACKGROUND].green,
+                    D_800E74E8[type - MAIN_MENU_BACKGROUND].blue);
+
+                must_inval_bg = 1;
+            }
+
+/*            cur_r = D_800E74E8[type - MAIN_MENU_BACKGROUND].red;
             cur_g = D_800E74E8[type - MAIN_MENU_BACKGROUND].green;
             cur_b = D_800E74E8[type - MAIN_MENU_BACKGROUND].blue;
             if (cur_r != last_r || cur_g != last_g || cur_b != last_b) {
                 last_r = cur_r;
                 last_g = cur_g;
                 last_b = cur_b;
-                gfx_texture_cache_invalidate(&gMenuTextureBuffer[sMenuTextureMap[0].offset]);
-            }
+                must_inval_bg = 1;
+//                gfx_texture_cache_invalidate(&gMenuTextureBuffer[sMenuTextureMap[0].offset]);
+            }*/
             break;
         case MENU_ITEM_UI_OK:
             menuItem->param1 = 0x20;

@@ -107,13 +107,13 @@ Player* gPlayerEight = &gPlayers[7];
 
 Player* gPlayerOneCopy = &gPlayers[0];
 Player* gPlayerTwoCopy = &gPlayers[1];
-UNUSED Player* gPlayerThreeCopy = &gPlayers[2];
-UNUSED Player* gPlayerFourCopy = &gPlayers[3];
+//UNUSED Player* gPlayerThreeCopy = &gPlayers[2];
+//UNUSED Player* gPlayerFourCopy = &gPlayers[3];
 
-UNUSED s32 D_800FD850[3];
+//UNUSED s32 D_800FD850[3];
 struct GfxPool* gGfxPool;
 
-UNUSED s32 gfxPool_padding; // is this necessary?
+//UNUSED s32 gfxPool_padding; // is this necessary?
 struct VblankHandler gGameVblankHandler;
 struct VblankHandler sSoundVblankHandler;
 OSMesgQueue gDmaMesgQueue, gGameVblankQueue, gGfxVblankQueue, unused_gMsgQueue, gIntrMesgQueue, gSPTaskMesgQueue;
@@ -121,7 +121,7 @@ OSMesgQueue sSoundMesgQueue;
 OSMesg sSoundMesgBuf[1];
 OSMesg gDmaMesgBuf[1], gGameMesgBuf;
 OSMesg gGfxMesgBuf[1];
-UNUSED OSMesg D_8014F010, D_8014F014;
+//UNUSED OSMesg D_8014F010, D_8014F014;
 OSMesg gIntrMesgBuf[16], gSPTaskMesgBuf[16];
 OSMesg gMainReceivedMesg;
 OSIoMesg gDmaIoMesg;
@@ -236,6 +236,7 @@ static struct GfxRenderingAPI *rendering_api = &gfx_opengl_api;
 extern void gfx_run(Gfx *commands);
 
 extern void thread5_game_loop(void *arg);
+#define SAMPLES_ACTUAL 446
 #define SAMPLES_HIGH 454
 #define SAMPLES_LOW 438
 #include "dcaudio/audio_api.h"
@@ -274,10 +275,10 @@ void game_loop_one_iteration(void) {
     gfx_end_frame();
 #if 1
     u32 num_audio_samples = even_frame ? SAMPLES_HIGH : SAMPLES_LOW;
-    irq_disable();
+    //irq_disable();
     create_next_audio_buffer(audio_buffer + 0 * (num_audio_samples * 2), num_audio_samples);
     create_next_audio_buffer(audio_buffer + 1 * (num_audio_samples * 2), num_audio_samples);
-    irq_enable();
+    //irq_enable();
     audio_api->play((u8 *)audio_buffer, 2 * num_audio_samples * 2 * 2);
 #endif
 
@@ -565,16 +566,16 @@ int main(UNUSED int argc, UNUSED char **argv) {
 }
 
 void setup_mesg_queues(void) {
-    osCreateMesgQueue(&gDmaMesgQueue, gDmaMesgBuf, ARRAY_COUNT(gDmaMesgBuf));
-    osCreateMesgQueue(&gSPTaskMesgQueue, gSPTaskMesgBuf, ARRAY_COUNT(gSPTaskMesgBuf));
-    osCreateMesgQueue(&gIntrMesgQueue, gIntrMesgBuf, ARRAY_COUNT(gIntrMesgBuf));
-    osViSetEvent(&gIntrMesgQueue, (OSMesg) MESG_VI_VBLANK, 1);
-    osSetEventMesg(OS_EVENT_SP, &gIntrMesgQueue, (OSMesg) MESG_SP_COMPLETE);
-    osSetEventMesg(OS_EVENT_DP, &gIntrMesgQueue, (OSMesg) MESG_DP_COMPLETE);
+//    osCreateMesgQueue(&gDmaMesgQueue, gDmaMesgBuf, ARRAY_COUNT(gDmaMesgBuf));
+//    osCreateMesgQueue(&gSPTaskMesgQueue, gSPTaskMesgBuf, ARRAY_COUNT(gSPTaskMesgBuf));
+//    osCreateMesgQueue(&gIntrMesgQueue, gIntrMesgBuf, ARRAY_COUNT(gIntrMesgBuf));
+//    osViSetEvent(&gIntrMesgQueue, (OSMesg) MESG_VI_VBLANK, 1);
+//    osSetEventMesg(OS_EVENT_SP, &gIntrMesgQueue, (OSMesg) MESG_SP_COMPLETE);
+//    osSetEventMesg(OS_EVENT_DP, &gIntrMesgQueue, (OSMesg) MESG_DP_COMPLETE);
 }
 
 void start_sptask(s32 taskType) {
-    if (taskType == M_AUDTASK) {
+/*     if (taskType == M_AUDTASK) {
         gActiveSPTask = sCurrentAudioSPTask;
     } else {
         gActiveSPTask = sCurrentDisplaySPTask;
@@ -582,6 +583,7 @@ void start_sptask(s32 taskType) {
     osSpTaskLoad(&gActiveSPTask->task);
     osSpTaskStartGo(&gActiveSPTask->task);
     gActiveSPTask->state = SPTASK_STATE_RUNNING;
+ */
 }
 
 /**
@@ -593,7 +595,7 @@ void create_gfx_task_structure(void) {
 	//printf("\n");
 	
 #if 1
-    gGfxSPTask->msgqueue = &gGfxVblankQueue;
+    gGfxSPTask->msgqueue = NULL;//&gGfxVblankQueue;
     gGfxSPTask->msg = (OSMesg) 2;
     gGfxSPTask->task.t.type = M_GFXTASK;
     gGfxSPTask->task.t.flags = OS_TASK_DP_WAIT;
@@ -602,13 +604,13 @@ void create_gfx_task_structure(void) {
     // The split-screen multiplayer racing state uses F3DLX which has a simple subpixel calculation.
     // Singleplayer race mode and all other game states use F3DEX.
     // http://n64devkit.square7.ch/n64man/ucode/gspF3DEX.htm
-    if (gGamestate != RACING || gPlayerCountSelection1 == 1) {
+    //if (gGamestate != RACING || gPlayerCountSelection1 == 1) {
         gGfxSPTask->task.t.ucode = NULL;//gspF3DEXTextStart;
         gGfxSPTask->task.t.ucode_data = NULL;//gspF3DEXDataStart;
-    } else {
-        gGfxSPTask->task.t.ucode = NULL;//gspF3DLXTextStart;
-        gGfxSPTask->task.t.ucode_data = NULL;//gspF3DLXDataStart;
-    }
+    //} else {
+    //    gGfxSPTask->task.t.ucode = NULL;//gspF3DLXTextStart;
+    //    gGfxSPTask->task.t.ucode_data = NULL;//gspF3DLXDataStart;
+    //}
     gGfxSPTask->task.t.flags = 0;
     gGfxSPTask->task.t.flags = OS_TASK_DP_WAIT;
     gGfxSPTask->task.t.ucode_size = SP_UCODE_SIZE;
@@ -1086,17 +1088,14 @@ int sgm_run = 0;
  * Setup main segments and framebuffers.
  */
 void setup_game_memory(void) {
-    set_segment_base_addr(0, 0x8c010000);
+    set_segment_base_addr(0, 0x8C010000);//0xDEADBEEF);
     func_80000BEC();
     memset(SEG2_BUF, 0, sizeof(SEG2_BUF));
     memset(COMMON_BUF, 0, sizeof(COMMON_BUF));
     set_segment_base_addr(2, (void*) load_data(SEG_DATA_START, SEG_DATA_END, SEG2_BUF));
     char texfn[256];
-#if 1
+
     sprintf(texfn, "%s/dc_data/common_data.bin", fnpre);
-#else
-    sprintf(texfn, "/cd/dc_data/common_data.bin");
-#endif
 
     FILE* file = fopen(texfn, "rb");
     if (!file) {
@@ -1135,7 +1134,7 @@ void setup_game_memory(void) {
             np = (np << 8) | ((np >> 8) & 0xff);
             tlut_ptr[i] = np;
         }
-#if 1
+
         tlut_ptr = (u16*) segmented_to_virtual(l_d_course_rainbow_road_static_tluts[1]);
         for (int i = 0; i < 256; i++) {
             uint16_t np = tlut_ptr[i];
@@ -1172,7 +1171,7 @@ void setup_game_memory(void) {
             np = (np << 8) | ((np >> 8) & 0xff);
             tlut_ptr[i] = np;
         }
-#endif
+
         // a whole bunch of stuff I have to endian-swap
         tlut_ptr = (u16*) segmented_to_virtual(common_tlut_player_emblem);
         for (int i = 0; i < 256; i++) {
@@ -1602,14 +1601,14 @@ void setup_game_memory(void) {
             np = (np << 8) | ((np >> 8) & 0xff);
             tlut_ptr[i] = np;
         }
-// bomb kart wheel, 16x16
+
+        // bomb kart wheel, 16x16
         tlut_ptr = segmented_to_virtual(D_0D02AA58);
         for (int i = 0; i < 16 * 16; i++) {
             uint16_t np = tlut_ptr[i];
             np = (np << 8) | ((np >> 8) & 0xff);
             tlut_ptr[i] = np;
         }
-
 
         sgm_run = 1;
     }

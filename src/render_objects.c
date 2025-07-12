@@ -35,7 +35,7 @@
 #include "courses/all_course_data.h"
 #include <vehicles.h>
 #include "data/some_data.h"
-
+#include <stdio.h>
 void gfx_texture_cache_invalidate(void *orig_addr);
 
 void func_800431B0(Vec3f pos, Vec3su orientation, f32 scale, Vtx* vtx) {
@@ -230,6 +230,11 @@ void load_texture_block_i8_nomirror(u8* texture, s32 width, s32 height) {
 }
 
 void func_80044924(u8* texture, s32 width, s32 height) {
+    if ((uintptr_t)texture < 0x01000000u) {
+        printf("%s low val ptr\n", __func__);
+        return;
+    }
+
     // This macro ought to be equivalent to the block of macros below but it doesn't match
     // See comment above the `gDPLoadBlock` macro
     // gDPLoadTextureBlock_4b(gDisplayListHead++, texture, G_IM_FMT_I, width, height, 0, G_TX_NOMIRROR | G_TX_CLAMP,
@@ -264,6 +269,11 @@ void func_80044BF8(u8* texture, s32 width, s32 height) {
 }
 
 void func_80044DA0(u8* image, s32 width, s32 height) {
+     if ((uintptr_t)image < 0x01000000u) {
+        printf("%s low val ptr\n", __func__);
+        return;
+    }
+
     // This macro ought to be equivalent to the block of macros below but it doesn't match
     // See comment above the `gDPLoadBlock` macro
     // gDPLoadTextureBlock_4b(gDisplayListHead++, image, G_IM_FMT_I, width, height, 0, G_TX_NOMIRROR | G_TX_CLAMP,
@@ -287,7 +297,11 @@ void func_80044DA0(u8* image, s32 width, s32 height) {
 
 // Appears to be a complete copy of `func_80044F34`?
 void func_80044F34(u8* image, s32 width, s32 height) {
-    // This macro ought to be equivalent to the block of macros below but it doesn't match
+     if ((uintptr_t)image < 0x01000000u) {
+        printf("%s low val ptr\n", __func__);
+        return;
+    }
+   // This macro ought to be equivalent to the block of macros below but it doesn't match
     // See comment above the `gDPLoadBlock` macro
     // gDPLoadTextureBlock_4b(gDisplayListHead++, image, G_IM_FMT_I, width, height, 0, G_TX_NOMIRROR | G_TX_CLAMP,
     // G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD);
@@ -309,6 +323,10 @@ void func_80044F34(u8* image, s32 width, s32 height) {
 }
 
 void func_800450C8(u8* image, s32 width, s32 height) {
+    if ((uintptr_t)image < 0x01000000u) {
+        printf("%s low val ptr\n", __func__);
+        return;
+    }
     // This macro ought to be equivalent to the block of macros below but it doesn't match
     // See comment above the `gDPLoadBlock` macro
     // gDPLoadTextureBlock_4b(gDisplayListHead++, image, G_IM_FMT_I, width, height, 0, G_TX_NOMIRROR | G_TX_CLAMP,
@@ -1088,6 +1106,8 @@ void func_8004961C(u8* texture, Vtx* arg1, s32 arg2, s32 arg3, s32 width, s32 he
     s32 j;
     s32 var_s2 = 0;
     u8* img = texture;
+    if (!texture)
+        return;
 
     for (i = 0; i < arg3 / height; i++) {
         for (j = 0; j < arg2 / width; j++) {
@@ -2106,6 +2126,9 @@ UNUSED void func_8004DAB8(s32 arg0, s32 arg1, u8* texture, s32 arg3, s32 arg4) {
     s32 var_s4;
     s32 var;
     s32 i;
+
+    if (!texture)
+        return;
 
     D_801656B0 += D_80165710;
     temp_f20 = D_8018D00C;

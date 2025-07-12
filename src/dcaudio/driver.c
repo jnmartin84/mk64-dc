@@ -193,6 +193,13 @@ void *audio_callback(UNUSED snd_stream_hnd_t hnd, int samples_requested_bytes, i
     return (void*)(temp_buf + (SND_STREAM_BUFFER_MAX * temp_buf_sel));
 }
 
+void mute_stream(void) {
+    snd_stream_volume(shnd, 0); // Set maximum volume
+}
+void unmute_stream(void) {
+    snd_stream_volume(shnd, 124); // Set maximum volume
+}
+
 static bool audio_dc_init(void) {
     if (snd_stream_init()) {
         printf("AICA INIT FAILURE!\n");
@@ -221,7 +228,7 @@ static bool audio_dc_init(void) {
         snd_stream_destroy(shnd);
         return false;
     }
-    snd_stream_volume(shnd, 252); // Set maximum volume
+    snd_stream_volume(shnd, 124); // Set maximum volume
     
     // Start the dedicated audio polling thread
 //    g_audio_thread_status = AUDIO_STATUS_RUNNING;
@@ -233,7 +240,7 @@ static bool audio_dc_init(void) {
 	main_attr.label = "snd_thread";
     g_audio_poll_thread_handle = thd_create_ex(&main_attr, snd_thread, NULL);
     #endif
-#if 0
+#if 1
     g_audio_poll_thread_handle = thd_create(false, snd_thread, NULL);
 
     if (!g_audio_poll_thread_handle) {
@@ -278,8 +285,8 @@ static void audio_dc_play(/* const */ uint8_t *buf, size_t len) {
         cb_clear();
        // return;
     }
-    if(audio_started)
-        snd_stream_poll(shnd);
+//    if(audio_started)
+  //      snd_stream_poll(shnd);
 }
 
 struct AudioAPI audio_dc = {

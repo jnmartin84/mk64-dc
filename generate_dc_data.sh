@@ -3,7 +3,7 @@
 mkdir -p dc_data
 
 cp build/us/assets/code/common_data/common_data.bin dc_data
-
+cp build/us/assets/code/ceremony_data/ceremony_data.bin dc_data
 cp bin/audiobanks.us.bin dc_data/audiobanks.bin
 cp bin/audiotables.bin dc_data
 

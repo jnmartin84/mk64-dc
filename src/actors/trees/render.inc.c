@@ -26,7 +26,7 @@ Gfx l_d_course_mario_raceway_dl_tree_setup[] = {
     gsSPEndDisplayList(),
 };
 
-#if 0
+#if 1
 Gfx l_d_course_mario_raceway_dl_tree[] = {
     gsSPVertex(d_course_mario_raceway_tree_model, 4, 0),
     gsSP1Triangle(0, 1, 2, 0),
@@ -44,7 +44,7 @@ void finish_actor_tree_mario_raceway(void) {
     gDPSetTextureLUT(gDisplayListHead++, G_TT_NONE);
 }
 
-void render_actor_tree_mario_raceway(Camera* camera, Mat4 arg1, struct Actor* arg2) {
+void render_actor_tree_mario_raceway(Camera* camera, Mat4 arg1, struct Actor* arg2, int pass) {
     f32 temp_f0;
     s16 temp_v0 = arg2->flags;
 
@@ -59,20 +59,27 @@ void render_actor_tree_mario_raceway(Camera* camera, Mat4 arg1, struct Actor* ar
         return;
     }
 
+    if (pass == 1) {
     if (((temp_v0 & 0x400) == 0) && (temp_f0 < 250000.0f)) {
-        func_8029794C(arg2->pos, arg2->rot, 3.0f);
+        render_shadow_for_tree(arg2->pos, arg2->rot, 3.0f);
     }
+    return;
+    } else if (pass == 0) {
     arg1[3][0] = arg2->pos[0];
     arg1[3][1] = arg2->pos[1];
     arg1[3][2] = arg2->pos[2];
 
     if (render_set_position(arg1, 0) != 0) {
+#if 0
         gDPLoadTLUT_pal256(gDisplayListHead++, common_tlut_trees_import);
         gSPDisplayList(gDisplayListHead++, d_course_mario_raceway_dl_tree);
-
-        //        gSPVertex(gDisplayListHead++, d_course_mario_raceway_tree_model, 4, 0);
-  //      gSP1Triangle(gDisplayListHead++, 0, 1, 2, 0);
-    //    gSP1Triangle(gDisplayListHead++, 0, 2, 3, 0);
+#else
+        gSPVertex(gDisplayListHead++, d_course_mario_raceway_tree_model, 4, 0);
+        gSP1Triangle(gDisplayListHead++, 0, 1, 2, 0);
+        gSP1Triangle(gDisplayListHead++, 0, 2, 3, 0);
+//        gSPDisplayList(gDisplayListHead++, l_d_course_mario_raceway_dl_tree);
+#endif
+    }
     }
 }
 
@@ -99,7 +106,7 @@ void render_actor_tree_yoshi_valley(Camera* camera, Mat4 arg1, struct Actor* arg
     }
 
     if (((temp_v0 & 0x400) == 0) && (temp_f0 < 250000.0f)) {
-        func_8029794C(arg2->pos, arg2->rot, 2.79999995f);
+        render_shadow_for_tree(arg2->pos, arg2->rot, 2.79999995f);
     }
     arg1[3][0] = arg2->pos[0];
     arg1[3][1] = arg2->pos[1];
@@ -134,7 +141,7 @@ void render_actor_tree_royal_raceway(Camera* camera, Mat4 arg1, struct Actor* ar
     }
 
     if (((temp_v0 & 0x400) == 0) && (temp_f0 < 250000.0f)) {
-        func_8029794C(arg2->pos, arg2->rot, 2.79999995f);
+        render_shadow_for_tree(arg2->pos, arg2->rot, 2.79999995f);
     }
     arg1[3][0] = arg2->pos[0];
     arg1[3][1] = arg2->pos[1];
@@ -169,7 +176,7 @@ void render_actor_tree_moo_moo_farm(Camera* camera, Mat4 arg1, struct Actor* arg
     }
 
     if (((temp_v0 & 0x400) == 0) && (temp_f0 < 600.0f)) {
-        func_8029794C(arg2->pos, arg2->rot, 5.0f);
+        render_shadow_for_tree(arg2->pos, arg2->rot, 5.0f);
     }
     arg1[3][0] = arg2->pos[0];
     arg1[3][1] = arg2->pos[1];
@@ -209,7 +216,6 @@ Gfx l_d_course_moo_moo_farm_dl_tree[] = {
     gsDPLoadTextureBlock(0x03009800, G_IM_FMT_CI, G_IM_SIZ_8b, 32, 64, 0, G_TX_NOMIRROR | G_TX_CLAMP,
                          G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD),
     gsSP2Triangles(4, 5, 6, 0, 4, 6, 7, 0),
-    gsDPSetTextureLUT(G_TT_NONE),
     gsSPEndDisplayList(),
 };
 
@@ -230,7 +236,7 @@ void render_actor_tree_luigi_raceway(Camera* camera, Mat4 arg1, struct Actor* ar
     }
 
     if (((temp_v0 & 0x400) == 0) && (temp_f0 < 250000.0f)) {
-        func_8029794C(arg2->pos, arg2->rot, 2.79999995f);
+        render_shadow_for_tree(arg2->pos, arg2->rot, 2.79999995f);
     }
     arg1[3][0] = arg2->pos[0];
     arg1[3][1] = arg2->pos[1];
@@ -270,7 +276,7 @@ void render_actor_tree_bowser_castle(Camera* camera, Mat4 arg1, struct Actor* ar
     }
 
     if (((temp_v0 & 0x400) == 0) && (temp_f0 < 250000.0f)) {
-        func_8029794C(arg2->pos, arg2->rot, 2.79999995f);
+        render_shadow_for_tree(arg2->pos, arg2->rot, 2.79999995f);
     }
     arg1[3][0] = arg2->pos[0];
     arg1[3][1] = arg2->pos[1];
@@ -305,7 +311,7 @@ void render_actor_bush_bowser_castle(Camera* camera, Mat4 arg1, struct Actor* ar
     }
 
     if (((temp_v0 & 0x400) == 0) && (temp_f0 < 250000.0f)) {
-        func_8029794C(arg2->pos, arg2->rot, 2.79999995f);
+        render_shadow_for_tree(arg2->pos, arg2->rot, 2.79999995f);
     }
     arg1[3][0] = arg2->pos[0];
     arg1[3][1] = arg2->pos[1];
@@ -340,7 +346,7 @@ void render_actor_tree_frappe_snowland(Camera* camera, Mat4 arg1, struct Actor* 
     }
 
     if (((temp_v0 & 0x400) == 0) && (temp_f0 < 250000.0f)) {
-        func_8029794C(arg2->pos, arg2->rot, 2.79999995f);
+        render_shadow_for_tree(arg2->pos, arg2->rot, 2.79999995f);
     }
     arg1[3][0] = arg2->pos[0];
     arg1[3][1] = arg2->pos[1];
@@ -374,7 +380,7 @@ void render_actor_tree_cactus1_kalimari_desert(Camera* camera, Mat4 arg1, struct
     }
 
     if (((temp_v0 & 0x400) == 0) && (temp_f0 < 40000.0f)) {
-        func_8029794C(arg2->pos, arg2->rot, 1.0f);
+        render_shadow_for_tree(arg2->pos, arg2->rot, 1.0f);
     }
     arg1[3][0] = arg2->pos[0];
     arg1[3][1] = arg2->pos[1];
@@ -408,7 +414,7 @@ void render_actor_tree_cactus2_kalimari_desert(Camera* camera, Mat4 arg1, struct
     }
 
     if (((temp_v0 & 0x400) == 0) && (temp_f0 < 40000.0f)) {
-        func_8029794C(arg2->pos, arg2->rot, 1.0f);
+        render_shadow_for_tree(arg2->pos, arg2->rot, 1.0f);
     }
     arg1[3][0] = arg2->pos[0];
     arg1[3][1] = arg2->pos[1];
@@ -442,7 +448,7 @@ void render_actor_tree_cactus3_kalimari_desert(Camera* camera, Mat4 arg1, struct
     }
 
     if (((temp_v0 & 0x400) == 0) && (temp_f0 < 40000.0f)) {
-        func_8029794C(arg2->pos, arg2->rot, 0.80000001f);
+        render_shadow_for_tree(arg2->pos, arg2->rot, 0.80000001f);
     }
     arg1[3][0] = arg2->pos[0];
     arg1[3][1] = arg2->pos[1];

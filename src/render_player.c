@@ -649,7 +649,160 @@ Vtx rk_D_800E5210[] = {
     { { { -9, 0, 0 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
 };
 
-Vtx* D_800DDBB4[] = { rk_D_800E49C0, rk_D_800E4AC0, rk_D_800E4BC0, rk_D_800E4CC0, rk_D_800E4DC0, rk_D_800E4EC0, rk_D_800E4FD0, rk_D_800E50D0 };
+Vtx gPlayerOneVtx[] = {
+    { { { 9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+};
+
+Vtx gPlayerTwoVtx[] = {
+    { { { 9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+};
+
+Vtx gPlayerThreeVtx[] = {
+    { { { 9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+};
+
+Vtx gPlayerFourVtx[] = {
+    { { { 9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+};
+
+Vtx gPlayerFiveVtx[] = {
+    { { { 9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+};
+
+Vtx gPlayerSixVtx[] = {
+    { { { 9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0x60 } } },
+};
+
+Vtx gPlayerSevenVtx[] = {
+    { { { 9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+};
+
+Vtx gPlayerEightVtx[] = {
+    { { { 9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 18, -6 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 18, -6 }, 0, { 4032, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 9, -6 }, 0, { 0, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 9, 0, -6 }, 0, { 0, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 0, -6 }, 0, { 4032, 3776 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -9, 9, -6 }, 0, { 4032, 1984 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+};
+
+Vtx* gPlayerVtx[] = { gPlayerOneVtx, gPlayerTwoVtx, gPlayerThreeVtx, gPlayerFourVtx, gPlayerFiveVtx, gPlayerSixVtx, gPlayerSevenVtx, gPlayerEightVtx };
 
 f32 gCharacterSize[] = { MARIO_SIZE, LUIGI_SIZE, YOSHI_SIZE, TOAD_SIZE, DK_SIZE, WARIO_SIZE, PEACH_SIZE, BOWSER_SIZE };
 
@@ -1179,12 +1332,12 @@ void some_time_decay_thing(Player* player, UNUSED s8 arg1) {
 void func_80022CA8(Player* player, s8 playerId, UNUSED s8 screenId, s8 arg3) {
     s16 temp_v0 = player->unk_DA4;
 
-    D_800DDBB4[playerId][arg3 + 0x0].v.ob[1] = 18 - (temp_v0 * 2.3);
-    D_800DDBB4[playerId][arg3 + 0x1].v.ob[1] = 9 - temp_v0;
-    D_800DDBB4[playerId][arg3 + 0x2].v.ob[1] = 9 - temp_v0;
-    D_800DDBB4[playerId][arg3 + 0x3].v.ob[1] = 18 - (temp_v0 * 2.3);
-    D_800DDBB4[playerId][arg3 + 0x4].v.ob[1] = 9 - temp_v0;
-    D_800DDBB4[playerId][arg3 + 0x7].v.ob[1] = 9 - temp_v0;
+    gPlayerVtx[playerId][arg3 + 0x0].v.ob[1] = 18 - (temp_v0 * 2.3);
+    gPlayerVtx[playerId][arg3 + 0x1].v.ob[1] = 9 - temp_v0;
+    gPlayerVtx[playerId][arg3 + 0x2].v.ob[1] = 9 - temp_v0;
+    gPlayerVtx[playerId][arg3 + 0x3].v.ob[1] = 18 - (temp_v0 * 2.3);
+    gPlayerVtx[playerId][arg3 + 0x4].v.ob[1] = 9 - temp_v0;
+    gPlayerVtx[playerId][arg3 + 0x7].v.ob[1] = 9 - temp_v0;
 }
 
 /**
@@ -1192,8 +1345,8 @@ void func_80022CA8(Player* player, s8 playerId, UNUSED s8 screenId, s8 arg3) {
  * short period of time. Perhaps does not do anything
  **/
 void func_80022D60(UNUSED Player* player, s8 playerId, UNUSED s8 screenId, s8 arg3) {
-    D_800DDBB4[playerId][arg3].v.ob[1] = 21;
-    D_800DDBB4[playerId][arg3 + 0x3].v.ob[1] = 21;
+    gPlayerVtx[playerId][arg3].v.ob[1] = 21;
+    gPlayerVtx[playerId][arg3 + 0x3].v.ob[1] = 21;
 }
 
 void func_80022DB4(Player* player, UNUSED s8 arg1) {
@@ -1223,12 +1376,12 @@ void func_80022DB4(Player* player, UNUSED s8 arg1) {
 void func_80022E84(Player* player, s8 playerId, UNUSED s8 screenId, s8 arg3) {
     s16 temp_v0 = player->unk_DB4.unk1E;
 
-    D_800DDBB4[playerId][arg3 + 0x0].v.ob[1] = 18 - temp_v0;
-    D_800DDBB4[playerId][arg3 + 0x1].v.ob[1] = 9 - temp_v0;
-    D_800DDBB4[playerId][arg3 + 0x2].v.ob[1] = 9 - temp_v0;
-    D_800DDBB4[playerId][arg3 + 0x3].v.ob[1] = 18 - temp_v0;
-    D_800DDBB4[playerId][arg3 + 0x4].v.ob[1] = 9 - temp_v0;
-    D_800DDBB4[playerId][arg3 + 0x7].v.ob[1] = 9 - temp_v0;
+    gPlayerVtx[playerId][arg3 + 0x0].v.ob[1] = 18 - temp_v0;
+    gPlayerVtx[playerId][arg3 + 0x1].v.ob[1] = 9 - temp_v0;
+    gPlayerVtx[playerId][arg3 + 0x2].v.ob[1] = 9 - temp_v0;
+    gPlayerVtx[playerId][arg3 + 0x3].v.ob[1] = 18 - temp_v0;
+    gPlayerVtx[playerId][arg3 + 0x4].v.ob[1] = 9 - temp_v0;
+    gPlayerVtx[playerId][arg3 + 0x7].v.ob[1] = 9 - temp_v0;
 }
 
 /**
@@ -1462,6 +1615,16 @@ Gfx rk_common_square_plain_render[] = {
     gsSPEndDisplayList(),
 };
 
+Gfx kart_common_square_plain_render[] = {
+    gsSP1Triangle(0, 1, 2, 0),
+    gsSP1Triangle(0, 2, 3, 0),
+    gsSP1Triangle(4, 5, 6, 0),
+    gsSP1Triangle(4, 6, 7, 0),
+
+    gsSPEndDisplayList(),
+};
+
+
 void render_player_shadow(Player* player, s8 playerId, s8 screenId) {
     Mat4 sp118;
     UNUSED Mat4 pad;
@@ -1642,16 +1805,16 @@ void render_kart(Player* player, s8 playerId, s8 screenId, s8 arg3) {
 #endif
     if ((screenId == 0) || (screenId == 1)) {
         sKartUpperTexture = &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId][playerId].pixel_index_array[0];
-        sKartLowerTexture = &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId][playerId].pixel_index_array[0x7C0];
+//        sKartLowerTexture = &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId][playerId].pixel_index_array[0x7C0];
     } else {
         sKartUpperTexture =
             &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId - 1][playerId - 4].pixel_index_array[0];
-        sKartLowerTexture =
-            &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId - 1][playerId - 4].pixel_index_array[0x7C0];
+//        sKartLowerTexture =
+//            &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId - 1][playerId - 4].pixel_index_array[0x7C0];
     }
 
     gfx_texture_cache_invalidate(sKartUpperTexture);
-    gfx_texture_cache_invalidate(sKartLowerTexture);
+//    gfx_texture_cache_invalidate(sKartLowerTexture);
 
     mtxf_translate_rotate(kart_matrix, result_pos, orientation);
     mtxf_scale2(kart_matrix, gCharacterSize[player->characterId] * player->size);
@@ -1712,17 +1875,24 @@ void render_kart(Player* player, s8 playerId, s8 screenId, s8 arg3) {
         gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2);
     }
 
+#if 0
     gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
                         G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &D_800DDBB4[playerId][arg3], 4, 0);
+    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 4, 0);
     gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
 
     gDPLoadTextureBlock(gDisplayListHead++, sKartLowerTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
                         G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &D_800DDBB4[playerId][arg3 + 4], 4, 0);
+    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3 + 4], 4, 0);
     gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
+#endif
+    gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 64, 0,
+                        G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
+                        G_TX_NOLOD);
+    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 8, 0);
+    gSPDisplayList(gDisplayListHead++, kart_common_square_plain_render);
     gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
     gDPSetAlphaCompare(gDisplayListHead++, G_AC_NONE);
 }
@@ -1763,17 +1933,17 @@ void render_ghost(Player* player, s8 playerId, s8 screenId, s8 arg3) {
     if ((screenId == 0) || (screenId == 1)) {
         sKartUpperTexture =
             &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId][playerId].pixel_index_array[0];
-        sKartLowerTexture =
-            &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId][playerId].pixel_index_array[0x7C0];
+//        sKartLowerTexture =
+//            &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId][playerId].pixel_index_array[0x7C0];
     } else {
         sKartUpperTexture =
             &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId - 1][playerId - 4].pixel_index_array[0];
-        sKartLowerTexture =
-            &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId - 1][playerId - 4].pixel_index_array[0x7C0];
+//        sKartLowerTexture =
+//            &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId - 1][playerId - 4].pixel_index_array[0x7C0];
     }
 
     gfx_texture_cache_invalidate(sKartUpperTexture);
-    gfx_texture_cache_invalidate(sKartLowerTexture);
+//    gfx_texture_cache_invalidate(sKartLowerTexture);
 
     mtxf_translate_rotate(sp12C, spDC, spD4);
     mtxf_scale2(sp12C, gCharacterSize[player->characterId] * player->size);
@@ -1791,18 +1961,25 @@ void render_ghost(Player* player, s8 playerId, s8 screenId, s8 arg3) {
                          GBL_c1(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA),
                      AA_EN | Z_CMP | Z_UPD | IM_RD | CVG_DST_WRAP | ZMODE_XLU | CVG_X_ALPHA | FORCE_BL |
                          GBL_c2(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA));
-
+#if 0
     gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
                         G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &D_800DDBB4[playerId][arg3], 4, 0);
+    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 4, 0);
     gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
 
     gDPLoadTextureBlock(gDisplayListHead++, sKartLowerTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
                         G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &D_800DDBB4[playerId][arg3 + 4], 4, 0);
+    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3 + 4], 4, 0);
     gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
+#endif
+    gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 64, 0,
+                        G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
+                        G_TX_NOLOD);
+    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 8, 0);
+    gSPDisplayList(gDisplayListHead++, kart_common_square_plain_render);
+
     gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
     gDPSetAlphaCompare(gDisplayListHead++, G_AC_NONE);
 }
@@ -1835,19 +2012,28 @@ void func_80025DE8(Player* player, s8 playerId, s8 screenId, s8 arg3) {
                          GBL_c1(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA),
                      AA_EN | Z_CMP | Z_UPD | IM_RD | CVG_DST_WRAP | ZMODE_XLU | CVG_X_ALPHA | FORCE_BL |
                          GBL_c2(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA));
-
+#if 0
     gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
                         G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &D_800DDBB4[playerId][arg3], 4, 0);
+    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 4, 0);
     gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
 
     gDPLoadTextureBlock(gDisplayListHead++, sKartLowerTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
                         G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &D_800DDBB4[playerId][arg3 + 4], 4, 0);
+    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3 + 4], 4, 0);
     gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
     gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
+#endif
+    gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 64, 0,
+                        G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
+                        G_TX_NOLOD);
+    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 8, 0);
+    gSPDisplayList(gDisplayListHead++, kart_common_square_plain_render);
+    gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
+    gDPSetAlphaCompare(gDisplayListHead++, G_AC_NONE);
+
     gMatrixEffectCount += 1;
 }
 
@@ -1880,17 +2066,27 @@ void render_player_ice_reflection(Player* player, s8 playerId, s8 screenId, s8 a
                   gPlayerCyanEffect[playerId], gPlayerMagentaEffect[playerId], gPlayerYellowEffect[playerId],
                   (s16) player->unk_0C6 / 2);
     gDPSetRenderMode(gDisplayListHead++, G_RM_ZB_XLU_SURF, G_RM_ZB_XLU_SURF2);
+#if 0
     gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
                         G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &D_800DDBB4[playerId][arg3], 4, 0);
+    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 4, 0);
     gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
     gDPLoadTextureBlock(gDisplayListHead++, sKartLowerTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
                         G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &D_800DDBB4[playerId][arg3 + 4], 4, 0);
+    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3 + 4], 4, 0);
     gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
     gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
+#endif
+    gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 64, 0,
+                        G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
+                        G_TX_NOLOD);
+    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 8, 0);
+    gSPDisplayList(gDisplayListHead++, kart_common_square_plain_render);
+    gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
+    gDPSetAlphaCompare(gDisplayListHead++, G_AC_NONE);
+
     gMatrixEffectCount += 1;
 }
 

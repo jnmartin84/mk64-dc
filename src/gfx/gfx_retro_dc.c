@@ -418,6 +418,7 @@ static uint8_t gfx_texture_cache_lookup(int tile, struct TextureHashmapNode** n,
 			gfx_opengl_set_tile_addr(tile, segaddr);
 
 			if ((*node)->dirty) {
+				(*node)->dirty = 0;
 				return 2;
 			} else {
 				*n = *node;
@@ -935,8 +936,6 @@ static void import_texture(int tile) {
 	} else {
 //		abort();
 	}
-
-	rendering_state.textures[tile]->dirty = 0;
 }
 #include <kos.h>
 
@@ -2205,10 +2204,10 @@ static void  __attribute__((noinline)) gfx_dp_set_scissor(UNUSED uint32_t mode, 
 
 static void  __attribute__((noinline)) gfx_dp_set_texture_image(UNUSED uint32_t format, uint32_t size, UNUSED uint32_t width,
 									 UNUSED const void* addr) {
-	if ((uintptr_t) addr < 0x01000000)
-		rdp.texture_to_load.addr = NULL;
-	else
-		rdp.texture_to_load.addr = segmented_to_virtual((void*)addr);
+//	if ((uintptr_t) addr < 0x01000000)
+//		rdp.texture_to_load.addr = NULL;
+//	else
+	rdp.texture_to_load.addr = segmented_to_virtual((void*)addr);
 
 	rdp.texture_to_load.siz = size;
 
@@ -2736,7 +2735,7 @@ static void gfx_run_dl(Gfx* cmd) {
 
 			// RDP Commands:
 			case G_SETTIMG:
-				gfx_dp_set_texture_image(C0(21, 3), C0(19, 2), C0(0, 10), seg_addr(cmd->words.w1));
+				gfx_dp_set_texture_image(C0(21, 3), C0(19, 2), C0(0, 10), cmd->words.w1);
 				break;
 
 			case G_LOADBLOCK:

@@ -135,6 +135,11 @@ __attribute__((noinline)) void stacktrace() {
 void* segmented_to_virtual(const void* addr) {
 	uintptr_t uip_addr = (uintptr_t)addr;
 
+//    if (uip_addr < 0x01000000) {
+//        printf("tried to use NULL-ish addr %08x as segmented addr\n", uip_addr);
+//        stacktrace();
+//    }
+
     if ((uip_addr >= 0x8c010000) && (uip_addr <= 0x8cffffff)) {
 		return uip_addr;
 	} 
@@ -171,10 +176,12 @@ void move_segment_table_to_dmem(void) {
 //    }
 }
 
+#if 0
 UNUSED void func_802A7D54(s32 arg0, s32 arg1) {
     gD_80150158[arg0].unk0 = arg0;
     gD_80150158[arg0].unk8 = arg1;
 }
+#endif
 
 /**
  * @brief Allocate and DMA.
@@ -186,6 +193,7 @@ void* load_data(uintptr_t startAddr, uintptr_t endAddr, uintptr_t target) {
     return (void*) target;
 }
 
+#if 0
 UNUSED void main_pool_init(uintptr_t start, uintptr_t end) {
     start = ALIGN16(start);
     end = ALIGN16(end - 15);
@@ -311,6 +319,7 @@ UNUSED void* func_802A80B0(u8* dest, u8* srcStart, u8* srcEnd) {
     return addr;
 }
 
+
 // replaces call to dynamic_dma_read with dma_read.
 UNUSED void* load_segment(s32 segment, u8* srcStart, u8* srcEnd, u8* side) {
     void* addr = func_802A80B0(srcStart, srcEnd, side);
@@ -383,6 +392,7 @@ UNUSED uintptr_t func_802A82AC(s32 arg0) {
     }
     return phi_v1;
 }
+#endif
 
 void gfx_texture_cache_invalidate(void* arg);
 // starting address for this texture COMPRESSED is gNextFree+arg2
@@ -581,11 +591,14 @@ extern u16 d_tlut_rainbow_road_neon_wario[];
 extern u16 d_tlut_rainbow_road_neon_toad[];
 #endif
 
+void mute_stream(void);
+void unmute_stream(void);
 
 
 //int max_unpack = 0;
 u8* load_course(s32 courseId) {
     u32 vertexCount;
+    mute_stream();
     nuke_everything();
 
     vertexCount = gCourseTable[courseId].vertexCount;
@@ -699,5 +712,6 @@ for (int n=0;n<6;n++) {
 }
 }
 #endif
+    unmute_stream();
     return COMP_VERT_BUF;
 }

@@ -420,16 +420,14 @@ void init_red_shell_texture(void) {
     }
 }
 
+#if 0
 UNUSED void func_80297944(void) {};
-//gDPSetCombineLERP(gDisplayListHead++, 0, 0, 0, PRIMITIVE, TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, PRIMITIVE, TEXEL0, 0,
-     //                 PRIMITIVE, 0);
-  //  gDPSetPrimColor(gDisplayListHead++, 0, 0, red, green, blue, alpha);
+#endif
 
 // this DL draws tree shadows
 Gfx l_D_0D007B20[] = {
     gsSPDisplayList(D_0D007A08),
     gsDPSetTextureFilter(G_TF_BILERP),
-//    gsDPSetRenderMode(G_RM_ZB_CLD_SURF, G_RM_ZB_CLD_SURF2),
     gsDPSetRenderMode(G_RM_AA_ZB_XLU_SURF, G_RM_AA_ZB_XLU_SURF2),
     gsDPSetPrimColor(0, 0, 0x14, 0x14, 0x14, 0x7F),
     gsDPSetCombineLERP(0, 0, 0, PRIMITIVE, TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, PRIMITIVE, TEXEL0, 0,
@@ -440,7 +438,7 @@ Gfx l_D_0D007B20[] = {
     gsSPEndDisplayList(),
 };
 
-void func_8029794C(Vec3f pos, Vec3s rot, f32 scale) {
+void render_shadow_for_tree(Vec3f pos, Vec3s rot, f32 scale) {
     Mat4 sp20;
     pos[1] += 2.0f;
 
@@ -460,7 +458,7 @@ void func_802979F8(struct Actor* arg0, UNUSED f32 arg1) {
 
         func_802976EC(&arg0->unk30, rot); // arg0 + 0x30
         func_80297760(arg0, pos);
-        func_8029794C(pos, rot, 0.45f);
+        render_shadow_for_tree(pos, rot, 0.45f);
     }
 }
 
@@ -734,7 +732,11 @@ void render_actor_shell(Camera* camera, Mat4 matrix, struct ShellActor* shell) {
     if (maxObjectsReached) {
         return;
     }
-gfx_texture_cache_invalidate((void*)phi_t3);
+    // this could be improved by checking for:
+    // 1) this is not blue shell
+    // 2) the shell TLUT is the same as the last time this was called
+    // in which case, don't invalidate again
+    gfx_texture_cache_invalidate((void*)phi_t3);
     gDPLoadTextureBlock(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(phi_t3), G_IM_FMT_CI, G_IM_SIZ_8b, 32, 32, 0,
                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
                         G_TX_NOLOD);
@@ -2454,6 +2456,10 @@ void render_item_boxes(struct UnkStruct_800DC5EC* arg0) {
 }
 extern void setup_actor_tree_mario_raceway();
 extern void finish_actor_tree_mario_raceway();
+extern void setup_actor_banana();
+extern void finish_actor_banana();
+extern void setup_actor_banana_flat();
+extern void finish_actor_banana_flat();
 void render_course_actors(struct UnkStruct_800DC5EC* arg0) {
     Camera* camera = arg0->camera;
     u16 pathCounter = arg0->pathCounter;
@@ -2488,126 +2494,167 @@ void render_course_actors(struct UnkStruct_800DC5EC* arg0) {
     }
     D_8015F8E0 = 0;
 
-/*     int ever_mario_treed = 0; */
+//    int tree_restarts = 0;
+//    int banana_restarts = 0;
 
+/*     int ever_mario_treed = 0; */
+    int doing_trees = 0;
+for (int pass=0;pass<2;pass++) {
     for (i = 0; i < ACTOR_LIST_SIZE; i++) {
         actor = &gActorList[i];
 
         if (actor->flags == 0) {
             continue;
         }
-#if 0
-        if (/* ever_mario_treed &&  */(actor->type != ACTOR_TREE_MARIO_RACEWAY) && (last_actor_type == ACTOR_TREE_MARIO_RACEWAY)) {
-            finish_actor_tree_mario_raceway();
-        } else if ((actor->type == ACTOR_TREE_MARIO_RACEWAY) && (last_actor_type != ACTOR_TREE_MARIO_RACEWAY)) {
-            setup_actor_tree_mario_raceway();
-            /* ever_mario_treed = 1; */
+
+        if (pass == 0) {
+            if (doing_trees == 0 && (actor->type == ACTOR_TREE_MARIO_RACEWAY)) {
+                doing_trees = 1;
+//                printf("restarting tree list %d\n", tree_restarts++);
+                setup_actor_tree_mario_raceway();
+            } else if (doing_trees == 1 && (actor->type != ACTOR_TREE_MARIO_RACEWAY)) {
+                doing_trees = 0;
+                finish_actor_tree_mario_raceway();
+            }
         }
-#endif
+
         switch (actor->type) {
             case ACTOR_TREE_MARIO_RACEWAY:
           //  setup_actor_tree_mario_raceway();
-                render_actor_tree_mario_raceway(camera, D_801502C0, actor);
+                render_actor_tree_mario_raceway(camera, D_801502C0, actor, pass);
           //  finish_actor_tree_mario_raceway();
                 break;
             case ACTOR_TREE_YOSHI_VALLEY:
+                if (pass == 0)
                 render_actor_tree_yoshi_valley(camera, D_801502C0, actor);
                 break;
             case ACTOR_TREE_ROYAL_RACEWAY:
+                if (pass == 0)
                 render_actor_tree_royal_raceway(camera, D_801502C0, actor);
                 break;
             case ACTOR_TREE_MOO_MOO_FARM:
+                if (pass == 0)
                 render_actor_tree_moo_moo_farm(camera, D_801502C0, actor);
                 break;
             case ACTOR_TREE_LUIGI_RACEWAY:
+                if (pass == 0)
                 render_actor_tree_luigi_raceway(camera, D_801502C0, actor);
                 break;
             case ACTOR_TREE_BOWSERS_CASTLE:
+                if (pass == 0)
                 render_actor_tree_bowser_castle(camera, D_801502C0, actor);
                 break;
             case ACTOR_BUSH_BOWSERS_CASTLE:
+                if (pass == 0)
                 render_actor_bush_bowser_castle(camera, D_801502C0, actor);
                 break;
             case ACTOR_TREE_FRAPPE_SNOWLAND:
+                if (pass == 0)
                 render_actor_tree_frappe_snowland(camera, D_801502C0, actor);
                 break;
             case ACTOR_CACTUS1_KALAMARI_DESERT:
+                if (pass == 0)
                 render_actor_tree_cactus1_kalimari_desert(camera, D_801502C0, actor);
                 break;
             case ACTOR_CACTUS2_KALAMARI_DESERT:
+                if (pass == 0)
                 render_actor_tree_cactus2_kalimari_desert(camera, D_801502C0, actor);
                 break;
             case ACTOR_CACTUS3_KALAMARI_DESERT:
+                if (pass == 0)
                 render_actor_tree_cactus3_kalimari_desert(camera, D_801502C0, actor);
                 break;
             case ACTOR_FALLING_ROCK:
+                if (pass == 0)
                 render_actor_falling_rock(camera, (struct FallingRock*) actor);
                 break;
             case ACTOR_KIWANO_FRUIT:
+                if (pass == 0)
                 render_actor_kiwano_fruit(camera, D_801502C0, actor);
                 break;
             case ACTOR_BANANA:
+                if (pass == 0)
                 render_actor_banana(camera, D_801502C0, (struct BananaActor*) actor);
                 break;
             case ACTOR_GREEN_SHELL:
+                if (pass == 0)
                 render_actor_green_shell(camera, D_801502C0, (struct ShellActor*) actor);
                 break;
             case ACTOR_RED_SHELL:
+                if (pass == 0)
                 render_actor_red_shell(camera, D_801502C0, (struct ShellActor*) actor);
                 break;
             case ACTOR_BLUE_SPINY_SHELL:
+                if (pass == 0)
                 render_actor_blue_shell(camera, D_801502C0, (struct ShellActor*) actor);
                 break;
             case ACTOR_PIRANHA_PLANT:
+                if (pass == 0)
                 render_actor_piranha_plant(camera, D_801502C0, (struct PiranhaPlant*) actor);
                 break;
             case ACTOR_TRAIN_ENGINE:
+                if (pass == 0)
                 render_actor_train_engine(camera, (struct TrainCar*) actor);
                 break;
             case ACTOR_TRAIN_TENDER:
+                if (pass == 0)
                 render_actor_train_tender(camera, (struct TrainCar*) actor);
                 break;
             case ACTOR_TRAIN_PASSENGER_CAR:
+                if (pass == 0)
                 render_actor_train_passenger_car(camera, (struct TrainCar*) actor);
                 break;
             case ACTOR_COW:
+                if (pass == 0)
                 render_actor_cow(camera, D_801502C0, actor);
                 break;
             case ACTOR_UNKNOWN_0x14:
+                if (pass == 0)
                 func_8029AC18(camera, D_801502C0, actor);
                 break;
             case ACTOR_MARIO_SIGN:
+                if (pass == 0)
                 render_actor_mario_sign(camera, D_801502C0, actor);
                 break;
             case ACTOR_WARIO_SIGN:
+                if (pass == 0)
                 render_actor_wario_sign(camera, actor);
                 break;
             case ACTOR_PALM_TREE:
+                if (pass == 0)
                 render_actor_palm_tree(camera, D_801502C0, (struct PalmTree*) actor);
                 break;
             case ACTOR_PADDLE_BOAT:
+                if (pass == 0)
                 render_actor_paddle_boat(camera, (struct PaddleWheelBoat*) actor, D_801502C0, pathCounter);
                 break;
             case ACTOR_BOX_TRUCK:
+                if (pass == 0)
                 render_actor_box_truck(camera, actor);
                 break;
             case ACTOR_SCHOOL_BUS:
+                if (pass == 0)
                 render_actor_school_bus(camera, actor);
                 break;
             case ACTOR_TANKER_TRUCK:
+                if (pass == 0)
                 render_actor_tanker_truck(camera, actor);
                 break;
             case ACTOR_CAR:
+                if (pass == 0)
                 render_actor_car(camera, actor);
                 break;
             case ACTOR_RAILROAD_CROSSING:
+                if (pass == 0)
                 render_actor_railroad_crossing(camera, (struct RailroadCrossing*) actor);
                 break;
             case ACTOR_YOSHI_EGG:
+                if (pass == 0)
                 render_actor_yoshi_egg(camera, D_801502C0, (struct YoshiValleyEgg*) actor, pathCounter);
                 break;
         }
         last_actor_type = actor->type;
+    }
     }
     switch (gCurrentCourseId) {
         case COURSE_MOO_MOO_FARM:

@@ -29,7 +29,7 @@ void render_actor_palm_tree(Camera* arg0, UNUSED Mat4 arg1, struct PalmTree* arg
 
     if (!(temp_f0 < 0.0f)) {
         if (((temp_v0 & 0x400) == 0) && (temp_f0 < 250000.0f)) {
-            func_8029794C(arg2->pos, arg2->rot, 2.0f);
+            render_shadow_for_tree(arg2->pos, arg2->rot, 2.0f);
         }
         mtxf_pos_rotation_xyz(sp68, arg2->pos, spA8);
         if (render_set_position(sp68, 0) != 0) {

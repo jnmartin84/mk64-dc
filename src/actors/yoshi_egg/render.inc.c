@@ -37,7 +37,7 @@ void render_actor_yoshi_egg(Camera* arg0, Mat4 arg1, struct YoshiValleyEgg* egg,
             sp54[1] = 3.0f;
             sp54[2] = egg->pos[2];
             func_802976D8(sp5C);
-            func_8029794C(sp54, sp5C, 10.0f);
+            render_shadow_for_tree(sp54, sp5C, 10.0f);
         }
         sp5C[0] = 0;
         sp5C[1] = egg->eggRot;
