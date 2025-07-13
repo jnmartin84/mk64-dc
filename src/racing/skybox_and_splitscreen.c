@@ -135,6 +135,10 @@ void set_the_scissor(struct UnkStruct_800DC5EC* arg0) {
 
 UNUSED void func_802A38AC(void) {
 }
+extern int must_inval_bg;
+extern uint16_t last_r;
+extern uint16_t last_g;
+extern uint16_t last_b;
 
 void func_802A38B4(void) {
     init_rdp();
@@ -152,6 +156,10 @@ void func_802A38B4(void) {
     gIsInQuitToMenuTransition = 0;
     gQuitToMenuTransitionCounter = 0;
     gFadeModeSelection = FADE_MODE_MAIN;
+    must_inval_bg = 1;
+    last_r = 0;
+    last_g = 0;
+    last_b = 0;
 
     switch (gGotoMode) {
         case START_MENU_FROM_QUIT:

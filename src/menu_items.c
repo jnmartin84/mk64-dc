@@ -3681,7 +3681,7 @@ void func_80099AEC(void) {
     TextureMap* entry;
     MenuTexture* texPtr;
 //    OSIoMesg mb;
-    OSMesg sp64;
+//    OSMesg sp64;
     s32 cacheSize;
     s32 bufSize;
 
@@ -3709,12 +3709,12 @@ void func_80099AEC(void) {
         cacheSize = ((cacheSize / 8) * 8) + 8;
     }
 
-    osInvalDCache(gMenuCompressedBuffer, cacheSize);
+//    osInvalDCache(gMenuCompressedBuffer, cacheSize);
     //(uintptr_t) _textures_0aSegmentRomStart + SEGMENT_OFFSET(texPtr->textureData),
 //    osPiStartDma(&mb, 0, 0, texPtr->textureData, gMenuCompressedBuffer, cacheSize, &gDmaMesgQueue);
     dma_copy(gMenuCompressedBuffer, texPtr->textureData, cacheSize);
 
-    osRecvMesg(&gDmaMesgQueue, &sp64, 1);
+//    osRecvMesg(&gDmaMesgQueue, &sp64, 1);
 
     while (1) {
         if ((var_s1 + 1)->texture == NULL) {
@@ -3729,7 +3729,7 @@ void func_80099AEC(void) {
             if (cacheSize % 8) {
                 cacheSize = ((cacheSize / 8) * 8) + 8;
             }
-            osInvalDCache(&gMenuCompressedBuffer[bufSize], cacheSize);
+            //osInvalDCache(&gMenuCompressedBuffer[bufSize], cacheSize);
             //(uintptr_t) _textures_0aSegmentRomStart + SEGMENT_OFFSET(texPtr->textureData),
             //osPiStartDma(&mb, 0, 0, texPtr->textureData, &gMenuCompressedBuffer[bufSize], cacheSize, &gDmaMesgQueue);
             dma_copy( &gMenuCompressedBuffer[bufSize], texPtr->textureData,cacheSize);
@@ -3744,7 +3744,7 @@ void func_80099AEC(void) {
             break;
         }
 
-        osRecvMesg(&gDmaMesgQueue, &sp64, 1);
+//        osRecvMesg(&gDmaMesgQueue, &sp64, 1);
 
         if ((var_s1 + 1)->texture == NULL) {
             texEnd += 1;
@@ -3758,7 +3758,7 @@ void func_80099AEC(void) {
             if (cacheSize % 8) {
                 cacheSize = ((cacheSize / 8) * 8) + 8;
             }
-            osInvalDCache(gMenuCompressedBuffer, cacheSize);
+            //osInvalDCache(gMenuCompressedBuffer, cacheSize);
             //(uintptr_t) _textures_0aSegmentRomStart + SEGMENT_OFFSET(texPtr->textureData),
             //osPiStartDma(&mb, 0, 0, texPtr->textureData, gMenuCompressedBuffer, cacheSize, &gDmaMesgQueue);
             dma_copy( gMenuCompressedBuffer, texPtr->textureData,cacheSize);
@@ -3771,7 +3771,7 @@ void func_80099AEC(void) {
         if (texEnd) {
             break;
         }
-        osRecvMesg(&gDmaMesgQueue, &sp64, 1);
+        //osRecvMesg(&gDmaMesgQueue, &sp64, 1);
     }
 }
 
@@ -5420,10 +5420,9 @@ void clear_menus(void) {
     }
 }
 
-u16 last_r=0;
-u16 last_g=0;
-u16 last_b=0;
-int last_bg_type = -1;
+u16 last_r = 0;
+u16 last_g = 0;
+u16 last_b = 0;
 #include <stdlib.h>
 void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
     MenuItem* menuItem;
@@ -5551,31 +5550,24 @@ void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
         case CHARACTER_SELECT_BACKGROUND:
         case COURSE_SELECT_BACKGROUND:
             u16 cur_r, cur_g, cur_b;
-            load_menu_img_comp_type(gMenuTexturesBackground[has_unlocked_extra_mode()], LOAD_MENU_IMG_TKMK00_ONCE);
-            load_menu_img_comp_type(D_02004B74, LOAD_MENU_IMG_TKMK00_ONCE);
-            if (last_bg_type != (type - MAIN_MENU_BACKGROUND)) {
-                last_bg_type = type - MAIN_MENU_BACKGROUND;
-
-                convert_img_to_greyscale(0, 0x00000019);
-
-                adjust_img_colour(0, SCREEN_WIDTH * SCREEN_HEIGHT,
-                    D_800E74E8[type - MAIN_MENU_BACKGROUND].red,
-                    D_800E74E8[type - MAIN_MENU_BACKGROUND].green,
-                    D_800E74E8[type - MAIN_MENU_BACKGROUND].blue);
-
-                must_inval_bg = 1;
-            }
-
-/*            cur_r = D_800E74E8[type - MAIN_MENU_BACKGROUND].red;
+            cur_r = D_800E74E8[type - MAIN_MENU_BACKGROUND].red;
             cur_g = D_800E74E8[type - MAIN_MENU_BACKGROUND].green;
             cur_b = D_800E74E8[type - MAIN_MENU_BACKGROUND].blue;
+            load_menu_img_comp_type(gMenuTexturesBackground[has_unlocked_extra_mode()], LOAD_MENU_IMG_TKMK00_ONCE);
+            load_menu_img_comp_type(D_02004B74, LOAD_MENU_IMG_TKMK00_ONCE);
             if (cur_r != last_r || cur_g != last_g || cur_b != last_b) {
                 last_r = cur_r;
                 last_g = cur_g;
                 last_b = cur_b;
-                must_inval_bg = 1;
-//                gfx_texture_cache_invalidate(&gMenuTextureBuffer[sMenuTextureMap[0].offset]);
-            }*/
+                must_inval_bg = 1; 
+
+                convert_img_to_greyscale(0, 0x00000019);
+
+                adjust_img_colour(0, SCREEN_WIDTH * SCREEN_HEIGHT,
+                    cur_r,
+                    cur_g,
+                    cur_b);
+            }
             break;
         case MENU_ITEM_UI_OK:
             menuItem->param1 = 0x20;
