@@ -1250,8 +1250,6 @@ extern u16 reflection_map_brass[];
 
 extern u16 reflection_map_silver[];
 
-int converted_refls = 0;
-
 void func_80091B78(void) {
     s32 why = 0;
     s32 i;
@@ -1271,7 +1269,7 @@ void func_80091B78(void) {
     if (gMenuSelection == LOGO_INTRO_MENU) {
 		void *startup_decomp = decompress_segments((u8*) STARTUP_LOGO_ROM_START, CEREMONY_ACTOR_BUF);
         set_segment_base_addr(6, startup_decomp);
-        if (!converted_refls) {
+
         uint16_t *reflp = (uint16_t *)segmented_to_virtual(reflection_map_gold);
 		for (int i=0;i<32*32;i++) {
 			uint16_t nextrp = reflp[i];
@@ -1290,8 +1288,6 @@ void func_80091B78(void) {
 			nextrp = (nextrp << 8) | ((nextrp >> 8)&0xff);
 			reflp[i] = nextrp;
 		}
-        converted_refls = 1;
-        }
     }
 
     // Hypothetically, this should be a ptr... But only hypothetically.
@@ -5424,9 +5420,10 @@ void clear_menus(void) {
     }
 }
 
-u16 last_r = 0;
-u16 last_g = 0;
-u16 last_b = 0;
+u16 last_r=0;
+u16 last_g=0;
+u16 last_b=0;
+int last_bg_type = -1;
 #include <stdlib.h>
 void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
     MenuItem* menuItem;
@@ -5554,16 +5551,10 @@ void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
         case CHARACTER_SELECT_BACKGROUND:
         case COURSE_SELECT_BACKGROUND:
             u16 cur_r, cur_g, cur_b;
-            cur_r = D_800E74E8[type - MAIN_MENU_BACKGROUND].red;
-            cur_g = D_800E74E8[type - MAIN_MENU_BACKGROUND].green;
-            cur_b    = D_800E74E8[type - MAIN_MENU_BACKGROUND].blue;
             load_menu_img_comp_type(gMenuTexturesBackground[has_unlocked_extra_mode()], LOAD_MENU_IMG_TKMK00_ONCE);
             load_menu_img_comp_type(D_02004B74, LOAD_MENU_IMG_TKMK00_ONCE);
-            if (cur_r != last_r || cur_g != last_g || cur_b != last_b) {
-                last_r = cur_r;
-                last_g = cur_g;
-                last_b = cur_b;
-                must_inval_bg = 1;                
+            if (last_bg_type != (type - MAIN_MENU_BACKGROUND)) {
+                last_bg_type = type - MAIN_MENU_BACKGROUND;
 
                 convert_img_to_greyscale(0, 0x00000019);
 
@@ -5571,6 +5562,8 @@ void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
                     D_800E74E8[type - MAIN_MENU_BACKGROUND].red,
                     D_800E74E8[type - MAIN_MENU_BACKGROUND].green,
                     D_800E74E8[type - MAIN_MENU_BACKGROUND].blue);
+
+                must_inval_bg = 1;
             }
 
 /*            cur_r = D_800E74E8[type - MAIN_MENU_BACKGROUND].red;
