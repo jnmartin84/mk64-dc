@@ -93,15 +93,28 @@ static inline int32_t clamp32(int64_t v) {
     return (int32_t) v;
 }
 
+//void checked_memeset
+uintptr_t DMEM_END = rspa.buf.as_u8 + DMEM_BUF_SIZE;
+
 void aClearBufferImpl(uint16_t addr, int nbytes) {
     nbytes = ROUND_UP_16(nbytes);
-    memset(BUF_U8(addr), 0, nbytes);
+ /*    if (((uintptr_t)BUF_U8(addr) + nbytes) >= DMEM_END) {
+        printf("attempted to clear past end of DMEM\n");
+        memset(BUF_U8(addr), 0, DMEM_END - (uintptr_t)BUF_U8(addr));
+    } else { */
+        memset(BUF_U8(addr), 0, nbytes);
+   // }
 }
 #include <stdio.h>
 
 void aLoadBufferImpl(const void* source_addr, uint16_t dest_addr, uint16_t nbytes) {
     //printf("source_addr: %08x\n dest_addr; %08x\n nbytes: %d\n", (uintptr_t)source_addr, (uintptr_t)BUF_U8(dest_addr), nbytes);
+    /* if (((uintptr_t)BUF_U8(dest_addr) + ROUND_DOWN_16(nbytes)) >= DMEM_END) {
+        printf("attempted to clear past end of DMEM\n");
+        memcpy(BUF_U8(dest_addr), 0, DMEM_END - (uintptr_t)BUF_U8(dest_addr));
+    } else { */
     memcpy(BUF_U8(dest_addr), source_addr, ROUND_DOWN_16(nbytes));
+//}
 }
 
 void aSaveBufferImpl(uint16_t source_addr, int16_t* dest_addr, uint16_t nbytes) {
@@ -458,6 +471,7 @@ void aSMixImpl(uint16_t in_addr, uint16_t out_addr, uint16_t count) {
     }
 }
 #endif
+/*
 void aSMixImpl(uint16_t in_addr, uint16_t out_addr, uint16_t count) {
     int nbytes = ROUND_UP_32(ROUND_DOWN_16(count));
     int32_t* in = (int32_t *)(((uintptr_t)BUF_S16(in_addr)+3)&~3);
@@ -486,6 +500,35 @@ void aSMixImpl(uint16_t in_addr, uint16_t out_addr, uint16_t count) {
             *out++ = (clamp16(sample1)<<16) | clamp16(sample2);
         }
 
+        nbytes -= 16 * sizeof(int16_t);
+    }
+}*/
+void aSMixImpl(uint16_t in_addr, uint16_t out_addr, uint16_t count) {
+    int nbytes = ROUND_UP_32(ROUND_DOWN_16(count));
+    int32_t* in = (int32_t *)(((uintptr_t)BUF_S16(in_addr)+3)&~3);
+    int32_t* out = (int32_t *)(((uintptr_t)BUF_S16(out_addr)+3)&~3);
+    __builtin_prefetch(in);
+    int i = 0;
+    int32_t sample1 = 0;
+    int32_t sample2 = 0;
+    int32_t outsamp;
+    int32_t insamp;
+
+    while (nbytes > 0) {
+        __builtin_prefetch(out);
+        for (i = 0; i < 8; i++) {
+            insamp = *in++;
+            sample1 = (insamp >> 16) & 0xffff;
+            sample2 = (insamp & 0xffff);
+#if 1
+            asm volatile("": : : "memory");
+#endif
+            outsamp = *out;
+            sample1 += (outsamp >> 16) & 0xffff;
+            sample2 += (outsamp & 0xffff);
+            *out++ = (clamp16(sample1)<<16) | clamp16(sample2);
+        }    
+        __builtin_prefetch(in);
         nbytes -= 16 * sizeof(int16_t);
     }
 }
@@ -561,6 +604,7 @@ void aDownsampleHalfImpl(uint16_t n_samples, uint16_t in_addr, uint16_t out_addr
     } while (n > 0);
 }
 #else
+/*
 void aDownsampleHalfImpl(
     uint16_t n_samples, uint16_t in_addr, uint16_t out_addr)
 {
@@ -574,6 +618,26 @@ void aDownsampleHalfImpl(
         uint32_t pair2 = *in++;
         uint32_t pair3 = *in++;
 
+        *out++ = ((int16_t)pair0 << 16) | (int16_t)pair1; // keep first, discard second
+        *out++ = ((int16_t)pair2 << 16) | (int16_t)pair3; // keep first, discard second
+        n -= 4;
+    } while (n > 0);
+}*/
+void aDownsampleHalfImpl(
+    uint16_t n_samples, uint16_t in_addr, uint16_t out_addr)
+{
+    int32_t * __restrict in =  (int32_t*)(((uintptr_t)BUF_S16(in_addr)+3) & ~3);
+    __builtin_prefetch(in);
+    int32_t * __restrict out = (int32_t*)(((uintptr_t)BUF_S16(out_addr)+3) & ~3);
+    int n = ROUND_UP_8(n_samples);
+
+    do {
+        asm volatile("pref @%0" : : "r" (out) : "memory");
+        uint32_t pair0 = *in++;
+        uint32_t pair1 = *in++;
+        uint32_t pair2 = *in++;
+        uint32_t pair3 = *in++;
+        asm volatile("pref @%0" : : "r" (in) : "memory");
         *out++ = ((int16_t)pair0 << 16) | (int16_t)pair1; // keep first, discard second
         *out++ = ((int16_t)pair2 << 16) | (int16_t)pair3; // keep first, discard second
         n -= 4;
