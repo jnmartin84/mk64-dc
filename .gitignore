@@ -1,3 +1,6 @@
+.DS_Store
+dcload-ip/
+
 # Object files
 *.o
 *.obj
