@@ -322,25 +322,41 @@ void func_800BB030(UNUSED s32 arg0) {
 
 // Similar to patch_sound, but not really
 void func_800BB304(struct AudioBankSample* sample) {
-    UNUSED u8* mem = NULL;
-//printf("%s(%08x)\n",__func__,sample);
+    u8* mem = NULL;
+    //printf("%s(%08x)\n",__func__,sample);
     if (sample == (void*) NULL) {
+        //printf("sample null\n");
         return;// -1;
     }
 
     if (sample->loaded == 1) {
+        uint32_t sampleCopySize = sample->sampleSize;
+        // this is why DK and Toad were broken once sound is active
+        if (sampleCopySize > 0xffff) {
+            sampleCopySize = Swap32(sampleCopySize);
+        }
         // temp_a1 = sound->sampleAddr // unk10;
-        mem = soundAlloc(&gNotesAndBuffersPool, sample->sampleSize);
+        mem = soundAlloc(&gNotesAndBuffersPool, sampleCopySize);
         // temp_a1_2 = temp_v0;
         if (mem == (void*) NULL) {
+            //printf("mem null\n");
             return;// -1;
         }
 
         //printf("about to copy to %08x\n", mem);
-        audio_dma_copy_immediate(sample->sampleAddr, mem, sample->sampleSize);
+        //printf("sample addr is %08x\n", sample->sampleAddr);
+        //printf("sample size is %08x\n", sample->sampleSize);
+      //  uint32_t sampleCopySize = sample->sampleSize;
+        // this is why DK and Toad were broken once sound is active
+//        if (sampleCopySize > 0xffff) {
+  //          sampleCopySize = Swap32(sampleCopySize);
+    //    }
+        audio_dma_copy_immediate(sample->sampleAddr, mem, sampleCopySize);//sample->sampleSize);
         sample->loaded = 0x81;
+        sample->sampleSize = sampleCopySize;
         sample->sampleAddr = mem; // sound->unk4
     }
+    //printf("returning from the func\n");
 }
 
 s32 func_800BB388(s32 bankId, s32 instId, s32 arg2) {
@@ -350,19 +366,24 @@ s32 func_800BB388(s32 bankId, s32 instId, s32 arg2) {
     if (instId < 0x7F) {
         instr = get_instrument_inner(bankId, instId);
         if (instr == NULL) {
+            //printf("instr null return -1\n");
             return -1;
         }
+        //printf("instr is %08x\n", instr);
         if (instr->normalRangeLo != 0) {
+            //printf("normalRangeLo != 0\n");
             func_800BB304(instr->lowNotesSound.sample);
         }
         func_800BB304(instr->normalNotesSound.sample);
         if (instr->normalRangeHi != 0x7F) {
+            //printf("normalRangeHi != 0x7f\n");
             func_800BB304(instr->highNotesSound.sample);
         }
         //! @bug missing return
     } else if (instId == 0x7F) {
         drum = get_drum(bankId, arg2);
         if (drum == NULL) {
+            //printf("drum null return -1\n");
             return -1;
         }
         func_800BB304(drum->sound.sample);
