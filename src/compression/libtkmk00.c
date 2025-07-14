@@ -63,7 +63,7 @@ void tkmk00decode(uint32_t *_tkmk, uint8_t *tmp_buf, uint16_t *_rgba16, int32_t 
    width = read_u16_be(&tkmk[0x8]);
    height = read_u16_be(&tkmk[0xA]);
 
-   alpha = alpha_color ? 0xFF : 0x00;
+   alpha = alpha_color;// > 1 ? 0xFF : 0x00;
    header6 = tkmk[0x6];
    pixels = width * height;
    memset(rgba_buf, 0xFF, sizeof(rgba_buf));
