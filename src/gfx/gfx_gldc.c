@@ -84,11 +84,15 @@ static void resample_16bit(const unsigned short* in, int inwidth, int inheight, 
     const unsigned short* inrow;
     unsigned int frac, fracstep;
 
+    __builtin_prefetch(in);
     fracstep = inwidth * 0x10000 / outwidth;
     for (i = 0; i < outheight; i++, out += outwidth) {
         inrow = in + inwidth * (i * inheight / outheight);
         frac = fracstep >> 1;
         for (j = 0; j < outwidth; j += 4) {
+            if (j & 7 == 0)
+                __builtin_prefetch(inrow + 16);
+
             out[j] = inrow[frac >> 16];
             frac += fracstep;
             out[j + 1] = inrow[frac >> 16];
@@ -359,7 +363,7 @@ static void gfx_opengl_select_texture(int tile, uint32_t texture_id) {
 }
 
 /* Used for rescaling textures ROUGHLY into pow2 dims */
-static unsigned int __attribute__((aligned(16))) scaled[64 * 64 * 4];//sizeof(unsigned int)]; /* 16kb */
+static unsigned int __attribute__((aligned(32))) scaled[64 * 64 * 4];//sizeof(unsigned int)]; /* 16kb */
 
 static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int height, unsigned int type) {
     // we don't support non power of two textures, scale to next power of two if necessary
