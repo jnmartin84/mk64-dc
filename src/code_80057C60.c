@@ -568,7 +568,7 @@ void render_object_p1(void) {
         func_80055F48(PLAYER_ONE);
         func_80056160(PLAYER_ONE);
         func_8005217C(PLAYER_ONE);
-        func_80054BE8(PLAYER_ONE);
+        render_ia8_star_particles(PLAYER_ONE);
         return;
     }
     if (!gDemoMode) {
@@ -2760,6 +2760,7 @@ extern u8 __attribute__((aligned(32))) OTHER_BUF[96*1024];
 void load_race_common_tex(void) {
 	ROVING_SEG3_BUF = OTHER_BUF;
 
+    // IA8 star texture
     D_8018D488 = dma_textures(gTexture69C80C, 0x400, 0x400);
     D_8018D474 = dma_textures(gTextureKartShadow, 0x1000, 0x1000);
     D_8018D420 = dma_textures(gTexture69B03C, 0x100, 0x100);

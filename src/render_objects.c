@@ -680,6 +680,23 @@ void func_80047068(u8* tlut, u8* texture, Vtx* arg2, UNUSED s32 arg3, s32 arg4, 
     gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
 }
 
+void draw_rectangle_texture_overlap_no_inval(u8* tlut, u8* texture, Vtx* arg2, UNUSED s32 arg3, s32 arg4, s32 width,
+                                    s32 height) {
+    s32 heightIndex;
+    s32 vertexIndex = 0;
+    u8* img = texture;
+
+    gDPLoadTLUT_pal256(gDisplayListHead++, tlut);
+    for (heightIndex = 0; heightIndex < arg4 / height; heightIndex++) {
+        rsp_load_texture(img, width, height);
+        gSPVertex(gDisplayListHead++, &arg2[vertexIndex], 4, 0);
+        gSPDisplayList(gDisplayListHead++, common_rectangle_display);
+        img += width * (height - 1);
+        vertexIndex += 4;
+    }
+    gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
+}
+
 void draw_rectangle_texture_overlap(u8* tlut, u8* texture, Vtx* arg2, UNUSED s32 arg3, s32 arg4, s32 width,
                                     s32 height) {
     s32 heightIndex;
@@ -847,6 +864,13 @@ UNUSED void func_80048038(Vec3f arg0, Vec3su arg1, f32 arg2, u8* tlut, u8* textu
     func_80047068(tlut, texture, arg5, arg6, arg7, arg8, arg9);
 }
 
+void draw_2d_texture_at_no_inval(Vec3f arg0, Vec3su arg1, f32 arg2, u8* tlut, u8* texture, Vtx* arg5, s32 arg6, s32 arg7,
+                        s32 arg8, s32 arg9) {
+    rsp_set_matrix_transformation(arg0, arg1, arg2);
+    gSPDisplayList(gDisplayListHead++, D_0D007D78);
+    draw_rectangle_texture_overlap_no_inval(tlut, texture, arg5, arg6, arg7, arg8, arg9);
+}
+
 void draw_2d_texture_at(Vec3f arg0, Vec3su arg1, f32 arg2, u8* tlut, u8* texture, Vtx* arg5, s32 arg6, s32 arg7,
                         s32 arg8, s32 arg9) {
     rsp_set_matrix_transformation(arg0, arg1, arg2);
@@ -937,6 +961,7 @@ void func_800485C4(Vec3f arg0, Vec3su arg1, f32 arg2, s32 arg3, u8* tlut, u8* te
     gDPSetAlphaCompare(gDisplayListHead++, G_AC_NONE);
 }
 
+#if 0
 UNUSED void func_800486B0(s32 arg0, s32 arg1, u16 arg2, f32 arg3, u8* tlut, u8* texture, Vtx* arg6) {
     func_8004788C(arg0, arg1, arg2, arg3, tlut, texture, arg6, 24, 48, 24, 48);
 }
@@ -1028,6 +1053,7 @@ UNUSED void func_80048ED0(s32 arg0, s32 arg1, u16 arg2, f32 arg3, u8* tlut, u8* 
 UNUSED void func_80048F38(Vec3f arg0, Vec3su arg1, f32 arg2, u8* tlut, u8* texture, Vtx* arg5) {
     draw_2d_texture_at(arg0, arg1, arg2, tlut, texture, arg5, 72, 48, 72, 24);
 }
+#endif
 
 void func_80048F8C(u8* texture, Vtx* arg1, s32 arg2, s32 arg3, s32 width, s32 height) {
     s32 heightIndex;
@@ -1356,7 +1382,7 @@ void func_8004A7AC(s32 objectIndex, f32 arg1) {
     }
 }
 
-void func_8004A870(s32 objectIndex, f32 arg1) {
+void shadow_for_a_hedgehog(s32 objectIndex, f32 arg1) {
     Mat4 sp30;
     Object* object;
 
@@ -2003,7 +2029,7 @@ void func_8004D37C(s32 arg0, s32 arg1, u8* texture, s32 arg3, s32 arg4, s32 arg5
     img = texture;
     gSPDisplayList(gDisplayListHead++, D_0D007FE0);
     set_shadow_color(arg3, arg4, arg5, arg6);
-    gfx_texture_cache_invalidate(img);
+//    gfx_texture_cache_invalidate(img);
     for (i = 0; i < arg8 / height; i++) {
         func_80044F34(img, width, height);
         func_8004B97C(arg0 - (width / 2), var_s3, width, height, 1);
@@ -3310,7 +3336,7 @@ void func_800523B8(s32 objectIndex, s32 arg1, u32 arg2) {
     Camera* camera = &camera1[arg1];
 
     object = &gObjectList[objectIndex];
-    object->orientation[1] = func_800418AC(object->pos[0], object->pos[2], camera->pos);
+    object->orientation[1] = get_angle_between_xz(object->pos[0], object->pos[2], camera->pos);
     func_800484BC(object->pos, object->orientation, object->sizeScaling, object->primAlpha, (u8*) object->activeTLUT,
                   object->activeTexture, object->vertex, 0x00000030, 0x00000028, 0x00000030, 0x00000028);
     if ((is_obj_flag_status_active(objectIndex, 0x00000020) != 0) && (arg2 < 0x15F91U)) {
@@ -3354,7 +3380,7 @@ void render_object_bat(s32 cameraId) {
 
             if ((gObjectList[objectIndex].state >= 2) && (gMatrixHudCount < 0x2EF)) {
                 D_80183E80[1] =
-                    func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], temp_s7->pos);
+                    get_angle_between_xz(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], temp_s7->pos);
                 func_800431B0(gObjectList[objectIndex].pos, D_80183E80, gObjectList[objectIndex].sizeScaling,
                               D_0D0062B0);
             }
@@ -3369,7 +3395,7 @@ void render_object_bat(s32 cameraId) {
 
             if ((gObjectList[objectIndex].state >= 2) && (gMatrixHudCount < 0x2EF)) {
                 D_80183E80[1] =
-                    func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], temp_s7->pos);
+                    get_angle_between_xz(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], temp_s7->pos);
                 func_800431B0(gObjectList[objectIndex].pos, D_80183E80, gObjectList[objectIndex].sizeScaling,
                               D_0D0062B0);
             }
@@ -3519,7 +3545,7 @@ void render_object_snowmans_list_2(s32 cameraId) {
             if (object->state > 0) {
                 func_8008A364(objectIndex, cameraId, 0x2AABU, 0x000001F4);
                 if (is_obj_flag_status_active(objectIndex, VISIBLE) != 0) {
-                    object->orientation[1] = func_800418AC(object->pos[0], object->pos[2], sp44->pos);
+                    object->orientation[1] = get_angle_between_xz(object->pos[0], object->pos[2], sp44->pos);
                     rsp_set_matrix_gObjectList(objectIndex);
                     gSPDisplayList(gDisplayListHead++, D_0D0069E0);
                 }
@@ -3542,7 +3568,7 @@ void OLD_render_object_snowmans_list_1(s32 cameraId) {
             if (is_obj_flag_status_active(objectIndex, VISIBLE) != 0) {
                 D_80183E80[0] = (s16) gObjectList[objectIndex].orientation[0];
                 D_80183E80[1] =
-                    func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
+                    get_angle_between_xz(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
                 D_80183E80[2] = (u16) gObjectList[objectIndex].orientation[2];
                 if (is_obj_flag_status_active(objectIndex, 0x00000010) != 0) {
                     draw_2d_texture_at(gObjectList[objectIndex].pos, (u16*) D_80183E80,
@@ -3610,7 +3636,7 @@ void render_object_snowmans_list_1(s32 cameraId) {
             if (is_obj_flag_status_active(objectIndex, VISIBLE) != 0) {
                 D_80183E80[0] = (s16) gObjectList[objectIndex].orientation[0];
                 D_80183E80[1] =
-                    func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
+                    get_angle_between_xz(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
                 D_80183E80[2] = (u16) gObjectList[objectIndex].orientation[2];
 
                 if (is_obj_flag_status_active(objectIndex, 0x00000010) != 0) {
@@ -3680,7 +3706,7 @@ void render_lakitu(s32 cameraId) {
     if (is_obj_flag_status_active(objectIndex, 0x00000010) != 0) {
         object = &gObjectList[objectIndex];
         object->orientation[0] = 0;
-        object->orientation[1] = func_800418AC(object->pos[0], object->pos[2], camera->pos);
+        object->orientation[1] = get_angle_between_xz(object->pos[0], object->pos[2], camera->pos);
         object->orientation[2] = 0x8000;
         if (func_80072354(objectIndex, 2) != 0) {
             draw_2d_texture_at(object->pos, object->orientation, object->sizeScaling, (u8*) object->activeTLUT,
@@ -3821,7 +3847,7 @@ void render_object_thwomps(s32 cameraId) {
             object = &gObjectList[objectIndex];
             if ((object->state >= 2) && (object->unk_0D5 == 2) && (gMatrixHudCount <= MTX_HUD_POOL_SIZE_MAX)) {
                 set_prim_only(0x000000FF, 0x000000FF, 0x000000FF, (s32) object->primAlpha);
-                D_80183E80[1] = func_800418AC(object->pos[0], object->pos[2], camera->pos);
+                D_80183E80[1] = get_angle_between_xz(object->pos[0], object->pos[2], camera->pos);
                 func_800431B0(object->pos, D_80183E80, object->sizeScaling, D_0D005AE0);
                 // jnmartin84 -- ???
                 func_800431B0(object->pos, D_80183E80, object->sizeScaling*0.85, D_0D005AE0);
@@ -3881,7 +3907,7 @@ void render_object_train_smoke_particle(s32 objectIndex, s32 cameraId) {
             set_color_render((s32) gObjectList[objectIndex].type, (s32) gObjectList[objectIndex].type,
                              (s32) gObjectList[objectIndex].type, 0, 0, 0, (s32) gObjectList[objectIndex].primAlpha);
             D_80183E80[1] =
-                func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
+                get_angle_between_xz(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
             func_800431B0(gObjectList[objectIndex].pos, D_80183E80, gObjectList[objectIndex].sizeScaling, D_0D005AE0);
         }
     }
@@ -3943,7 +3969,7 @@ void render_object_paddle_boat_smoke_particle(s32 objectIndex, s32 cameraId) {
                              gObjectList[objectIndex].unk_0A2, gObjectList[objectIndex].unk_0A2,
                              (s32) gObjectList[objectIndex].primAlpha);
             D_80183E80[1] =
-                func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
+                get_angle_between_xz(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
             func_800431B0(gObjectList[objectIndex].pos, D_80183E80, gObjectList[objectIndex].sizeScaling, D_0D005AE0);
         }
     }
@@ -3986,7 +4012,7 @@ void render_object_bowser_flame_particle(s32 objectIndex, s32 cameraId) {
         } else {
             set_prim_only(0xFF, (s32) object->type, 0, (s32) object->primAlpha);
         }
-        D_80183E80[1] = func_800418AC(object->pos[0], object->pos[2], camera->pos);
+        D_80183E80[1] = get_angle_between_xz(object->pos[0], object->pos[2], camera->pos);
         func_800431B0(object->pos, D_80183E80, object->sizeScaling, D_0D005AE0);
     }
 }
@@ -4026,7 +4052,7 @@ void func_8005477C(s32 objectIndex, u8 arg1, Vec3f arg2) {
             default:
                 break;
         }
-        D_80183E80[1] = func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], arg2);
+        D_80183E80[1] = get_angle_between_xz(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], arg2);
         func_800431B0(gObjectList[objectIndex].pos, D_80183E80, gObjectList[objectIndex].sizeScaling, D_0D005AE0);
     }
 }
@@ -4062,9 +4088,9 @@ void render_object_smoke_particles(s32 cameraId) {
     }
 }
 
-void func_80054AFC(s32 objectIndex, Vec3f arg1) {
-    D_80183E80[0] = func_800418E8(gObjectList[objectIndex].pos[2], gObjectList[objectIndex].pos[1], arg1);
-    D_80183E80[1] = func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], arg1);
+void render_one_ia8_star_particle(s32 objectIndex, Vec3f arg1) {
+    D_80183E80[0] = get_angle_between_yz(gObjectList[objectIndex].pos[2], gObjectList[objectIndex].pos[1], arg1);
+    D_80183E80[1] = get_angle_between_xz(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], arg1);
     D_80183E80[2] = (u16) gObjectList[objectIndex].orientation[2];
     set_prim_only((s32) gObjectList[objectIndex].unk_084[0], (s32) gObjectList[objectIndex].unk_084[1],
                   (s32) gObjectList[objectIndex].unk_084[2], (s32) gObjectList[objectIndex].primAlpha);
@@ -4074,7 +4100,7 @@ void func_80054AFC(s32 objectIndex, Vec3f arg1) {
     gSPDisplayList(gDisplayListHead++, common_rectangle_display);
 }
 
-void func_80054BE8(s32 cameraId) {
+void render_ia8_star_particles(s32 cameraId) {
     s32 var_s0;
     s32 temp_a0;
     Camera* camera;
@@ -4087,7 +4113,7 @@ void func_80054BE8(s32 cameraId) {
     for (var_s0 = 0; var_s0 < gObjectParticle3_SIZE; var_s0++) {
         temp_a0 = gObjectParticle3[var_s0];
         if ((temp_a0 != -1) && (gObjectList[temp_a0].state >= 2)) {
-            func_80054AFC(temp_a0, camera->pos);
+            render_one_ia8_star_particle(temp_a0, camera->pos);
         }
     }
 }
@@ -4101,7 +4127,7 @@ void func_80054D00(s32 objectIndex, s32 cameraId) {
         if (is_obj_flag_status_active(objectIndex, VISIBLE) != 0) {
             D_80183E80[0] = (s16) gObjectList[objectIndex].orientation[0];
             D_80183E80[1] =
-                func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
+                get_angle_between_xz(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
             D_80183E80[2] = (u16) gObjectList[objectIndex].orientation[2];
             func_80048130(gObjectList[objectIndex].pos, (u16*) D_80183E80, gObjectList[objectIndex].sizeScaling,
                           (u8*) gObjectList[objectIndex].activeTLUT, gObjectList[objectIndex].activeTexture, D_0D0062B0,
@@ -4148,7 +4174,7 @@ void func_80054F04(s32 cameraId) {
         if (object->state > 0) {
             func_8008A364(objectIndex, cameraId, 0x2AABU, 0x000000C8);
             if ((is_obj_flag_status_active(objectIndex, VISIBLE) != 0) && (gMatrixHudCount <= MTX_HUD_POOL_SIZE_MAX)) {
-                object->orientation[1] = func_800418AC(object->pos[0], object->pos[2], sp44->pos);
+                object->orientation[1] = get_angle_between_xz(object->pos[0], object->pos[2], sp44->pos);
                 rsp_set_matrix_gObjectList(objectIndex);
                 gSPDisplayList(gDisplayListHead++, D_0D006980);
             }
@@ -4241,8 +4267,8 @@ void draw_crabs(s32 objectIndex, s32 cameraId) {
         camera = &camera1[cameraId];
         func_8004A6EC(objectIndex, 0.5f);
         gObjectList[objectIndex].orientation[1] =
-            func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
-        draw_2d_texture_at(gObjectList[objectIndex].pos, gObjectList[objectIndex].orientation,
+            get_angle_between_xz(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
+        draw_2d_texture_at_no_inval(gObjectList[objectIndex].pos, gObjectList[objectIndex].orientation,
                            gObjectList[objectIndex].sizeScaling, (u8*) gObjectList[objectIndex].activeTLUT,
                            gObjectList[objectIndex].activeTexture, common_vtx_hedgehog, 0x00000040, 0x00000040,
                            0x00000040, 0x00000020);
@@ -4262,15 +4288,15 @@ void render_object_crabs(s32 arg0) {
     }
 }
 
-void func_800555BC(s32 objectIndex, s32 cameraId) {
+void render_a_hedgehog(s32 objectIndex, s32 cameraId) {
     Camera* camera;
 
     if (gObjectList[objectIndex].state >= 2) {
         camera = &camera1[cameraId];
-        func_8004A870(objectIndex, 0.7f);
+        shadow_for_a_hedgehog(objectIndex, 0.7f);
         gObjectList[objectIndex].orientation[1] =
-            func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
-        draw_2d_texture_at(gObjectList[objectIndex].pos, gObjectList[objectIndex].orientation,
+            get_angle_between_xz(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
+        draw_2d_texture_at_no_inval(gObjectList[objectIndex].pos, gObjectList[objectIndex].orientation,
                            gObjectList[objectIndex].sizeScaling, (u8*) gObjectList[objectIndex].activeTLUT,
                            gObjectList[objectIndex].activeTexture, gObjectList[objectIndex].vertex, 64, 64, 64, 32);
     }
@@ -4295,7 +4321,7 @@ void render_object_hedgehogs(s32 arg0) {
                 set_object_flag_status_true(test, 0x00400000);
             }
             if (something < 0x52211U) {
-                func_800555BC(test, arg0);
+                render_a_hedgehog(test, arg0);
             }
         }
     }
@@ -4388,7 +4414,7 @@ void func_80055AB8(s32 objectIndex, s32 cameraId) {
             D_80183E40[2] = gObjectList[objectIndex].pos[2];
             D_80183E80[0] = 0;
             D_80183E80[1] =
-                func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
+                get_angle_between_xz(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos);
             D_80183E80[2] = 0x8000;
             func_800468E0(D_80183E40, D_80183E80, 0.54f, d_course_rainbow_road_sphere, D_0D0062B0, 0x00000020,
                           0x00000040, 0x00000020, 0x00000040, 5);
@@ -4433,7 +4459,7 @@ void func_80055CCC(s32 objectIndex, s32 cameraId) {
         } else {
             D_80183E80[0] = (s16) gObjectList[objectIndex].direction_angle[0];
             D_80183E80[1] =
-                (s16) (func_800418AC(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos) +
+                (s16) (get_angle_between_xz(gObjectList[objectIndex].pos[0], gObjectList[objectIndex].pos[2], camera->pos) +
                        0x8000);
             D_80183E80[2] = (u16) gObjectList[objectIndex].direction_angle[2];
             func_80043328(gObjectList[objectIndex].pos, D_80183E80, gObjectList[objectIndex].sizeScaling,
@@ -4552,7 +4578,7 @@ void func_800563DC(s32 objectIndex, s32 cameraId, s32 arg2) {
     D_80183E40[1] = object->pos[1] + 1.0;
     D_80183E40[2] = object->pos[2];
     D_80183E80[0] = 0;
-    D_80183E80[1] = func_800418AC(object->pos[0], object->pos[2], camera->pos);
+    D_80183E80[1] = get_angle_between_xz(object->pos[0], object->pos[2], camera->pos);
     D_80183E80[2] = 0x8000;
     rsp_set_matrix_transformation(D_80183E40, D_80183E80, 0.2f);
     gSPDisplayList(gDisplayListHead++, D_0D007E98);
@@ -4691,13 +4717,13 @@ void func_80056E24(s32 bombIndex, Vec3f arg1) {
     D_80183E80[2] = 0x8000;
     gSPDisplayList(gDisplayListHead++, D_0D0079C8);
     load_texture_block_rgba16_mirror((u8*) D_0D02AA58, 0x00000010, 0x00000010);
-    D_80183E80[1] = func_800418AC(sp2C.wheel1Pos[0], sp2C.wheel1Pos[2], arg1);
+    D_80183E80[1] = get_angle_between_xz(sp2C.wheel1Pos[0], sp2C.wheel1Pos[2], arg1);
     func_800431B0(sp2C.wheel1Pos, D_80183E80, 0.15f, common_vtx_rectangle);
-    D_80183E80[1] = func_800418AC(sp2C.wheel2Pos[0], sp2C.wheel2Pos[2], arg1);
+    D_80183E80[1] = get_angle_between_xz(sp2C.wheel2Pos[0], sp2C.wheel2Pos[2], arg1);
     func_800431B0(sp2C.wheel2Pos, D_80183E80, 0.15f, common_vtx_rectangle);
-    D_80183E80[1] = func_800418AC(sp2C.wheel3Pos[0], sp2C.wheel3Pos[2], arg1);
+    D_80183E80[1] = get_angle_between_xz(sp2C.wheel3Pos[0], sp2C.wheel3Pos[2], arg1);
     func_800431B0(sp2C.wheel3Pos, D_80183E80, 0.15f, common_vtx_rectangle);
-    D_80183E80[1] = func_800418AC(sp2C.wheel4Pos[0], sp2C.wheel4Pos[2], arg1);
+    D_80183E80[1] = get_angle_between_xz(sp2C.wheel4Pos[0], sp2C.wheel4Pos[2], arg1);
     func_800431B0(sp2C.wheel4Pos, D_80183E80, 0.15f, common_vtx_rectangle);
     gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
 }
@@ -4754,7 +4780,7 @@ void func_80057114(s32 cameraId) {
             if (is_obj_flag_status_active(objectIndex, VISIBLE) != 0) {
                 set_object_flag_status_true(objectIndex, 0x00200000);
                 D_80183E80[0] = 0;
-                D_80183E80[1] = func_800418AC(var_s1_2->bombPos[0], var_s1_2->bombPos[2], camera->pos);
+                D_80183E80[1] = get_angle_between_xz(var_s1_2->bombPos[0], var_s1_2->bombPos[2], camera->pos);
                 D_80183E80[2] = 0x8000;
                 func_800563DC(objectIndex, cameraId, 0x000000FF);
                 func_80056E24(i, camera->pos);

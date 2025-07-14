@@ -518,11 +518,11 @@ u16 func_800417B4(u16 angle1, u16 angle2) {
     return out_angle;
 }
 
-s32 func_800418AC(f32 arg0, f32 arg1, Vec3f arg2) {
+s32 get_angle_between_xz(f32 arg0, f32 arg1, Vec3f arg2) {
     return atan2s(arg0 - arg2[0], arg1 - arg2[2]);
 }
 
-s32 func_800418E8(f32 arg0, f32 arg1, Vec3f arg2) {
+s32 get_angle_between_yz(f32 arg0, f32 arg1, Vec3f arg2) {
     return atan2s(arg0 - arg2[1], arg1 - arg2[2]);
 }
 
