@@ -135,10 +135,15 @@ __attribute__((noinline)) void stacktrace() {
 void* segmented_to_virtual(const void* addr) {
 	uintptr_t uip_addr = (uintptr_t)addr;
 
-//    if (uip_addr < 0x01000000) {
-//        printf("tried to use NULL-ish addr %08x as segmented addr\n", uip_addr);
-//        stacktrace();
-//    }
+/*    
+    going from player select to map select hits this for some stuff
+    0x2000 range
+    Sherbet Land has 0x00000004, 0x00000009, 0x0000000b
+    if (uip_addr < 0x02000000) {
+        printf("tried to use NULL-ish addr %08x as segmented addr\n", uip_addr);
+        stacktrace();
+    }
+*/
 
     if ((uip_addr >= 0x8c010000) && (uip_addr <= 0x8cffffff)) {
 		return uip_addr;
@@ -160,6 +165,10 @@ void* segmented_to_virtual(const void* addr) {
             while(1){}
         exit(-1);
 	}
+
+/*     if (gSegmentTable[segment] == 0) {
+        printf("segment %02x has null base address, original address %08x\n", segment, uip_addr);
+    } */
 
     size_t offset = (uintptr_t) uip_addr & 0x00FFFFFF;
     return (void*) ((gSegmentTable[segment] + offset));
