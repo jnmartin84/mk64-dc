@@ -158,6 +158,7 @@ void eu_process_audio_cmd(struct EuAudioCmd* cmd) {
             }
             break;
         case 0xF3:
+            //printf("func_800BB388(%08x,%08x,%08x)\n", cmd->u.s.bankId, cmd->u.s.arg2, cmd->u.s.arg3);
             func_800BB388(cmd->u.s.bankId, cmd->u.s.arg2, cmd->u.s.arg3);
             break;
     }
@@ -267,25 +268,19 @@ void func_800CBCB0(u32 arg0) {
 
         if (cmd->u.s.bankId < SEQUENCE_PLAYERS) {
             float tmpfloat;
-            uint32_t *tmpufp;
             seqPlayer = &gSequencePlayers[cmd->u.s.bankId];
             if ((cmd->u.s.op & 0x80) != 0) {
                 eu_process_audio_cmd(cmd);
             } else if ((cmd->u.s.op & 0x40) != 0) {
                 switch (cmd->u.s.op) {
                     case 0x41:
-                        tmpfloat = cmd->u2.as_f32;
-//                        tmpufp = (uint32_t *)&tmpfloat;
-//                        *tmpufp = Swap32(*tmpufp);
-                        seqPlayer->fadeVolumeScale = tmpfloat;
-                        ///* Swap32 */(cmd->u2.as_f32);
+                        seqPlayer->fadeVolumeScale = cmd->u2.as_f32;
 
                         seqPlayer->recalculateVolume = 1;
                         break;
 
                     case 0x47:
                         seqPlayer->tempo = cmd->u2.as_s32 * TATUMS_PER_BEAT;
-                        //printf("!!! TEMPO IS %08x\n", seqPlayer->tempo);
                         break;
 
                     case 0x48:
@@ -301,21 +296,11 @@ void func_800CBCB0(u32 arg0) {
                 if (IS_SEQUENCE_CHANNEL_VALID(chan)) {
                     switch (cmd->u.s.op) {
                         case 1:
-                            tmpfloat = cmd->u2.as_f32;
-//                            tmpufp = (uint32_t *)&tmpfloat;
-//                            *tmpufp = Swap32(*tmpufp);
-                            chan->volumeScale = tmpfloat;
-                            ///* Swap32 */(cmd->u2.as_f32);
-                            //printf("chan->volScale %f\n", chan->volumeScale);
+                            chan->volumeScale = cmd->u2.as_f32;
                             chan->changes.as_bitfields.volume = 1;
                             break;
                         case 2:
-                            tmpfloat = cmd->u2.as_f32;
-//                            tmpufp = (uint32_t *)&tmpfloat;
-//                            *tmpufp = Swap32(*tmpufp);
-                            chan->volume = tmpfloat;
-                            ///* Swap32 */(cmd->u2.as_f32);
-                            //printf("chan->volume %f\n", chan->volume);
+                            chan->volume = cmd->u2.as_f32;
                             chan->changes.as_bitfields.volume = 1;
                             break;
                         case 3:
@@ -323,12 +308,7 @@ void func_800CBCB0(u32 arg0) {
                             chan->changes.as_bitfields.pan = 1;
                             break;
                         case 4:
-                            tmpfloat = cmd->u2.as_f32;
-//                            tmpufp = (uint32_t *)&tmpfloat;
-//                            *tmpufp = Swap32(*tmpufp);
-                            chan->freqScale = tmpfloat;
-                            ///* Swap32 */(cmd->u2.as_f32);
-                            //printf("chan->freqScale %f\n", chan->freqScale);
+                            chan->freqScale = cmd->u2.as_f32;
                             chan->changes.as_bitfields.freqScale = 1;
                             break;
                         case 5:
