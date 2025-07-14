@@ -345,11 +345,14 @@ uint8_t tex_is_kart(void *addr) {
 }
 
 void gfx_texture_cache_invalidate(void* orig_addr) {
-	void* segaddr = segmented_to_virtual(orig_addr);
+ 	void* segaddr = segmented_to_virtual(orig_addr);
+
 	size_t hash = (uintptr_t) segaddr;
 	hash = (hash >> 5) & 0x3ff;
 	struct TextureHashmapNode** node = &gfx_texture_cache.hashmap[hash];
-	while (*node != NULL && *node - gfx_texture_cache.pool < (int) gfx_texture_cache.pool_pos) {
+	uintptr_t last_node = &gfx_texture_cache.pool[gfx_texture_cache.pool_pos];
+	while (*node != NULL && ((uintptr_t)*node < last_node)) {
+		__builtin_prefetch((*node)->next);
 		if ((*node)->texture_addr == segaddr) {
 			(*node)->dirty = 1;
 		}
@@ -410,8 +413,13 @@ static uint8_t gfx_texture_cache_lookup(int tile, struct TextureHashmapNode** n,
 		*node = &oops_node;
 		return 1;
 	}
+	__builtin_prefetch(*node);
 
-	while (*node != NULL && *node - gfx_texture_cache.pool < (int) gfx_texture_cache.pool_pos) {
+//	while (*node != NULL && *node - gfx_texture_cache.pool < (int) gfx_texture_cache.pool_pos) {
+	uintptr_t last_node = &gfx_texture_cache.pool[gfx_texture_cache.pool_pos];
+	while (*node != NULL && ((uintptr_t)*node < last_node)) {
+		__builtin_prefetch((*node)->next);
+
 		if ((*node)->texture_addr == segaddr && (*node)->ult == ult && (*node)->uls == uls &&
 			(*node)->fmt == fmt && (*node)->siz == siz) {
 			gfx_rapi->select_texture(tile, (*node)->texture_id);
