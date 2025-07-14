@@ -16,14 +16,16 @@
 #undef CONT_DPAD2_LEFT
 #undef CONT_DPAD2_RIGHT
 #undef bool
-#include <stdio.h>
-#include <stdlib.h>
 #include <ultra64.h>
 #include <macros.h>
 #include <defines.h>
 #include <segments.h>
 #include <mk64.h>
 #include <course.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "code_80281780.h"
 #include "memory.h"
@@ -116,50 +118,49 @@ extern Gfx d_course_royal_raceway_packed_dl_A618[];
 extern Gfx d_course_royal_raceway_packed_dl_23F8[];
 extern Gfx d_course_royal_raceway_packed_dl_2478[];
 extern uint8_t __attribute__((aligned(32))) CEREMONY_BUF[36232];
-static char texfn[256];
-extern char *fnpre;
-
-void load_ceremony_data(void) {
-        {
-        sprintf(texfn, "%s/dc_data/ceremony_data.bin", fnpre);
-        FILE* file = fopen(texfn, "rb");
-        if (!file) {
-            perror("fopen");
-            printf("\n");
-            // while(1){}
-            exit(-1);
-        }
-
-        fseek(file, 0, SEEK_END);
-        long filesize = ftell(file);
-        fseek(file, 0, SEEK_SET);
-
-        long toread = filesize;
-        long didread = 0;
-
-        while (didread < toread) {
-            long rv = fread(&CEREMONY_BUF[didread], 1, toread - didread, file);
-            if (rv == -1) {
-                perror("fread");
-                printf("couldnt read into ceremony buf\n");
-                // while(1){}
-                exit(-1);
-            }
-            toread -= rv;
-            didread += rv;
-        }
-        fclose(file);
-        file = NULL;
-        set_segment_base_addr(0xB, (void*) CEREMONY_BUF);
-    }
-}
-
-extern CollisionTriangle __attribute__((aligned(32))) allColTris[2800];
 extern uint8_t __attribute__((aligned(32))) COURSE_BUF[146464];
-#include <string.h>
 extern u16 reflection_map_silver[1024];
 extern u16 reflection_map_gold[1024];
 extern u16 reflection_map_brass[1024];
+extern CollisionTriangle __attribute__((aligned(32))) allColTris[2800];
+
+extern char *fnpre;
+
+static char texfn[256];
+
+void load_ceremony_data(void) {
+    sprintf(texfn, "%s/dc_data/ceremony_data.bin", fnpre);
+    FILE* file = fopen(texfn, "rb");
+    if (!file) {
+        perror("fopen");
+        printf("\n");
+        // while(1) {}
+        exit(-1);
+    }
+
+    fseek(file, 0, SEEK_END);
+    long filesize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    long toread = filesize;
+    long didread = 0;
+
+    while (didread < toread) {
+        long rv = fread(&CEREMONY_BUF[didread], 1, toread - didread, file);
+        if (rv == -1) {
+            perror("fread");
+            printf("couldnt read into ceremony buf\n");
+            // while(1) {}
+            exit(-1);
+        }
+        toread -= rv;
+        didread += rv;
+    }
+    fclose(file);
+    file = NULL;
+    set_segment_base_addr(0xB, (void*) CEREMONY_BUF);
+}
+
 void load_ceremony_cutscene(void) {
     Camera* camera = &cameras[0];
 
@@ -181,41 +182,38 @@ void load_ceremony_cutscene(void) {
     gModeSelection = GRAND_PRIX;
     load_course(gCurrentCourseId);
 
+    sprintf(texfn, "%s/dc_data/banshee_boardwalk_data.bin", fnpre);
 
-    {
-        sprintf(texfn, "%s/dc_data/banshee_boardwalk_data.bin", fnpre);
+    FILE* file = fopen(texfn, "rb");
+    if (!file) {
+        perror("fopen");
+        printf("\n");
+        // while(1) {}
+        exit(-1);
+    }
 
-        FILE* file = fopen(texfn, "rb");
-        if (!file) {
-            perror("fopen");
-            printf("\n");
-            // while(1){}
+    fseek(file, 0, SEEK_END);
+    long filesize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    long toread = filesize;
+    long didread = 0;
+
+    while (didread < toread) {
+        long rv = fread(&COURSE_BUF[didread], 1, toread - didread, file);
+        if (rv == -1) {
+            perror("fread");
+            printf("couldnt read into course buf\n");
+            // while(1) {}
             exit(-1);
         }
-
-        fseek(file, 0, SEEK_END);
-        long filesize = ftell(file);
-        fseek(file, 0, SEEK_SET);
-
-        long toread = filesize;
-        long didread = 0;
-
-        while (didread < toread) {
-            long rv = fread(&COURSE_BUF[didread], 1, toread - didread, file);
-            if (rv == -1) {
-                perror("fread");
-                printf("couldnt read into course buf\n");
-                //            while(1){}
-                exit(-1);
-            }
-            toread -= rv;
-            didread += rv;
-        }
-        fclose(file);
-        file = NULL;
-
-        set_segment_base_addr(6, (void*) COURSE_BUF);
+        toread -= rv;
+        didread += rv;
     }
+    fclose(file);
+    file = NULL;
+
+    set_segment_base_addr(6, (void*) COURSE_BUF);
 
     D_8015F8E4 = -2000.0f;
 
@@ -233,7 +231,7 @@ void load_ceremony_cutscene(void) {
     gCollisionMeshCount = (u16) 0;
     D_800DC5BC = (u16) 0;
     D_800DC5C8 = (u16) 0;
-    gCollisionMesh = (CollisionTriangle*) allColTris; // gNextFreeMemoryAddress;
+    gCollisionMesh = (CollisionTriangle*) allColTris;
     //! @bug these segmented addresses need to be symbols for mobility
     // d_course_royal_raceway_packed_dl_67E8
     generate_collision_mesh_with_default_section_id((Gfx*) d_course_royal_raceway_packed_dl_67E8, -1);

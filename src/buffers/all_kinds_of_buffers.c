@@ -3,41 +3,41 @@
 #include "main.h"
 
 // uncompressed common data segment size
-u8 __attribute__((aligned(32))) COMMON_BUF[184664];
+uint8_t __attribute__((aligned(32))) COMMON_BUF[184664];
 // size of data in data_segment2.o
-u8 __attribute__((aligned(32))) SEG2_BUF[47688];
+uint8_t __attribute__((aligned(32))) SEG2_BUF[47688];
 // 
-u8 __attribute__((aligned(32))) SEG3_BUF[0x18000];
+uint8_t __attribute__((aligned(32))) SEG3_BUF[0x18000];
 // largest observed value -- Bowser's Castle
-u8 __attribute__((aligned(32))) SEG4_BUF[228656];
+uint8_t __attribute__((aligned(32))) SEG4_BUF[228656];
 // largest *tex.bin -- Luigi's Raceway
-u8 __attribute__((aligned(32))) SEG5_BUF[133120];
+uint8_t __attribute__((aligned(32))) SEG5_BUF[133120];
 
 // DO NOT MAKE THIS SMALLER
 // THERE IS A BUFFER OVERWRITE ISSUE AND IT CORRUPTS SEG5_BUF
-u8 __attribute__((aligned(32))) CEREMONY_ACTOR_BUF[65536]; 
+uint8_t __attribute__((aligned(32))) CEREMONY_ACTOR_BUF[65536]; 
 
-u8 __attribute__((aligned(32))) OTHER_BUF[96*1024];
-u8 __attribute__((aligned(32))) STARTUP_BUF[38016];
-u8 __attribute__((aligned(32))) COURSE_BUF[146464];
-u8 __attribute__((aligned(32))) UNPACK_BUF[51008];
-u8 __attribute__((aligned(32))) CEREMONY_BUF[36232];
+uint8_t __attribute__((aligned(32))) OTHER_BUF[96*1024];
+uint8_t __attribute__((aligned(32))) STARTUP_BUF[38016];
+uint8_t __attribute__((aligned(32))) COURSE_BUF[146464];
+uint8_t __attribute__((aligned(32))) UNPACK_BUF[51008];
+uint8_t __attribute__((aligned(32))) CEREMONY_BUF[36232];
 uint8_t __attribute__((aligned(32))) COMP_VERT_BUF[65536];
 uint8_t __attribute__((aligned(32))) DECOMP_VERT_BUF[228656];
 
-u16 __attribute__((aligned(32))) colls[2800];//16384];
+uint16_t __attribute__((aligned(32))) colls[2800];//16384];
 CollisionTriangle __attribute__((aligned(32))) allColTris[2800];//2048+1024];
 
 struct __attribute__((aligned(32))) GfxPool gGfxPools[2];
 
-u8 __attribute__((aligned(32))) backing_gCourseOutline[0x16][128*96/2];
-u8 __attribute__((aligned(32))) backing_gMenuTextureBuffer[0x000900B0];
-u8 __attribute__((aligned(32))) backing_gMenuCompressedBuffer[65536];
-u8 __attribute__((aligned(32))) backing_sTKMK00_LowResBuffer[320*240];
-u8 __attribute__((aligned(32))) backing_gSomeDLBuffer[0x1000];
+uint8_t __attribute__((aligned(32))) backing_gCourseOutline[0x16][128*96/2];
+uint8_t __attribute__((aligned(32))) backing_gMenuTextureBuffer[0x000900B0];
+uint8_t __attribute__((aligned(32))) backing_gMenuCompressedBuffer[65536];
+uint8_t __attribute__((aligned(32))) backing_sTKMK00_LowResBuffer[320*240];
+uint8_t __attribute__((aligned(32))) backing_gSomeDLBuffer[0x1000];
 
 #define SAMPLES_HIGH 454
-s16 audio_buffer[SAMPLES_HIGH * 2 * 2] __attribute__((aligned(64)));
+int16_t audio_buffer[SAMPLES_HIGH * 2 * 2] __attribute__((aligned(64)));
 
 extern u8 d_course_koopa_troopa_beach_palm_frond[];
 extern Vtx d_course_koopa_troopa_beach_unknown_model4[];
@@ -89,9 +89,9 @@ Gfx l_d_course_koopa_troopa_beach_dl_18520[] = {
     gsSPSetLights1(d_course_koopa_troopa_beach_light2),
     gsSPTexture(0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON),
     gsDPPipeSync(),
-gsDPSetRenderMode(G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2),
+    gsDPSetRenderMode(G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2),
     gsDPSetCombineMode(G_CC_DECALRGBA, G_CC_DECALRGBA),
-	    gsDPTileSync(),
+    gsDPTileSync(),
     gsDPSetTile(G_IM_FMT_RGBA, G_IM_SIZ_16b, 16, 0x0000, G_TX_RENDERTILE, 0, G_TX_NOMIRROR | G_TX_CLAMP, 5, G_TX_NOLOD,
                 G_TX_NOMIRROR | G_TX_CLAMP, 6, G_TX_NOLOD),
     gsDPSetTileSize(G_TX_RENDERTILE, 0, 0, 0x00FC, 0x007C),
@@ -128,21 +128,8 @@ Gfx l_d_course_koopa_troopa_beach_dl_18BC0[] = {
     gsSPSetLights1(d_course_koopa_troopa_beach_light4),
     gsSPTexture(0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON),
     gsDPPipeSync(),
-//    gsDPSetCombineMode(G_CC_MODULATEIDECALA, G_CC_MODULATEIDECALA),
-	//G_CC_MODULATEIA, G_CC_MODULATEIA),//
-//    gsDPSetRenderMode(G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2),
-/* G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2
-    gsDPSetRenderMode(AA_EN | Z_CMP | Z_UPD | IM_RD | CVG_DST_WRAP | ZMODE_XLU | CVG_X_ALPHA | FORCE_BL |
-                                 GBL_c1(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA),
-                             AA_EN | Z_CMP | Z_UPD | IM_RD | CVG_DST_WRAP | ZMODE_XLU | CVG_X_ALPHA | FORCE_BL |
-                                 GBL_c2(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA)),
- */		//G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2),
-//gsDPSetRenderMode(G_RM_AA_ZB_XLU_SURF, G_RM_AA_ZB_XLU_SURF2),
-  //  gsDPSetPrimColor(0, 0, 255, 255, 255, 0),
-    //gsDPSetCombineLERP(0, 0, 0, PRIMITIVE, 0, 0, 0, TEXEL0, 0, 0, 0, PRIMITIVE, 0, 0, 0, TEXEL0),
- gsDPSetRenderMode(G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2),
+    gsDPSetRenderMode(G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2),
     gsDPSetCombineMode(G_CC_DECALRGBA, G_CC_DECALRGBA),
-
 	gsDPTileSync(),
     gsDPSetTile(G_IM_FMT_RGBA, G_IM_SIZ_16b, 16, 0x0000, G_TX_RENDERTILE, 0, G_TX_NOMIRROR | G_TX_CLAMP, 5, G_TX_NOLOD,
                 G_TX_NOMIRROR | G_TX_CLAMP, 6, G_TX_NOLOD),
@@ -175,8 +162,6 @@ Gfx l_d_course_koopa_troopa_beach_dl_tree_top3[] = {
     gsSPEndDisplayList(),
 };
 
-
-
 u16 l_d_course_rainbow_road_static_tluts[][256] = {
 {
     #include "assets/code/rainbow_road_tluts/gTLUTRainbowRoadNeonPeach.rgba16.inc.c"
@@ -203,7 +188,6 @@ u16 l_d_course_rainbow_road_static_tluts[][256] = {
     #include "assets/code/rainbow_road_tluts/gTLUTRainbowRoadNeonToad.rgba16.inc.c"
 }
 };
-
 
 u16 l_common_texture_minimap_kart_mario[][64] = {
 {

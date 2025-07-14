@@ -97,12 +97,7 @@ extern u16 D_8015F702;
 extern f32 D_8015F704;
 extern Vec3f D_8015F708;
 extern UNUSED u32 D_8015F718[3];
-//extern size_t gFreeMemorySize;
-//extern uintptr_t gNextFreeMemoryAddress;
-//extern uintptr_t gHeapEndPtr;
 
-//extern u32 D_8015F730;
-//extern uintptr_t gFreeMemoryResetAnchor;
 extern Vec3f D_8015F738;
 extern Vec3f D_8015F748;
 extern Vec3f D_8015F758;

@@ -171,22 +171,6 @@ s32 padding[2048];
 u16 D_80152300[4];
 u16 D_80152308;
 
-//UNUSED OSThread paddingThread;
-//OSThread gIdleThread;
-//ALIGNED8 u8 gIdleThreadStack[STACKSIZE]; // Based on sm64 and padding between bss symbols.
-//OSThread gVideoThread;
-//ALIGNED8 u8 gVideoThreadStack[STACKSIZE];
-//UNUSED OSThread D_80156820;
-//UNUSED ALIGNED8 u8 D_8015680_Stack[STACKSIZE];
-//OSThread gGameLoopThread;
-//ALIGNED8 u8 gGameLoopThreadStack[STACKSIZE];
-//OSThread gAudioThread;
-//ALIGNED8 u8 gAudioThreadStack[STACKSIZE];
-//UNUSED OSThread D_8015CD30;
-//UNUSED ALIGNED8 u8 D_8015CD30_Stack[STACKSIZE / 2];
-
-//ALIGNED8 u8 gGfxSPTaskYieldBuffer[4352];
-//ALIGNED8 u32 gGfxSPTaskStack[256];
 OSMesg gPIMesgBuf[32];
 OSMesgQueue gPIMesgQueue;
 
@@ -272,15 +256,16 @@ void game_loop_one_iteration(void) {
 
     display_and_vsync();
 
-    gfx_end_frame();
 #if 1
-    u32 num_audio_samples = even_frame ? SAMPLES_HIGH : SAMPLES_LOW;
-    irq_disable();
+    u32 num_audio_samples = 448;//even_frame ? SAMPLES_HIGH : SAMPLES_LOW;
+//    irq_disable();
     create_next_audio_buffer(audio_buffer + 0 * (num_audio_samples * 2), num_audio_samples);
     create_next_audio_buffer(audio_buffer + 1 * (num_audio_samples * 2), num_audio_samples);
     audio_api->play((u8 *)audio_buffer, 2 * num_audio_samples * 2 * 2);
-    irq_enable();
+//    irq_enable();
 #endif
+
+    gfx_end_frame();
 
 //    EndAudioFrame();
 }
@@ -901,6 +886,7 @@ void dispatch_audio_sptask(struct SPTask* spTask) {
 
 void exec_display_list(struct SPTask* spTask) {
 	send_display_list(&gGfxPool->spTask);
+#if 0
     osWritebackDCacheAll();
     spTask->state = SPTASK_STATE_NOT_STARTED;
     if (sCurrentDisplaySPTask == NULL) {
@@ -910,6 +896,7 @@ void exec_display_list(struct SPTask* spTask) {
     } else {
         sNextDisplaySPTask = spTask;
     }
+#endif        
 }
 
 /**
@@ -940,7 +927,7 @@ void clear_framebuffer(s32 color) {
     gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
 
     gDPSetFillColor(gDisplayListHead++, color);
-    gDPFillRectangle(gDisplayListHead++, 0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
+//    gDPFillRectangle(gDisplayListHead++, 0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
 
     gDPPipeSync(gDisplayListHead++);
 
@@ -974,15 +961,15 @@ void config_gfx_pool(void) {
  * Selects the next framebuffer to be rendered and displayed.
  */
 void display_and_vsync(void) {
-    profiler_log_thread5_time(BEFORE_DISPLAY_LISTS);
-    osRecvMesg(&gGfxVblankQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
+    //profiler_log_thread5_time(BEFORE_DISPLAY_LISTS);
+//    osRecvMesg(&gGfxVblankQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
     exec_display_list(&gGfxPool->spTask);
-    profiler_log_thread5_time(AFTER_DISPLAY_LISTS);
-    osRecvMesg(&gGameVblankQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
-    osViSwapBuffer((void*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[sRenderedFramebuffer]));
-    profiler_log_thread5_time(THREAD5_END);
-    osRecvMesg(&gGameVblankQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
-    crash_screen_set_framebuffer(gPhysicalFramebuffers[sRenderedFramebuffer]);
+    //profiler_log_thread5_time(AFTER_DISPLAY_LISTS);
+//    osRecvMesg(&gGameVblankQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
+//    osViSwapBuffer((void*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[sRenderedFramebuffer]));
+    //profiler_log_thread5_time(THREAD5_END);
+//    osRecvMesg(&gGameVblankQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
+//    crash_screen_set_framebuffer(gPhysicalFramebuffers[sRenderedFramebuffer]);
 
     if (++sRenderedFramebuffer == 3) {
         sRenderedFramebuffer = 0;
@@ -1672,7 +1659,7 @@ void race_logic_loop(void) {
             }
             func_8005A070();
             sNumVBlanks = 0;
-//            profiler_log_thread5_time(LEVEL_SCRIPT_EXECUTE);
+            ////profiler_log_thread5_time(LEVEL_SCRIPT_EXECUTE);
             D_8015F788 = 0;
             render_player_one_1p_screen();
             if (!gEnableDebugMode) {
@@ -1735,7 +1722,7 @@ void race_logic_loop(void) {
                 func_80022744();
             }
             func_8005A070();
-            profiler_log_thread5_time(LEVEL_SCRIPT_EXECUTE);
+            ////profiler_log_thread5_time(LEVEL_SCRIPT_EXECUTE);
             sNumVBlanks = 0;
             move_segment_table_to_dmem();
             init_rdp();
@@ -1780,7 +1767,7 @@ void race_logic_loop(void) {
                 }
                 func_80022744();
             }
-            profiler_log_thread5_time(LEVEL_SCRIPT_EXECUTE);
+            ////profiler_log_thread5_time(LEVEL_SCRIPT_EXECUTE);
             sNumVBlanks = (u16) 0;
             func_8005A070();
             move_segment_table_to_dmem();
@@ -1854,7 +1841,7 @@ void race_logic_loop(void) {
             }
             func_8005A070();
             sNumVBlanks = 0;
-            profiler_log_thread5_time(LEVEL_SCRIPT_EXECUTE);
+            ////profiler_log_thread5_time(LEVEL_SCRIPT_EXECUTE);
             move_segment_table_to_dmem();
             init_rdp();
             if (D_800DC5B0 != 0) {
@@ -2013,7 +2000,7 @@ void set_vblank_handler(s32 index, struct VblankHandler* handler, OSMesgQueue* q
 void start_gfx_sptask(void) {
     if (gActiveSPTask == NULL && sCurrentDisplaySPTask != NULL &&
         sCurrentDisplaySPTask->state == SPTASK_STATE_NOT_STARTED) {
-        profiler_log_gfx_time(TASKS_QUEUED);
+        ////profiler_log_gfx_time(TASKS_QUEUED);
         start_sptask(M_GFXTASK);
     }
 }
@@ -2033,13 +2020,13 @@ void handle_vblank(void) {
         if (gActiveSPTask != NULL) {
             interrupt_gfx_sptask();
         } else {
-            profiler_log_vblank_time();
+            ////profiler_log_vblank_time();
             start_sptask(M_AUDTASK);
         }
     } else {
         if (gActiveSPTask == NULL && sCurrentDisplaySPTask != NULL &&
             sCurrentDisplaySPTask->state != SPTASK_STATE_FINISHED) {
-            profiler_log_gfx_time(TASKS_QUEUED);
+            ////profiler_log_gfx_time(TASKS_QUEUED);
             start_sptask(M_GFXTASK);
         }
     }
@@ -2062,7 +2049,7 @@ void handle_dp_complete(void) {
     if (sCurrentDisplaySPTask->msgqueue != NULL) {
         osSendMesg(sCurrentDisplaySPTask->msgqueue, sCurrentDisplaySPTask->msg, OS_MESG_NOBLOCK);
     }
-    profiler_log_gfx_time(RDP_COMPLETE);
+    ////profiler_log_gfx_time(RDP_COMPLETE);
     sCurrentDisplaySPTask->state = SPTASK_STATE_FINISHED_DP;
     sCurrentDisplaySPTask = NULL;
 }
@@ -2080,20 +2067,20 @@ void handle_sp_complete(void) {
             // The gfx task completed before we had time to interrupt it.
             // Mark it finished, just like below.
             curSPTask->state = SPTASK_STATE_FINISHED;
-            profiler_log_gfx_time(RSP_COMPLETE);
+            ////profiler_log_gfx_time(RSP_COMPLETE);
         }
         // Start the audio task, as expected by handle_vblank.
-        profiler_log_vblank_time();
+        ////profiler_log_vblank_time();
         start_sptask(M_AUDTASK);
     } else {
         curSPTask->state = SPTASK_STATE_FINISHED;
         if (curSPTask->task.t.type == M_AUDTASK) {
             // After audio tasks come gfx tasks.
-            profiler_log_vblank_time();
+            ////profiler_log_vblank_time();
             if (sCurrentDisplaySPTask != NULL) {
                 if (sCurrentDisplaySPTask->state != SPTASK_STATE_FINISHED) {
                     if (sCurrentDisplaySPTask->state != SPTASK_STATE_INTERRUPTED) {
-                        profiler_log_gfx_time(TASKS_QUEUED);
+                        ////profiler_log_gfx_time(TASKS_QUEUED);
                     }
                     start_sptask(M_GFXTASK);
                 }
@@ -2106,7 +2093,7 @@ void handle_sp_complete(void) {
             // The SP process is done, but there is still a Display Processor notification
             // that needs to arrive before we can consider the task completely finished and
             // null out sCurrentDisplaySPTask. That happens in handle_dp_complete.
-            profiler_log_gfx_time(RSP_COMPLETE);
+            ////profiler_log_gfx_time(RSP_COMPLETE);
         }
     };
 }
@@ -2253,7 +2240,7 @@ void thread5_game_loop(UNUSED void* arg) {
             gGamestate = gGamestateNext;
             update_gamestate();
         }
-        profiler_log_thread5_time(THREAD5_START);
+        ////profiler_log_thread5_time(THREAD5_START);
         config_gfx_pool();
         read_controllers();
         game_state_handler();
@@ -2438,12 +2425,12 @@ void thread4_audio(UNUSED void* arg) {
 
         osRecvMesg(&sSoundMesgQueue, &msg, OS_MESG_BLOCK);
 
-        profiler_log_thread4_time();
+        ////profiler_log_thread4_time();
 
         spTask = create_next_audio_frame_task();
         if (spTask != NULL) {
             dispatch_audio_sptask(spTask);
         }
-        profiler_log_thread4_time();
+        ////profiler_log_thread4_time();
     }
 }
