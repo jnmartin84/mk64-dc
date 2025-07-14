@@ -275,11 +275,11 @@ void game_loop_one_iteration(void) {
     gfx_end_frame();
 #if 1
     u32 num_audio_samples = even_frame ? SAMPLES_HIGH : SAMPLES_LOW;
-    //irq_disable();
+    irq_disable();
     create_next_audio_buffer(audio_buffer + 0 * (num_audio_samples * 2), num_audio_samples);
     create_next_audio_buffer(audio_buffer + 1 * (num_audio_samples * 2), num_audio_samples);
-    //irq_enable();
     audio_api->play((u8 *)audio_buffer, 2 * num_audio_samples * 2 * 2);
+    irq_enable();
 #endif
 
 //    EndAudioFrame();
@@ -1083,6 +1083,7 @@ extern u16 common_tlut_lakitu_final_lap[];
 extern u16 common_tlut_lakitu_fishing[];
 extern u16 l_common_texture_minimap_kart_mario[][64];
 int sgm_run = 0;
+extern void load_ceremony_data(void);
 
 /**
  * Setup main segments and framebuffers.
@@ -1612,6 +1613,8 @@ void setup_game_memory(void) {
 
         sgm_run = 1;
     }
+
+    load_ceremony_data();
 }
 
 /**

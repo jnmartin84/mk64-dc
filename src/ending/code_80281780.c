@@ -115,38 +115,12 @@ extern Gfx d_course_royal_raceway_packed_dl_A618[];
 extern Gfx d_course_royal_raceway_packed_dl_A618[];
 extern Gfx d_course_royal_raceway_packed_dl_23F8[];
 extern Gfx d_course_royal_raceway_packed_dl_2478[];
-
-
-extern CollisionTriangle __attribute__((aligned(32))) allColTris[2800];
 extern uint8_t __attribute__((aligned(32))) CEREMONY_BUF[36232];
-extern uint8_t __attribute__((aligned(32))) COURSE_BUF[146464];
-#include <string.h>
-extern u16 reflection_map_silver[1024];
-extern u16 reflection_map_gold[1024];
-extern u16 reflection_map_brass[1024];
 static char texfn[256];
 extern char *fnpre;
-void load_ceremony_cutscene(void) {
-    Camera* camera = &cameras[0];
 
-    gCurrentCourseId = COURSE_ROYAL_RACEWAY;
-    D_800DC5B4 = (u16) 1;
-    gIsMirrorMode = 0;
-    gGotoMenu = 0xFFFF;
-    D_80287554 = 0;
-    set_perspective_and_aspect_ratio();
-    func_802A74BC();
-    camera->unk_B4 = 60.0f;
-    gCameraZoom[0] = 60.0f;
-    D_800DC5EC->screenWidth = SCREEN_WIDTH;
-    D_800DC5EC->screenHeight = SCREEN_HEIGHT;
-    D_800DC5EC->screenStartX = 160;
-    D_800DC5EC->screenStartY = 120;
-    gScreenModeSelection = SCREEN_MODE_1P;
-    gActiveScreenMode = SCREEN_MODE_1P;
-    gModeSelection = GRAND_PRIX;
-    load_course(gCurrentCourseId);
-    {
+void load_ceremony_data(void) {
+        {
         sprintf(texfn, "%s/dc_data/ceremony_data.bin", fnpre);
         FILE* file = fopen(texfn, "rb");
         if (!file) {
@@ -178,6 +152,35 @@ void load_ceremony_cutscene(void) {
         file = NULL;
         set_segment_base_addr(0xB, (void*) CEREMONY_BUF);
     }
+}
+
+extern CollisionTriangle __attribute__((aligned(32))) allColTris[2800];
+extern uint8_t __attribute__((aligned(32))) COURSE_BUF[146464];
+#include <string.h>
+extern u16 reflection_map_silver[1024];
+extern u16 reflection_map_gold[1024];
+extern u16 reflection_map_brass[1024];
+void load_ceremony_cutscene(void) {
+    Camera* camera = &cameras[0];
+
+    gCurrentCourseId = COURSE_ROYAL_RACEWAY;
+    D_800DC5B4 = (u16) 1;
+    gIsMirrorMode = 0;
+    gGotoMenu = 0xFFFF;
+    D_80287554 = 0;
+    set_perspective_and_aspect_ratio();
+    func_802A74BC();
+    camera->unk_B4 = 60.0f;
+    gCameraZoom[0] = 60.0f;
+    D_800DC5EC->screenWidth = SCREEN_WIDTH;
+    D_800DC5EC->screenHeight = SCREEN_HEIGHT;
+    D_800DC5EC->screenStartX = 160;
+    D_800DC5EC->screenStartY = 120;
+    gScreenModeSelection = SCREEN_MODE_1P;
+    gActiveScreenMode = SCREEN_MODE_1P;
+    gModeSelection = GRAND_PRIX;
+    load_course(gCurrentCourseId);
+
 
     {
         sprintf(texfn, "%s/dc_data/banshee_boardwalk_data.bin", fnpre);

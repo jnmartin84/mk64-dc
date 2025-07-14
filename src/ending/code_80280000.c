@@ -129,7 +129,7 @@ void credits_loop(void) {
 }
 
 extern char *fnpre;
-extern uint8_t __attribute__((aligned(32))) CEREMONY_BUF[36232];
+//extern uint8_t __attribute__((aligned(32))) CEREMONY_BUF[36232];
 extern CollisionTriangle __attribute__((aligned(32))) allColTris[2800];//2048+1024];//2800];//2798];//2048+1024];
 void load_credits(void) {
     Camera* camera = &cameras[0];
@@ -148,6 +148,7 @@ void load_credits(void) {
     gScreenModeSelection = SCREEN_MODE_1P;
     gActiveScreenMode = SCREEN_MODE_1P;
     load_course(gCurrentCourseId);
+#if 0
     {
 #if 1
         sprintf(texfn, "%s/dc_data/ceremony_data.bin", fnpre);
@@ -186,6 +187,7 @@ void load_credits(void) {
         file = NULL;
         set_segment_base_addr(0xB, (void*) CEREMONY_BUF);
     }
+#endif
     gCourseMinX = -0x15A1;
     gCourseMinY = -0x15A1;
     gCourseMinZ = -0x15A1;
