@@ -1,6 +1,7 @@
 .DS_Store
 dcload-ip/
-
+src/gfx/gfx_pvr.c
+src/gfx/gfx_pvr.h
 # Object files
 *.o
 *.obj

@@ -37,8 +37,10 @@ Player* gPlayersToRenderPlayer[8];
 s16 gMatrixEffectCount;
 s32 D_80164AF4[3];
 struct_D_802F1F80* gPlayerPalette;
-u8* sKartUpperTexture;
-u8* sKartLowerTexture;
+//u8* sKartUpperTexture;
+//u8* sKartLowerTexture;
+u8* sKartTexture;
+
 u16 gPlayerRedEffect[8];
 u16 gPlayerGreenEffect[8];
 u16 gPlayerBlueEffect[8];
@@ -1798,23 +1800,17 @@ void render_kart(Player* player, s8 playerId, s8 screenId, s8 arg3) {
             result_pos[2] = player->pos[2] + z;
         }
     }
-#ifdef AVOID_UB
+
     gPlayerPalette = &gPlayerPalettesList[D_801651D0[screenId][playerId]][screenId][playerId];
-#else
-    gPlayerPalette = (struct_D_802F1F80*) &gPlayerPalettesList[D_801651D0[screenId][playerId]][screenId][playerId * 0x100];
-#endif
+
     if ((screenId == 0) || (screenId == 1)) {
-        sKartUpperTexture = &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId][playerId].pixel_index_array[0];
-//        sKartLowerTexture = &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId][playerId].pixel_index_array[0x7C0];
+        sKartTexture = &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId][playerId].pixel_index_array[0];
     } else {
-        sKartUpperTexture =
+        sKartTexture =
             &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId - 1][playerId - 4].pixel_index_array[0];
-//        sKartLowerTexture =
-//            &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId - 1][playerId - 4].pixel_index_array[0x7C0];
     }
 
-    gfx_texture_cache_invalidate(sKartUpperTexture);
-//    gfx_texture_cache_invalidate(sKartLowerTexture);
+    gfx_texture_cache_invalidate(sKartTexture);
 
     mtxf_translate_rotate(kart_matrix, result_pos, orientation);
     mtxf_scale2(kart_matrix, gCharacterSize[player->characterId] * player->size);
@@ -1875,20 +1871,7 @@ void render_kart(Player* player, s8 playerId, s8 screenId, s8 arg3) {
         gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2);
     }
 
-#if 0
-    gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
-                        G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
-                        G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 4, 0);
-    gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
-
-    gDPLoadTextureBlock(gDisplayListHead++, sKartLowerTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
-                        G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
-                        G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3 + 4], 4, 0);
-    gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
-#endif
-    gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 64, 0,
+    gDPLoadTextureBlock(gDisplayListHead++, sKartTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 64, 0,
                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
                         G_TX_NOLOD);
     gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 8, 0);
@@ -1898,19 +1881,15 @@ void render_kart(Player* player, s8 playerId, s8 screenId, s8 arg3) {
 }
 
 void render_ghost(Player* player, s8 playerId, s8 screenId, s8 arg3) {
-    UNUSED s32 pad;
     Mat4 sp12C;
-    UNUSED s32 pad2[17];
     Vec3f spDC;
     Vec3s spD4;
     f32 spD0;
     f32 spCC;
     f32 spC8;
-    UNUSED s32 pad3;
     s16 spC2;
     s16 thing;
 
-    if (screenId) {}
     if (D_8015F890 == 1) {
         spC2 = 0x00FF;
     } else {
@@ -1924,26 +1903,17 @@ void render_ghost(Player* player, s8 playerId, s8 screenId, s8 arg3) {
     spDC[1] = (player->pos[1] - player->boundingBoxSize) + (spCC - 2.0);
     spDC[0] = player->pos[0] + spD0;
     spDC[2] = player->pos[2] + spC8;
-#ifdef AVOID_UB
+
     gPlayerPalette = &gPlayerPalettesList[D_801651D0[screenId][playerId]][screenId][playerId];
-#else
-    gPlayerPalette =
-        (struct_D_802F1F80*) &gPlayerPalettesList[D_801651D0[screenId][playerId]][screenId][playerId * 0x100];
-#endif
     if ((screenId == 0) || (screenId == 1)) {
-        sKartUpperTexture =
+        sKartTexture =
             &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId][playerId].pixel_index_array[0];
-//        sKartLowerTexture =
-//            &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId][playerId].pixel_index_array[0x7C0];
     } else {
-        sKartUpperTexture =
+        sKartTexture =
             &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId - 1][playerId - 4].pixel_index_array[0];
-//        sKartLowerTexture =
-//            &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId - 1][playerId - 4].pixel_index_array[0x7C0];
     }
 
-    gfx_texture_cache_invalidate(sKartUpperTexture);
-//    gfx_texture_cache_invalidate(sKartLowerTexture);
+    gfx_texture_cache_invalidate(sKartTexture);
 
     mtxf_translate_rotate(sp12C, spDC, spD4);
     mtxf_scale2(sp12C, gCharacterSize[player->characterId] * player->size);
@@ -1961,20 +1931,8 @@ void render_ghost(Player* player, s8 playerId, s8 screenId, s8 arg3) {
                          GBL_c1(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA),
                      AA_EN | Z_CMP | Z_UPD | IM_RD | CVG_DST_WRAP | ZMODE_XLU | CVG_X_ALPHA | FORCE_BL |
                          GBL_c2(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA));
-#if 0
-    gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
-                        G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
-                        G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 4, 0);
-    gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
 
-    gDPLoadTextureBlock(gDisplayListHead++, sKartLowerTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
-                        G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
-                        G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3 + 4], 4, 0);
-    gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
-#endif
-    gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 64, 0,
+    gDPLoadTextureBlock(gDisplayListHead++, sKartTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 64, 0,
                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
                         G_TX_NOLOD);
     gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 8, 0);
@@ -1984,7 +1942,7 @@ void render_ghost(Player* player, s8 playerId, s8 screenId, s8 arg3) {
     gDPSetAlphaCompare(gDisplayListHead++, G_AC_NONE);
 }
 
-void func_80025DE8(Player* player, s8 playerId, s8 screenId, s8 arg3) {
+void render_boosted_kart(Player* player, s8 playerId, s8 screenId, s8 arg3) {
     Mat4 spA8;
     Vec3f sp9C;
     Vec3s sp94;
@@ -2012,21 +1970,8 @@ void func_80025DE8(Player* player, s8 playerId, s8 screenId, s8 arg3) {
                          GBL_c1(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA),
                      AA_EN | Z_CMP | Z_UPD | IM_RD | CVG_DST_WRAP | ZMODE_XLU | CVG_X_ALPHA | FORCE_BL |
                          GBL_c2(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA));
-#if 0
-    gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
-                        G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
-                        G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 4, 0);
-    gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
 
-    gDPLoadTextureBlock(gDisplayListHead++, sKartLowerTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
-                        G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
-                        G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3 + 4], 4, 0);
-    gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
-    gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
-#endif
-    gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 64, 0,
+    gDPLoadTextureBlock(gDisplayListHead++, sKartTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 64, 0,
                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
                         G_TX_NOLOD);
     gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 8, 0);
@@ -2066,20 +2011,8 @@ void render_player_ice_reflection(Player* player, s8 playerId, s8 screenId, s8 a
                   gPlayerCyanEffect[playerId], gPlayerMagentaEffect[playerId], gPlayerYellowEffect[playerId],
                   (s16) player->unk_0C6 / 2);
     gDPSetRenderMode(gDisplayListHead++, G_RM_ZB_XLU_SURF, G_RM_ZB_XLU_SURF2);
-#if 0
-    gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
-                        G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
-                        G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 4, 0);
-    gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
-    gDPLoadTextureBlock(gDisplayListHead++, sKartLowerTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 32, 0,
-                        G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
-                        G_TX_NOLOD);
-    gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3 + 4], 4, 0);
-    gSPDisplayList(gDisplayListHead++, rk_common_square_plain_render);
-    gSPTexture(gDisplayListHead++, 1, 1, 0, G_TX_RENDERTILE, G_OFF);
-#endif
-    gDPLoadTextureBlock(gDisplayListHead++, sKartUpperTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 64, 0,
+
+    gDPLoadTextureBlock(gDisplayListHead++, sKartTexture, G_IM_FMT_CI, G_IM_SIZ_8b, 64, 64, 0,
                         G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD,
                         G_TX_NOLOD);
     gSPVertex(gDisplayListHead++, &gPlayerVtx[playerId][arg3], 8, 0);
@@ -2091,10 +2024,8 @@ void render_player_ice_reflection(Player* player, s8 playerId, s8 screenId, s8 a
 }
 
 void render_player(Player* player, s8 playerId, s8 screenId) {
-    UNUSED s32 pad[2];
     s32 temp_t1;
     s32 var_v1;
-    OSMesg* sp34;
 
     update_wheel_palette(player, playerId, screenId, D_801651D0[screenId][playerId]);
     if (!(player->unk_002 & (4 << (screenId * 4)))) {
@@ -2119,13 +2050,14 @@ void render_player(Player* player, s8 playerId, s8 screenId) {
     } else {
         render_ghost(player, playerId, screenId, var_v1);
     }
-    osRecvMesg(&gDmaMesgQueue, (OSMesg*) &sp34, OS_MESG_BLOCK);
+
     if ((temp_t1 == (player->unk_002 & temp_t1)) && (player->surfaceType == ICE) && ((player->unk_0CA & 1) != 1) &&
         (player->collision.surfaceDistance[2] <= 30.0f)) {
         render_player_ice_reflection(player, playerId, screenId, var_v1);
     }
+
     if (player->boostPower >= 2.0f) {
-        func_80025DE8(player, playerId, screenId, var_v1);
+        render_boosted_kart(player, playerId, screenId, var_v1);
     }
 }
 

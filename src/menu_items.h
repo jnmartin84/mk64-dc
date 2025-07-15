@@ -436,7 +436,7 @@ void func_8009A76C(s32, s32, s32, s32);
 void func_8009A7EC(s32, s32, s32, s32, s32);
 MenuTexture* func_8009A878(struct_8018DEE0_entry*);
 MenuTexture* func_8009A944(struct_8018DEE0_entry*, s32);
-void func_8009A9FC(s32, s32, u32, s32);
+//void func_8009A9FC(s32, s32, u32, s32);
 void func_8009AB7C(s32);
 void func_8009AD78(s32, s32);
 void convert_img_to_greyscale(s32, u32);

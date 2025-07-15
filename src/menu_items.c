@@ -3256,8 +3256,6 @@ Gfx* func_80097E58(Gfx* displayListHead, s8 fmt, UNUSED u32 arg2, u32 arg3, UNUS
 
     arg6Copy = arg6;
 
-//    gfx_texture_cache_invalidate(someTexture);
-
     lrs = arg9 / 2;
     spDC = arg9 - lrs;
     for (ult = arg3; ult < arg5; ult += 32) {
@@ -3480,12 +3478,13 @@ void load_menu_img(MenuTexture* addr) {
                 } else {
                     size = 0x1000;
                 }
-                if (size % 8) {
-                    size = ((size / 8) * 8) + 8;
-                }
-                dma_copy_mio0_segment(texAddr->textureData, size, gMenuCompressedBuffer);
+//                if (size % 8) {
+                    size = ((size+ 7)) & ~7;
+  //              }
+//                dma_copy_mio0_segment(texAddr->textureData, size, gMenuCompressedBuffer);
                 // check 1
-                mio0decode((u8*) gMenuCompressedBuffer, (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
+//                mio0decode((u8*) gMenuCompressedBuffer, (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
+                mio0decode((u8*) texAddr->textureData , (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
             } else {
                 dma_copy_mio0_segment(texAddr->textureData, (texAddr->height * texAddr->width) * 2,
                                       &gMenuTextureBuffer[sMenuTextureBufferIndex]);
@@ -3493,7 +3492,7 @@ void load_menu_img(MenuTexture* addr) {
             texMap[sMenuTextureEntries].textureData = texAddr->textureData;
             texMap[sMenuTextureEntries].offset = sMenuTextureBufferIndex;
             sMenuTextureBufferIndex += texAddr->height * texAddr->width;
-            sMenuTextureBufferIndex = ((sMenuTextureBufferIndex / 8) * 8) + 8;
+            sMenuTextureBufferIndex = ((sMenuTextureBufferIndex+ 7)) & ~7;
             sMenuTextureEntries += 1;
         }
         texAddr++;
@@ -3524,7 +3523,7 @@ void func_80099394(MenuTexture* addr) {
             texMap[sMenuTextureEntries].textureData = texAddr->textureData;
             texMap[sMenuTextureEntries].offset = sMenuTextureBufferIndex;
             sMenuTextureBufferIndex += texAddr->height * texAddr->width;
-            sMenuTextureBufferIndex = ((sMenuTextureBufferIndex / 8) * 8) + 8;
+            sMenuTextureBufferIndex = ((sMenuTextureBufferIndex+ 7)) & ~7;
             sMenuTextureEntries += 1;
         }
         texAddr++;
@@ -3548,13 +3547,14 @@ void func_8009952C(MenuTexture* addr) {
         }
 
         if (imgLoaded == 0) {
-            dma_copy_mio0_segment(texAddr->textureData, 0x00008000U, gMenuCompressedBuffer);
+//            dma_copy_mio0_segment(texAddr->textureData, 0x00008000U, gMenuCompressedBuffer);
             // check 2
-            mio0decode((u8*) gMenuCompressedBuffer, (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
+//            mio0decode((u8*) gMenuCompressedBuffer, (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
+            mio0decode((u8*) texAddr->textureData, (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
             texMap[sMenuTextureEntries].textureData = texAddr->textureData;
             texMap[sMenuTextureEntries].offset = sMenuTextureBufferIndex;
             sMenuTextureBufferIndex += texAddr->height * texAddr->width;
-            sMenuTextureBufferIndex = ((sMenuTextureBufferIndex / 8) * 8) + 8;
+            sMenuTextureBufferIndex = ((sMenuTextureBufferIndex+ 7)) & ~7;
             sMenuTextureEntries += 1;
         }
         texAddr++;
@@ -3589,20 +3589,28 @@ void load_menu_img_comp_type(MenuTexture* addr, s32 compType) {
             } else {
                 size = 0x1000;
             }
-            if (size % 8) {
-                size = ((size / 8) * 8) + 8;
-            }
+//            if (size % 8) {
+                size = ((size+ 7)) & ~7;
+  //          }
             switch (compType) {
                 case LOAD_MENU_IMG_MIO0_ONCE:
                 case LOAD_MENU_IMG_MIO0_FORCE:
-                    dma_copy_mio0_segment(texAddr->textureData, size, gMenuCompressedBuffer);
+//                    dma_copy_mio0_segment(texAddr->textureData, size, gMenuCompressedBuffer);
+                    mio0decode((u8*) texAddr->textureData, (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
                     break;
                 case LOAD_MENU_IMG_TKMK00_ONCE:
                 case LOAD_MENU_IMG_TKMK00_FORCE:
-                    dma_tkmk00_textures(texAddr->textureData, size, gMenuCompressedBuffer);
+//                    dma_tkmk00_textures(texAddr->textureData, size, gMenuCompressedBuffer);
+                    if (texAddr->type == 1) {
+                        clearBit = 0xBE;
+                    } else {
+                        clearBit = 1;
+                    }
+                    tkmk00decode(texAddr->textureData, sTKMK00_LowResBuffer,
+                                 &gMenuTextureBuffer[sMenuTextureBufferIndex], clearBit);
                     break;
             }
-
+#if 0
             switch (compType) {
                 case LOAD_MENU_IMG_MIO0_ONCE:
                 case LOAD_MENU_IMG_MIO0_FORCE:
@@ -3620,11 +3628,12 @@ void load_menu_img_comp_type(MenuTexture* addr, s32 compType) {
                                  &gMenuTextureBuffer[sMenuTextureBufferIndex], clearBit);
                     break;
             }
-
+#endif
             texMap[sMenuTextureEntries].textureData = texAddr->textureData;
             texMap[sMenuTextureEntries].offset = sMenuTextureBufferIndex;
             sMenuTextureBufferIndex += texAddr->height * texAddr->width;
-            sMenuTextureBufferIndex = ((sMenuTextureBufferIndex / 8) * 8) + 8;
+            sMenuTextureBufferIndex = (sMenuTextureBufferIndex + 7) & ~7;
+            //((sMenuTextureBufferIndex / 8) * 8) + 8;
             sMenuTextureEntries += 1;
         }
         texAddr++;
@@ -3642,14 +3651,19 @@ void func_80099958(MenuTexture* addr, s32 arg1, s32 arg2) {
         } else {
             size = 0x1400;
         }
-        if (size % 8) {
+//        if (size % 8) {
             // Round up to the next multiple of eight
-            size = ((size / 8) * 8) + 8;
-        }
-        dma_copy_mio0_segment(texAddr->textureData, size, gMenuCompressedBuffer);
+            size = ((size+ 7)) & ~7;
+  //      }
+#if 0
+   dma_copy_mio0_segment(texAddr->textureData, size, gMenuCompressedBuffer);
         mio0decode((u8*) gMenuCompressedBuffer,
                    (u8*) D_802BFB80.arraySize4[arg2][arg1 / 2][(arg1 % 2) + 2].pixel_index_array);
-        texAddr++;
+#endif
+        mio0decode((u8*) texAddr->textureData,
+                   (u8*) D_802BFB80.arraySize4[arg2][arg1 / 2][(arg1 % 2) + 2].pixel_index_array);
+
+                   texAddr++;
     }
 }
 
@@ -3702,9 +3716,9 @@ void func_80099AEC(void) {
     } else {
         cacheSize = 0x1400;
     }
-    if (cacheSize % 8) {
-        cacheSize = ((cacheSize / 8) * 8) + 8;
-    }
+//    if (cacheSize % 8) {
+        cacheSize = ((cacheSize+ 7)) & ~7;
+  //  }
 
 //    osInvalDCache(gMenuCompressedBuffer, cacheSize);
     //(uintptr_t) _textures_0aSegmentRomStart + SEGMENT_OFFSET(texPtr->textureData),
@@ -3723,9 +3737,9 @@ void func_80099AEC(void) {
             } else {
                 cacheSize = 0x1400;
             }
-            if (cacheSize % 8) {
-                cacheSize = ((cacheSize / 8) * 8) + 8;
-            }
+//            if (cacheSize % 8) {
+                cacheSize = ((cacheSize+ 7)) & ~7;
+  //          }
             //osInvalDCache(&gMenuCompressedBuffer[bufSize], cacheSize);
             //(uintptr_t) _textures_0aSegmentRomStart + SEGMENT_OFFSET(texPtr->textureData),
             //osPiStartDma(&mb, 0, 0, texPtr->textureData, &gMenuCompressedBuffer[bufSize], cacheSize, &gDmaMesgQueue);
@@ -3752,9 +3766,9 @@ void func_80099AEC(void) {
             } else {
                 cacheSize = 0x1400;
             }
-            if (cacheSize % 8) {
-                cacheSize = ((cacheSize / 8) * 8) + 8;
-            }
+//            if (cacheSize % 8) {
+                cacheSize = ((cacheSize+ 7)) & ~7;
+  //          }
             //osInvalDCache(gMenuCompressedBuffer, cacheSize);
             //(uintptr_t) _textures_0aSegmentRomStart + SEGMENT_OFFSET(texPtr->textureData),
             //osPiStartDma(&mb, 0, 0, texPtr->textureData, gMenuCompressedBuffer, cacheSize, &gDmaMesgQueue);
@@ -3811,26 +3825,29 @@ void func_80099EC4(void) {
     } else {
         var_s0 = 0x1400;
     }
-    if (var_s0 % 8) {
-        var_s0 = ((var_s0 / 8) * 8) + 8;
-    }
+//    if (var_s0 % 8) {
+        var_s0 = ((var_s0+ 7)) & ~7;
+  //  }
     dma_copy(gMenuCompressedBuffer, temp_s2->textureData, var_s0);
     if ((var_s0 && var_s0) && var_s0) {}
 //    osRecvMesg(&gDmaMesgQueue, &sp64, 1);
     while (1) {
-        if ((var_s1 + 1)->mk64Texture == NULL) {
+//        if ((var_s1 + 1)->mk64Texture == NULL) {
+        if (var_s1[1].mk64Texture == NULL) {
             var_s4 += 1;
         } else {
-            temp_s2 = (var_s1 + 1)->mk64Texture;
-            huh = (var_s1 + 1)->mk64Texture->size;
+//            temp_s2 = (var_s1 + 1)->mk64Texture;
+//            huh = (var_s1 + 1)->mk64Texture->size;
+            temp_s2 = var_s1[1].mk64Texture;
+            huh = var_s1[1].mk64Texture->size;
             if (huh != 0) {
                 var_s0 = huh;
             } else {
                 var_s0 = 0x1400;
             }
-            if (var_s0 % 8) {
-                var_s0 = ((var_s0 / 8) * 8) + 8;
-            }
+//            if (var_s0 % 8) {
+                var_s0 = ((var_s0+ 7)) & ~7;
+  //          }
             dma_copy(gMenuCompressedBuffer + 0x500, temp_s2->textureData,  var_s0);
         }
         mio0decode((u8*) gMenuCompressedBuffer,
@@ -3840,19 +3857,23 @@ void func_80099EC4(void) {
         if (var_s4 != 0)
             break;
         //osRecvMesg(&gDmaMesgQueue, &sp64, 1);
-        if ((var_s1 + 1)->mk64Texture == NULL) {
+//        if ((var_s1 + 1)->mk64Texture == NULL) {
+        if (var_s1[1].mk64Texture == NULL) {
             var_s4 += 1;
         } else {
-            temp_s2 = (var_s1 + 1)->mk64Texture;
-            huh = (var_s1 + 1)->mk64Texture->size;
+//            temp_s2 = (var_s1 + 1)->mk64Texture;
+//            huh = (var_s1 + 1)->mk64Texture->size;
+            temp_s2 = var_s1[1].mk64Texture;
+            huh = var_s1[1].mk64Texture->size;
+
             if (huh != 0) {
                 var_s0 = huh;
             } else {
                 var_s0 = 0x1400;
             }
-            if (var_s0 % 8) {
-                var_s0 = ((var_s0 / 8) * 8) + 8;
-            }
+//            if (var_s0 % 8) {
+                var_s0 = ((var_s0+ 7)) & ~7;
+  //          }
             dma_copy(gMenuCompressedBuffer, temp_s2->textureData, var_s0);
         }
         mio0decode((u8*) (gMenuCompressedBuffer + 0x500),
@@ -3874,11 +3895,13 @@ void func_8009A238(MenuTexture* arg0, s32 arg1) {
     temp_v1 = sMenuTextureMap[arg1].offset;
     sp24 = arg0->textureData;
     var_a3 = arg0->size;
-    if (var_a3 % 8) {
-        var_a3 = ((var_a3 / 8) * 8) + 8;
-    }
-    dma_tkmk00_textures(sp24, var_a3, gMenuCompressedBuffer);
-    tkmk00decode(gMenuCompressedBuffer, sTKMK00_LowResBuffer, &gMenuTextureBuffer[temp_v1], 1);
+//    if (var_a3 % 8) {
+        var_a3 = ((var_a3+ 7)) & ~7;
+  //  }
+//    dma_tkmk00_textures(sp24, var_a3, gMenuCompressedBuffer);
+//    tkmk00decode(gMenuCompressedBuffer, sTKMK00_LowResBuffer, &gMenuTextureBuffer[temp_v1], 1);
+    tkmk00decode(sp24, sTKMK00_LowResBuffer, &gMenuTextureBuffer[temp_v1], 1);
+    
     gfx_texture_cache_invalidate(&gMenuTextureBuffer[temp_v1]);
     sMenuTextureMap[arg1].textureData = sp24;
 }
@@ -4098,7 +4121,7 @@ MenuTexture* func_8009A944(struct_8018DEE0_entry* arg0, s32 arg1) {
     }
     return arg0->textureSequence[arg0->sequenceIndex].mk64Texture;
 }
-
+#if 0
 void func_8009A9FC(s32 arg0, s32 arg1, u32 arg2, s32 arg3) {
     s32 red;
     s32 green;
@@ -4121,7 +4144,7 @@ void func_8009A9FC(s32 arg0, s32 arg1, u32 arg2, s32 arg3) {
         green = (temp_a0 & 0x7C0) >> 6;
         blue = (temp_a0 & 0x3E) >> 1;
         alpha = temp_a0 & 0x1;
-        if (alpha) {}
+//        if (alpha) {}
         temp_t9 = ((red * 0x4D) + (green * 0x96) + (blue * 0x1D)) >> 8;
         newred = (((((temp_t9 - red) * arg3) >> 8) + red) << 0xB);
         newgreen = (((((((temp_t9 * 7) / 8) - green) * arg3) >> 8) + green) << 6);
@@ -4129,7 +4152,7 @@ void func_8009A9FC(s32 arg0, s32 arg1, u32 arg2, s32 arg3) {
         *color1++ = newblue + newgreen + newred + alpha;
     }
 }
-
+#endif
 void func_8009AB7C(s32 arg0) {
     s32 red;
     s32 green;
@@ -5199,6 +5222,7 @@ void func_8009DB8C(void) {
     gDPSetRenderMode(gDisplayListHead++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
     gDPSetPrimColor(gDisplayListHead++, 0, 0, 0x00, 0x00, 0x00, 0xFF);
     gDPSetCombineMode(gDisplayListHead++, G_CC_PRIMITIVE, G_CC_PRIMITIVE);
+#if 0
     for (var_s0 = 0; var_s0 < 0x4B0; var_s0++) {
         if (sTKMK00_LowResBuffer[var_s0] != 0) {
             temp_t4 = (var_s0 % 40) * 8;
@@ -5206,6 +5230,7 @@ void func_8009DB8C(void) {
             gDPFillRectangle(gDisplayListHead++, temp_t4, temp_t5, temp_t4 + 8, temp_t5 + 8);
         }
     }
+#endif
     gDPPipeSync(gDisplayListHead++);
     var_v1 = (D_8018E7D0[4] * 255) / D_8018E7B8[4];
     if (var_v1 >= 0x100) {

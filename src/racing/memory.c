@@ -178,15 +178,16 @@ extern u8 *ROVING_SEG3_BUF;
 
 // starting address for this texture COMPRESSED is gNextFree+arg2
 // starting address for this texture DECOMPRESSED is gNextFree
-u8* dma_textures(u8 texture[], size_t arg1, size_t arg2) {
+u8* dma_textures(u8 texture[], UNUSED size_t arg1, size_t arg2) {
     u8* temp_v0;
-    void* temp_a0;
+//    void* temp_a0;
     temp_v0 = (u8*) ROVING_SEG3_BUF;
-    temp_a0 = temp_v0 + arg2;
-    arg1 = ALIGN16(arg1);
+//    temp_a0 = temp_v0 + arg2;
+//    arg1 = ALIGN16(arg1);
     arg2 = ALIGN16(arg2);
-    dma_copy(temp_a0, texture, arg1);
-    mio0decode((u8*) temp_a0, temp_v0);
+    //dma_copy(temp_a0, texture, arg1);
+    //mio0decode((u8*) temp_a0, temp_v0);
+    mio0decode((u8 *)texture, temp_v0);
     gfx_texture_cache_invalidate(temp_v0);
     ROVING_SEG3_BUF += arg2;
     return temp_v0;

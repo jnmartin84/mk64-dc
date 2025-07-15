@@ -834,26 +834,40 @@ static void import_texture_ci4(int tile) {
 	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_1_5_5_5_REV);
 }
 
-static void import_texture_ci8(int tile) {
+static __attribute__((noinline)) void import_texture_ci8(int tile) {
 	uint32_t width = rdp.texture_tile.line_size_bytes;
 	uint32_t height = rdp.loaded_texture[tile].size_bytes / rdp.texture_tile.line_size_bytes;
 
 	if (last_set_texture_image_width == 0) {
-		uint32_t count = rdp.loaded_texture[tile].size_bytes;
-		uint16_t *tex16 = rgba16_buf;
 		uint8_t *tex8 = rdp.loaded_texture[tile].addr;
-		for (uint32_t i = 0; i < count; i+=4) {
-			uint16_t t1,t2,t3,t4;
+		__builtin_prefetch(tex8);
+		uint32_t count = rdp.loaded_texture[tile].size_bytes;
+//		uint16_t *tex16 = rgba16_buf;
+		uint32_t *tex32 = (uint32_t)rgba16_buf;
+		for (uint32_t i = 0; i < count; i+=8) {
+			uint16_t t1,t2,t3,t4,t5,t6,t7,t8;
+			__builtin_prefetch(tex8+16);
 			t1 = tlut[*tex8++];
 			t2 = tlut[*tex8++];
 			t3 = tlut[*tex8++];
 			t4 = tlut[*tex8++];
+			t5 = tlut[*tex8++];
+			t6 = tlut[*tex8++];
+			t7 = tlut[*tex8++];
+			t8 = tlut[*tex8++];
+#if 1
+            asm volatile("": : : "memory");
+#endif
 
 //			*tex16++ = tlut[*tex8++];
-			*tex16++ = t1;
+/* 			*tex16++ = t1;
 			*tex16++ = t2;
 			*tex16++ = t3;
-			*tex16++ = t4;
+			*tex16++ = t4; */
+			*tex32++ = t2 << 16 | t1;
+			*tex32++ = t4 << 16 | t3;
+			*tex32++ = t6 << 16 | t5;
+			*tex32++ = t8 << 16 | t7;
 		}
 	} else {
 		u32 src_width;
@@ -1721,7 +1735,7 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 		gfx_rapi->set_zmode_decal(zmode_decal);
 		rendering_state.decal_mode = zmode_decal;
 	}
-
+#if 0
 	if (do_fill_rect) {
 		gfx_flush();
 		gfx_rapi->set_depth_test(0);
@@ -1729,7 +1743,7 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 		gfx_rapi->set_depth_mask(0);
 		rendering_state.depth_mask = 0;
 	}
-
+#endif
 	if (rdp.viewport_or_scissor_changed) {
 		if (memcmp(&rdp.viewport, &rendering_state.viewport, sizeof(rdp.viewport)) != 0) {
 			gfx_flush();
@@ -2195,8 +2209,8 @@ static void  __attribute__((noinline)) gfx_sp_texture(uint16_t sc, uint16_t tc, 
 	rsp.texture_scaling_factor.t = tc;
 }
 
-static void  __attribute__((noinline)) gfx_dp_set_scissor(UNUSED uint32_t mode, uint32_t ulx, uint32_t uly, UNUSED uint32_t lrx,
-							   UNUSED uint32_t lry) {
+static void  __attribute__((noinline)) gfx_dp_set_scissor(UNUSED uint32_t mode, uint32_t ulx, uint32_t uly, uint32_t lrx,
+							   uint32_t lry) {
 	float x = ulx / 4.0f * RATIO_X;
 	float y = (SCREEN_HEIGHT - lry / 4.0f) * RATIO_Y;
 	float width = (lrx - ulx) / 4.0f * RATIO_X;

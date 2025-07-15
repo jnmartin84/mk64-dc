@@ -5,7 +5,7 @@
 // uncompressed common data segment size
 uint8_t __attribute__((aligned(32))) COMMON_BUF[184664];
 // size of data in data_segment2.o
-uint8_t __attribute__((aligned(32))) SEG2_BUF[47688];
+//uint8_t __attribute__((aligned(32))) SEG2_BUF[47688];
 // 
 uint8_t __attribute__((aligned(32))) SEG3_BUF[0x18000];
 // largest observed value -- Bowser's Castle

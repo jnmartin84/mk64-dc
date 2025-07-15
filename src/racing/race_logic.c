@@ -689,19 +689,23 @@ void func_8028F588(void) {
         case SCREEN_MODE_1P:
             screenWidth = (s16) (s32) (320.0f * D_802BA034);
             if (screenWidth < 0) {
-                screenWidth = 1;
+                screenWidth = 1;//0x007C;
+            } else if (screenWidth >= 0x140) {
+                screenWidth = 0x013C;
             }
             D_800DC5EC->screenWidth = screenWidth;
             screenWidth = (s16) (s32) (240.0f * D_802BA034);
             if (screenWidth < 0) {
-                screenWidth = 1;
+                screenWidth = 1;//0x007C;
+            } else if (screenWidth >= 0x1E0) {
+                screenWidth = 0x01DC;
             }
             D_800DC5EC->screenHeight = screenWidth;
             break;
         case SCREEN_MODE_2P_SPLITSCREEN_VERTICAL:
             screenWidth = (s16) (s32) (160.0f * D_802BA034);
             if (screenWidth <= 0) {
-                screenWidth = 1;
+                screenWidth = 1;//0x007C;
             } else if (screenWidth >= 0x140) {
                 screenWidth = 0x013C;
             }
@@ -709,7 +713,7 @@ void func_8028F588(void) {
             D_800DC5F0->screenWidth = screenWidth;
             screenWidth = (s16) (s32) (240.0f * D_802BA034);
             if (screenWidth <= 0) {
-                screenWidth = 1;
+                screenWidth = 1;//0x007C;
             } else if (screenWidth >= 0x1E0) {
                 screenWidth = 0x01DC;
             }
@@ -719,7 +723,7 @@ void func_8028F588(void) {
         case SCREEN_MODE_2P_SPLITSCREEN_HORIZONTAL:
             screenWidth = (s16) (s32) (320.0f * D_802BA034);
             if (screenWidth <= 0) {
-                screenWidth = 1;
+                screenWidth = 1;//0x007C;
             } else if (screenWidth >= 0x280) {
                 screenWidth = 0x027C;
             }
@@ -727,7 +731,7 @@ void func_8028F588(void) {
             D_800DC5F0->screenWidth = screenWidth;
             screenWidth = (s16) (s32) (120.0f * D_802BA034);
             if (screenWidth <= 0) {
-                screenWidth = 1;
+                screenWidth = 0x007C;
             } else if (screenWidth >= 0xF0) {
                 screenWidth = 0x00EC;
             }
@@ -737,7 +741,7 @@ void func_8028F588(void) {
         case SCREEN_MODE_3P_4P_SPLITSCREEN:
             screenWidth = (s16) (s32) (160.0f * D_802BA034);
             if (screenWidth <= 0) {
-                screenWidth = 1;
+                screenWidth = 1;//0x007C;
             } else if (screenWidth >= 0x140) {
                 screenWidth = 0x013C;
             }
@@ -747,7 +751,7 @@ void func_8028F588(void) {
             D_800DC5F8->screenWidth = screenWidth;
             screenWidth = (s16) (s32) (120.0f * D_802BA034);
             if (screenWidth <= 0) {
-                screenWidth = 1;
+                screenWidth = 1;//0x007C;
             } else if (screenWidth >= 0xF0) {
                 screenWidth = 0x00EC;
             }
@@ -919,9 +923,9 @@ void func_8028FCBC(void) {
             D_800DC5B4 = 1;
             D_802BA034 = 0.008f;
             D_8015F894 = 0;
-//            if (gScreenModeSelection != SCREEN_MODE_1P) {
-//                func_8005C64C(&D_8018D2AC);
-//            }
+            if (gScreenModeSelection != SCREEN_MODE_1P) {
+                func_8005C64C(&D_8018D2AC);
+            }
             for (i = 0; i < NUM_PLAYERS; i++) {
                 if ((ply->type & PLAYER_EXISTS) == 0) {
                     continue;

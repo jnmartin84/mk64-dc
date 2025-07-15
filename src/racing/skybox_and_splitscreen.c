@@ -66,7 +66,9 @@ Vtx D_802B8A10[] = {
     { { { 0, 0, -1 }, 0, { 0, 0 }, { 0x78, 0xFF, 0x78, 0xFF } } },
     { { { 0, 120, -1 }, 0, { 0, 0 }, { 0x00, 0xDC, 0x00, 0xFF } } },
 };
-
+#if 0
+#include <stdio.h>
+#endif
 void set_the_scissor(struct UnkStruct_800DC5EC* arg0) {
     s32 ulx;
     s32 uly;
@@ -76,7 +78,11 @@ void set_the_scissor(struct UnkStruct_800DC5EC* arg0) {
     s32 screenHeight = arg0->screenHeight * 2;
     s32 screenStartX = arg0->screenStartX * 4;
     s32 screenStartY = arg0->screenStartY * 4;
-
+#if 0
+    printf("scissor args:\n\tw %d h %d x %d y %d\n",
+        arg0->screenWidth, arg0->screenHeight,
+        arg0->screenStartX, arg0->screenStartY);
+#endif
     arg0->viewport.vp.vscale[0] = screenWidth;
     arg0->viewport.vp.vscale[1] = screenHeight;
     arg0->viewport.vp.vscale[2] = 511;
@@ -113,8 +119,10 @@ void set_the_scissor(struct UnkStruct_800DC5EC* arg0) {
     lrx = screenStartX + screenWidth;
     uly = screenStartY - screenHeight;
     lry = screenStartY + screenHeight;
-    ulx = (ulx + 31) & ~31;
-    uly = (uly + 31) & ~31;
+    if (ulx < 16) ulx = 0;
+    else ulx = (ulx + 31) & ~31;
+    if (uly < 16) uly = 0;
+    else uly = (uly + 31) & ~31;
     lrx = (lrx + 31) & ~31;
     lry = (lry + 31) & ~31;
     if (ulx < 0) {
@@ -184,7 +192,7 @@ void func_802A39E0(struct UnkStruct_800DC5EC* arg0) {
     s32 uly = arg0->screenStartY - (arg0->screenHeight / 2);
     s32 lrx = arg0->screenStartX + (arg0->screenWidth / 2);
     s32 lry = arg0->screenStartY + (arg0->screenHeight / 2);
-
+#if 0
     if (ulx < 0) {
         ulx = 0;
     }
@@ -202,6 +210,25 @@ void func_802A39E0(struct UnkStruct_800DC5EC* arg0) {
     }
     if (uly >= lry) {
         lry = uly + 2;
+    }
+#endif
+    if (ulx < 16) ulx = 0;
+    else ulx = (ulx + 31) & ~31;
+    if (uly < 16) uly = 0;
+    else uly = (uly + 31) & ~31;
+    lrx = (lrx + 31) & ~31;
+    lry = (lry + 31) & ~31;
+    if (ulx < 0) {
+        ulx = 0;
+    }
+    if (uly < 0) {
+        uly = 0;
+    }
+    if (lrx > SCREEN_WIDTH) {
+        lrx = SCREEN_WIDTH;
+    }
+    if (lry > SCREEN_HEIGHT) {
+        lry = SCREEN_HEIGHT;
     }
 
     gDPPipeSync(gDisplayListHead++);
@@ -1235,6 +1262,7 @@ void render_player_two_3p_4p_screen(void) {
 
     func_802A5590();
     init_rdp();
+
     set_the_scissor(D_800DC5F0);
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU
@@ -1295,6 +1323,7 @@ void render_player_three_3p_4p_screen(void) {
 
     func_802A5678();
     init_rdp();
+
     set_the_scissor(D_800DC5F4);
 
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
@@ -1365,7 +1394,7 @@ void render_player_four_3p_4p_screen(void) {
     }
 
     init_rdp();
-    set_the_scissor(D_800DC5F8);
+            set_the_scissor(D_800DC5F8);
 
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU

@@ -248,9 +248,10 @@ void* dma_sample_data(uintptr_t devAddr, u32 size, s32 arg2, u8* dmaIndexRef) {
     dma->source = dmaDevAddr;
     dma->sizeUnused = transfer;
 #if 1
-    osPiStartDma(&gCurrAudioFrameDmaIoMesgBufs[gCurrAudioFrameDmaCount++], OS_MESG_PRI_NORMAL, OS_READ, dmaDevAddr,
-                 dma->buffer, transfer, &gCurrAudioFrameDmaQueue);
-#endif
+//    osPiStartDma(&gCurrAudioFrameDmaIoMesgBufs[gCurrAudioFrameDmaCount++], OS_MESG_PRI_NORMAL, OS_READ, dmaDevAddr,
+  //               dma->buffer, transfer, &gCurrAudioFrameDmaQueue);
+    dma->buffer = dmaDevAddr;
+  #endif
 //    dma_copy(dma->buffer, devAddr, transfer);
     *dmaIndexRef = dmaIndex;
     return (devAddr - dmaDevAddr) + dma->buffer;
@@ -265,10 +266,10 @@ void func_800BB030(UNUSED s32 arg0) {
     D_803B70A8 = 0x5A0;
 
     for (i = 0; i < gMaxSimultaneousNotes * 3 * gAudioBufferParameters.presetUnk4; i++) {
-        sSampleDmas[gSampleDmaNumListItems].buffer = soundAlloc(&gNotesAndBuffersPool, D_803B70A8);
-        if (sSampleDmas[gSampleDmaNumListItems].buffer == NULL) {
-            break;
-        }
+        sSampleDmas[gSampleDmaNumListItems].buffer = NULL;//soundAlloc(&gNotesAndBuffersPool, D_803B70A8);
+//        if (sSampleDmas[gSampleDmaNumListItems].buffer == NULL) {
+//            break;
+//        }
         sSampleDmas[gSampleDmaNumListItems].bufSize = D_803B70A8;
         sSampleDmas[gSampleDmaNumListItems].source = 0;
         sSampleDmas[gSampleDmaNumListItems].sizeUnused = 0;
@@ -292,10 +293,10 @@ void func_800BB030(UNUSED s32 arg0) {
 
     D_803B70A8 = 0x180;
     for (i = 0; i < gMaxSimultaneousNotes; i++) {
-        sSampleDmas[gSampleDmaNumListItems].buffer = soundAlloc(&gNotesAndBuffersPool, D_803B70A8);
-        if (sSampleDmas[gSampleDmaNumListItems].buffer == NULL) {
-            break;
-        }
+        sSampleDmas[gSampleDmaNumListItems].buffer = NULL;//soundAlloc(&gNotesAndBuffersPool, D_803B70A8);
+//        if (sSampleDmas[gSampleDmaNumListItems].buffer == NULL) {
+  //          break;
+    //    }
         sSampleDmas[gSampleDmaNumListItems].bufSize = D_803B70A8;
         sSampleDmas[gSampleDmaNumListItems].source = 0;
         sSampleDmas[gSampleDmaNumListItems].sizeUnused = 0;
@@ -336,12 +337,12 @@ void func_800BB304(struct AudioBankSample* sample) {
             sampleCopySize = Swap32(sampleCopySize);
         }
         // temp_a1 = sound->sampleAddr // unk10;
-        mem = soundAlloc(&gNotesAndBuffersPool, sampleCopySize);
+//        mem = soundAlloc(&gNotesAndBuffersPool, sampleCopySize);
         // temp_a1_2 = temp_v0;
-        if (mem == (void*) NULL) {
+  //      if (mem == (void*) NULL) {
             //printf("mem null\n");
-            return;// -1;
-        }
+    //        return;// -1;
+      //  }
 
         //printf("about to copy to %08x\n", mem);
         //printf("sample addr is %08x\n", sample->sampleAddr);
@@ -351,10 +352,10 @@ void func_800BB304(struct AudioBankSample* sample) {
 //        if (sampleCopySize > 0xffff) {
   //          sampleCopySize = Swap32(sampleCopySize);
     //    }
-        audio_dma_copy_immediate(sample->sampleAddr, mem, sampleCopySize);//sample->sampleSize);
+//////////        audio_dma_copy_immediate(sample->sampleAddr, mem, sampleCopySize);//sample->sampleSize);
         sample->loaded = 0x81;
         sample->sampleSize = sampleCopySize;
-        sample->sampleAddr = mem; // sound->unk4
+        sample->sampleAddr = sample->sampleAddr;//mem; // sound->unk4
     }
     //printf("returning from the func\n");
 }
@@ -444,17 +445,17 @@ void patch_sound(struct AudioBankSound* sound, u8* memBase, u8* offsetBase) {
             // printf("else sample->sampleAddr %08x\n", sample->sampleAddr);
             sample->sampleSize = Swap32(sample->sampleSize);
             // printf("else sample->sampleSize %08x\n", sample->sampleSize);
-            mem = soundAlloc(&gNotesAndBuffersPool, sample->sampleSize);
-            if (mem == NULL) {
-                sample->sampleAddr = (u8*) patched;
+     //       mem = soundAlloc(&gNotesAndBuffersPool, sample->sampleSize);
+       //     if (mem == NULL) {
+         //       sample->sampleAddr = (u8*) patched;
                 // printf("\tMEMNULL else sample->sampleAddr %08x\n", sample->sampleAddr);
-                sample->loaded = 1;
-            } else {
+           //     sample->loaded = 1;
+            //} else {
                 // printf("\telse about to copy to %08x\n", mem);
-                audio_dma_copy_immediate((u8*) patched, mem, sample->sampleSize);
+//////////                audio_dma_copy_immediate((u8*) patched, mem, sample->sampleSize);
                 sample->loaded = 0x81;
-                sample->sampleAddr = mem;
-            }
+                sample->sampleAddr = (u8*) patched;//mem;
+            //}
             sample->loop = Swap32(sample->loop);
             sample->loop = (struct AdpcmLoop*) PATCH(sample->loop, memBase);
             // printf("else sample->loop %08x\n", sample->loop);

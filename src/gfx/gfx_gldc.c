@@ -63,7 +63,7 @@ static struct SamplerState tmu_state[2];
 static const dc_fast_t* cur_buf = NULL;
 static uint8_t gl_blend = 0;
 static uint8_t gl_depth = 0;
-static uint8_t gl_npot = 0;
+
 
 #if !defined(TARGET_DC)
 static uint8_t gl_multitexture = 0;
@@ -90,17 +90,28 @@ static void resample_16bit(const unsigned short* in, int inwidth, int inheight, 
         inrow = in + inwidth * (i * inheight / outheight);
         frac = fracstep >> 1;
         for (j = 0; j < outwidth; j += 4) {
+            uint16_t p1,p2,p3,p4;
             if (j & 7 == 0)
                 __builtin_prefetch(inrow + 16);
-
-            out[j] = inrow[frac >> 16];
+            p1 = inrow[frac >> 16];
             frac += fracstep;
-            out[j + 1] = inrow[frac >> 16];
+            p2 = inrow[frac >> 16];
             frac += fracstep;
-            out[j + 2] = inrow[frac >> 16];
+            p3 = inrow[frac >> 16];
             frac += fracstep;
-            out[j + 3] = inrow[frac >> 16];
+            p4 = inrow[frac >> 16];
             frac += fracstep;
+#if 1
+            asm volatile("": : : "memory");
+#endif
+            out[j] = p1; /* inrow[frac >> 16];
+            frac += fracstep; */
+            out[j + 1] = p2; /* inrow[frac >> 16];
+            frac += fracstep; */
+            out[j + 2] = p3; /* inrow[frac >> 16];
+            frac += fracstep; */
+            out[j + 3] = p4; /* inrow[frac >> 16];
+            frac += fracstep; */
         }
     }
 }
@@ -366,6 +377,14 @@ static void gfx_opengl_select_texture(int tile, uint32_t texture_id) {
 static unsigned int __attribute__((aligned(32))) scaled[64 * 64 * 4];//sizeof(unsigned int)]; /* 16kb */
 
 static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int height, unsigned int type) {
+    GLint intFormat;
+
+    if (type == GL_UNSIGNED_SHORT_1_5_5_5_REV) {
+        intFormat = GL_ARGB1555_KOS;
+    } else {
+        intFormat = GL_ARGB4444_KOS;
+    }
+
     // we don't support non power of two textures, scale to next power of two if necessary
     if ((!is_pot(width) || !is_pot(height)) || (width < 8) || (height < 8)) {
         int pwidth = next_pot(width);
@@ -390,14 +409,6 @@ static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int 
         rgba32_buf = (uint8_t*) scaled;
         width = pwidth;
         height = pheight;
-    }
-
-    GLint intFormat;
-
-    if (type == GL_UNSIGNED_SHORT_1_5_5_5_REV) {
-        intFormat = GL_ARGB1555_KOS;
-    } else {
-        intFormat = GL_ARGB4444_KOS;
     }
 
     glTexImage2D(GL_TEXTURE_2D, 0, intFormat, width, height, 0, GL_BGRA, type, rgba32_buf);
@@ -716,9 +727,8 @@ void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size
         glDepthFunc(GL_LEQUAL);
         glDisable(GL_BLEND);
         glDisable(GL_FOG);
-        //       glPushMatrix();
-        //     glLoadIdentity();
     }
+
 
 #if 1
     if (in_intro && cur_shader->shader_id == 0x01a00200) { // clouds over skybox

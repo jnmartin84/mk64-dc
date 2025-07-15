@@ -144,6 +144,43 @@ UNUSED void* vec3f_set_return(Vec3f dest, f32 x, f32 y, f32 z) {
     return &dest;
 }
 
+void mtxf_copy(Mat4 mat1, Mat4 mat2) {
+    asm volatile(R"(
+        fschg
+
+        pref    @%[dst]
+        fmov.d  @%[src]+, xd0
+        fmov.d  @%[src]+, xd2
+        fmov.d  @%[src]+, xd4
+        fmov.d  @%[src]+, xd6
+
+        pref    @%[src]
+        add     #32, %[dst]
+
+        fmov.d  xd6, @-%[dst]
+        fmov.d  xd4, @-%[dst]
+        fmov.d  xd2, @-%[dst]
+        fmov.d  xd0, @-%[dst]
+
+        add     #32, %[dst]
+        pref    @%[dst]
+
+        fmov.d  @%[src]+, xd0
+        fmov.d  @%[src]+, xd2
+        fmov.d  @%[src]+, xd4
+        fmov.d  @%[src]+, xd6
+
+        add     #32, %[dst]
+        fmov.d  xd6, @-%[dst]
+        fmov.d  xd4, @-%[dst]
+        fmov.d  xd2, @-%[dst]
+        fmov.d  xd0, @-%[dst]
+
+        fschg
+    )"
+    : [dst] "+&r" (mat2), [src] "+&r" (mat1), "=m" (mat2));
+}
+#if 0
 // Copy mat1 to mat2
 void mtxf_copy(Mat4 mat1, Mat4 mat2) {
     s32 row;
@@ -155,6 +192,7 @@ void mtxf_copy(Mat4 mat1, Mat4 mat2) {
         }
     }
 }
+#endif
 
 // mtxf_copy
 void mtxf_copy_n_element(s32* dest, s32* src, s32 n) {
@@ -162,22 +200,25 @@ void mtxf_copy_n_element(s32* dest, s32* src, s32 n) {
         *dest++ = *src++;
     }
 }
-
+#include <string.h>
 // Transform a matrix to a matrix identity
 void mtxf_identity(Mat4 mtx) {
     s32 i;
     s32 k;
 
-    for (i = 0; i < 4; i++) {
-        for (k = 0; k < 4; k++) {
-            mtx[i][k] = (i == k) ? 1.0f : 0.0f;
-        }
-    }
+//    for (i = 0; i < 4; i++) {
+//        for (k = 0; k < 4; k++) {
+//            mtx[i][k] = (i == k) ? 1.0f : 0.0f;
+//        }
+//    }
+    memset(mtx, 0, sizeof(float)*16);
+    mtx[0][0] = mtx[1][1] = mtx[2][2] = mtx[3][3] = 1.0f;
 }
 
 // Add a translation vector to a matrix, mat is the matrix to add, dest is the destination matrix, pos is the
 // translation vector
 void add_translate_mat4_vec3f(Mat4 mat, Mat4 dest, Vec3f pos) {
+#if 0
     dest[3][0] = mat[3][0] + pos[0];
     dest[3][1] = mat[3][1] + pos[1];
     dest[3][2] = mat[3][2] + pos[2];
@@ -194,7 +235,11 @@ void add_translate_mat4_vec3f(Mat4 mat, Mat4 dest, Vec3f pos) {
     dest[2][1] = mat[2][1];
     dest[2][2] = mat[2][2];
     dest[2][3] = mat[2][3];
-
+#endif
+    mtxf_copy(mat, dest);
+    dest[3][0] += pos[0];
+    dest[3][1] += pos[1];
+    dest[3][2] += pos[2];
     /*
      * mat(0,0)        mat(0,1)        mat(0,2)        mat(0,3)
      * mat(1,0)        mat(1,1)        mat(1,2)        mat(1,3)

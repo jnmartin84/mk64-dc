@@ -19,14 +19,8 @@ u64 osClockRate = 62500000;
 s32 osPiStartDma(UNUSED OSIoMesg *mb, UNUSED s32 priority, UNUSED s32 direction,
                  uintptr_t devAddr, void *vAddr, size_t nbytes,
                  UNUSED OSMesgQueue *mq) {
-
-//    printf("VDEV %08x\n", devAddr);
 	void *vdevAddr = segmented_to_virtual((void *)devAddr);
-//    printf("VDEV %08x\n", devAddr);
-//	void *segAddr = segmented_to_virtual(vdevAddr);					
-
-
-    memcpy(vAddr, (const void *) vdevAddr/* segAddr */, nbytes);
+    memcpy(vAddr, (const void *) vdevAddr, nbytes);
     return 0;
 }
 

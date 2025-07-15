@@ -254,8 +254,6 @@ void game_loop_one_iteration(void) {
     game_state_handler();
     end_master_display_list();
 
-    display_and_vsync();
-
 #if 1
     u32 num_audio_samples = 448;//even_frame ? SAMPLES_HIGH : SAMPLES_LOW;
 //    irq_disable();
@@ -265,9 +263,12 @@ void game_loop_one_iteration(void) {
 //    irq_enable();
 #endif
 
+    display_and_vsync();
+
+
     gfx_end_frame();
 
-//    EndAudioFrame();
+    EndAudioFrame();
 }
 
 void send_display_list(struct SPTask *spTask) {
@@ -984,7 +985,7 @@ void dma_copy(u8* dest, u8* romAddr, size_t size) {
     memcpy(segmented_to_virtual(dest), segmented_to_virtual(romAddr), size);
 }
 
-extern u8 __attribute__((aligned(32))) SEG2_BUF[47688];
+//extern u8 __attribute__((aligned(32))) SEG2_BUF[47688];
 extern u8 __attribute__((aligned(32))) COMMON_BUF[184664];
 extern u16 common_texture_minimap_kart_toad[];
 extern u16 common_texture_minimap_kart_luigi[];
@@ -1078,9 +1079,9 @@ extern void load_ceremony_data(void);
 void setup_game_memory(void) {
     set_segment_base_addr(0, 0x8C010000);//0xDEADBEEF);
     func_80000BEC();
-    memset(SEG2_BUF, 0, sizeof(SEG2_BUF));
+//    memset(SEG2_BUF, 0, sizeof(SEG2_BUF));
     memset(COMMON_BUF, 0, sizeof(COMMON_BUF));
-    set_segment_base_addr(2, (void*) load_data(SEG_DATA_START, SEG_DATA_END, SEG2_BUF));
+    set_segment_base_addr(2, SEG_DATA_START);//(void*) load_data(SEG_DATA_START, SEG_DATA_END, SEG2_BUF));
     char texfn[256];
 
     sprintf(texfn, "%s/dc_data/common_data.bin", fnpre);
@@ -1634,10 +1635,12 @@ void race_logic_loop(void) {
         sNumVBlanks = 1;
     }
     func_802A4EF4();
+    
+    gTickSpeed = 2;
 
     switch (gActiveScreenMode) {
         case SCREEN_MODE_1P:
-            gTickSpeed = 2;
+            //gTickSpeed = 2;
             staff_ghosts_loop();
             if (gIsGamePaused == 0) {
                 for (i = 0; i < gTickSpeed; i++) {
@@ -1696,11 +1699,11 @@ void race_logic_loop(void) {
             break;
 
         case SCREEN_MODE_2P_SPLITSCREEN_VERTICAL:
-            if (gCurrentCourseId == COURSE_DK_JUNGLE) {
+            /* if (gCurrentCourseId == COURSE_DK_JUNGLE) {
                 gTickSpeed = 3;
             } else {
                 gTickSpeed = 2;
-            }
+            } */
             if (gIsGamePaused == 0) {
                 for (i = 0; i < gTickSpeed; i++) {
                     if (D_8015011E != 0) {
@@ -1741,11 +1744,12 @@ void race_logic_loop(void) {
 
         case SCREEN_MODE_2P_SPLITSCREEN_HORIZONTAL:
 
-            if (gCurrentCourseId == COURSE_DK_JUNGLE) {
+            /* if (gCurrentCourseId == COURSE_DK_JUNGLE) {
                 gTickSpeed = 3;
             } else {
                 gTickSpeed = 2;
-            }
+            } */
+            gTickSpeed = 3;
 
             if (gIsGamePaused == 0) {
                 for (i = 0; i < gTickSpeed; i++) {
@@ -1776,18 +1780,18 @@ void race_logic_loop(void) {
                 select_framebuffer();
             }
             D_8015F788 = 0;
-            if (gPlayerWinningIndex == 0) {
-                render_player_two_2p_screen_horizontal();
+//            if (gPlayerWinningIndex == 0) {
+//                render_player_two_2p_screen_horizontal();
+//                render_player_one_2p_screen_horizontal();
+//            } else {
                 render_player_one_2p_screen_horizontal();
-            } else {
-                render_player_one_2p_screen_horizontal();
                 render_player_two_2p_screen_horizontal();
-            }
+//            }
 
             break;
 
         case SCREEN_MODE_3P_4P_SPLITSCREEN:
-            if (gPlayerCountSelection1 == 3) {
+            /* if (gPlayerCountSelection1 == 3) {
                 switch (gCurrentCourseId) {
                     case COURSE_BOWSER_CASTLE:
                     case COURSE_MOO_MOO_FARM:
@@ -1814,7 +1818,7 @@ void race_logic_loop(void) {
                         gTickSpeed = 3;
                         break;
                 }
-            }
+            } */
             if (gIsGamePaused == 0) {
                 for (i = 0; i < gTickSpeed; i++) {
                     if (D_8015011E != 0) {

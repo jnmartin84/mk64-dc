@@ -224,7 +224,7 @@ void sound_init_main_pools(s32 arg0) {
 // inspired by session_pools_init in sm64
 void func_800B914C(struct PoolSplit* arg0) {
     gAudioSessionPool.cur = gAudioSessionPool.start;
-    sound_alloc_pool_init(&gNotesAndBuffersPool, soundAlloc(&gAudioSessionPool, arg0->wantSeq), arg0->wantSeq);
+    sound_alloc_pool_init(&gNotesAndBuffersPool, soundAlloc(&gAudioSessionPool, arg0->wantSeq - (0x20000)), arg0->wantSeq - (0x20000));
     sound_alloc_pool_init(&gSeqAndBankPool, soundAlloc(&gAudioSessionPool, arg0->wantCustom), arg0->wantCustom);
 }
 
@@ -765,7 +765,7 @@ void func_800BA8B0(s32 poolIdx, s32 id) {
         }
         gUnkPool1.entries[temp_a2].ptr = soundAlloc(&gUnkPool1.pool, temp_a1);
         if (gUnkPool1.entries[temp_a2].ptr != NULL) {
-            printf("about to copy to gUnkPool1.entries[temp_a2].ptr %08x\n", (uintptr_t)gUnkPool1.entries[temp_a2].ptr);
+//            printf("about to copy to gUnkPool1.entries[temp_a2].ptr %08x\n", (uintptr_t)gUnkPool1.entries[temp_a2].ptr);
             audio_dma_copy_immediate(var_a3, gUnkPool1.entries[temp_a2].ptr, temp_a1);
             gUnkPool1.entries[temp_a2].poolIndex = poolIdx;
             gUnkPool1.entries[temp_a2].id = id;
