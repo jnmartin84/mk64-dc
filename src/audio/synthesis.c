@@ -222,7 +222,7 @@ Acmd* synthesis_resample_and_mix_reverb(Acmd* acmd, s32 bufLen, s16 reverbIndex,
             acmd = synthesis_load_reverb_ring_buffer(acmd, item->lengthA + 0x840, 0U, item->lengthB, reverbIndex);
         }
 
-        aSMix(acmd++, 0x7fff, 0x840, 0x540, 0x300);
+////        aSMix(acmd++, 0x7fff, 0x840, 0x540, 0x300);
 //        aMix(acmd++, 0x8000 + gSynthesisReverbs[reverbIndex].reverbGain, 0x840, 0x840, 0x300);
     } else {
         startPad = (item->startPos % 8U) * 2;
@@ -240,7 +240,7 @@ Acmd* synthesis_resample_and_mix_reverb(Acmd* acmd, s32 bufLen, s16 reverbIndex,
         aSetBuffer(acmd++, 0, 0x1A0 + startPad, 0x9C0, bufLen * 2);
         aResample(acmd++, gSynthesisReverbs[reverbIndex].resampleFlags, gSynthesisReverbs[reverbIndex].resampleRate,
                   VIRTUAL_TO_PHYSICAL2(gSynthesisReverbs[reverbIndex].resampleStateRight));
-        aSMix(acmd++, 0x7fff, 0x840, 0x540, 0x300);
+ ////       aSMix(acmd++, 0x7fff, 0x840, 0x540, 0x300);
  //       aMix(acmd++, 0x8000 + gSynthesisReverbs[reverbIndex].reverbGain, 0x840, 0x840, 0x300);
     }
     return acmd;
@@ -781,7 +781,7 @@ Acmd* note_apply_headset_pan_effects(Acmd* acmd, struct NoteSubEu* noteSubEu, st
         aSaveBuffer(acmd++, 0x0200 + bufLen, VIRTUAL_TO_PHYSICAL2(note->synthesisBuffers->panSamplesBuffer), panShift);
     }
 
-    aSMix(acmd++, /*gain*/ 0x7FFF, /*in*/ 0x0200, /*out*/ dest, ALIGN(bufLen, 5));
+ ////   aSMix(acmd++, /*gain*/ 0x7FFF, /*in*/ 0x0200, /*out*/ dest, ALIGN(bufLen, 5));
 
     return acmd;
 }

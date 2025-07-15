@@ -2198,6 +2198,7 @@ void vblfunc(uint32_t c, void *d) {
 	(void)c;
 	(void)d;
     vblticker++;
+    genwait_wake_one(&vblticker);
 }    
 
 void thread5_game_loop(UNUSED void* arg) {
@@ -2270,18 +2271,32 @@ void _AudioInit(void) {
 }
 
 void SPINNING_THREAD(UNUSED void *arg) {
-     uint64_t last_vbltick = vblticker;
+    uint64_t last_vbltick = vblticker;
     while (1) {
+#if 0
         while (!(vblticker > (last_vbltick+1)))
-            thd_pass();
-
+            thd_sleep(5);
+#else
+        {
+        irq_disable_scoped();
+        while (vblticker <= last_vbltick + 1)
+            genwait_wait(&vblticker, NULL, 15, NULL);
+        }
+#endif
         last_vbltick = vblticker;
         
         u32 num_audio_samples = 448;
+//        {
+//        irq_disable_scoped();
         create_next_audio_buffer(audio_buffer, num_audio_samples);
+//        }
+//        {
+//        irq_disable_scoped();
         create_next_audio_buffer(audio_buffer + (num_audio_samples*2), num_audio_samples);
+//        }
         audio_api->play((u8 *)audio_buffer, 2 * num_audio_samples * 2 * 2);
-        thd_pass();
+
+        thd_pass();//sleep(1);
     }
 }
 

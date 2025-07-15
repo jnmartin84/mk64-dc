@@ -300,6 +300,8 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
     n64_memcpy(state, out - 16, 16 * sizeof(int16_t));
 }
 
+#include <kos.h>
+
 void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     int16_t __attribute__((aligned(32))) tmp[32] = {0};
     int16_t* in_initial = BUF_S16(rspa.in);
@@ -309,7 +311,7 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     uint32_t pitch_accumulator = 0;
     int i = 0;
     int16_t* tbl = NULL;
-    int32_t sample = 0;
+    float sample_f = 0;
 
     if (flags & A_INIT) {
         n64_memset(tmp, 0, 5 * sizeof(int16_t));
@@ -318,7 +320,7 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     }
     if (flags & 2) {
         n64_memcpy(in - 8, tmp + 8, 8 * sizeof(int16_t));
-        in -= tmp[5] / sizeof(int16_t);
+        in -= (tmp[5] >> 1);// / sizeof(int16_t);
     }
     in -= 4;
     pitch_accumulator = (uint16_t) tmp[4];
@@ -326,11 +328,14 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
 
     do {
         for (i = 0; i < 8; i++) {
-            // tbl = resample_table[pitch_accumulator * 64 >> 16];
             tbl = resample_table[pitch_accumulator >> 10];
-            sample = ((in[0] * tbl[0] + 0x4000) >> 15) + ((in[1] * tbl[1] + 0x4000) >> 15) +
-                     ((in[2] * tbl[2] + 0x4000) >> 15) + ((in[3] * tbl[3] + 0x4000) >> 15);
-            *out++ = clamp16(sample);
+            float in_f[4] = {(float)(int)in[0],(float)(int)in[1],(float)(int)in[2],(float)(int)in[3]};
+            float tbl_f[4] = {(float)(int)tbl[0],(float)(int)tbl[1],(float)(int)tbl[2],(float)(int)tbl[3]};
+
+            sample_f = fipr(in_f[0],in_f[1],in_f[2],in_f[3],
+                tbl_f[0],tbl_f[1],tbl_f[2],tbl_f[3]) * 0.00003052f;
+
+            *out++ = clamp16((s32)sample_f);
 
             pitch_accumulator += (pitch << 1);
             in += pitch_accumulator >> 16;
@@ -388,66 +393,6 @@ void aEnvMixerImpl(uint16_t in_addr, uint16_t n_samples, bool swap_reverb, bool 
         n -= 8;
     } while (n > 0);
 }
-
-void aSMixImpl(uint16_t in_addr, uint16_t out_addr, uint16_t count) {
-    int nbytes = ROUND_UP_32(ROUND_DOWN_16(count));
-    int32_t* in = (int32_t *)(((uintptr_t)BUF_S16(in_addr)+3)&~3);
-    int32_t* out = (int32_t *)(((uintptr_t)BUF_S16(out_addr)+3)&~3);
-    __builtin_prefetch(in);
-    int i = 0;
-    int32_t sample1 = 0;
-    int32_t sample2 = 0;
-    int32_t outsamp;
-    int32_t insamp;
-
-    while (nbytes > 0) {
-        __builtin_prefetch(out);
-        for (i = 0; i < 8; i++) {
-            insamp = *in++;
-            sample1 = (insamp >> 16) & 0xffff;
-            sample2 = (insamp & 0xffff);
-#if 1
-            asm volatile("": : : "memory");
-#endif
-            outsamp = *out;
-            sample1 += (outsamp >> 16) & 0xffff;
-            sample2 += (outsamp & 0xffff);
-            *out++ = (clamp16(sample1)<<16) | clamp16(sample2);
-        }    
-        __builtin_prefetch(in);
-        nbytes -= 16 * sizeof(int16_t);
-    }
-}
-
-#if 0
-void aMixImpl(int16_t gain, uint16_t in_addr, uint16_t out_addr, uint16_t count) {
-    int nbytes = ROUND_UP_32(ROUND_DOWN_16(count));
-    int16_t* in = BUF_S16(in_addr);
-    int16_t* out = BUF_S16(out_addr);
-    int i = 0;
-    int32_t sample = 0;
-
-    // have never observed this code path being taken
-    if (gain == -0x8000) {
-        while (nbytes > 0) {
-            for (i = 0; i < 16; i++) {
-                sample = *out - *in++;
-                *out++ = clamp16(sample);
-            }
-            nbytes -= 16 * sizeof(int16_t);
-        }
-    }
-
-    while (nbytes > 0) {
-        for (i = 0; i < 16; i++) {
-            sample = ((*out * 0x7fff + *in++ * gain) + 0x4000) >> 15;
-            *out++ = clamp16(sample);
-        }
-
-        nbytes -= 16 * sizeof(int16_t);
-    }
-}
-#endif
 
 void aDMEMMove2Impl(uint8_t t, uint16_t in_addr, uint16_t out_addr, uint16_t count) {
     uint8_t* in = BUF_U8(in_addr);

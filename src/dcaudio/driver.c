@@ -345,10 +345,10 @@ static void audio_dc_play(const uint8_t *buf, size_t len) {
         snd_stream_start(shnd, DC_AUDIO_FREQUENCY, DC_STEREO_AUDIO);
     }
     
-    if (written == 0) {
+//    if (written == 0) {
         // printf("O\n");
-        cb_clear();
-    }
+//        cb_clear();
+//    }
 
     if (audio_started) {
         snd_stream_poll(shnd);
