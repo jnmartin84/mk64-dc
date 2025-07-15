@@ -201,6 +201,8 @@ void mtxf_copy_n_element(s32* dest, s32* src, s32 n) {
     }
 }
 #include <string.h>
+void n64_memset(void *dst, uint8_t val, size_t size);
+
 // Transform a matrix to a matrix identity
 void mtxf_identity(Mat4 mtx) {
     s32 i;
@@ -211,7 +213,7 @@ void mtxf_identity(Mat4 mtx) {
 //            mtx[i][k] = (i == k) ? 1.0f : 0.0f;
 //        }
 //    }
-    memset(mtx, 0, sizeof(float)*16);
+    n64_memset(mtx, 0, sizeof(float)*16);
     mtx[0][0] = mtx[1][1] = mtx[2][2] = mtx[3][3] = 1.0f;
 }
 
@@ -1098,9 +1100,11 @@ void mtxf_multiplication(Mat4 dest, Mat4 mat1, Mat4 mat2) {
  * exception. On Wii and Wii U Virtual Console the value will simply be clamped
  * and no crashes occur.
  */
+void n64_memcpy(void *dst, const void *src, size_t size);
+
 void mtxf_to_mtx(Mtx* dest, Mat4 src) {
 #ifdef GBI_FLOATS
-    memcpy(dest, src, sizeof(Mtx));
+    n64_memcpy(dest, src, sizeof(Mtx));
 #else
 #ifdef AVOID_UB
     // Avoid type-casting which is technically UB by calling the equivalent
@@ -1128,7 +1132,7 @@ void mtxf_to_mtx(Mtx* dest, Mat4 src) {
  * Helper function for atan2s. Does a look up of the arctangent of y/x assuming
  * the resulting angle is in range [0, 0x2000] (1/8 of a circle).
  */
-
+#if 0
 // if 2pi is a full circle
 // the output range is [0, 2pi / 8 -> pi/4] is the range
 
@@ -1151,6 +1155,7 @@ static inline float bump_atan2f(const float y, const float x)
 	angle += (0.1963f * r * r - 0.9817f) * r;
 	return copysignf(angle, y) * scaleatanval;
 }
+#endif
 
 u16 atan2_lookup(f32 y, f32 x) {
     u16 ret;
@@ -1325,14 +1330,14 @@ u16 random_u16(void) {
     return gRandomSeed16;
 }
 
-//#define recip65535 0.00001526f
+#define recip65535 0.00001526f
 
-//u16 random_int(u16 arg0) {
-//    return arg0 * (((f32) random_u16()) * recip65535);
-//}
 u16 random_int(u16 arg0) {
-    return arg0 * (((f32) random_u16()) / 65535.0);
+    return arg0 * (((f32) random_u16()) * recip65535);
 }
+//u16 random_int(u16 arg0) {
+//    return arg0 * (((f32) random_u16()) / 65535.0);
+//}
 
 s16 func_802B7F34(f32 arg0, f32 arg1, f32 arg2, f32 arg3) {
     return atan2s(arg2 - arg0, arg3 - arg1);

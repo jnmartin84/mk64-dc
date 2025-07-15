@@ -162,7 +162,159 @@ void move_segment_table_to_dmem(void) {
     } */
 }
 
+void n64_memcpy(void* dst, const void* src, size_t size) {
+    uint8_t* bdst = (uint8_t*) dst;
+    uint8_t* bsrc = (uint8_t*) src;
+    uint32_t* wdst = (uint32_t*) dst;
+    uint32_t* wsrc = (uint32_t*) src;
 
+    int size_to_copy = size;
+    int words_to_copy = size_to_copy >> 2;
+    int bytes_to_copy = size_to_copy - (words_to_copy << 2);
+    __builtin_prefetch(bsrc);
+    if ((!((uintptr_t) bdst & 3)) && (!((uintptr_t) bsrc & 3))) {
+        while (words_to_copy--) {
+            if (words_to_copy & 3 == 0) {
+                __builtin_prefetch(bsrc + 16);
+            }
+            *wdst++ = *wsrc++;
+        }
+
+        bdst = (uint8_t*) wdst;
+        bsrc = (uint8_t*) wsrc;
+
+#if 0
+        while (bytes_to_copy--)
+        {
+            *bdst++ = *bsrc++;
+        }
+#else
+        switch (bytes_to_copy) {
+            case 0:
+                return;
+            case 1:
+                goto n64copy1;
+            case 2:
+                goto n64copy2;
+            case 3:
+                goto n64copy3;
+            case 4:
+                goto n64copy4;
+            case 5:
+                goto n64copy5;
+            case 6:
+                goto n64copy6;
+            case 7:
+                goto n64copy7;
+        }
+#endif
+        return;
+    } else {
+        while (words_to_copy > 0) {
+            uint8_t b1, b2, b3, b4;
+            b1 = *bsrc++;
+            b2 = *bsrc++;
+            b3 = *bsrc++;
+            b4 = *bsrc++;
+#if 1
+            asm volatile("" : : : "memory");
+#endif
+            *bdst++ = b1; //*bsrc++;
+            *bdst++ = b2; //*bsrc++;
+            *bdst++ = b3; //*bsrc++;
+            *bdst++ = b4; //*bsrc++;
+
+            words_to_copy--;
+        }
+
+#if 0
+        while (bytes_to_copy--)
+        {
+            *bdst++ = *bsrc++;
+        }
+#else
+        switch (bytes_to_copy) {
+            case 0:
+                return;
+            case 1:
+                goto n64copy1;
+            case 2:
+                goto n64copy2;
+            case 3:
+                goto n64copy3;
+            case 4:
+                goto n64copy4;
+            case 5:
+                goto n64copy5;
+            case 6:
+                goto n64copy6;
+            case 7:
+                goto n64copy7;
+        }
+#endif
+        return;
+    }
+
+n64copy7:
+    *bdst++ = *bsrc++;
+n64copy6:
+    *bdst++ = *bsrc++;
+n64copy5:
+    *bdst++ = *bsrc++;
+n64copy4:
+    *bdst++ = *bsrc++;
+n64copy3:
+    *bdst++ = *bsrc++;
+n64copy2:
+    *bdst++ = *bsrc++;
+n64copy1:
+    *bdst++ = *bsrc++;
+    return;
+}
+
+void n64_memset(void *dst, uint8_t val, size_t size)
+{
+    uint8_t *bdst = (uint8_t *)dst;
+    uint32_t *wdst = (uint32_t *)dst;
+
+    int size_to_copy = size;
+    int words_to_copy = size_to_copy >> 2;
+    int bytes_to_copy = size_to_copy - (words_to_copy<<2);
+
+    if ((!((uintptr_t)bdst&3)))
+    {
+        while (words_to_copy--)
+        {
+            *wdst++ = 0;
+        }
+
+        bdst = (uint8_t *)wdst;
+
+        while (bytes_to_copy--)
+        {
+            *bdst++ = 0;
+        }
+    }
+    else
+    {
+        while (words_to_copy > 0)
+        {
+            *bdst++ = 0;
+            *bdst++ = 0;
+            *bdst++ = 0;
+            *bdst++ = 0;
+
+            words_to_copy--;
+        }
+
+        while(bytes_to_copy--)
+        {
+            *bdst++ = 0;
+        }
+    }
+}
+
+#if 0
 /**
  * @brief Allocate and DMA.
  */
@@ -172,12 +324,15 @@ void* load_data(uintptr_t startAddr, uintptr_t endAddr, uintptr_t target) {
     dma_copy((u8*) target, (u8*) startAddr, size);
     return (void*) target;
 }
+#endif
 
 void gfx_texture_cache_invalidate(void* arg);
 extern u8 *ROVING_SEG3_BUF;
 
 // starting address for this texture COMPRESSED is gNextFree+arg2
 // starting address for this texture DECOMPRESSED is gNextFree
+void mio0decode_noinval(const unsigned char *in, unsigned char *out);
+
 u8* dma_textures(u8 texture[], UNUSED size_t arg1, size_t arg2) {
     u8* temp_v0;
 //    void* temp_a0;
@@ -187,8 +342,8 @@ u8* dma_textures(u8 texture[], UNUSED size_t arg1, size_t arg2) {
     arg2 = ALIGN16(arg2);
     //dma_copy(temp_a0, texture, arg1);
     //mio0decode((u8*) temp_a0, temp_v0);
-    mio0decode((u8 *)texture, temp_v0);
-    gfx_texture_cache_invalidate(temp_v0);
+    mio0decode_noinval((u8 *)texture, temp_v0);
+//    gfx_texture_cache_invalidate(temp_v0);
     ROVING_SEG3_BUF += arg2;
     return temp_v0;
 }
@@ -231,12 +386,13 @@ void func_802A86A8(CourseVtx* data, u32 arg1) {
         courseVtx++;
     }
 }
+void mio0decode_noinval(const unsigned char *in, unsigned char *out);
 
 void decompress_vtx(CourseVtx* arg0, u32 vertexCount, void *target) {
 	u8* vtxCompressed;	
 	vtxCompressed = (u8*)segmented_to_virtual(arg0);
 
-    mio0decode(vtxCompressed, (u8*) target);
+    mio0decode_noinval(vtxCompressed, (u8*) target);
     func_802A86A8((CourseVtx*) target, vertexCount);
     set_segment_base_addr(4, (void*) SEG4_BUF);
 }
@@ -325,9 +481,10 @@ static inline uint32_t Swap32(uint32_t val)
 	return ((((val)&0xff000000) >> 24) | (((val)&0x00ff0000) >> 8) |
 		(((val)&0x0000ff00) << 8) | (((val)&0x000000ff) << 24));
 }
+void mio0decode_noinval(const unsigned char *in, unsigned char *out);
 
 void* decompress_segments(u8* start, u8 *target) {
-    mio0decode(segmented_to_virtual(start), (u8*) target);
+    mio0decode_noinval(segmented_to_virtual(start), (u8*) target);
     return (void*) target;
 }
 
@@ -364,15 +521,15 @@ void unmute_stream(void);
 
 u8* load_course(s32 courseId) {
     u32 vertexCount;
-    mute_stream();
+//    mute_stream();
     nuke_everything();
 
     vertexCount = gCourseTable[courseId].vertexCount;
 
-    memset(COURSE_BUF, 0, sizeof(COURSE_BUF));
-    memset(COMP_VERT_BUF, 0, sizeof(COMP_VERT_BUF));
-    memset(DECOMP_VERT_BUF, 0, sizeof(DECOMP_VERT_BUF));
-    memset(UNPACK_BUF, 0, sizeof(UNPACK_BUF));
+    n64_memset(COURSE_BUF, 0, sizeof(COURSE_BUF));
+    n64_memset(COMP_VERT_BUF, 0, sizeof(COMP_VERT_BUF));
+    n64_memset(DECOMP_VERT_BUF, 0, sizeof(DECOMP_VERT_BUF));
+    n64_memset(UNPACK_BUF, 0, sizeof(UNPACK_BUF));
 
     char *courseName = get_course_name(gCurrentCourseId);
 	// open course data
@@ -457,6 +614,6 @@ u8* load_course(s32 courseId) {
         //printf("unpack to %08x\n", (uintptr_t*) UNPACK_BUF);
     }
     decompress_textures(0);
-    unmute_stream();
+//    unmute_stream();
     return COMP_VERT_BUF;
 }

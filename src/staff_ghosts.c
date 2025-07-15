@@ -181,10 +181,11 @@ s32 func_800051C4(void) {
         return phi_v0 + 0x1e;
     }
 }
+void mio0decode_noinval(const unsigned char *in, unsigned char *out);
 
 void func_8000522C(void) {
     D_80162D94 = (u32*) &D_802BFB80.arraySize8[0][D_80162DC8][3];
-    mio0decode((u8*) D_800DC714, (u8*) D_80162D94);
+    mio0decode_noinval((u8*) D_800DC714, (u8*) D_80162D94);
     D_80162D8C = (s32) (*D_80162D94 & 0xFF0000);
     D_80162D90 = 0;
     D_80162E00 = 1;

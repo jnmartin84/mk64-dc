@@ -304,13 +304,13 @@ void func_8028E678(void) {
             D_800DC5EC->screenStartY -= 2;
             D_800DC5F0->screenStartY += 2;
 
-            if (D_800DC5EC->screenHeight < 120) {
-                D_800DC5EC->screenHeight = 120;
+            if (D_800DC5EC->screenHeight < 96) { //120) {
+                D_800DC5EC->screenHeight = 96; //120;
                 phi_a0_10++;
             }
 
-            if (D_800DC5F0->screenHeight < 120) {
-                D_800DC5F0->screenHeight = 120;
+            if (D_800DC5F0->screenHeight < 96) { //120-16) {
+                D_800DC5F0->screenHeight = 96; //120-16;
                 phi_a0_10++;
             }
 

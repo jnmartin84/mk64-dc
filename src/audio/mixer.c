@@ -46,7 +46,7 @@ static struct  __attribute__((aligned(32)))  {
 
 } rspa;
 
-static int16_t resample_table[64][4] = {
+static int16_t __attribute__((aligned(32))) resample_table[64][4] = {
     { 0x0c39, 0x66ad, 0x0d46, 0xffdf }, { 0x0b39, 0x6696, 0x0e5f, 0xffd8 }, { 0x0a44, 0x6669, 0x0f83, 0xffd0 },
     { 0x095a, 0x6626, 0x10b4, 0xffc8 }, { 0x087d, 0x65cd, 0x11f0, 0xffbf }, { 0x07ab, 0x655e, 0x1338, 0xffb6 },
     { 0x06e4, 0x64d9, 0x148c, 0xffac }, { 0x0628, 0x643f, 0x15eb, 0xffa1 }, { 0x0577, 0x638f, 0x1756, 0xff96 },
@@ -91,51 +91,33 @@ static inline int32_t clamp32(int64_t v) {
 
 //void checked_memeset
 uintptr_t DMEM_END = rspa.buf.as_u8 + DMEM_BUF_SIZE;
+void n64_memset(void *dst, uint8_t val, size_t size);
 
 void aClearBufferImpl(uint16_t addr, int nbytes) {
     nbytes = ROUND_UP_16(nbytes);
- /*    if (((uintptr_t)BUF_U8(addr) + nbytes) >= DMEM_END) {
-        printf("attempted to clear past end of DMEM\n");
-        memset(BUF_U8(addr), 0, DMEM_END - (uintptr_t)BUF_U8(addr));
-    } else { */
-        memset(BUF_U8(addr), 0, nbytes);
-   // }
+    n64_memset(BUF_U8(addr), 0, nbytes);
 }
+
 #include <stdio.h>
+void n64_memcpy(void *dst, const void *src, size_t size);
 
 void aLoadBufferImpl(const void* source_addr, uint16_t dest_addr, uint16_t nbytes) {
-    //printf("source_addr: %08x\n dest_addr; %08x\n nbytes: %d\n", (uintptr_t)source_addr, (uintptr_t)BUF_U8(dest_addr), nbytes);
-    /* if (((uintptr_t)BUF_U8(dest_addr) + ROUND_DOWN_16(nbytes)) >= DMEM_END) {
-        printf("attempted to clear past end of DMEM\n");
-        memcpy(BUF_U8(dest_addr), 0, DMEM_END - (uintptr_t)BUF_U8(dest_addr));
-    } else { */
-    memcpy(BUF_U8(dest_addr), source_addr, ROUND_DOWN_16(nbytes));
-//}
+    n64_memcpy(BUF_U8(dest_addr), source_addr, ROUND_DOWN_16(nbytes));
 }
 
 void aSaveBufferImpl(uint16_t source_addr, int16_t* dest_addr, uint16_t nbytes) {
-//    if (nbytes > 704) {nbytes = 704;}
-    //printf("source_addr: %08x\n dest_addr; %08x\n nbytes: %d\n", (uintptr_t)BUF_S16(source_addr), (uintptr_t)dest_addr, nbytes);
-    memcpy(dest_addr, BUF_S16(source_addr), ROUND_DOWN_16(nbytes));
+    n64_memcpy(dest_addr, BUF_S16(source_addr), ROUND_DOWN_16(nbytes));
 }
 static inline short SwapShort(short dat)
 {
         return ((((dat << 8) | (dat >> 8 & 0xff)) << 16) >> 16);
 }
-//int16_t tmpstuff[512];
+
 void aLoadADPCMImpl(int num_entries_times_16, const int16_t* book_source_addr) {
-//    memcpy(rspa.adpcm_table, book_source_addr, num_entries_times_16);
-
-//    for (int i=0;i<num_entries_times_16 / 2;i++) {
-  //      tmpstuff[i] = (short)SwapShort(book_source_addr[i]);    
-   // }
-
-//    memcpy(rspa.adpcm_table, tmpstuff, num_entries_times_16);
     short *aptr = (short*)rspa.adpcm_table;
     for (int i=0;i<num_entries_times_16 / 2;i++) {
         aptr[i] = (short)SwapShort(book_source_addr[i]);    
     }
-
 }
 
 void aSetBufferImpl(UNUSED uint8_t flags, uint16_t in, uint16_t out, uint16_t nbytes) {
@@ -196,13 +178,17 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
     int16_t* r = BUF_S16(right);
     //int16_t* d = BUF_S16(rspa.out);
     int32_t* d = (int32_t*)(((uintptr_t)BUF_S16(rspa.out)+3) & ~3);
+    __builtin_prefetch(r);
 
     while (count > 0) {
+        __builtin_prefetch(r+16);
         int32_t l0 = (*l++ << 16) | (*r++ & 0xffff);
         int32_t l1 = (*l++ << 16) | (*r++ & 0xffff);
         int32_t l2 = (*l++ << 16) | (*r++ & 0xffff);
         int32_t l3 = (*l++ << 16) | (*r++ & 0xffff);
-
+#if 1
+            asm volatile("": : : "memory");
+#endif
         *d++ = l0;
         *d++ = l1;
         *d++ = l2;
@@ -211,7 +197,7 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
     }
 }
 #endif
-
+#if 1
 void aInterleaveImpl(uint16_t left, uint16_t right) {
     int count = ROUND_UP_16(rspa.nbytes) / sizeof(int16_t) / 8;
     int16_t* l = BUF_S16(left);
@@ -259,6 +245,7 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
         --count;
     }
 }
+#endif
 
 void aDMEMMoveImpl(uint16_t in_addr, uint16_t out_addr, int nbytes) {
     nbytes = ROUND_UP_16(nbytes);
@@ -274,11 +261,11 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
     int16_t* out = BUF_S16(rspa.out);
     int nbytes = ROUND_UP_32(rspa.nbytes);
     if (flags & A_INIT) {
-        memset(out, 0, 16 * sizeof(int16_t));
+        n64_memset(out, 0, 16 * sizeof(int16_t));
     } else if (flags & A_LOOP) {
-        memcpy(out, rspa.adpcm_loop_state, 16 * sizeof(int16_t));
+        n64_memcpy(out, rspa.adpcm_loop_state, 16 * sizeof(int16_t));
     } else {
-        memcpy(out, state, 16 * sizeof(int16_t));
+        n64_memcpy(out, state, 16 * sizeof(int16_t));
     }
     out += 16;
 
@@ -294,8 +281,9 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
             int16_t prev2 = out[-2];
             int j, k;
             for (j = 0; j < 4; j++) {
-                ins[j * 2] = (((*in >> 4) << 28) >> shift);//>> 28) << shift;
-                ins[j * 2 + 1] = (((*in++ & 0xf) << 28) >> shift);//>> 28) << shift;
+                uint8_t in8 = *in++;
+                ins[j * 2] = (((in8 >> 4) << 28) >> shift);//>> 28) << shift;
+                ins[j * 2 + 1] = (((in8 & 0xf) << 28) >> shift);//>> 28) << shift;
             }
             for (j = 0; j < 8; j++) {
                 int32_t acc = tbl[0][j] * prev2 + tbl[1][j] * prev1 + (ins[j] << 11);
@@ -303,12 +291,13 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
                     acc += tbl[1][((j - k) - 1)] * ins[k];
                 }
                 acc >>= 11;
+//                printf("acc %08x\n", acc);
                 *out++ = clamp16(acc);
             }
         }
         nbytes -= 16 * sizeof(int16_t);
     }
-    memcpy(state, out - 16, 16 * sizeof(int16_t));
+    n64_memcpy(state, out - 16, 16 * sizeof(int16_t));
 }
 
 void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
@@ -323,17 +312,17 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     int32_t sample = 0;
 
     if (flags & A_INIT) {
-        memset(tmp, 0, 5 * sizeof(int16_t));
+        n64_memset(tmp, 0, 5 * sizeof(int16_t));
     } else {
-        memcpy(tmp, state, 16 * sizeof(int16_t));
+        n64_memcpy(tmp, state, 16 * sizeof(int16_t));
     }
     if (flags & 2) {
-        memcpy(in - 8, tmp + 8, 8 * sizeof(int16_t));
+        n64_memcpy(in - 8, tmp + 8, 8 * sizeof(int16_t));
         in -= tmp[5] / sizeof(int16_t);
     }
     in -= 4;
     pitch_accumulator = (uint16_t) tmp[4];
-    memcpy(in, tmp, 4 * sizeof(int16_t));
+    n64_memcpy(in, tmp, 4 * sizeof(int16_t));
 
     do {
         for (i = 0; i < 8; i++) {
@@ -351,14 +340,14 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     } while (nbytes > 0);
 
     state[4] = (int16_t) pitch_accumulator;
-    memcpy(state, in, 4 * sizeof(int16_t));
+    n64_memcpy(state, in, 4 * sizeof(int16_t));
     i = (in - in_initial + 4) & 7;
     in -= i;
     if (i != 0) {
         i = -8 - i;
     }
     state[5] = i;
-    memcpy(state + 8, in, 8 * sizeof(int16_t));
+    n64_memcpy(state + 8, in, 8 * sizeof(int16_t));
 }
 
 void aEnvSetup1Impl(uint8_t initial_vol_wet, /* UNUSED  */uint16_t rate_wet, uint16_t rate_left, uint16_t rate_right) {
@@ -467,7 +456,7 @@ void aDMEMMove2Impl(uint8_t t, uint16_t in_addr, uint16_t out_addr, uint16_t cou
 
     do {
         // out and in never overlap as called by `synthesis.c`
-        memcpy(out, in, nbytes);
+        n64_memcpy(out, in, nbytes);
         out += nbytes;
     } while (t-- > 0);
 }

@@ -1,3 +1,135 @@
+#if 0
+#include "macros.h"
+#include "audio_api.h"
+#include <kos.h>
+#include <dc/sound/stream.h>
+#include <stdio.h>
+void n64_memcpy(void *dst, const void *src, size_t size);
+void n64_memset(void *dst, uint8_t val, size_t size);
+
+#define DC_AUDIO_CHANNELS 2
+#define DC_STEREO_AUDIO (1)
+#define DC_AUDIO_FREQUENCY 26800
+#define DC_AUDIO_GIVEN_BUFFERS (2)
+#define SAMPLES_HIGH (448)
+//#define DC_AUDIO_SAMPLES_DESIRED (SAMPLES_HIGH * DC_AUDIO_GIVEN_BUFFERS * 2 /* to help pad space */)
+#define DC_AUDIO_SAMPLES_DESIRED (0x12000 / 4)
+
+/* Double Buffer */
+snd_stream_hnd_t shnd = -1;
+//extern int gProcessAudio;
+
+void mute_stream(void) {
+    snd_stream_volume(shnd, 0); // Set maximum volume
+}
+
+void unmute_stream(void) {
+    snd_stream_volume(shnd, 124); // Set maximum volume
+}
+
+
+
+/* 0x12000 bytes */
+uint16_t snd_buffer_internal[DC_AUDIO_SAMPLES_DESIRED * DC_AUDIO_CHANNELS] __attribute__((aligned(64)));
+static int audio_frames_generated_total;
+static int audio_frames_generated_cur;
+
+extern void create_next_audio_buffer(uint16_t *samples, uint32_t num_samples);
+void *audio_callback(UNUSED snd_stream_hnd_t hnd, int samples_requested, int *samples_returned) {
+    const int backup_req = samples_requested;
+    /* Catch-22, can be used to play more samples, but then takes longer, leading to needing more samples */
+#if 0
+    void *snd_buf = snd_buffer_internal;
+    do {
+        //printf("left to generate %d/%d bytes\n", samples_requested, backup_req);
+        create_next_audio_buffer(snd_buf, SAMPLES_HIGH);
+        snd_buf += (SAMPLES_HIGH * DC_AUDIO_CHANNELS * sizeof(short));
+        samples_requested -= (SAMPLES_HIGH * DC_AUDIO_CHANNELS * sizeof(short));
+    } while (samples_requested >= (SAMPLES_HIGH * DC_AUDIO_CHANNELS * sizeof(short)));
+    create_next_audio_buffer(snd_buf, SAMPLES_HIGH);
+    snd_buf += (SAMPLES_HIGH * DC_AUDIO_CHANNELS * sizeof(short));
+
+    //int ret = backup_req-samples_requested;
+#endif
+    int ret = backup_req;
+    *samples_returned = ret;
+#ifdef DEBUG
+    void *buf = snd_buffer_internal;
+    printf("%s:%d asked for %d and gave %d @ %x with %d left \n", __func__, __LINE__, backup_req, ret, (unsigned int) buf, samples_requested);
+    fflush(stdout);
+#endif
+    audio_frames_generated_cur = 0;
+    return snd_buffer_internal;
+}
+
+static bool audio_dc_init(void) {
+    if (snd_stream_init()) {
+        printf("AICA INIT FAILURE!\n");
+        fflush(stdout);
+        return false;
+    }
+
+    shnd = snd_stream_alloc(audio_callback, SND_STREAM_BUFFER_MAX / 2 /* 0xFFFF */);
+    if (shnd == SND_STREAM_INVALID) {
+        printf("SND: creation failure!");
+        fflush(stdout);
+        return false;
+    }
+
+    n64_memset(snd_buffer_internal, 0, DC_AUDIO_SAMPLES_DESIRED * DC_AUDIO_CHANNELS * 2);
+    audio_frames_generated_total = 0;
+    audio_frames_generated_cur = 0;
+    return true;
+}
+
+static int audio_dc_buffered(void) {
+    return 0;
+}
+
+static int audio_dc_get_desired_buffered(void) {
+    /* This is more than 1088 */
+    return 1100;
+}
+static int stream_started = 0;
+/* We do our own cycle and processing of audio */
+static void audio_dc_play(UNUSED const uint8_t *buf, UNUSED size_t len) {
+    void *snd_buf = snd_buffer_internal + audio_frames_generated_cur * (SAMPLES_HIGH * DC_AUDIO_CHANNELS * sizeof(short));
+
+//    if (gProcessAudio) {
+        create_next_audio_buffer(snd_buf, SAMPLES_HIGH);
+        snd_buf += (SAMPLES_HIGH * DC_AUDIO_CHANNELS * sizeof(short));
+        create_next_audio_buffer(snd_buf, SAMPLES_HIGH);
+//    } else {
+//        sq_clr(snd_buffer_internal, sizeof(snd_buffer_internal));
+//    }
+
+    audio_frames_generated_total += 2;
+    audio_frames_generated_cur += 2;
+
+    if (audio_frames_generated_total > 15) {
+        snd_stream_start(shnd, DC_AUDIO_FREQUENCY, DC_STEREO_AUDIO);
+        stream_started = 1;
+    }
+
+    if (stream_started) {
+    int ret = snd_stream_poll(shnd);
+    if (ret) {
+        printf("SND: %d\n", ret);
+        fflush(stdout);
+    }
+    }
+    thd_pass();
+}
+
+struct AudioAPI audio_dc = {
+    audio_dc_init,
+    audio_dc_buffered,
+    audio_dc_get_desired_buffered,
+    audio_dc_play
+};
+#endif
+
+#if 1
 /*
  * File: dc_audio_kos.c
  * Project: sm64-port
@@ -57,6 +189,7 @@ static bool cb_init(size_t capacity) {
     r->tail = 0;
     return true;
 }
+void n64_memcpy(void *dst, const void *src, size_t size);
 
 static size_t cb_write_data(const void *src, size_t n) {
     uint32_t head = r->head;
@@ -66,8 +199,8 @@ static size_t cb_write_data(const void *src, size_t n) {
         return 0;
     uint32_t idx = head & (r->cap - 1);
     uint32_t first = MIN(n, r->cap - idx);
-    memcpy(r->buf + idx, src, first);
-    memcpy(r->buf, (uint8_t*)src + first, n - first);
+    n64_memcpy(r->buf + idx, src, first);
+    n64_memcpy(r->buf, (uint8_t*)src + first, n - first);
     r->head = head + n;
     return n;
 }
@@ -79,8 +212,8 @@ static size_t cb_read_data(void *dst, size_t n) {
     if (n > avail) return 0;
     uint32_t idx = tail & (r->cap - 1);
     uint32_t first = MIN(n, r->cap - idx);
-    memcpy(dst, r->buf + idx, first);
-    memcpy((uint8_t*)dst + first, r->buf, n - first);
+    n64_memcpy(dst, r->buf + idx, first);
+    n64_memcpy((uint8_t*)dst + first, r->buf, n - first);
     r->tail = tail + n;
     return n;
 }
@@ -130,6 +263,14 @@ static void cb_clear(void) {
 #define TEMP_BUF_SIZE (SND_STREAM_BUFFER_MAX * NUM_BUFFER_BLOCKS)
 static uint8_t __attribute__((aligned(32))) temp_buf[TEMP_BUF_SIZE];
 static unsigned int temp_buf_sel = 0;
+void n64_memset(void *dst, uint8_t val, size_t size);
+void mute_stream(void) {
+    snd_stream_volume(shnd, 0); // Set maximum volume
+}
+
+void unmute_stream(void) {
+    snd_stream_volume(shnd, 124); // Set maximum volume
+}
 
 void *audio_callback(UNUSED snd_stream_hnd_t hnd, int samples_requested_bytes, int *samples_returned_bytes) {
     size_t samples_requested = samples_requested_bytes / 4;
@@ -140,7 +281,7 @@ void *audio_callback(UNUSED snd_stream_hnd_t hnd, int samples_requested_bytes, i
     
     /*@Note: This is more correct, fill with empty audio */
     if (samples_avail_bytes < (unsigned)samples_requested_bytes) {
-        memset(temp_buf + (SND_STREAM_BUFFER_MAX * temp_buf_sel) + samples_avail_bytes, 0, (samples_requested_bytes - samples_avail_bytes));
+        n64_memset(temp_buf + (SND_STREAM_BUFFER_MAX * temp_buf_sel) + samples_avail_bytes, 0, (samples_requested_bytes - samples_avail_bytes));
         // printf("U\n");
     }
     
@@ -150,14 +291,6 @@ void *audio_callback(UNUSED snd_stream_hnd_t hnd, int samples_requested_bytes, i
     }
     
     return (void*)(temp_buf + (SND_STREAM_BUFFER_MAX * temp_buf_sel));
-}
-
-void mute_stream(void) {
-    snd_stream_volume(shnd, 0); // Set maximum volume
-}
-
-void unmute_stream(void) {
-    snd_stream_volume(shnd, 124); // Set maximum volume
 }
 
 static bool audio_dc_init(void) {
@@ -228,3 +361,4 @@ struct AudioAPI audio_dc = {
     audio_dc_get_desired_buffered,
     audio_dc_play
 };
+#endif

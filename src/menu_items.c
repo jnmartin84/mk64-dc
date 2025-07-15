@@ -3214,6 +3214,7 @@ Gfx* func_80097AE4(Gfx* displayListHead, s8 fmt, s32 arg2, s32 arg3, u8* arg4, s
         return displayListHead;
     }
 
+// maybe?
 //    gfx_texture_cache_invalidate(arg4);
 
     arg2Copy = arg2;
@@ -3453,6 +3454,9 @@ void* segmented_to_virtual_dupe(const void* addr) {
 void* segmented_to_virtual_dupe_2(const void* addr) {
     return segmented_to_virtual(addr);
 }
+//void mio0decode_noinval(const unsigned char *in, unsigned char *out);
+
+//#define mio0decode mio0decode_noinval
 
 void load_menu_img(MenuTexture* addr) {
     u16 size;
@@ -3629,6 +3633,8 @@ void load_menu_img_comp_type(MenuTexture* addr, s32 compType) {
                     break;
             }
 #endif
+//            gfx_texture_cache_invalidate(&gMenuTextureBuffer[sMenuTextureBufferIndex]);
+
             texMap[sMenuTextureEntries].textureData = texAddr->textureData;
             texMap[sMenuTextureEntries].offset = sMenuTextureBufferIndex;
             sMenuTextureBufferIndex += texAddr->height * texAddr->width;
@@ -4517,6 +4523,9 @@ Gfx* func_8009C204(Gfx* arg0, MenuTexture* arg1, s32 arg2, s32 arg3, s32 arg4) {
                 break;
         }
         temp_t0 = (u8*) func_8009B8C4(var_s1->textureData);
+
+// maybe?
+//        gfx_texture_cache_invalidate(temp_t0);
         switch (arg4) {
             case 2:
                 arg0 =

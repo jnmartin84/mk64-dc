@@ -247,6 +247,7 @@ static struct ShaderProgram* gfx_lookup_or_create_shader_program(uint32_t shader
 	}
 	return prg;
 }
+void n64_memcpy(void *dst, const void *src, size_t size);
 
 static void gfx_generate_cc(struct ColorCombiner* comb, uint32_t cc_id) {
 	uint8_t c[2][4];
@@ -294,7 +295,7 @@ static void gfx_generate_cc(struct ColorCombiner* comb, uint32_t cc_id) {
 	}
 	comb->cc_id = cc_id;
 	comb->prg = gfx_lookup_or_create_shader_program(shader_id);
-	memcpy(comb->shader_input_mapping, shader_input_mapping, sizeof(shader_input_mapping));
+	n64_memcpy(comb->shader_input_mapping, shader_input_mapping, sizeof(shader_input_mapping));
 }
 
 static struct ColorCombiner* gfx_lookup_or_create_color_combiner(uint32_t cc_id) {
@@ -569,6 +570,8 @@ static void import_texture_rgba32(int tile) {
 	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_1_5_5_5_REV);
 }
 
+void n64_memset(void *dst, uint8_t val, size_t size);
+
 
 static void import_texture_ia4(int tile) {
 	uint32_t width = rdp.texture_tile.line_size_bytes << 1;
@@ -589,7 +592,7 @@ static void import_texture_ia4(int tile) {
 		}
 	} else {
 		uint8_t ia4_xform_buf[8192];
-		memset(ia4_xform_buf, 0, width*height);
+		n64_memset(ia4_xform_buf, 0, width*height);
 		uint8_t* start =
 			(uint8_t*) &rdp.loaded_texture[tile]
 				.addr[(((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) >> 1) * (last_set_texture_image_width + 1)) +
@@ -628,7 +631,7 @@ static void import_texture_ia4(int tile) {
 static void import_texture_ia8(int tile) {
 	uint32_t width = rdp.texture_tile.line_size_bytes;
 	uint32_t height = rdp.loaded_texture[tile].size_bytes / rdp.texture_tile.line_size_bytes;
-	memset(rgba16_buf, 0, 8192*2);
+	n64_memset(rgba16_buf, 0, width*height*2);//8192*2);
 
 	uint8_t* start = (uint8_t*) &rdp.loaded_texture[tile]
 						 .addr[((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) * (last_set_texture_image_width + 1)) +
@@ -681,7 +684,7 @@ static void import_texture_ia16(int tile) {
 		src_width = width;
 	}
 
-//	memset(rgba16_buf,0,src_width*height);
+//	n64_memset(rgba16_buf,0,src_width*height);
 
 	uint16_t* start = rdp.loaded_texture[tile].addr;
 	if (last_set_texture_image_width) {
@@ -726,7 +729,7 @@ static void import_texture_i4(int tile) {
 		}
 	} else {
 //		uint8_t xform_buf[8192];
-		memset(rgba16_buf,0,8192);
+		n64_memset(rgba16_buf,0,width*height);//8192);
 		uint8_t* start =
 			(uint8_t*) &rdp.loaded_texture[tile]
 				.addr[(((((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC)-1)/2) * (width)/2)) +
@@ -760,7 +763,7 @@ static void import_texture_i8(int tile) {
 	uint32_t height = rdp.loaded_texture[tile].size_bytes / rdp.texture_tile.line_size_bytes;
 
 	uint8_t xform_buf[8192];
-    memset(xform_buf, 0, width*height*2);
+    n64_memset(xform_buf, 0, width*height*2);
 
 	uint8_t* start = (uint8_t*) &rdp.loaded_texture[tile]
 						 .addr[((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) * (last_set_texture_image_width + 1)) +
@@ -805,7 +808,7 @@ static void import_texture_ci4(int tile) {
 		}
 	} else {
 		uint8_t xform_buf[8192];
-		memset(xform_buf, 0, width*height*2);
+		n64_memset(xform_buf, 0, width*height*2);
 		uint8_t* start =
 			(uint8_t*) &rdp.loaded_texture[tile]
 				.addr[(((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) / 2) * (last_set_texture_image_width + 1)) +
@@ -1124,7 +1127,7 @@ static __attribute__((noinline)) void gfx_sp_matrix(uint8_t parameters, const in
 	}
 #else
 	// For a modified GBI where fixed point values are replaced with floats
-	memcpy(matrix, saddr, sizeof(matrix));
+	n64_memcpy(matrix, saddr, sizeof(matrix));
 #endif
 
 	matrix_dirty = 1;
@@ -1873,7 +1876,7 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 						color_a = rdp.prim_color.a;
 						break;
 					default:
-						//memset(&tmp, 0, sizeof(tmp));
+						//n64_memset(&tmp, 0, sizeof(tmp));
 						//color = &tmp;
 						color = &white;
 						break;
@@ -2169,7 +2172,7 @@ static void  __attribute__((noinline)) gfx_sp_movemem(uint8_t index, UNUSED uint
 			int lightidx = offset / 24 - 2;
 			if (lightidx >= 0 && lightidx <= MAX_LIGHTS) { // skip lookat
 				// NOTE: reads out of bounds if it is an ambient light
-				memcpy(rsp.current_lights + lightidx, data, sizeof(Light_t));
+				n64_memcpy(rsp.current_lights + lightidx, data, sizeof(Light_t));
 			}
 			break;
 		}
@@ -2178,7 +2181,7 @@ static void  __attribute__((noinline)) gfx_sp_movemem(uint8_t index, UNUSED uint
 		case G_MV_L1:
 		case G_MV_L2:
 			// NOTE: reads out of bounds if it is an ambient light
-			memcpy(rsp.current_lights + (index - G_MV_L0) / 2, data, sizeof(Light_t));
+			n64_memcpy(rsp.current_lights + (index - G_MV_L0) / 2, data, sizeof(Light_t));
 			break;
 #endif
 	}
@@ -2910,7 +2913,7 @@ void gfx_init(struct GfxWindowManagerAPI* wapi, struct GfxRenderingAPI* rapi, co
 	gfx_rapi->select_texture(0, oops_texture_id);
 	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, 64, 64, GL_UNSIGNED_SHORT_4_4_4_4_REV);
 
-	memset(&oops_node, 0, sizeof(oops_node));
+	n64_memset(&oops_node, 0, sizeof(oops_node));
 	oops_node.texture_id = oops_texture_id;
 }
 

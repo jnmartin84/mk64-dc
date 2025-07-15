@@ -6,4 +6,4 @@
  * See trig_tables.c for the real file.
  */
 
-ALIGNED8 u8 trigTablesPadding[0x5810];
+//ALIGNED8 u8 trigTablesPadding[0x5810];

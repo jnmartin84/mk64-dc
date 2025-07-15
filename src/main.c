@@ -70,8 +70,6 @@ const void *__kos_romdisk;
 
 void func_80091B78(void);
 void audio_init(void);
-void StartAudioFrame(void);
-void EndAudioFrame(void);
 void create_debug_thread(void);
 void start_debug_thread(void);
 struct SPTask* create_next_audio_frame_task(void);
@@ -235,7 +233,6 @@ static int even_frame;
 
 void game_loop_one_iteration(void) {
     even_frame = !((frameno++) & 1);
-//    StartAudioFrame();
 
     gfx_start_frame();
 
@@ -254,21 +251,9 @@ void game_loop_one_iteration(void) {
     game_state_handler();
     end_master_display_list();
 
-#if 1
-    u32 num_audio_samples = 448;//even_frame ? SAMPLES_HIGH : SAMPLES_LOW;
-//    irq_disable();
-    create_next_audio_buffer(audio_buffer + 0 * (num_audio_samples * 2), num_audio_samples);
-    create_next_audio_buffer(audio_buffer + 1 * (num_audio_samples * 2), num_audio_samples);
-    audio_api->play((u8 *)audio_buffer, 2 * num_audio_samples * 2 * 2);
-//    irq_enable();
-#endif
-
     display_and_vsync();
 
-
     gfx_end_frame();
-
-    EndAudioFrame();
 }
 
 void send_display_list(struct SPTask *spTask) {
@@ -279,14 +264,6 @@ void send_display_list(struct SPTask *spTask) {
 
     gfx_run((Gfx *)spTask->task.t.data_ptr);
 }
-
-#if 0
-void produce_one_frame(void) {
-    gfx_start_frame();
-    game_loop_one_iteration();
-    gfx_end_frame();
-}
-#endif
 
 uint16_t __attribute__((aligned(32))) fb[3][4];
 
@@ -982,7 +959,7 @@ void display_and_vsync(void) {
 }
 
 void dma_copy(u8* dest, u8* romAddr, size_t size) {
-    memcpy(segmented_to_virtual(dest), segmented_to_virtual(romAddr), size);
+    n64_memcpy(segmented_to_virtual(dest), segmented_to_virtual(romAddr), size);
 }
 
 //extern u8 __attribute__((aligned(32))) SEG2_BUF[47688];
@@ -1076,11 +1053,13 @@ extern void load_ceremony_data(void);
 /**
  * Setup main segments and framebuffers.
  */
+void n64_memset(void *dst, uint8_t val, size_t size);
+
 void setup_game_memory(void) {
     set_segment_base_addr(0, 0x8C010000);//0xDEADBEEF);
     func_80000BEC();
 //    memset(SEG2_BUF, 0, sizeof(SEG2_BUF));
-    memset(COMMON_BUF, 0, sizeof(COMMON_BUF));
+    n64_memset(COMMON_BUF, 0, sizeof(COMMON_BUF));
     set_segment_base_addr(2, SEG_DATA_START);//(void*) load_data(SEG_DATA_START, SEG_DATA_END, SEG2_BUF));
     char texfn[256];
 
@@ -2171,6 +2150,7 @@ void func_80002658(void) {
     gActiveScreenMode = SCREEN_MODE_1P;
     set_perspective_and_aspect_ratio();
 }
+void SPINNING_THREAD(UNUSED void *arg);
 
 /**
  * Sets courseId to NULL if
@@ -2212,47 +2192,13 @@ void update_gamestate(void) {
             break;
     }
 }
-#if 0
-void thread5_game_loop(UNUSED void* arg) {
-    osCreateMesgQueue(&gGfxVblankQueue, gGfxMesgBuf, 1);
-    osCreateMesgQueue(&gGameVblankQueue, &gGameMesgBuf, 1);
-    init_controllers();
-    if (!wasSoftReset) {
-        clear_nmi_buffer();
-    }
 
-    set_vblank_handler(2, &gGameVblankHandler, &gGameVblankQueue, (OSMesg) OS_EVENT_SW2);
-    // These variables track stats such as player wins.
-    // In the event of a console reset, it remembers them.
-    gNmiUnknown1 = &pAppNmiBuffer[0]; // 2  u8's, tracks number of times player 1/2 won a VS race
-    gNmiUnknown2 =
-        &pAppNmiBuffer[2]; // 9  u8's, 3x3, tracks number of times player 1/2/3   has placed in 1st/2nd/3rd in a VS race
-    gNmiUnknown3 = &pAppNmiBuffer[11]; // 12 u8's, 4x3, tracks number of times player 1/2/3/4 has placed in 1st/2nd/3rd
-                                       // in a VS race
-    gNmiUnknown4 = &pAppNmiBuffer[23]; // 2  u8's, tracking number of Battle mode wins by player 1/2
-    gNmiUnknown5 = &pAppNmiBuffer[25]; // 3  u8's, tracking number of Battle mode wins by player 1/2/3
-    gNmiUnknown6 = &pAppNmiBuffer[28]; // 4  u8's, tracking number of Battle mode wins by player 1/2/3/4
-    rendering_init();
-    read_controllers();
-    func_800C5CB8();
-
-    while (true) {
-        func_800CB2C4();
-
-        // Update the gamestate if it has changed (racing, menus, credits, etc.).
-        if (gGamestateNext != gGamestate) {
-            gGamestate = gGamestateNext;
-            update_gamestate();
-        }
-        ////profiler_log_thread5_time(THREAD5_START);
-        config_gfx_pool();
-        read_controllers();
-        game_state_handler();
-        end_master_display_list();
-        display_and_vsync();
-    }
-}
-#endif
+static volatile uint64_t vblticker=0;
+void vblfunc(uint32_t c, void *d) {
+	(void)c;
+	(void)d;
+    vblticker++;
+}    
 
 void thread5_game_loop(UNUSED void* arg) {
     setup_mesg_queues();
@@ -2282,8 +2228,10 @@ void thread5_game_loop(UNUSED void* arg) {
     read_controllers();
     func_800C5CB8();
 	inited = 1;
+    vblank_handler_add(&vblfunc, NULL);
+    create_thread(NULL, 5, &SPINNING_THREAD, NULL, NULL, 12);
 
-#if 1
+#if 0
     for(int mi=0;mi<6*1048576;mi+=65536) {
         void *test_m = malloc(mi);
         if (test_m != NULL) {
@@ -2314,104 +2262,27 @@ run_game_loop:
     }
 }
 
-/**
- * Sound processing thread. Runs at 50 or 60 FPS according to osTvType.
- */
-struct audstruct_s {
-    kthread_t *thread;
-    condvar_t cv_to_thread;
-    condvar_t cv_from_thread;
-    mutex_t mutex;
-    uint8_t running;
-    uint8_t processing;
-};
-
-struct audstruct_s audio;
-#if 1
-//#define SAMPLES_HIGH 448
-//#define SAMPLES_LOW 432
-//#define NUM_AUDIO_CHANNELS 2
-//#define SAMPLES_PER_FRAME (SAMPLES_HIGH * NUM_AUDIO_CHANNELS * 2)
-
-#if 0
- AudioPlayerGetDesiredBuffered(void) {
-    return audio_api->get_desired_buffered();
-}
-
-int32_t AudioPlayerBuffered(void) {
-    return audio_api->buffered();
-}
-void AudioPlayerPlayFrame(void) {
-  //  printf("audio player play frame\n");
-    audio_api->play();
-}
-
-extern void create_next_audio_buffer(uint16_t *samples, uint32_t num_samples);
-#endif
-void StartAudioFrame(void) {
-    mutex_lock(&audio.mutex);
-    audio.processing = 1;
-    mutex_unlock(&audio.mutex);
-    cond_signal(&audio.cv_to_thread);
-}
-            
-void EndAudioFrame(void) {
-    mutex_lock(&audio.mutex);
-    while (audio.processing) {
-        cond_wait(&audio.cv_from_thread, &audio.mutex);
-    }
-    mutex_unlock(&audio.mutex);
-}
-
-void HandleAudioThread(UNUSED void *arg) {
-    while (audio.running) {
-        mutex_lock(&audio.mutex);
-        while (!audio.processing && audio.running) {
-            cond_wait(&audio.cv_to_thread, &audio.mutex);
-        }
-        mutex_unlock(&audio.mutex);
-        if (!audio.running) {
-            break;
-        }
-        mutex_lock(&audio.mutex);
-        u32 num_audio_samples = even_frame ? SAMPLES_HIGH : SAMPLES_LOW;
-//        irq_disable();
-        create_next_audio_buffer(audio_buffer + 0 * (num_audio_samples * 2), num_audio_samples);
-        create_next_audio_buffer(audio_buffer + 1 * (num_audio_samples * 2), num_audio_samples);
-  //      irq_enable();
-        audio_api->play((u8 *)audio_buffer, 2 * num_audio_samples * 2 * 2);
-
-        audio.processing = 0;
-        cond_signal(&audio.cv_from_thread);
-        mutex_unlock(&audio.mutex);
-
-        thd_pass();
-    }
-}
-#endif
-
 void _AudioInit(void) {
-    if (audio_api == NULL/*  && audio_dc.init() */) {
+    if (audio_api == NULL) {
         audio_api = &audio_dc;
         audio_api->init();
     }
-#if 0
-    if (!audio.running) {
-        mutex_init(&audio.mutex, MUTEX_TYPE_NORMAL);
-        cond_init(&audio.cv_from_thread);
-        cond_init(&audio.cv_to_thread);
-        audio.running = true;
+}
 
-        kthread_attr_t main_attr;
-        main_attr.create_detached = 1;
-	    main_attr.stack_size = 32768;
-	    main_attr.stack_ptr = NULL;//gAudioThreadStack;
-	    main_attr.prio = 15;
-	    main_attr.label = "AudioThread";
-        audio.thread = thd_create_ex(&main_attr, &HandleAudioThread, NULL);
-        printf("Audio thread started");
+void SPINNING_THREAD(UNUSED void *arg) {
+     uint64_t last_vbltick = vblticker;
+    while (1) {
+        while (!(vblticker > (last_vbltick+1)))
+            thd_pass();
+
+        last_vbltick = vblticker;
+        
+        u32 num_audio_samples = 448;
+        create_next_audio_buffer(audio_buffer, num_audio_samples);
+        create_next_audio_buffer(audio_buffer + (num_audio_samples*2), num_audio_samples);
+        audio_api->play((u8 *)audio_buffer, 2 * num_audio_samples * 2 * 2);
+        thd_pass();
     }
-#endif        
 }
 
 /**

@@ -41,8 +41,10 @@ void guMtxL2F(float mf[4][4], Mtx* m) {
     }
 }
 #else
+void n64_memcpy(void *dst, const void *src, size_t size);
+
 void guMtxF2L(float mf[4][4], Mtx* m) {
-    memcpy(m, mf, sizeof(Mtx));
+    n64_memcpy(m, mf, sizeof(Mtx));
 }
 #endif
 

@@ -376,14 +376,24 @@ static void gfx_opengl_select_texture(int tile, uint32_t texture_id) {
 /* Used for rescaling textures ROUGHLY into pow2 dims */
 static unsigned int __attribute__((aligned(32))) scaled[64 * 64 * 4];//sizeof(unsigned int)]; /* 16kb */
 
+#define LET_GLDC_TWIDDLE 0
+
 static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int height, unsigned int type) {
     GLint intFormat;
 
+#if LET_GLDC_TWIDDLE
+    if (type == GL_UNSIGNED_SHORT_1_5_5_5_REV) {
+        intFormat = GL_ARGB1555_TWID_KOS;
+    } else {
+        intFormat = GL_ARGB4444_TWID_KOS;
+    }
+#else
     if (type == GL_UNSIGNED_SHORT_1_5_5_5_REV) {
         intFormat = GL_ARGB1555_KOS;
     } else {
         intFormat = GL_ARGB4444_KOS;
     }
+#endif
 
     // we don't support non power of two textures, scale to next power of two if necessary
     if ((!is_pot(width) || !is_pot(height)) || (width < 8) || (height < 8)) {
@@ -806,6 +816,7 @@ static inline uint8_t gl_get_version(int* major, int* minor, uint8_t* is_es) {
 }
 
 #define sys_fatal printf
+void n64_memset(void *dst, uint8_t val, size_t size);
 
 extern void getRamStatus(void);
 static void gfx_opengl_init(void) {
@@ -816,7 +827,7 @@ static void gfx_opengl_init(void) {
 #endif
     newest_texture = 0;
     shaderidx = 0;
-    memset(shaderlist, 0, sizeof(shaderlist));
+    n64_memset(shaderlist, 0, sizeof(shaderlist));
     GLdcConfig config;
     glKosInitConfig(&config);
     config.autosort_enabled = GL_TRUE;
@@ -887,7 +898,7 @@ void nuke_everything(void) {
 static void gfx_opengl_start_frame(void) {
 #if 0
     shaderidx = 0;
-    memset(shaderlist, 0, sizeof(shaderlist));
+    n64_memset(shaderlist, 0, sizeof(shaderlist));
 #endif
     screen_2d_z = -1.0f;
     glDisable(GL_SCISSOR_TEST);

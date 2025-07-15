@@ -48,8 +48,10 @@ void move_segment_table_to_dmem(void);
 void initialize_memory_pool(uintptr_t, uintptr_t);
 void* decompress_segments(u8*, u8*);
 void* allocate_memory(size_t);
-void* load_data(uintptr_t, uintptr_t, uintptr_t);
+//void* load_data(uintptr_t, uintptr_t, uintptr_t);
 void func_802A7D54(s32, s32);
+void n64_memcpy(void *dst, const void *src, size_t size);
+void n64_memset(void *dst, uint8_t val, size_t size);
 
 void main_pool_init(uintptr_t, uintptr_t);
 void* main_pool_alloc(uintptr_t, uintptr_t);

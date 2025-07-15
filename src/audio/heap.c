@@ -765,7 +765,6 @@ void func_800BA8B0(s32 poolIdx, s32 id) {
         }
         gUnkPool1.entries[temp_a2].ptr = soundAlloc(&gUnkPool1.pool, temp_a1);
         if (gUnkPool1.entries[temp_a2].ptr != NULL) {
-//            printf("about to copy to gUnkPool1.entries[temp_a2].ptr %08x\n", (uintptr_t)gUnkPool1.entries[temp_a2].ptr);
             audio_dma_copy_immediate(var_a3, gUnkPool1.entries[temp_a2].ptr, temp_a1);
             gUnkPool1.entries[temp_a2].poolIndex = poolIdx;
             gUnkPool1.entries[temp_a2].id = id;

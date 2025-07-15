@@ -1160,6 +1160,7 @@ void init_race_and_spawn_players(void) {
 void func_8003CD78(void) {
     spawn_players_for_ending();
 }
+void mio0decode_noinval(const unsigned char *in, unsigned char *out);
 
 void func_8003CD98(Player* player, Camera* camera, s8 playerId, s8 screenId) {
     if (player->type & PLAYER_EXISTS) {
@@ -1171,13 +1172,13 @@ void func_8003CD98(Player* player, Camera* camera, s8 playerId, s8 screenId) {
             load_kart_palette(player, playerId, screenId, 0);
             load_kart_palette(player, playerId, screenId, 1);
             load_kart_texture(player, playerId, screenId, screenId, 0);
-            mio0decode((u8*) /* & */gEncodedKartTexture[0][screenId][playerId].unk_00,
+            mio0decode_noinval((u8*) /* & */gEncodedKartTexture[0][screenId][playerId].unk_00,
                        (u8*) &D_802BFB80.arraySize8[0][screenId][playerId]);
         } else {
             load_kart_palette(player, playerId, screenId, 0);
             load_kart_palette(player, playerId, screenId, 1);
             load_kart_texture(player, (s8) (playerId + 4), screenId, (s8) (screenId - 2), 0);
-            mio0decode((u8*) gEncodedKartTexture[0][screenId - 2][playerId + 4].unk_00,
+            mio0decode_noinval((u8*) gEncodedKartTexture[0][screenId - 2][playerId + 4].unk_00,
                        (u8*) &D_802BFB80.arraySize8[0][screenId - 2][playerId + 4]);
         }
 
