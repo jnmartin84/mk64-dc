@@ -279,7 +279,7 @@ void options_menu_act(struct Controller* controller, u16 controllerIdx) {
                         sp38->paramf += 4.0;
                     }
                     sp38->subState = 1;
-                    tempVar = 0;
+                    tempVar = 1;
                 }
                 if ((btnAndStick & U_JPAD) && (gSubMenuSelection > SUB_MENU_OPTION_MIN)) {
                     gSubMenuSelection -= 1;
@@ -287,7 +287,7 @@ void options_menu_act(struct Controller* controller, u16 controllerIdx) {
                     if (sp38->paramf < 4.2) {
                         sp38->paramf += 4.0;
                     }
-                    tempVar = 0;
+                    tempVar = 1;
                     sp38->subState = -1;
                 }
                 if (tempVar && gSoundMode != sp38->state) {
@@ -1431,11 +1431,11 @@ void main_menu_act(struct Controller* controller, u16 controllerIdx) {
                     cursorMoved = 0;
                     if (has_unlocked_extra_mode()) {
                         if (subMode < sGameModePlayerColumnExtra[gPlayerCount - 1][gGameModeMenuColumn[gPlayerCount - 1]]) {
-                            cursorMoved = 0;
+                            cursorMoved = 1;
                         }
                     } else {
                         if (subMode < sGameModePlayerColumnDefault[gPlayerCount - 1][gGameModeMenuColumn[gPlayerCount - 1]]) {
-                            cursorMoved = 0;
+                            cursorMoved = 1;
                         }
                     }
                     if (cursorMoved) {
@@ -1560,8 +1560,7 @@ void player_select_menu_act(struct Controller* controller, u16 controllerIdx) {
                 if ((btnAndStick & A_BUTTON) && (gCharacterGridIsSelected[controllerIdx] == 0)) {
                     gCharacterGridIsSelected[controllerIdx] = 1;
                     func_800C90F4(controllerIdx, 
-                        //((sCharacterGridOrder - 1)[gCharacterGridSelections[controllerIdx]] * 0x10)
-                        (sCharacterGridOrder[gCharacterGridSelections[controllerIdx] - 1]*16) + 0x2900800E);
+                        ((sCharacterGridOrder - 1)[gCharacterGridSelections[controllerIdx]] * 0x10) + 0x2900800E);
                 }
 
                 selected = 0;
@@ -1698,8 +1697,7 @@ void player_select_menu_act(struct Controller* controller, u16 controllerIdx) {
 
         if (gCharacterGridSelections[controllerIdx] != 0) {
             gCharacterSelections[controllerIdx] = 
-            //(sCharacterGridOrder - 1)[gCharacterGridSelections[controllerIdx]];
-            sCharacterGridOrder[gCharacterGridSelections[controllerIdx] - 1];
+            (sCharacterGridOrder - 1)[gCharacterGridSelections[controllerIdx]];
         }
     }
 }
