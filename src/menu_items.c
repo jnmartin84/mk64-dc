@@ -3454,9 +3454,6 @@ void* segmented_to_virtual_dupe(const void* addr) {
 void* segmented_to_virtual_dupe_2(const void* addr) {
     return segmented_to_virtual(addr);
 }
-//void mio0decode_noinval(const unsigned char *in, unsigned char *out);
-
-//#define mio0decode mio0decode_noinval
 
 void load_menu_img(MenuTexture* addr) {
     u16 size;
@@ -3482,12 +3479,8 @@ void load_menu_img(MenuTexture* addr) {
                 } else {
                     size = 0x1000;
                 }
-//                if (size % 8) {
-                    size = ((size+ 7)) & ~7;
-  //              }
-//                dma_copy_mio0_segment(texAddr->textureData, size, gMenuCompressedBuffer);
-                // check 1
-//                mio0decode((u8*) gMenuCompressedBuffer, (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
+
+                size = ((size+ 7)) & ~7;
                 mio0decode((u8*) texAddr->textureData , (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
             } else {
                 dma_copy_mio0_segment(texAddr->textureData, (texAddr->height * texAddr->width) * 2,
@@ -3496,7 +3489,7 @@ void load_menu_img(MenuTexture* addr) {
             texMap[sMenuTextureEntries].textureData = texAddr->textureData;
             texMap[sMenuTextureEntries].offset = sMenuTextureBufferIndex;
             sMenuTextureBufferIndex += texAddr->height * texAddr->width;
-            sMenuTextureBufferIndex = ((sMenuTextureBufferIndex+ 7)) & ~7;
+            sMenuTextureBufferIndex = ((sMenuTextureBufferIndex + 7)) & ~7;
             sMenuTextureEntries += 1;
         }
         texAddr++;
@@ -3551,9 +3544,6 @@ void func_8009952C(MenuTexture* addr) {
         }
 
         if (imgLoaded == 0) {
-//            dma_copy_mio0_segment(texAddr->textureData, 0x00008000U, gMenuCompressedBuffer);
-            // check 2
-//            mio0decode((u8*) gMenuCompressedBuffer, (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
             mio0decode((u8*) texAddr->textureData, (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
             texMap[sMenuTextureEntries].textureData = texAddr->textureData;
             texMap[sMenuTextureEntries].offset = sMenuTextureBufferIndex;
@@ -3593,18 +3583,14 @@ void load_menu_img_comp_type(MenuTexture* addr, s32 compType) {
             } else {
                 size = 0x1000;
             }
-//            if (size % 8) {
-                size = ((size+ 7)) & ~7;
-  //          }
+            size = ((size + 7)) & ~7;
             switch (compType) {
                 case LOAD_MENU_IMG_MIO0_ONCE:
                 case LOAD_MENU_IMG_MIO0_FORCE:
-//                    dma_copy_mio0_segment(texAddr->textureData, size, gMenuCompressedBuffer);
                     mio0decode((u8*) texAddr->textureData, (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
                     break;
                 case LOAD_MENU_IMG_TKMK00_ONCE:
                 case LOAD_MENU_IMG_TKMK00_FORCE:
-//                    dma_tkmk00_textures(texAddr->textureData, size, gMenuCompressedBuffer);
                     if (texAddr->type == 1) {
                         clearBit = 0xBE;
                     } else {
@@ -3614,26 +3600,6 @@ void load_menu_img_comp_type(MenuTexture* addr, s32 compType) {
                                  &gMenuTextureBuffer[sMenuTextureBufferIndex], clearBit);
                     break;
             }
-#if 0
-            switch (compType) {
-                case LOAD_MENU_IMG_MIO0_ONCE:
-                case LOAD_MENU_IMG_MIO0_FORCE:
-                    // check 3
-                    mio0decode((u8*) gMenuCompressedBuffer, (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
-                    break;
-                case LOAD_MENU_IMG_TKMK00_ONCE:
-                case LOAD_MENU_IMG_TKMK00_FORCE:
-                    if (texAddr->type == 1) {
-                        clearBit = 0xBE;
-                    } else {
-                        clearBit = 1;
-                    }
-                    tkmk00decode(gMenuCompressedBuffer, sTKMK00_LowResBuffer,
-                                 &gMenuTextureBuffer[sMenuTextureBufferIndex], clearBit);
-                    break;
-            }
-#endif
-//            gfx_texture_cache_invalidate(&gMenuTextureBuffer[sMenuTextureBufferIndex]);
 
             texMap[sMenuTextureEntries].textureData = texAddr->textureData;
             texMap[sMenuTextureEntries].offset = sMenuTextureBufferIndex;
@@ -3657,19 +3623,12 @@ void func_80099958(MenuTexture* addr, s32 arg1, s32 arg2) {
         } else {
             size = 0x1400;
         }
-//        if (size % 8) {
-            // Round up to the next multiple of eight
-            size = ((size+ 7)) & ~7;
-  //      }
-#if 0
-   dma_copy_mio0_segment(texAddr->textureData, size, gMenuCompressedBuffer);
-        mio0decode((u8*) gMenuCompressedBuffer,
-                   (u8*) D_802BFB80.arraySize4[arg2][arg1 / 2][(arg1 % 2) + 2].pixel_index_array);
-#endif
+        size = ((size+ 7)) & ~7;
+
         mio0decode((u8*) texAddr->textureData,
                    (u8*) D_802BFB80.arraySize4[arg2][arg1 / 2][(arg1 % 2) + 2].pixel_index_array);
 
-                   texAddr++;
+        texAddr++;
     }
 }
 
@@ -3722,16 +3681,10 @@ void func_80099AEC(void) {
     } else {
         cacheSize = 0x1400;
     }
-//    if (cacheSize % 8) {
-        cacheSize = ((cacheSize+ 7)) & ~7;
-  //  }
 
-//    osInvalDCache(gMenuCompressedBuffer, cacheSize);
-    //(uintptr_t) _textures_0aSegmentRomStart + SEGMENT_OFFSET(texPtr->textureData),
-//    osPiStartDma(&mb, 0, 0, texPtr->textureData, gMenuCompressedBuffer, cacheSize, &gDmaMesgQueue);
+    cacheSize = ((cacheSize+ 7)) & ~7;
+
     dma_copy(gMenuCompressedBuffer, texPtr->textureData, cacheSize);
-
-//    osRecvMesg(&gDmaMesgQueue, &sp64, 1);
 
     while (1) {
         if ((var_s1 + 1)->texture == NULL) {
@@ -3743,13 +3696,8 @@ void func_80099AEC(void) {
             } else {
                 cacheSize = 0x1400;
             }
-//            if (cacheSize % 8) {
-                cacheSize = ((cacheSize+ 7)) & ~7;
-  //          }
-            //osInvalDCache(&gMenuCompressedBuffer[bufSize], cacheSize);
-            //(uintptr_t) _textures_0aSegmentRomStart + SEGMENT_OFFSET(texPtr->textureData),
-            //osPiStartDma(&mb, 0, 0, texPtr->textureData, &gMenuCompressedBuffer[bufSize], cacheSize, &gDmaMesgQueue);
-            dma_copy( &gMenuCompressedBuffer[bufSize], texPtr->textureData,cacheSize);
+            cacheSize = ((cacheSize+ 7)) & ~7;
+            dma_copy(&gMenuCompressedBuffer[bufSize], texPtr->textureData, cacheSize);
         }
 
         some_var = (entry + var_s1->texNum)->offset;
@@ -3761,8 +3709,6 @@ void func_80099AEC(void) {
             break;
         }
 
-//        osRecvMesg(&gDmaMesgQueue, &sp64, 1);
-
         if ((var_s1 + 1)->texture == NULL) {
             texEnd += 1;
         } else {
@@ -3772,12 +3718,7 @@ void func_80099AEC(void) {
             } else {
                 cacheSize = 0x1400;
             }
-//            if (cacheSize % 8) {
-                cacheSize = ((cacheSize+ 7)) & ~7;
-  //          }
-            //osInvalDCache(gMenuCompressedBuffer, cacheSize);
-            //(uintptr_t) _textures_0aSegmentRomStart + SEGMENT_OFFSET(texPtr->textureData),
-            //osPiStartDma(&mb, 0, 0, texPtr->textureData, gMenuCompressedBuffer, cacheSize, &gDmaMesgQueue);
+            cacheSize = ((cacheSize+ 7)) & ~7;
             dma_copy( gMenuCompressedBuffer, texPtr->textureData,cacheSize);
         }
 
@@ -3788,7 +3729,6 @@ void func_80099AEC(void) {
         if (texEnd) {
             break;
         }
-        //osRecvMesg(&gDmaMesgQueue, &sp64, 1);
     }
 }
 
@@ -3831,12 +3771,9 @@ void func_80099EC4(void) {
     } else {
         var_s0 = 0x1400;
     }
-//    if (var_s0 % 8) {
-        var_s0 = ((var_s0+ 7)) & ~7;
-  //  }
+    var_s0 = ((var_s0+ 7)) & ~7;
     dma_copy(gMenuCompressedBuffer, temp_s2->textureData, var_s0);
-    if ((var_s0 && var_s0) && var_s0) {}
-//    osRecvMesg(&gDmaMesgQueue, &sp64, 1);
+
     while (1) {
 //        if ((var_s1 + 1)->mk64Texture == NULL) {
         if (var_s1[1].mk64Texture == NULL) {
@@ -3851,9 +3788,7 @@ void func_80099EC4(void) {
             } else {
                 var_s0 = 0x1400;
             }
-//            if (var_s0 % 8) {
-                var_s0 = ((var_s0+ 7)) & ~7;
-  //          }
+            var_s0 = ((var_s0+ 7)) & ~7;
             dma_copy(gMenuCompressedBuffer + 0x500, temp_s2->textureData,  var_s0);
         }
         mio0decode((u8*) gMenuCompressedBuffer,
@@ -3862,7 +3797,7 @@ void func_80099EC4(void) {
         var_s1++;
         if (var_s4 != 0)
             break;
-        //osRecvMesg(&gDmaMesgQueue, &sp64, 1);
+
 //        if ((var_s1 + 1)->mk64Texture == NULL) {
         if (var_s1[1].mk64Texture == NULL) {
             var_s4 += 1;
@@ -3877,9 +3812,7 @@ void func_80099EC4(void) {
             } else {
                 var_s0 = 0x1400;
             }
-//            if (var_s0 % 8) {
-                var_s0 = ((var_s0+ 7)) & ~7;
-  //          }
+            var_s0 = ((var_s0 + 7)) & ~7;
             dma_copy(gMenuCompressedBuffer, temp_s2->textureData, var_s0);
         }
         mio0decode((u8*) (gMenuCompressedBuffer + 0x500),
@@ -3888,7 +3821,6 @@ void func_80099EC4(void) {
         var_s1++;
         if (var_s4 != 0)
             break;
-//        osRecvMesg(&gDmaMesgQueue, &sp64, 1);
     }
 }
 
@@ -3901,15 +3833,11 @@ void func_8009A238(MenuTexture* arg0, s32 arg1) {
     temp_v1 = sMenuTextureMap[arg1].offset;
     sp24 = arg0->textureData;
     var_a3 = arg0->size;
-//    if (var_a3 % 8) {
-        var_a3 = ((var_a3+ 7)) & ~7;
-  //  }
-//    dma_tkmk00_textures(sp24, var_a3, gMenuCompressedBuffer);
-//    tkmk00decode(gMenuCompressedBuffer, sTKMK00_LowResBuffer, &gMenuTextureBuffer[temp_v1], 1);
+    var_a3 = ((var_a3+ 7)) & ~7;
+
     tkmk00decode(sp24, sTKMK00_LowResBuffer, &gMenuTextureBuffer[temp_v1], 1);
-    
-    gfx_texture_cache_invalidate(&gMenuTextureBuffer[temp_v1]);
     sMenuTextureMap[arg1].textureData = sp24;
+    gfx_texture_cache_invalidate(&gMenuTextureBuffer[temp_v1]);
 }
 
 void func_8009A2F0(struct_8018E0E8_entry* arg0) {
@@ -3923,7 +3851,7 @@ void func_8009A2F0(struct_8018E0E8_entry* arg0) {
             break;
         }
         load_menu_img_comp_type(var_a0, LOAD_MENU_IMG_TKMK00_ONCE);
-        if (1) {}
+
         temp_v0++;
         var_a0 = temp_v0->mk64Texture;
     }
@@ -4479,7 +4407,6 @@ Gfx* print_letter(Gfx* arg0, MenuTexture* glyphTexture, f32 arg2, f32 arg3, s32 
         } else {
             temp_v0_2 = (u8*) func_8009B8C4(var_s0->textureData);
             if (temp_v0_2 != 0) {
-//                    gfx_texture_cache_invalidate(temp_v0_2);
                     switch (mode) { /* irregular */
                     case 1:
                         gSPDisplayList(arg0++, D_020077F8);
@@ -4523,20 +4450,19 @@ Gfx* func_8009C204(Gfx* arg0, MenuTexture* arg1, s32 arg2, s32 arg3, s32 arg4) {
                 break;
         }
         temp_t0 = (u8*) func_8009B8C4(var_s1->textureData);
-
-// maybe?
-//        gfx_texture_cache_invalidate(temp_t0);
-        switch (arg4) {
-            case 2:
-                arg0 =
-                    func_800963F0(arg0, var_s2, 0x00000400, 0x00000400, 0.5f, 0.5f, 0, 0, var_s1->width, var_s1->height,
-                                  var_s1->dX + arg2, var_s1->dY + arg3, temp_t0, var_s1->width, var_s1->height);
-                break;
-            case 3:
-                arg0 = func_800963F0(arg0, var_s2, 0x00000400, 0x00000400, 0.457f, 0.5f, 0, 0, var_s1->width,
-                                     var_s1->height, var_s1->dX + arg2, var_s1->dY + arg3, temp_t0, var_s1->width,
-                                     var_s1->height);
-                break;
+        if (temp_t0) {
+            switch (arg4) {
+                case 2:
+                    arg0 =
+                        func_800963F0(arg0, var_s2, 0x00000400, 0x00000400, 0.5f, 0.5f, 0, 0, var_s1->width, var_s1->height,
+                                    var_s1->dX + arg2, var_s1->dY + arg3, temp_t0, var_s1->width, var_s1->height);
+                    break;
+                case 3:
+                    arg0 = func_800963F0(arg0, var_s2, 0x00000400, 0x00000400, 0.457f, 0.5f, 0, 0, var_s1->width,
+                                        var_s1->height, var_s1->dX + arg2, var_s1->dY + arg3, temp_t0, var_s1->width,
+                                        var_s1->height);
+                    break;
+            }
         }
         var_s1++;
     }
@@ -4572,9 +4498,6 @@ Gfx* func_8009C434(Gfx* arg0, struct_8018DEE0_entry* arg1, s32 arg2, s32 arg3, s
             var_t0 = sMenuTextureMap[arg1->menuTextureIndex + 1].offset;
         } else {
             var_t0 = sMenuTextureMap[arg1->menuTextureIndex].offset;
-            if (1) {}
-            if (1) {}
-            if (1) {}
         }
         if (arg4 >= 0) {
             arg0 =
@@ -6764,7 +6687,7 @@ void func_800A15EC(MenuItem* arg0) {
                                      arg0->row + 0x27, 3);
     if (func_800B639C(arg0->type - 0x7C) >= 0) {
         // The "^ 0" is required to force the use of v1 instead of a 4th s* register
-        gDisplayListHead = draw_flash_select_case_slow(gDisplayListHead, arg0->column + 0x20, arg0->row ^ 0,
+        gDisplayListHead = draw_flash_select_case_slow(gDisplayListHead, arg0->column + 0x20, arg0->row /* ^ 0 */,
                                                        arg0->column + 0x3F, arg0->row + 9);
         gDisplayListHead =
             func_8009C204(gDisplayListHead, segmented_to_virtual_dupe(&D_02004A0C), arg0->column + 0x20, arg0->row, 2);
@@ -6851,7 +6774,7 @@ void menu_item_data_course_selectable(MenuItem* arg0) {
     temp_s6 = &gSaveData.allCourseTimeTrialRecords.cupRecords[gTimeTrialDataCourseIndex / 4]
                    .courseRecords[gTimeTrialDataCourseIndex % 4];
     for (i = 0; i < ARRAY_COUNT(gTextMenuOption); i++) {
-        wut = gTextMenuOption[i];
+//        wut = gTextMenuOption[i];
         var_s1 = 0;
         if (i == gCourseRecordsMenuSelection) {
             var_s2 = TEXT_BLUE_GREEN_RED_CYCLE_2;
@@ -11981,12 +11904,12 @@ void func_800AEDBC(MenuItem* arg0) {
         func_8009A594(arg0->D_8018DEE0_index, 0,
                       segmented_to_virtual_dupe_2(
                           D_800E7E34[gCupCourseOrder[gTimeTrialDataCourseIndex / 4][gTimeTrialDataCourseIndex % 4]]));
-        if (controller_pak_1_status() == PFS_NO_ERROR) {
-            func_800B6708();
-        } else {
+//        if (controller_pak_1_status() == PFS_NO_ERROR) {
+//            func_800B6708();
+//        } else {
             D_8018EE10[0].ghostDataSaved = 0;
             D_8018EE10[1].ghostDataSaved = 0;
-        }
+//        }
     }
 }
 

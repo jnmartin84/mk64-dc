@@ -171,7 +171,7 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
     }
 }
 #endif
-#if 0
+#if 1
 void aInterleaveImpl(uint16_t left, uint16_t right) {
     int count = ROUND_UP_16(rspa.nbytes) / sizeof(int16_t) / 4;
     int16_t* l = BUF_S16(left);
@@ -197,7 +197,7 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
     }
 }
 #endif
-#if 1
+#if 0
 void aInterleaveImpl(uint16_t left, uint16_t right) {
     int count = ROUND_UP_16(rspa.nbytes) / sizeof(int16_t) / 8;
     int16_t* l = BUF_S16(left);
@@ -270,7 +270,7 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
     out += 16;
 
     while (nbytes > 0) {
-        int shift = 28 - (*in >> 4);          // should be in 0..12 or 0..14
+        int shift = /* 28 -  */(*in >> 4);          // should be in 0..12 or 0..14
         int table_index = *in++ & 0xf; // should be in 0..7
         int16_t(*tbl)[8] = rspa.adpcm_table[table_index];
         int i;
@@ -280,10 +280,10 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
             int16_t prev1 = out[-1];
             int16_t prev2 = out[-2];
             int j, k;
-            for (j = 0; j < 4; j++) {
+            for (j = 0; j < 8; j+=2) {
                 uint8_t in8 = *in++;
-                ins[j * 2] = (((in8 >> 4) << 28) >> shift);//>> 28) << shift;
-                ins[j * 2 + 1] = (((in8 & 0xf) << 28) >> shift);//>> 28) << shift;
+                ins[j] = (((in8 >> 4) << 28) >> 28) << shift;
+                ins[j + 1] = (((in8 & 0xf) << 28) >> 28) << shift;
             }
             for (j = 0; j < 8; j++) {
                 int32_t acc = tbl[0][j] * prev2 + tbl[1][j] * prev1 + (ins[j] << 11);
