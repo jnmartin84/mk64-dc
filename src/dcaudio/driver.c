@@ -322,6 +322,7 @@ void *audio_callback(UNUSED snd_stream_hnd_t hnd, int samples_requested_bytes, i
     
     return (void*)(temp_buf + ((SND_STREAM_BUFFER_MAX/*  / 2 */) * temp_buf_sel));
 }
+mutex_t reset_mutex;
 
 static bool audio_dc_init(void) {
     if (snd_stream_init()) {
@@ -331,6 +332,8 @@ static bool audio_dc_init(void) {
 
     thd_set_hz(300);
     
+    mutex_init(&reset_mutex, MUTEX_TYPE_NORMAL);
+
     // --- Initial Pre-fill of Ring Buffer with Silence ---
     sq_clr(cb_buf_internal, sizeof(cb_buf_internal));
     sq_clr(temp_buf, sizeof(temp_buf));
@@ -376,10 +379,27 @@ static int audio_dc_get_desired_buffered(void) {
     return 1100;
 }
 
+
+void runtime_reset(void) {
+    mutex_lock(&reset_mutex);
+    snd_stream_volume(shnd,0);
+    audio_started = false;
+    // --- Initial Pre-fill of Ring Buffer with Silence ---
+    sq_clr(cb_buf_internal, sizeof(cb_buf_internal));
+    sq_clr(temp_buf, sizeof(temp_buf));
+    if (!cb_init(RING_BUFFER_MAX_BYTES)) {
+        printf("CB INIT FAILURE!\n");
+    }
+    snd_stream_volume(shnd,192);
+    mutex_unlock(&reset_mutex);
+}
+
 static void audio_dc_play(const uint8_t *buf, size_t len) {
+    mutex_lock(&reset_mutex);
     size_t ring_data_available = cb_get_used();
     size_t written = cb_write_data(buf, len);
-            
+
+
     if (!audio_started && ring_data_available >/* = */ ((SND_STREAM_BUFFER_MAX  / 3 ))) {
         audio_started = true;
         snd_stream_start(shnd, DC_AUDIO_FREQUENCY, DC_STEREO_AUDIO);
@@ -393,6 +413,8 @@ static void audio_dc_play(const uint8_t *buf, size_t len) {
     if (audio_started) {
         snd_stream_poll(shnd);
     }
+
+    mutex_unlock(&reset_mutex);
 }
 
 struct AudioAPI audio_dc = {

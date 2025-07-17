@@ -32,6 +32,8 @@
 #include "data/path_spawn_metadata.h"
 #include "math_util_2.h"
 
+void sincoss(u16 arg, f32 *s, f32 *c);
+
 s32 unk_cpu_vehicles_camera_path_pad[24];
 Collision D_80162E70;
 s16 D_80162EB0; // Possibly a float.
@@ -596,10 +598,13 @@ void adjust_position_by_angle(Vec3f newPos, Vec3f oldPos, s16 orientationY) {
     if (gIsMirrorMode != 0) {
         orientationY = -orientationY;
     }
+
+    sincoss(orientationY, &sine, &cosine);
+
     x_dist = newPos[0] - oldPos[0];
     z_dist = newPos[2] - oldPos[2];
-    sine = sins(orientationY);
-    cosine = coss(orientationY);
+//    sine = sins(orientationY);
+//    cosine = coss(orientationY);
     temp1 = ((x_dist * cosine) + (z_dist * sine));
     temp2 = ((z_dist * cosine) - (x_dist * sine));
     newPos[0] = oldPos[0] + temp1;
@@ -1409,7 +1414,7 @@ void update_player(s32 playerId) {
     Player* player;
     UNUSED s32 pad3[10];
     TrackPathPoint* pathPoint;
-    f32 onePointFive = 1.5f;
+//    f32 onePointFive = 1.5f;
 
     player = &gPlayers[playerId];
     if ((s32) GET_COURSE_AIMaximumSeparation >= 0) {
@@ -1570,9 +1575,14 @@ void update_player(s32 playerId) {
                 if (D_801630E8[playerId] != 0) {
                     sPlayerAngle[playerId] = -get_angle_between_points(player->oldPos, player->pos);
                     var_a0_2 =
-                        (gCurrentPathPointExpectedRotationPath[(sSomeNearestPathPoint + 2) % gSelectedPathCount] *
-                         0x168) /
-                        65535;
+                    // jnmartin84            
+                    // did i fuck this up
+                    ((s32)(gCurrentPathPointExpectedRotationPath[(sSomeNearestPathPoint + 2) % gSelectedPathCount] *
+                         0x168)) >> 16;
+
+//                        (gCurrentPathPointExpectedRotationPath[(sSomeNearestPathPoint + 2) % gSelectedPathCount] *
+//                         0x168) /
+//                        65535;
                     newAngle = (sPlayerAngle[playerId] * 0x168) / 65535;
                     if (var_a0_2 < -0xB4) {
                         var_a0_2 += 0x168;
@@ -1638,7 +1648,7 @@ void update_player(s32 playerId) {
                         pathIndex %= gSelectedPathCount;
                         set_track_offset_position(pathIndex, -0.7f, gPlayerPathIndex);
                     }
-                    if (1) { } if (1) { } if (1) { } if (1) { } if (1) { } if (1) { }
+//                    if (1) { } if (1) { } if (1) { } if (1) { } if (1) { } if (1) { }
                     if (gPlayerPathIndex == 0) {
                         func_8000B140(playerId);
                         if (D_80162FF8[playerId] > 0) {
@@ -1667,8 +1677,8 @@ void update_player(s32 playerId) {
                 gOffsetPosition[2] = (gPreviousPlayerAiOffsetZ[playerId] + gOffsetPosition[2]) * 0.5f; // average
                 gPreviousPlayerAiOffsetX[playerId] = gOffsetPosition[0];
                 gPreviousPlayerAiOffsetZ[playerId] = gOffsetPosition[2];
-                minAngle = onePointFive * 182.0f;
-                maxAngle = -onePointFive * 182.0f;
+                minAngle = 273.0f;//onePointFive * 182.0f;
+                maxAngle = -minAngle;//-273.0f;//-onePointFive * 182.0f;
 
                 angle = -get_angle_between_points(player->pos, gOffsetPosition);
                 angle -= (newAngle = player->rotation[1]);
@@ -1811,7 +1821,7 @@ void func_8000B140(s32 playerId) {
     }
 
     currPathPoint = gNearestPathPointByPlayerId[playerId];
-    temp_f22 = (player->speed / 18.0f) * 216.0f;
+    temp_f22 = (player->speed * 12.0f);// / 18.0f) * 216.0f;
     for (i = 0; i < 8; i++) {
         sp9C[i] = -1;
         spB0[i] = 0x03E8;
@@ -1830,7 +1840,7 @@ void func_8000B140(s32 playerId) {
             player = &gPlayers[i];
             if ((player->type & PLAYER_EXISTS)) {
                 temp_v1_2 = gNearestPathPointByPlayerId[i];
-                temp_f0_2 = (player->speed / 18.0f) * 216.0f;
+                temp_f0_2 = (player->speed * 12.0f);// / 18.0f) * 216.0f;
                 temp_f2 = temp_f22 - 5.0f;
                 if (temp_f0_2 < temp_f2) {
                     if (is_path_point_in_range(temp_v1_2, currPathPoint, 0, 0x0014U, gSelectedPathCount) > 0) {
@@ -1863,8 +1873,9 @@ void func_8000B140(s32 playerId) {
     for (i = 0; i < j; i++) {
         temp_f2 = gTrackPositionFactor[sp9C[i]];
         if ((temp_f2 > (-1.0f)) && (temp_f2 < 1.0f)) {
-            
-            temp_f12 = temp_ft2 = ((0.2f * (20.0f / (spB0[i] + 20.0f))) * ((sp74[i]) + 10.0f))  / 20.0f;
+            //(0.2f * (20.0f / (spB0[i] + 20.0f))) 
+            temp_f12 = temp_ft2 = ((4.0f / (spB0[i] + 20.0f))*((sp74[i]) + 10.0f)) * 0.05f;
+                // / 20.0f;
             
             if ((var_f18 == 1.0f) && (var_f20 == (-1.0f))) {
                 var_f18 = temp_f2 - temp_f12;
@@ -2291,16 +2302,16 @@ f32 func_80014EE4(f32 arg0, s32 arg1) {
             arg0 = 40.0f;
             break;
         case 0:
-            temp_f2 = 40.0;
+            temp_f2 = 40.0f;
             temp_f2 += temp_f0;
             if (temp_f2 < arg0) {
-                arg0 -= 1.0;
+                arg0 -= 1.0f;
                 if (arg0 < temp_f2) {
                     arg0 = temp_f2;
                 }
             }
             if (arg0 < temp_f2) {
-                arg0 += 1.0;
+                arg0 += 1.0f;
                 if (temp_f2 < arg0) {
                     arg0 = temp_f2;
                     ;
@@ -2308,16 +2319,16 @@ f32 func_80014EE4(f32 arg0, s32 arg1) {
             }
             break;
         case 1:
-            temp_f2 = 60.0;
+            temp_f2 = 60.0f;
             temp_f2 += temp_f0;
             if (arg0 < temp_f2) {
-                arg0 += 1.0;
+                arg0 += 1.0f;
                 if (temp_f2 < arg0) {
                     arg0 = temp_f2;
                 }
             }
             if (temp_f2 < arg0) {
-                arg0 -= 1.0;
+                arg0 -= 1.0f;
                 if (arg0 < temp_f2) {
                     arg0 = temp_f2;
                     ;
@@ -2325,32 +2336,32 @@ f32 func_80014EE4(f32 arg0, s32 arg1) {
             }
             break;
         case 3:
-            temp_f2 = 60.0;
+            temp_f2 = 60.0f;
             temp_f2 += temp_f0;
             if (arg0 < temp_f2) {
-                arg0 += 0.5;
+                arg0 += 0.5f;
                 if (temp_f2 < arg0) {
                     arg0 = temp_f2;
                 }
             }
             if (temp_f2 < arg0) {
-                arg0 -= 0.5;
+                arg0 -= 0.5f;
                 if (arg0 < temp_f2) {
                     arg0 = temp_f2;
                 }
             }
             break;
         case 2:
-            temp_f2 = 60.0;
+            temp_f2 = 60.0f;
             temp_f2 += temp_f0;
             if (arg0 < temp_f2) {
-                arg0 += 1.0;
+                arg0 += 1.0f;
                 if (temp_f2 < arg0) {
                     arg0 = temp_f2;
                 }
             }
             if (temp_f2 < arg0) {
-                arg0 -= 1.0;
+                arg0 -= 1.0f;
                 if (arg0 < temp_f2) {
                     arg0 = temp_f2;
                 }
@@ -2367,7 +2378,7 @@ void calculate_camera_up_vector(Camera* camera, s32 cameraIndex) {
     f32 xdiff;
     f32 ydiff;
     f32 zdiff;
-    f32 distance;
+    f32 rdistance;
     f32 sp28;
     u16 thing;
 
@@ -2377,17 +2388,20 @@ void calculate_camera_up_vector(Camera* camera, s32 cameraIndex) {
         camera->up[2] = 0.0f;
         camera->up[1] = 1.0f;
     } else {
+        f32 sine,cosine;
+        sincoss(thing, &sine, &cosine);
+
         xdiff = camera->lookAt[0] - camera->pos[0];
         ydiff = camera->lookAt[1] - camera->pos[1];
         zdiff = camera->lookAt[2] - camera->pos[2];
-        distance = sqrtf((xdiff * xdiff) + (ydiff * ydiff) + (zdiff * zdiff));
-        xnorm = xdiff / distance;
-        ynorm = ydiff / distance;
-        znorm = zdiff / distance;
-        sp28 = 1.0 - coss(thing);
-        camera->up[0] = (sp28 * xnorm * ynorm) - (sins(thing) * znorm);
-        camera->up[1] = coss(thing) + (sp28 * ynorm * ynorm);
-        camera->up[2] = (sins(thing) * xnorm) + (sp28 * ynorm * znorm);
+        rdistance = 1.0f / sqrtf((xdiff * xdiff) + (ydiff * ydiff) + (zdiff * zdiff));
+        xnorm = xdiff * rdistance;// / distance;
+        ynorm = ydiff * rdistance;// / distance;
+        znorm = zdiff * rdistance;// / distance;
+        sp28 = 1.0f - cosine;//coss(thing);
+        camera->up[0] = (sp28 * xnorm * ynorm) - (sine * znorm); // (sins(thing) * znorm);
+        camera->up[1] = /* coss(thing) */cosine + (sp28 * ynorm * ynorm);
+        camera->up[2] = (/* sins(thing) */sine * xnorm) + (sp28 * ynorm * znorm);
     }
 }
 
@@ -2474,11 +2488,11 @@ void func_80015544(s32 playerId, f32 arg1, s32 cameraId, s32 pathIndex) {
 
     temp_f2 = (f32) gTrackPaths[pathIndex][gNearestPathPointByCameraId[cameraId]].posY;
 
-    temp_f12 = get_surface_height(gOffsetPosition[0], (f32) (temp_f2 + 30.0), gOffsetPosition[2]);
-    if ((temp_f12 < (temp_f2 - 20.0)) || (temp_f12 >= 3000.0)) {
-        D_80164618[cameraId] = (f32) (temp_f2 + 10.0);
+    temp_f12 = get_surface_height(gOffsetPosition[0], (f32) (temp_f2 + 30.0f), gOffsetPosition[2]);
+    if ((temp_f12 < (temp_f2 - 20.0f)) || (temp_f12 >= 3000.0f)) {
+        D_80164618[cameraId] = (f32) (temp_f2 + 10.0f);
     } else {
-        D_80164618[cameraId] = (f32) (temp_f12 + 10.0);
+        D_80164618[cameraId] = (f32) (temp_f12 + 10.0f);
     }
     D_80164648[cameraId] = 0.0f;
     camera->pos[0] = D_801645F8[cameraId];

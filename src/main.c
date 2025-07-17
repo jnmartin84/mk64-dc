@@ -67,6 +67,7 @@
 
 char *fnpre;
 const void *__kos_romdisk;
+void runtime_reset(void);
 
 void func_80091B78(void);
 void audio_init(void);
@@ -2167,18 +2168,22 @@ void SPINNING_THREAD(UNUSED void *arg);
 void update_gamestate(void) {
     switch (gGamestate) {
         case START_MENU_FROM_QUIT:
+            runtime_reset();
             func_80002658();
             gCurrentlyLoadedCourseId = COURSE_NULL;
             break;
         case MAIN_MENU_FROM_QUIT:
+            runtime_reset();
             func_800025D4();
             gCurrentlyLoadedCourseId = COURSE_NULL;
             break;
         case PLAYER_SELECT_MENU_FROM_QUIT:
+            runtime_reset();
             func_80002600();
             gCurrentlyLoadedCourseId = COURSE_NULL;
             break;
         case COURSE_SELECT_MENU_FROM_QUIT:
+            runtime_reset();
             func_8000262C();
             gCurrentlyLoadedCourseId = COURSE_NULL;
             break;
@@ -2187,14 +2192,17 @@ void update_gamestate(void) {
              * @bug Reloading this segment makes random_u16() deterministic for player spawn order.
              * In laymens terms, random_u16() outputs the same value every time.
              */
+            runtime_reset();
             setup_race();
             break;
         case ENDING:
             gCurrentlyLoadedCourseId = COURSE_NULL;
+            runtime_reset();
             load_ceremony_cutscene();
             break;
         case CREDITS_SEQUENCE:
             gCurrentlyLoadedCourseId = COURSE_NULL;
+            runtime_reset();
             load_credits();
             break;
     }

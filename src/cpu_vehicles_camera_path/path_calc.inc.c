@@ -58,7 +58,7 @@ void calculate_track_boundaries(s32 pathIndex) {
     f32 z_dist;
     f32 neg_x_dist;
     f32 neg_z_dist;
-    f32 xz_dist;
+    f32 xz_rdist;
     s32 temp_f16;
     s32 pathPointIndex;
     TrackPathPoint* pathPoint;
@@ -85,20 +85,20 @@ void calculate_track_boundaries(s32 pathIndex) {
             z_dist = z2 - z1;
             neg_x_dist = x1 - x2;
             neg_z_dist = z1 - z2;
-            xz_dist = sqrtf((x_dist * x_dist) + (z_dist * z_dist));
-            temp_f16 = (f32) ((y1 + y2) * 0.5);
+            xz_rdist = 1.0f / sqrtf((x_dist * x_dist) + (z_dist * z_dist));
+            temp_f16 = (f32) ((y1 + y2) * 0.5f);
 
             // Calculate left boundary position
             // Uses perpendicular vector (Z, -X) normalized by segment length
-            var_s1->posX = ((pathPointWidth * z_dist) / xz_dist) + x1;
+            var_s1->posX = ((pathPointWidth * z_dist) * xz_rdist) + x1;
             var_s1->posY = temp_f16;
-            var_s1->posZ = ((pathPointWidth * neg_x_dist) / xz_dist) + z1;
+            var_s1->posZ = ((pathPointWidth * neg_x_dist) * xz_rdist) + z1;
 
             // Calculate right boundary position
             // Uses opposite perpendicular vector (-Z, X)
-            var_s2->posX = ((pathPointWidth * neg_z_dist) / xz_dist) + x1;
+            var_s2->posX = ((pathPointWidth * neg_z_dist) * xz_rdist) + x1;
             var_s2->posY = temp_f16;
-            var_s2->posZ = ((pathPointWidth * x_dist) / xz_dist) + z1;
+            var_s2->posZ = ((pathPointWidth * x_dist) * xz_rdist) + z1;
         }
     }
 }
@@ -151,8 +151,8 @@ f32 calculate_track_curvature(s32 pathIndex, u16 pathPointIndex) {
     x3 = pathPoint3->posX;
     z3 = pathPoint3->posZ;
 
-    firstVectorX = (((x2 + x3) * 0.5) - x1);
-    firstVectorZ = (((z2 + z3) * 0.5) - z1);
+    firstVectorX = (((x2 + x3) * 0.5f) - x1);
+    firstVectorZ = (((z2 + z3) * 0.5f) - z1);
 
     pathPoint1 = &pathPathPoints[(pathPointIndex + 3) % pathPointCount];
     pathPoint2 = &pathPathPoints[(pathPointIndex + 4) % pathPointCount];
@@ -165,8 +165,8 @@ f32 calculate_track_curvature(s32 pathIndex, u16 pathPointIndex) {
     x3 = pathPoint3->posX;
     z3 = pathPoint3->posZ;
 
-    secondVectorX = (((x2 + x3) * 0.5) - x1);
-    secondVectorZ = (((z2 + z3) * 0.5) - z1);
+    secondVectorX = (((x2 + x3) * 0.5f) - x1);
+    secondVectorZ = (((z2 + z3) * 0.5f) - z1);
 
     firstLength = sqrtf((firstVectorZ * firstVectorZ) + (firstVectorX * firstVectorX));
     secondLength = sqrtf((secondVectorX * secondVectorX) + (secondVectorZ * secondVectorZ));

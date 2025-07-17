@@ -168,3 +168,59 @@ s32 osEepromLongRead(UNUSED OSMesgQueue *mq, u8 address, u8 *buffer, int nbytes)
 s32 osEepromLongWrite(UNUSED OSMesgQueue *mq, u8 address, u8 *buffer, int nbytes) {
 	return -1;
 }
+
+#if 0
+/* file system interface */
+
+s32 osPfsInitPak(OSMesgQueue*, OSPfs*, int);
+s32 osPfsRepairId(OSPfs*);
+s32 osPfsInit(OSMesgQueue*, OSPfs*, int);
+s32 osPfsReFormat(OSPfs*, OSMesgQueue*, int);
+s32 osPfsChecker(OSPfs*);
+s32 osPfsAllocateFile(OSPfs*, u16, u32, u8*, u8*, int, s32*);
+s32 osPfsFindFile(OSPfs*, u16, u32, u8*, u8*, s32*);
+s32 osPfsDeleteFile(OSPfs*, u16, u32, u8*, u8*);
+s32 osPfsReadWriteFile(OSPfs*, s32, u8, int, int, u8*);
+s32 osPfsFileState(OSPfs*, s32, OSPfsState*);
+s32 osPfsGetLabel(OSPfs*, u8*, int*);
+s32 osPfsSetLabel(OSPfs*, u8*);
+s32 osPfsIsPlug(OSMesgQueue*, u8*);
+s32 osPfsFreeBlocks(OSPfs*, s32*);
+s32 osPfsNumFiles(OSPfs*, s32*, s32*);
+
+int32_t ControllerPakStatus = 1;
+int32_t Pak_Memory = 0;
+
+static char full_fn[20];
+
+char *get_vmu_fn(maple_device_t *vmudev, char *fn) {
+	if (fn)
+		sprintf(full_fn, "/vmu/%c%d/%s", 'a'+vmudev->port, vmudev->unit, fn);
+	else
+		sprintf(full_fn, "/vmu/%c%d", 'a'+vmudev->port, vmudev->unit);
+
+	return full_fn;
+}
+
+/* Description
+osPfsAllocateFile creates a new game note (file) in a Controller Pak.
+The company_code (company code), game_code (game code), game_name (note name),
+ext_name (note extension), and length (size) arguments must be specified as the
+information for the game note.
+*/
+s32 osPfsAllocateFile(OSPfs *pfs,  u16 company_code,  u32 game_code,  u8 *game_name, 
+                      u8 *ext_name,  int length,  s32 *file_no) {
+	ssize_t size;
+	maple_device_t *vmudev = NULL;
+	uint8_t *data;
+
+	ControllerPakStatus = 0;
+
+	vmudev = maple_enum_type(0, MAPLE_FUNC_MEMCARD);
+
+}
+
+s32 osPfsInitPak(OSMesgQueue* a, OSPfs* b, int c) {
+    return 0;
+}
+#endif
