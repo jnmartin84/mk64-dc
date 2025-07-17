@@ -71,7 +71,7 @@ void update_controller(s32);
 void read_controllers(void);
 void func_80000BEC(void);
 void dispatch_audio_sptask(struct SPTask*);
-void exec_display_list(struct SPTask*);
+//void exec_display_list(struct SPTask*);
 void init_rcp(void);
 void end_master_display_list(void);
 void clear_framebuffer(s32);

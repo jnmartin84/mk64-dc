@@ -40,11 +40,17 @@ static struct  __attribute__((aligned(32)))  {
     uint16_t rate_wet;
     uint16_t vol[2];
     uint16_t rate[2];
-
+#if 1
+    float  __attribute__((aligned(32))) adpcm_table[8][2][8];
+#else
     int16_t  __attribute__((aligned(32))) adpcm_table[8][2][8];
+#endif
     int16_t  __attribute__((aligned(32))) filter[8];
 
 } rspa;
+
+#define MEM_BARRIER()         asm volatile("": : : "memory");
+#define MEM_BARRIER_PREF(ptr) asm volatile("pref @%0" : : "r" ((ptr)) : "memory")
 
 static int16_t __attribute__((aligned(32))) resample_table[64][4] = {
     { 0x0c39, 0x66ad, 0x0d46, 0xffdf }, { 0x0b39, 0x6696, 0x0e5f, 0xffd8 }, { 0x0a44, 0x6669, 0x0f83, 0xffd0 },
@@ -112,11 +118,49 @@ static inline short SwapShort(short dat)
 {
         return ((((dat << 8) | (dat >> 8 & 0xff)) << 16) >> 16);
 }
-
+#if 0
 void aLoadADPCMImpl(int num_entries_times_16, const int16_t* book_source_addr) {
-    short *aptr = (short*)rspa.adpcm_table;
+#if 1
+    float *aptr = (float*)rspa.adpcm_table;
     for (int i=0;i<num_entries_times_16 / 2;i++) {
-        aptr[i] = (short)SwapShort(book_source_addr[i]);    
+        aptr[i] = (float)(s32)__builtin_bswap16(book_source_addr[i]);    
+    }
+#else
+    int16_t *aptr = (int16_t*)rspa.adpcm_table;
+    for (int i=0;i<num_entries_times_16 / 2;i++) {
+        aptr[i] = /* (float)(s32) */(int16_t)__builtin_bswap16(book_source_addr[i]);    
+    }
+
+#endif
+}
+#endif
+void aLoadADPCMImpl(int num_entries_times_16, const int16_t* book_source_addr) {
+    float *aptr = (float*)rspa.adpcm_table;
+    short tmp[8];
+    int i = 0;
+
+    __builtin_prefetch(book_source_addr);
+
+    for (int i=0;i<num_entries_times_16 / 2; i += 8) {
+        __builtin_prefetch(&aptr[i]);
+        tmp[0] = (short)SwapShort(book_source_addr[i + 0]);
+        tmp[1] = (short)SwapShort(book_source_addr[i + 1]);
+        tmp[2] = (short)SwapShort(book_source_addr[i + 2]);
+        tmp[3] = (short)SwapShort(book_source_addr[i + 3]);
+        tmp[4] = (short)SwapShort(book_source_addr[i + 4]);
+        tmp[5] = (short)SwapShort(book_source_addr[i + 5]);
+        tmp[6] = (short)SwapShort(book_source_addr[i + 6]);
+        tmp[7] = (short)SwapShort(book_source_addr[i + 7]);
+
+        MEM_BARRIER_PREF(&book_source_addr[i + 8]);
+        aptr[i + 0] = (f32)(s32)tmp[0];
+        aptr[i + 1] = (f32)(s32)tmp[1];
+        aptr[i + 2] = (f32)(s32)tmp[2];
+        aptr[i + 3] = (f32)(s32)tmp[3];
+        aptr[i + 4] = (f32)(s32)tmp[4];
+        aptr[i + 5] = (f32)(s32)tmp[5];
+        aptr[i + 6] = (f32)(s32)tmp[6];
+        aptr[i + 7] = (f32)(s32)tmp[7];
     }
 }
 
@@ -182,10 +226,10 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
 
     while (count > 0) {
         __builtin_prefetch(r+16);
-        int32_t l0 = (*l++ << 16) | (*r++ & 0xffff);
-        int32_t l1 = (*l++ << 16) | (*r++ & 0xffff);
-        int32_t l2 = (*l++ << 16) | (*r++ & 0xffff);
-        int32_t l3 = (*l++ << 16) | (*r++ & 0xffff);
+        int32_t l0 = (*r++ << 16) | (*l++ & 0xffff);
+        int32_t l1 = (*r++ << 16) | (*l++ & 0xffff);
+        int32_t l2 = (*r++ << 16) | (*l++ & 0xffff);
+        int32_t l3 = (*r++ << 16) | (*l++ & 0xffff);
 #if 1
             asm volatile("": : : "memory");
 #endif
@@ -255,7 +299,213 @@ void aDMEMMoveImpl(uint16_t in_addr, uint16_t out_addr, int nbytes) {
 void aSetLoopImpl(ADPCM_STATE* adpcm_loop_state) {
     rspa.adpcm_loop_state = adpcm_loop_state;
 }
+#if 1
+#include <kos.h>
 
+//https://fgiesen.wordpress.com/2024/10/23/zero-or-sign-extend/
+static inline int extend_nyb(int n) {
+    return (n ^ 8) - 8;
+}
+#if 1
+#include "sh4zam.h"
+
+inline static  void shz_xmtrx_load_3x4_rows(const shz_vec4_t *r1,
+                                            const shz_vec4_t *r2,
+                                            const shz_vec4_t *r3) {
+    asm volatile(R"(
+        pref    @%0
+        frchg
+
+        fldi0   fr12
+        fldi0   fr13
+        fldi0   fr14
+        fldi1   fr15
+
+        pref    @%1
+        fmov.s  @%0+, fr0
+        fmov.s  @%0+, fr1
+        fmov.s  @%0+, fr2
+        fmov.s  @%0,  fr3
+
+        pref    @%2
+        fmov.s  @%1+, fr4
+        fmov.s  @%1+, fr5
+        fmov.s  @%1+, fr6
+        fmov.s  @%1,  fr7
+
+        fmov.s  @%2+, fr8
+        fmov.s  @%2+, fr9
+        fmov.s  @%2+, fr10
+        fmov.s  @%2,  fr11
+
+        frchg
+    )"
+    : "+&r" (r1), "+&r" (r2), "+&r" (r3));
+}
+
+#define SHZ_FORCE_INLINE __attribute__((always_inline))
+SHZ_FORCE_INLINE void shz_copy_16_shorts(void *restrict dst, const void *restrict src) {
+    asm volatile(R"(
+        mov.w   @%[s]+, r0
+        mov.w   @%[s]+, r1
+        mov.w   @%[s]+, r2
+        mov.w   @%[s]+, r3
+        mov.w   @%[s]+, r4
+        mov.w   @%[s]+, r5
+        mov.w   @%[s]+, r6
+        mov.w   @%[s]+, r7
+        add     #16, %[d]
+        mov.w   r7, @-%[d]
+        mov.w   r6, @-%[d]
+        mov.w   r5, @-%[d]
+        mov.w   r4, @-%[d]
+        mov.w   r3, @-%[d]
+        mov.w   r2, @-%[d]
+        mov.w   r1, @-%[d]
+        mov.w   r0, @-%[d]
+        mov.w   @%[s]+, r0
+        mov.w   @%[s]+, r1
+        mov.w   @%[s]+, r2
+        mov.w   @%[s]+, r3
+        mov.w   @%[s]+, r4
+        mov.w   @%[s]+, r5
+        mov.w   @%[s]+, r6
+        mov.w   @%[s]+, r7
+        add     #32, %[d]
+        mov.w   r7, @-%[d]
+        mov.w   r6, @-%[d]
+        mov.w   r5, @-%[d]
+        mov.w   r4, @-%[d]
+        mov.w   r3, @-%[d]
+        mov.w   r2, @-%[d]
+        mov.w   r1, @-%[d]
+        mov.w   r0, @-%[d]
+    )"
+    : [d] "+r" (dst), [s] "+r" (src)
+    :
+    : "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "memory");
+}
+
+SHZ_FORCE_INLINE void shz_zero_16_shorts(void *dst) {
+    asm volatile(R"(
+        xor     r0, r0
+        add     #32 %0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+        mov.w   r0, @-%0
+    )"
+    : 
+    : "r" (dst)
+    : "r0", "memory");
+}
+#if 0
+static inline float clamp16f(float v) {
+    float temp = v + 32767.0f - fabsf(v - 32767.0f);
+    return (temp + (-65536.0f) + fabsf(temp + 65536.0f)) * 0.25f;
+}
+#endif
+static inline float clamp16f(float v) {
+    if (v < (float)INT16_MIN) {
+        return (float)INT16_MIN;
+    } else if (v > (float)INT16_MAX) {
+        return (float)INT16_MAX;
+    }
+    return v;
+}
+void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
+    int16_t* out = BUF_S16(rspa.out);
+    __builtin_prefetch(out);
+    uint8_t* in = BUF_U8(rspa.in);
+    int nbytes = ROUND_UP_32(rspa.nbytes);
+    if (flags & A_INIT) {
+        shz_zero_16_shorts(out);
+    } else if (flags & A_LOOP) {
+        shz_copy_16_shorts(out, rspa.adpcm_loop_state);
+    } else {
+        shz_copy_16_shorts(out, state);
+    }   
+    __builtin_prefetch(in);
+    out += 16;
+    float prev1 = (f32)(s32)out[-1];
+    float prev2 = (f32)(s32)out[-2];
+
+    while (nbytes > 0) {
+        uint8_t si_in = *in++;
+        MEM_BARRIER_PREF(out);
+        int shift = (si_in >> 4);          // should be in 0..12 or 0..14
+        int table_index = si_in & 0xf; // should be in 0..7
+        float(*tbl)[8] = rspa.adpcm_table[table_index];
+        int i;
+        __builtin_prefetch(tbl);
+
+        for (i = 0; i < 2; i++) {
+            float ins[8];
+
+            int j, k;
+            shz_vec4_t acc_vec[2];
+            float *accf = (float *)acc_vec;
+            const shz_vec4_t in_vec = { .x = prev2, .y = prev1, .z = 2048.0f };
+            {
+                uint8_t in81 = *in++;
+                uint8_t in82 = *in++;
+                ins[0] = (f32)((s32)extend_nyb((in81 >> 4)  & 0xf) << shift);
+                ins[1] = (f32)((s32)extend_nyb( in81        & 0xf) << shift);
+                ins[2] = (f32)((s32)extend_nyb((in82 >> 4)  & 0xf) << shift);
+                ins[3] = (f32)((s32)extend_nyb( in82        & 0xf) << shift);
+            }
+            
+            shz_xmtrx_load_3x4_rows(&tbl[0][0],
+                                    &tbl[1][0],
+                                    &ins[0]);
+        
+            acc_vec[0] = shz_xmtrx_trans_vec4(in_vec);
+            {
+                uint8_t in83 = *in++;
+                uint8_t in84 = *in++;
+                ins[4] = (f32)((s32)extend_nyb((in83 >> 4)  & 0xf) << shift);
+                ins[5] = (f32)((s32)extend_nyb( in83        & 0xf) << shift);
+                ins[6] = (f32)((s32)extend_nyb((in84 >> 4)  & 0xf) << shift);
+                ins[7] = (f32)((s32)extend_nyb( in84        & 0xf) << shift);
+            }
+
+            shz_xmtrx_load_3x4_rows(&tbl[0][4],
+                                    &tbl[1][4],
+                                    &ins[4]);
+
+            acc_vec[1] = shz_xmtrx_trans_vec4(in_vec);           
+
+            for(j = 0; j < 8; ++j) {
+                for(k = 0; k < j; ++k)
+                    accf[j] += tbl[1][((j - k) - 1)] * ins[k];
+
+                accf[j] *= 0.00048828f; // /= 2048.0f;
+                accf[j] = clamp16f(accf[j]);
+                *out++ = accf[j];
+            }
+
+            prev1 = accf[7];
+            prev2 = accf[6];
+        }
+        MEM_BARRIER_PREF(in);
+        nbytes -= 16 * sizeof(int16_t);
+    }
+
+    shz_copy_16_shorts(state, (out - 16));
+}
+#else
 void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
     uint8_t* in = BUF_U8(rspa.in);
     int16_t* out = BUF_S16(rspa.out);
@@ -270,37 +520,129 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
     out += 16;
 
     while (nbytes > 0) {
-        int shift = /* 28 -  */(*in >> 4);          // should be in 0..12 or 0..14
-        int table_index = *in++ & 0xf; // should be in 0..7
+        uint8_t si_in = *in++;
+        int shift = (si_in >> 4);          // should be in 0..12 or 0..14
+        int table_index = si_in & 0xf; // should be in 0..7
         int16_t(*tbl)[8] = rspa.adpcm_table[table_index];
         int i;
 
         for (i = 0; i < 2; i++) {
             int16_t ins[8];
-            int16_t prev1 = out[-1];
-            int16_t prev2 = out[-2];
+            float prev1 = (f32)(s32)out[-1];
+            float prev2 = (f32)(s32)out[-2];
             int j, k;
-            for (j = 0; j < 8; j+=2) {
-                uint8_t in8 = *in++;
-                ins[j] = (((in8 >> 4) << 28) >> 28) << shift;
-                ins[j + 1] = (((in8 & 0xf) << 28) >> 28) << shift;
+//            for (j = 0; j < 8; j+=2) {
+            {
+                uint8_t in81 = *in++;
+                uint8_t in82 = *in++;
+                uint8_t in83 = *in++;
+                uint8_t in84 = *in++;
+                ins[0] = extend_nyb((in81 >> 4)  & 0xf) << shift;
+                ins[1] = extend_nyb( in81        & 0xf) << shift;
+                ins[2] = extend_nyb((in82 >> 4)  & 0xf) << shift;
+                ins[3] = extend_nyb( in82        & 0xf) << shift;
+                ins[4] = extend_nyb((in83 >> 4)  & 0xf) << shift;
+                ins[5] = extend_nyb( in83        & 0xf) << shift;
+                ins[6] = extend_nyb((in84  >> 4) & 0xf) << shift;
+                ins[7] = extend_nyb( in84        & 0xf) << shift;
             }
+//            }
             for (j = 0; j < 8; j++) {
-                int32_t acc = tbl[0][j] * prev2 + tbl[1][j] * prev1 + (ins[j] << 11);
+                int32_t acc = 
+                (s32)fipr((f32)(s32)tbl[0][j], (f32)(s32)tbl[1][j], (f32)(s32)ins[j], 0, prev2, prev1, 2048.0f, 0);
+
                 for (k = 0; k < j; k++) {
                     acc += tbl[1][((j - k) - 1)] * ins[k];
                 }
                 acc >>= 11;
-//                printf("acc %08x\n", acc);
+
                 *out++ = clamp16(acc);
             }
         }
         nbytes -= 16 * sizeof(int16_t);
     }
+//    n64_memcpy(state, out - 16, 16 * sizeof(int16_t));
+    int16_t *sp = state;
+    int16_t *op = (int16_t *)(out - 16);
+    *sp++ = *op++;
+    *sp++ = *op++;
+    *sp++ = *op++;
+    *sp++ = *op++;
+    *sp++ = *op++;
+    *sp++ = *op++;
+    *sp++ = *op++;
+    *sp++ = *op++;
+    *sp++ = *op++;
+    *sp++ = *op++;
+    *sp++ = *op++;
+    *sp++ = *op++;
+    *sp++ = *op++;
+    *sp++ = *op++;
+    *sp++ = *op++;
+    *sp++ = *op++;
+}
+#endif
+#if 0
+void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
+    uint8_t* in = BUF_U8(rspa.in);
+    int16_t* out = BUF_S16(rspa.out);
+    int nbytes = ROUND_UP_32(rspa.nbytes);
+
+    if (flags & A_INIT) {
+        n64_memset(out, 0, 16 * sizeof(int16_t));
+    } else if (flags & A_LOOP) {
+        n64_memcpy(out, rspa.adpcm_loop_state, 16 * sizeof(int16_t));
+    } else {
+        n64_memcpy(out, state, 16 * sizeof(int16_t));
+    }
+    out += 16;
+
+    while (nbytes > 0) {
+        int shift = 28 - (*in >> 4);      // scale factor
+        int table_index = *in++ & 0xF;    // predictor index
+        int16_t(*tbl)[8] = rspa.adpcm_table[table_index];
+
+        for (int i = 0; i < 2; i++) {
+            int16_t ins[8];
+            int32_t acc[8];
+            int16_t prev1 = out[-1];
+            int16_t prev2 = out[-2];
+
+            // Expand 4 bytes -> 8 samples
+            for (int j = 0; j < 8; j+=2) {
+                uint8_t in8 = *in++;
+                // Sign extend nibble: shift left into sign bit, then shift back down
+                ins[j]     = (((in8 >> 4) & 0x0F) << 28) >> shift;
+                ins[j + 1] = (((in8 & 0x0F)) << 28) >> shift;
+            }
+
+            // Init each output sample with taps for prev1, prev2, and ins[j]
+            for (int j = 0; j < 8; j++) {
+                acc[j] = //tbl[0][j] * prev2 + tbl[1][j] * prev1 + (ins[j] << 11);
+                (s32)(fipr((f32)(s32)tbl[0][j], (f32)(s32)tbl[1][j], (f32)(s32)ins[j], 0, (f32)(s32)prev2, (f32)(s32)prev1, 2048.0f, 0));
+            }
+
+            // Accumulate FIR taps: k outer, j inner
+            for (int k = 0; k < 7; k++) {
+                for (int j = k + 1; j < 8; j++) {
+                    acc[j] += tbl[1][(j - k) - 1] * ins[k];
+                }
+            }
+
+            // Finalize, shift, clamp, output
+            for (int j = 0; j < 8; j++) {
+                int32_t sample = acc[j] >> 11;
+                *out++ = clamp16(sample);
+            }
+        }
+
+        nbytes -= 16 * sizeof(int16_t);
+    }
+
     n64_memcpy(state, out - 16, 16 * sizeof(int16_t));
 }
-
-#include <kos.h>
+#endif
+#endif
 
 void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     int16_t __attribute__((aligned(32))) tmp[32] = {0};
@@ -313,6 +655,8 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     int16_t* tbl = NULL;
     float sample_f = 0;
 
+    int16_t *dp,*sp;
+
     if (flags & A_INIT) {
         n64_memset(tmp, 0, 5 * sizeof(int16_t));
     } else {
@@ -324,7 +668,14 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     }
     in -= 4;
     pitch_accumulator = (uint16_t) tmp[4];
-    n64_memcpy(in, tmp, 4 * sizeof(int16_t));
+    
+//    n64_memcpy(in, tmp, 4 * sizeof(int16_t));
+    dp = in;
+    sp = tmp;
+    *dp++ = *sp++;
+    *dp++ = *sp++;
+    *dp++ = *sp++;
+    *dp++ = *sp++;
 
     do {
         for (i = 0; i < 8; i++) {
@@ -345,14 +696,31 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     } while (nbytes > 0);
 
     state[4] = (int16_t) pitch_accumulator;
-    n64_memcpy(state, in, 4 * sizeof(int16_t));
+//    n64_memcpy(state, in, 4 * sizeof(int16_t));
+    dp = (int16_t*)(state);
+    sp = in;
+    *dp++ = *sp++;
+    *dp++ = *sp++;
+    *dp++ = *sp++;
+    *dp++ = *sp++;
     i = (in - in_initial + 4) & 7;
     in -= i;
     if (i != 0) {
         i = -8 - i;
     }
     state[5] = i;
-    n64_memcpy(state + 8, in, 8 * sizeof(int16_t));
+//    n64_memcpy(state + 8, in, 8 * sizeof(int16_t));
+    dp = (int16_t*)(state + 8);
+    sp = in;
+
+    *dp++ = *sp++;
+    *dp++ = *sp++;
+    *dp++ = *sp++;
+    *dp++ = *sp++;
+    *dp++ = *sp++;
+    *dp++ = *sp++;
+    *dp++ = *sp++;
+    *dp++ = *sp++;
 }
 
 void aEnvSetup1Impl(uint8_t initial_vol_wet, /* UNUSED  */uint16_t rate_wet, uint16_t rate_left, uint16_t rate_right) {

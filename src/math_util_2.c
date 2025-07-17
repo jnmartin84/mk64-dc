@@ -471,19 +471,34 @@ UNUSED s32 func_800416AC(f32 arg0, f32 arg1) {
     return atan2s(arg1, arg0);
 }
 #endif
+void sincoss(u16 arg0, f32 *s, f32 *c);
+static inline void scaled_sincoss(u16 arg0, f32 *s, f32 *c, f32 scale) {
+    float farg0 = (float)arg0 * 0.00009587f;
+    f32 sf,cf;
+    sf = sinf(farg0);
+    cf = cosf(farg0);
+    sf *= scale;
+    cf *= scale;
+    *s = sf;//sinf(farg0) * scale;
+    *c = cf;//cosf(farg0) * scale;
+}
 
 f32 func_800416D8(f32 x, f32 z, u16 angle) {
     f32 cosAngle;
+    f32 sinAngle;
 
-    cosAngle = coss(angle);
-    return (cosAngle * x) - (sins(angle) * z);
+    sincoss(angle, &sinAngle, &cosAngle);
+
+    return (cosAngle * x) - (sinAngle * z);
 }
 
 f32 func_80041724(f32 x, f32 z, u16 angle) {
+    f32 cosAngle;
     f32 sinAngle;
 
-    sinAngle = sins(angle);
-    return (coss(angle) * z) + (sinAngle * x);
+    sincoss(angle, &sinAngle, &cosAngle);
+
+    return (cosAngle * z) + (sinAngle * x);
 }
 
 s32 get_angle_between_xy(f32 x1, f32 x2, f32 y1, f32 y2) {
@@ -592,8 +607,10 @@ void mtfx_translation_x_y(Mat4 arg0, s32 x, s32 y) {
 }
 
 void mtxf_u16_rotate_z(Mat4 dest, u16 angle) {
-    f32 sin_theta = sins(angle);
-    f32 cos_theta = coss(angle);
+    f32 sin_theta;// = sins(angle);
+    f32 cos_theta;// = coss(angle);
+
+    sincoss(angle, &sin_theta, &cos_theta);
 
     dest[0][0] = cos_theta;
     dest[1][0] = -sin_theta;
@@ -666,15 +683,21 @@ UNUSED void mtxf_rotate_z_scale_x_y(Mat4 dest, u16 angle, f32 scale) {
  * @param scale
  */
 void mtxf_translation_x_y_rotate_z_scale_x_y(Mat4 dest, s32 x, s32 y, u16 angle, f32 scale) {
-    f32 sin_theta = sins(angle);
-    f32 cos_theta = coss(angle) * scale;
+//    f32 sin_theta = sins(angle);
+//    f32 cos_theta = coss(angle) * scale;
+    f32 sin_theta;// = sins(angle);
+    f32 cos_theta;// = coss(angle);
+
+    scaled_sincoss(angle, &sin_theta, &cos_theta, scale);
+//    sin_theta *= scale;
+//    cos_theta *= scale;
 
     dest[2][0] = 0.0f;
     dest[0][0] = cos_theta;
-    dest[1][0] = (-sin_theta) * scale;
+    dest[1][0] = -sin_theta;
     dest[3][0] = (f32) x;
     dest[1][1] = cos_theta;
-    dest[0][1] = sin_theta * scale;
+    dest[0][1] = sin_theta;
     dest[2][1] = 0.0f;
     dest[3][1] = (f32) y;
     dest[0][2] = 0.0f;
@@ -843,12 +866,21 @@ UNUSED void func_8004252C(Mat4 arg0, u16 arg1, u16 arg2) {
 
 void mtxf_set_matrix_transformation(Mat4 transformMatrix, Vec3f translationVector, Vec3su rotationVector,
                                     f32 scalingFactor) {
-    f32 sinX = sins(rotationVector[0]);
-    f32 cosX = coss(rotationVector[0]);
-    f32 sinY = sins(rotationVector[1]);
-    f32 cosY = coss(rotationVector[1]);
-    f32 sinZ = sins(rotationVector[2]);
-    f32 cosZ = coss(rotationVector[2]);
+    f32 sinX;// = sins(rotationVector[0]);
+    f32 cosX;// = coss(rotationVector[0]);
+    f32 sinY;// = sins(rotationVector[1]);
+    f32 cosY;// = coss(rotationVector[1]);
+    f32 sinZ;// = sins(rotationVector[2]);
+    f32 cosZ;// = coss(rotationVector[2]);
+
+    sincoss(rotationVector[0], &sinX, &cosX);
+    sincoss(rotationVector[1], &sinY, &cosY);
+    sincoss(rotationVector[2], &sinZ, &cosZ);
+
+    transformMatrix[0][3] = 0.0f;
+    transformMatrix[1][3] = 0.0f;
+    transformMatrix[2][3] = 0.0f;
+    transformMatrix[3][3] = 1.0f;
 
     transformMatrix[0][0] = ((cosY * cosZ) + (sinX * sinY * sinZ)) * scalingFactor;
     transformMatrix[1][0] = ((-cosY * sinZ) + (sinX * sinY * cosZ)) * scalingFactor;
@@ -862,10 +894,6 @@ void mtxf_set_matrix_transformation(Mat4 transformMatrix, Vec3f translationVecto
     transformMatrix[1][2] = ((sinY * sinZ) + (sinX * cosY * cosZ)) * scalingFactor;
     transformMatrix[2][2] = cosX * cosY * scalingFactor;
     transformMatrix[3][2] = translationVector[2];
-    transformMatrix[0][3] = 0.0f;
-    transformMatrix[1][3] = 0.0f;
-    transformMatrix[2][3] = 0.0f;
-    transformMatrix[3][3] = 1.0f;
 }
 
 void mtxf_set_matrix_scale_transl(Mat4 transformMatrix, Vec3f vec1, Vec3f vec2, f32 scale) {
@@ -904,12 +932,15 @@ void mtxf_set_matrix_gObjectList(s32 objectIndex, Mat4 transformMatrix) {
     f32 cosZ;
     f32 cosX;
 
-    sinX = sins(object->orientation[0]);
+/*    sinX = sins(object->orientation[0]);
     cosX = coss(object->orientation[0]);
     sinY = sins(object->orientation[1]);
     cosY = coss(object->orientation[1]);
     sinZ = sins(object->orientation[2]);
-    cosZ = coss(object->orientation[2]);
+    cosZ = coss(object->orientation[2]);*/
+    sincoss(object->orientation[0], &sinX, &cosX);
+    sincoss(object->orientation[1], &sinY, &cosY);
+    sincoss(object->orientation[2], &sinZ, &cosZ);
 
     transformMatrix[0][0] = object->sizeScaling * ((cosY * cosZ) + (sinX * sinY * sinZ));
     transformMatrix[1][0] = object->sizeScaling * ((-cosY * sinZ) + sinX * sinY * cosZ);
@@ -955,7 +986,10 @@ void set_transform_matrix(Mat4 dest, Vec3f orientationVector, Vec3f positionVect
     Vec3f sp38;
     Vec3f sp2C;
 
-    vec3f_set_xyz(sp44, sins(rotationAngle), 0.0f, coss(rotationAngle));
+    f32 sang, cang;
+    sincoss(rotationAngle, &sang, &cang);
+
+    vec3f_set_xyz(sp44, sang, 0.0f, cang);
     MK64_vec3f_normalize(orientationVector);
     vec3f_cross_product(sp38, orientationVector, sp44);
     MK64_vec3f_normalize(sp38);
@@ -1029,14 +1063,15 @@ void vec3f_rotate_x_y(Vec3f dest, Vec3f pos, Vec3s rot) {
     f32 cosine1;
     f32 sine2;
     f32 cosine2;
-
+//    sine1 = sins(rot[0]);
+//    cosine1 = coss(rot[0]);
+//    sine2 = sins(rot[1]);
+//    cosine2 = coss(rot[1]);
+    sincoss(rot[1], &sine2, &cosine2);
     sp2C = pos[0];
-    sp28 = pos[1];
     sp24 = pos[2];
-    sine1 = sins(rot[0]);
-    cosine1 = coss(rot[0]);
-    sine2 = sins(rot[1]);
-    cosine2 = coss(rot[1]);
+    sp28 = pos[1];
+    sincoss(rot[0], &sine1, &cosine1);
     dest[0] = (sp2C * cosine2) - (sp24 * sine2);
     dest[1] = (sp2C * sine1 * sine2) + (sp28 * cosine1) + (sp24 * sine1 * cosine2);
     dest[2] = ((sp2C * cosine1 * sine2) - (sp28 * sine1)) + (sp24 * cosine1 * cosine2);

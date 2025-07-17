@@ -269,10 +269,10 @@ void func_80044BF8(u8* texture, s32 width, s32 height) {
 }
 
 void func_80044DA0(u8* image, s32 width, s32 height) {
-     if ((uintptr_t)image < 0x01000000u) {
+     /* if ((uintptr_t)image < 0x01000000u) {
         printf("%s low val ptr\n", __func__);
         return;
-    }
+    } */
 
     // This macro ought to be equivalent to the block of macros below but it doesn't match
     // See comment above the `gDPLoadBlock` macro
@@ -297,10 +297,10 @@ void func_80044DA0(u8* image, s32 width, s32 height) {
 
 // Appears to be a complete copy of `func_80044F34`?
 void func_80044F34(u8* image, s32 width, s32 height) {
-     if ((uintptr_t)image < 0x01000000u) {
+    /*  if ((uintptr_t)image < 0x01000000u) {
         printf("%s low val ptr\n", __func__);
         return;
-    }
+    } */
    // This macro ought to be equivalent to the block of macros below but it doesn't match
     // See comment above the `gDPLoadBlock` macro
     // gDPLoadTextureBlock_4b(gDisplayListHead++, image, G_IM_FMT_I, width, height, 0, G_TX_NOMIRROR | G_TX_CLAMP,
@@ -323,10 +323,10 @@ void func_80044F34(u8* image, s32 width, s32 height) {
 }
 
 void func_800450C8(u8* image, s32 width, s32 height) {
-    if ((uintptr_t)image < 0x01000000u) {
+    /* if ((uintptr_t)image < 0x01000000u) {
         printf("%s low val ptr\n", __func__);
         return;
-    }
+    } */
     // This macro ought to be equivalent to the block of macros below but it doesn't match
     // See comment above the `gDPLoadBlock` macro
     // gDPLoadTextureBlock_4b(gDisplayListHead++, image, G_IM_FMT_I, width, height, 0, G_TX_NOMIRROR | G_TX_CLAMP,
@@ -2099,7 +2099,7 @@ void func_8004D7B4(s32 arg0, s32 arg1, u8* texture, s32 arg3, s32 arg4) {
     for (i = 0; i < arg4; i++) {
         temp_s0 = var_s1;
         temp_s5 = (s32) ((sins(temp_s0) * temp_f20) + (f32) (arg0 - (arg3 / 2)));
-        sins(temp_s0);
+//        sins(temp_s0);
         load_texture_block_ia16_nomirror(img, arg3, 1);
         func_8004B97C(temp_s5, var_s3, arg3, 1, 1);
 
@@ -2133,7 +2133,7 @@ void func_8004D93C(s32 arg0, s32 arg1, u8* texture, s32 arg3, s32 arg4) {
     for (i = 0; i < arg4; i++) {
         temp_s0 = var_s1;
         temp_s6 = (s32) ((sins(temp_s0) * temp_f20) + (f32) (arg0 - (var)));
-        sins(temp_s0);
+//        sins(temp_s0);
         load_texture_block_ia8_nomirror(img, arg3, 1);
         func_8004B97C(temp_s6, var_s4, arg3, 1, 1);
         var_s1 += temp_s7;
@@ -2168,7 +2168,7 @@ UNUSED void func_8004DAB8(s32 arg0, s32 arg1, u8* texture, s32 arg3, s32 arg4) {
     for (i = 0; i < arg4; i++) {
         temp_s0 = var_s1;
         temp_s6 = (s32) ((sins(temp_s0) * temp_f20) + (f32) (arg0 - (var)));
-        sins(temp_s0);
+//        sins(temp_s0);
         func_80044924(img, arg3, 1);
         func_8004B97C(temp_s6, var_s4, arg3, 1, 1);
         var_s1 += temp_s7;
@@ -2276,7 +2276,7 @@ void func_8004E06C(s32 arg0, s32 arg1, u8* texture, s32 arg3, s32 arg4) {
     for (i = 0; i < arg4; i++) {
         temp_s0 = var_s1;
         temp_s6 = (u32) ((sins(temp_s0) * temp_f20) + (f32) (arg0 - var));
-        sins(temp_s0);
+//        sins(temp_s0);
         rsp_load_texture(img, arg3, 1);
         func_8004B97C(temp_s6, var_s4, arg3, 1, 1);
         var_s1 += temp_s7;
@@ -3645,12 +3645,12 @@ void render_object_snowmans_list_1(s32 cameraId) {
                             img[1] = gObjectList[objectIndex].activeTexture + (0x40 * (0x20-1));
                             gfx_texture_cache_invalidate(img[0]);
                             gfx_texture_cache_invalidate(img[1]);
-                            gDPLoadTLUT_pal256(gDisplayListHead++, (u8*) gObjectList[objectIndex].activeTLUT);
                             initialized_tex++;
                     }
                     rsp_set_matrix_transformation(gObjectList[objectIndex].pos, (u16*) D_80183E80,
                                         gObjectList[objectIndex].sizeScaling);
 
+                    gDPLoadTLUT_pal256(gDisplayListHead++, (u8*) gObjectList[objectIndex].activeTLUT);
                     rsp_load_texture(img[0], 0x00000040, 0x00000020);
                     gSPVertex(gDisplayListHead++, &gObjectList[objectIndex].vertex[0], 4, 0);
                     gSPDisplayList(gDisplayListHead++, common_rectangle_display);
@@ -3674,6 +3674,7 @@ void render_object_snowmans_list_1(s32 cameraId) {
                         initialized_tex++;
                 }
 
+                gDPLoadTLUT_pal256(gDisplayListHead++, (u8*) gObjectList[objectIndex].activeTLUT);
                 rsp_load_texture(img2[0], 0x00000040, 0x00000020);
                 gSPVertex(gDisplayListHead++, &gObjectList[objectIndex].vertex[0], 4, 0);
                 gSPDisplayList(gDisplayListHead++, common_rectangle_display);

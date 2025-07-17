@@ -249,6 +249,13 @@ void game_loop_one_iteration(void) {
     read_controllers();
 
     game_state_handler();
+
+//            u32 num_audio_samples = 448;
+  //      create_next_audio_buffer(audio_buffer, 448);
+    //    create_next_audio_buffer(audio_buffer + 896, 448);
+      //  audio_api->play((u8 *)audio_buffer, 3584);
+
+
     end_master_display_list();
 
     display_and_vsync();
@@ -256,11 +263,11 @@ void game_loop_one_iteration(void) {
     gfx_end_frame();
 }
 
-void send_display_list(struct SPTask *spTask) {
+static void send_display_list(struct SPTask *spTask) {
 
-    if (!inited) {
-        return;
-    }
+//    if (!inited) {
+//        return;
+//    }
 
     gfx_run((Gfx *)spTask->task.t.data_ptr);
 }
@@ -492,7 +499,7 @@ void setup_audio_data(void) {
 s32 osAppNmiBuffer[16];
 void isPrintfInit(void);
 int main(UNUSED int argc, UNUSED char **argv) {
-    thd_set_hz(120);
+    thd_set_hz(300);
     wasSoftReset = (s16)0;
     gPhysicalFramebuffers[0] = fb[0];//(u16*) &gFramebuffer0;
     gPhysicalFramebuffers[1] = fb[1];//(u16*) &gFramebuffer1;
@@ -862,7 +869,7 @@ void dispatch_audio_sptask(struct SPTask* spTask) {
     osSendMesg(&gSPTaskMesgQueue, spTask, OS_MESG_NOBLOCK);
 }
 
-void exec_display_list(struct SPTask* spTask) {
+static void exec_display_list(struct SPTask* spTask) {
 	send_display_list(&gGfxPool->spTask);
 #if 0
     osWritebackDCacheAll();
@@ -920,7 +927,7 @@ void rendering_init(void) {
     init_rcp();
     clear_framebuffer(0);
     end_master_display_list();
-    exec_display_list(&gGfxPool->spTask);
+//    exec_display_list(&gGfxPool->spTask);
     sRenderingFramebuffer++;
     gGlobalTimer++;
 }
@@ -1723,12 +1730,12 @@ void race_logic_loop(void) {
 
         case SCREEN_MODE_2P_SPLITSCREEN_HORIZONTAL:
 
-            /* if (gCurrentCourseId == COURSE_DK_JUNGLE) {
+             if (gCurrentCourseId == COURSE_DK_JUNGLE) {
                 gTickSpeed = 3;
             } else {
                 gTickSpeed = 2;
-            } */
-            gTickSpeed = 3;
+            }
+//            gTickSpeed = 3;
 
             if (gIsGamePaused == 0) {
                 for (i = 0; i < gTickSpeed; i++) {
@@ -2270,33 +2277,28 @@ void _AudioInit(void) {
     }
 }
 
-void SPINNING_THREAD(UNUSED void *arg) {
-    uint64_t last_vbltick = vblticker;
-    while (1) {
 #if 0
         while (!(vblticker > (last_vbltick+1)))
             thd_sleep(5);
-#else
+#endif
+#define SAMPLES_HIGH 448
+#define SAMPLES_LOW 432
+void SPINNING_THREAD(UNUSED void *arg) {
+    uint64_t last_vbltick = vblticker;
+
+    while (1) {
         {
         irq_disable_scoped();
         while (vblticker <= last_vbltick + 1)
             genwait_wait(&vblticker, NULL, 15, NULL);
         }
-#endif
         last_vbltick = vblticker;
-        
-        u32 num_audio_samples = 448;
-//        {
-//        irq_disable_scoped();
+// todo move the poll back to a thread again
+// jfc
+        u32 num_audio_samples = SAMPLES_HIGH;//even_frame ? SAMPLES_HIGH : SAMPLES_LOW;//448;
         create_next_audio_buffer(audio_buffer, num_audio_samples);
-//        }
-//        {
-//        irq_disable_scoped();
-        create_next_audio_buffer(audio_buffer + (num_audio_samples*2), num_audio_samples);
-//        }
-        audio_api->play((u8 *)audio_buffer, 2 * num_audio_samples * 2 * 2);
-
-        thd_pass();//sleep(1);
+        create_next_audio_buffer(audio_buffer + num_audio_samples*2, num_audio_samples);
+        audio_api->play((u8 *)audio_buffer, num_audio_samples * 2 * 2 * 2);
     }
 }
 

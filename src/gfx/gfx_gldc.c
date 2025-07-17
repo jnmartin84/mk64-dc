@@ -376,7 +376,7 @@ static void gfx_opengl_select_texture(int tile, uint32_t texture_id) {
 /* Used for rescaling textures ROUGHLY into pow2 dims */
 static unsigned int __attribute__((aligned(32))) scaled[64 * 64 * 4];//sizeof(unsigned int)]; /* 16kb */
 
-#define LET_GLDC_TWIDDLE 1
+#define LET_GLDC_TWIDDLE 0
 
 static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int height, unsigned int type) {
     GLint intFormat;

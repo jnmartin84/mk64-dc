@@ -136,6 +136,8 @@ void set_the_scissor(struct UnkStruct_800DC5EC* arg0) {
     }
     if (lry > SCREEN_HEIGHT) {
         lry = SCREEN_HEIGHT;
+    } else if (lry > 32) {
+        lry -= 32;
     }
 
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, ulx, uly, lrx, lry);
@@ -273,7 +275,7 @@ void init_z_buffer(void) {
 void init_rdp(void) {
     gDPPipeSync(gDisplayListHead++);
     gDPPipelineMode(gDisplayListHead++, G_PM_1PRIMITIVE);
-    gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+//    gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     gDPSetCombineMode(gDisplayListHead++, G_CC_SHADE, G_CC_SHADE);
     gDPSetTextureLOD(gDisplayListHead++, G_TL_TILE);
     gDPSetTextureLUT(gDisplayListHead++, G_TT_NONE);

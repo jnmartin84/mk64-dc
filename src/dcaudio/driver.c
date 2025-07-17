@@ -157,7 +157,7 @@ struct AudioAPI audio_dc = {
 #define DC_STEREO_AUDIO ( DC_AUDIO_CHANNELS == 2)
 // Sample rate for the AICA (32kHz)
 #define DC_AUDIO_FREQUENCY (26800) 
-#define RING_BUFFER_MAX_BYTES (SND_STREAM_BUFFER_MAX * 2)
+#define RING_BUFFER_MAX_BYTES (SND_STREAM_BUFFER_MAX * 2 /* / 2 */)
 
 // --- Global State for Dreamcast Audio Backend ---
 // Handle for the sound stream
@@ -166,6 +166,36 @@ static volatile snd_stream_hnd_t shnd = SND_STREAM_INVALID;
 static uint8_t cb_buf_internal[RING_BUFFER_MAX_BYTES] __attribute__((aligned(32))); 
 static void *const cb_buf = cb_buf_internal;
 static bool audio_started = false;
+
+typedef enum {
+    AUDIO_STATUS_RUNNING,
+    AUDIO_STATUS_DONE
+} audio_thread_status_t;
+
+volatile audio_thread_status_t g_audio_thread_status = AUDIO_STATUS_DONE;
+static kthread_t *g_audio_poll_thread_handle = NULL;
+//static kthread_t *g_audio_gen_thread_handle = NULL;
+
+// The dedicated audio polling thread: This continuously calls snd_stream_poll()
+// to allow KOS to invoke the audio_callback when data is needed.
+void* snd_thread(UNUSED void* arg) {
+
+#if defined(OUTPUT)
+    printf("AUDIO_THREAD: Started polling thread.\n"); // Debug print, uncomment if needed
+#endif
+    while(g_audio_thread_status == AUDIO_STATUS_RUNNING) {
+        if (shnd != SND_STREAM_INVALID && audio_started) {
+            snd_stream_poll(shnd);
+        }
+        thd_pass(); // Sleep briefly to avoid busy-waiting, yielding CPU
+    }
+
+#if defined(OUTPUT)
+    printf("AUDIO_THREAD: Polling thread shutting down.\n"); // Debug print, uncomment if needed
+#endif
+
+    return NULL;
+}
 
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 
@@ -260,7 +290,7 @@ static void cb_clear(void) {
 
 // --- KOS Stream Audio Callback (Consumer): Called by KOS when the AICA needs more data ---
 #define NUM_BUFFER_BLOCKS (2)
-#define TEMP_BUF_SIZE (SND_STREAM_BUFFER_MAX * NUM_BUFFER_BLOCKS)
+#define TEMP_BUF_SIZE ((SND_STREAM_BUFFER_MAX/*  / 2 */) * NUM_BUFFER_BLOCKS)
 static uint8_t __attribute__((aligned(32))) temp_buf[TEMP_BUF_SIZE];
 static unsigned int temp_buf_sel = 0;
 void n64_memset(void *dst, uint8_t val, size_t size);
@@ -269,19 +299,19 @@ void mute_stream(void) {
 }
 
 void unmute_stream(void) {
-    snd_stream_volume(shnd, 124); // Set maximum volume
+    snd_stream_volume(shnd, 192); // Set maximum volume
 }
 
 void *audio_callback(UNUSED snd_stream_hnd_t hnd, int samples_requested_bytes, int *samples_returned_bytes) {
     size_t samples_requested = samples_requested_bytes / 4;
-    size_t samples_avail_bytes = cb_read_data(temp_buf + (SND_STREAM_BUFFER_MAX * temp_buf_sel) , samples_requested_bytes);
+    size_t samples_avail_bytes = cb_read_data(temp_buf + ((SND_STREAM_BUFFER_MAX/*  / 2 */) * temp_buf_sel) , samples_requested_bytes);
     
     *samples_returned_bytes = samples_requested_bytes;
     size_t samples_returned = samples_avail_bytes / 4;
     
     /*@Note: This is more correct, fill with empty audio */
     if (samples_avail_bytes < (unsigned)samples_requested_bytes) {
-        n64_memset(temp_buf + (SND_STREAM_BUFFER_MAX * temp_buf_sel) + samples_avail_bytes, 0, (samples_requested_bytes - samples_avail_bytes));
+        n64_memset(temp_buf + ((SND_STREAM_BUFFER_MAX/*  / 2 */) * temp_buf_sel) + samples_avail_bytes, 0, (samples_requested_bytes - samples_avail_bytes));
         // printf("U\n");
     }
     
@@ -290,7 +320,7 @@ void *audio_callback(UNUSED snd_stream_hnd_t hnd, int samples_requested_bytes, i
         temp_buf_sel = 0;
     }
     
-    return (void*)(temp_buf + (SND_STREAM_BUFFER_MAX * temp_buf_sel));
+    return (void*)(temp_buf + ((SND_STREAM_BUFFER_MAX/*  / 2 */) * temp_buf_sel));
 }
 
 static bool audio_dc_init(void) {
@@ -299,7 +329,7 @@ static bool audio_dc_init(void) {
         return false;
     }
 
-    thd_set_hz(120);
+    thd_set_hz(300);
     
     // --- Initial Pre-fill of Ring Buffer with Silence ---
     sq_clr(cb_buf_internal, sizeof(cb_buf_internal));
@@ -313,15 +343,25 @@ static bool audio_dc_init(void) {
            (unsigned int)RING_BUFFER_MAX_BYTES);
     
     // Allocate the sound stream with KOS
-    shnd = snd_stream_alloc(audio_callback, SND_STREAM_BUFFER_MAX / 8);
+    shnd = snd_stream_alloc(audio_callback, (SND_STREAM_BUFFER_MAX / 8) /* / 2 */);
     if (shnd == SND_STREAM_INVALID) {
         printf("SND: Stream allocation failure!\n");
         snd_stream_destroy(shnd);
         return false;
     }
 
+#if 0
+    // Start the dedicated audio polling thread
+    g_audio_thread_status = AUDIO_STATUS_RUNNING;
+    g_audio_poll_thread_handle = thd_create(false, snd_thread, NULL);
+    if (!g_audio_poll_thread_handle) {
+        printf("ERROR: Failed to create audio polling thread!\n");
+        fflush(stdout);
+        return false;
+    }
+#endif
     // Set maximum volume
-    snd_stream_volume(shnd, 160); 
+    snd_stream_volume(shnd, 192); 
 
     printf("Sound init complete!\n");
     
@@ -340,7 +380,7 @@ static void audio_dc_play(const uint8_t *buf, size_t len) {
     size_t ring_data_available = cb_get_used();
     size_t written = cb_write_data(buf, len);
             
-    if (!audio_started && ring_data_available >= (SND_STREAM_BUFFER_MAX)) {
+    if (!audio_started && ring_data_available >/* = */ ((SND_STREAM_BUFFER_MAX  / 3 ))) {
         audio_started = true;
         snd_stream_start(shnd, DC_AUDIO_FREQUENCY, DC_STEREO_AUDIO);
     }

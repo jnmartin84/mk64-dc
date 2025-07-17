@@ -22,6 +22,18 @@
 #include "cpu_vehicles_camera_path.h"
 #include "sounds.h"
 
+void sincoss(u16 arg0, f32 *s, f32 *c);
+static inline void scaled_sincoss(u16 arg0, f32 *s, f32 *c, f32 scale) {
+    float farg0 = (float)arg0 * 0.00009587f;
+    f32 sf,cf;
+    sf = sinf(farg0);
+    cf = cosf(farg0);
+    sf *= scale;
+    cf *= scale;
+    *s = sf;//sinf(farg0) * scale;
+    *c = cf;//cosf(farg0) * scale;
+}
+
 extern s32 D_8018D168;
 
 s16 cpu_forMario[] = { LUIGI, YOSHI, TOAD, DK, WARIO, PEACH, BOWSER, 0 };
@@ -965,14 +977,18 @@ void func_80029B4C(Player* player, UNUSED f32 arg1, f32 arg2, UNUSED f32 arg3) {
 }
 
 void func_8002A194(Player* player, f32 arg1, f32 arg2, f32 arg3) {
-    UNUSED s32 pad[2];
     f32 temp_f12;
     f32 var_f20;
+    f32 temp_f0;
+    f32 tyre_s;
+    f32 tyre_c;
+
     s32 temp_v0;
+
     s16 temp_v1;
     s16 var_a1;
-    UNUSED s32 pad2;
-    f32 temp_f0;
+
+    u16 trigarg;
 
     temp_v1 = -player->rotation[1] - player->unk_0C0;
     if ((player->effects & LIGHTNING_EFFECT) == LIGHTNING_EFFECT) {
@@ -981,26 +997,38 @@ void func_8002A194(Player* player, f32 arg1, f32 arg2, f32 arg3) {
         var_f20 = (((gCharacterSize[player->characterId] * 18) / 2) * player->size) - 1;
     }
 
-    player->tyres[FRONT_LEFT].pos[2] = (coss(temp_v1 + 0x2000) * var_f20) + arg3;
-    temp_f12 = (sins(temp_v1 + 0x2000) * var_f20) + arg1;
+    trigarg = temp_v1 + 0x2000;
+    scaled_sincoss(trigarg, &tyre_s, &tyre_c, var_f20);
+
+    player->tyres[FRONT_LEFT].pos[2] = (tyre_c) + arg3;
+    temp_f12 = (tyre_s) + arg1;
     player->tyres[FRONT_LEFT].pos[0] = temp_f12;
     player->tyres[FRONT_LEFT].baseHeight =
         calculate_surface_height(temp_f12, arg2, player->tyres[FRONT_LEFT].pos[2], player->collision.meshIndexZX);
 
-    player->tyres[FRONT_RIGHT].pos[2] = (coss(temp_v1 - 0x2000) * var_f20) + arg3;
-    temp_f12 = (sins(temp_v1 - 0x2000) * var_f20) + arg1;
+    trigarg = temp_v1 - 0x2000;
+    scaled_sincoss(trigarg, &tyre_s, &tyre_c, var_f20);
+
+    player->tyres[FRONT_RIGHT].pos[2] = (tyre_c) + arg3;
+    temp_f12 = (tyre_s) + arg1;
     player->tyres[FRONT_RIGHT].pos[0] = temp_f12;
     player->tyres[FRONT_RIGHT].baseHeight =
         calculate_surface_height(temp_f12, arg2, player->tyres[FRONT_RIGHT].pos[2], player->collision.meshIndexZX);
 
-    player->tyres[BACK_LEFT].pos[2] = (coss(temp_v1 + 0x6000) * var_f20) + arg3;
-    temp_f12 = (sins(temp_v1 + 0x6000) * var_f20) + arg1;
+    trigarg = temp_v1 + 0x6000;
+    scaled_sincoss(trigarg, &tyre_s, &tyre_c, var_f20);
+
+    player->tyres[BACK_LEFT].pos[2] = (tyre_c) + arg3;
+    temp_f12 = (tyre_s) + arg1;
     player->tyres[BACK_LEFT].pos[0] = temp_f12;
     player->tyres[BACK_LEFT].baseHeight =
         calculate_surface_height(temp_f12, arg2, player->tyres[BACK_LEFT].pos[2], player->collision.meshIndexZX);
 
-    player->tyres[BACK_RIGHT].pos[2] = (coss(temp_v1 - 0x6000) * var_f20) + arg3;
-    player->tyres[BACK_RIGHT].pos[0] = (sins(temp_v1 - 0x6000) * var_f20) + arg1;
+    trigarg = temp_v1 - 0x6000;
+    scaled_sincoss(trigarg, &tyre_s, &tyre_c, var_f20);
+
+    player->tyres[BACK_RIGHT].pos[2] = (tyre_c) + arg3;
+    player->tyres[BACK_RIGHT].pos[0] = (tyre_s) + arg1;
     player->tyres[BACK_RIGHT].baseHeight = calculate_surface_height(
         player->tyres[BACK_LEFT].pos[0], arg2, player->tyres[BACK_LEFT].pos[2], player->collision.meshIndexZX);
 
@@ -1279,8 +1307,13 @@ void func_8002AE38(Player* player, s8 arg1, f32 arg2, f32 arg3, f32 arg4, f32 ar
     s16 temp_a0;
     s32 var_v1;
 
-    sp28 = (sins(-player->rotation[1]) * player->speed) + arg2;
-    temp_f16 = (coss(-player->rotation[1]) * player->speed) + arg3;
+    scaled_sincoss(-player->rotation[1], &sp28, &temp_f16, player->speed);
+
+//    sp28 = (sins(-player->rotation[1]) * player->speed) + arg2;
+//    temp_f16 = (coss(-player->rotation[1]) * player->speed) + arg3;
+    sp28 += arg2;// = (sp28 * player->speed) + arg2;
+    temp_f16 += arg3;// = (temp_f16 * player->speed) + arg3;
+
     if (((player->effects & 0x800) != 0x800) && ((player->effects & UNKNOWN_EFFECT_0x10) != UNKNOWN_EFFECT_0x10) &&
         !(player->unk_044 & 0x4000) &&
         ((((player->speed / 18.0f) * 216.0f) <= 8.0f) ||
@@ -2062,17 +2095,19 @@ void func_8002D268(Player* player, UNUSED Camera* camera, s8 screenId, s8 player
     s32 temp_v0_3;
     s32 temp3;
     f32 temp_f2_2;
-    UNUSED s32 pad[8];
+//    UNUSED s32 pad[8];
     f32 spB4;
     f32 spB0;
     f32 spAC;
     f32 temp_var;
-    UNUSED s32 pad2;
+//    UNUSED s32 pad2;
     Vec3f sp98;
     Vec3f sp8C;
-    UNUSED s32 pad3[3];
+//    UNUSED s32 pad3[3];
     s32 sp7C = 0;
-    UNUSED s32 pad4[6];
+//    UNUSED s32 pad4[6];
+
+    f32 ts1,tc1;
 
     func_80027EDC(player, playerId);
     func_8002C11C(player);
@@ -2122,8 +2157,11 @@ void func_8002D268(Player* player, UNUSED Camera* camera, s8 screenId, s8 player
         spB0 = -1 * player->kartGravity;
         spAC = 0 * (player->unk_064[2] + sp16C[2]);
     }
-    temp_f2_2 = ((player->oldPos[2] - player->pos[2]) * coss(player->rotation[1] + player->unk_0C0)) +
-                (-(player->oldPos[0] - player->pos[0]) * sins(player->rotation[1] + player->unk_0C0));
+
+    sincoss(player->rotation[1] + player->unk_0C0, &ts1, &tc1);
+
+    temp_f2_2 = ((player->oldPos[2] - player->pos[2]) * tc1) + //coss(player->rotation[1] + player->unk_0C0)) +
+                (-(player->oldPos[0] - player->pos[0]) * ts1); //sins(player->rotation[1] + player->unk_0C0));
     if (temp_f2_2 > 0.1) {
         player->unk_044 |= 8;
     } else {

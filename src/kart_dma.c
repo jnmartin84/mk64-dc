@@ -1174,7 +1174,7 @@ u8* gKartPalettes[] = {
 };
 
 /**
- * @brief Place DMA mio0 compressed character textures in a buffer.
+ * @brief Sets pointer to MIO0-compressed kart data.
  * Later, this data becomes decompressed.
  *
  * The player struct tracks the texture indices to load.
@@ -1190,34 +1190,26 @@ void load_kart_texture(Player* player, s8 playerId, s8 screenId, s8 screenId2, s
     if (((temp & 0x80) == 0x80) || ((temp & 0x40) == 0x40) || ((temp & 0x80000) == 0x80000) ||
         ((temp & 0x800000) == 0x800000) || ((temp & 0x20000) == 0x20000) || ((player->unk_044 & 0x800) != 0)) {
         if (player->animFrameSelector[screenId] != 0) {
-            //dma_copy(&
             gEncodedKartTexture[index][screenId2][playerId].unk_00 = 
                     gKartTextureTable1[player->characterId]
                         [player->animGroupSelector[screenId]]
-                        [player->animFrameSelector[screenId]];//,
-//                    D_800DDEB0[player->characterId]);
+                        [player->animFrameSelector[screenId]];
         } else {
-            //dma_copy(&
             gEncodedKartTexture[index][screenId2][playerId].unk_00 = 
                     gKartTextureTable0[player->characterId]
                         [player->animGroupSelector[screenId]]
                         [player->animFrameSelector[screenId]];
-//                    D_800DDEB0[player->characterId]);
         }
     } else if (((temp & 0x400) == 0x400) || ((temp & 0x01000000) == 0x01000000) ||
                ((temp & 0x02000000) == 0x02000000) || ((temp & 0x10000) == 0x10000)) {
-        //dma_copy(&
         gEncodedKartTexture[index][screenId2][playerId].unk_00 = 
                 gKartTextureTumbles[player->characterId]
                     [player->unk_0A8 >> 8];
-//                0x900);
     } else {
-        //dma_copy(&
         gEncodedKartTexture[index][screenId2][playerId].unk_00 = 
                 gKartTextureTable0[player->characterId]
                     [player->animGroupSelector[screenId]]
                     [player->animFrameSelector[screenId]];
-//                D_800DDEB0[player->characterId]);
     }
 }
 
@@ -1227,34 +1219,26 @@ void load_kart_texture_non_blocking(Player* player, s8 arg1, s8 arg2, s8 arg3, s
     if (((temp & 0x80) == 0x80) || ((temp & 0x40) == 0x40) || ((temp & 0x80000) == 0x80000) ||
         ((temp & 0x800000) == 0x800000) || ((temp & 0x20000) == 0x20000) || ((player->unk_044 & 0x800) != 0)) {
         if (player->animFrameSelector[arg2] != 0) {
-            //dma_copy(&
             gEncodedKartTexture[arg4][arg3][arg1].unk_00 = 
                     gKartTextureTable1[player->characterId]
                         [player->animGroupSelector[arg2]]
                         [player->animFrameSelector[arg2]];
-//                    D_800DDEB0[player->characterId]);
         } else {
-           // dma_copy(&
            gEncodedKartTexture[arg4][arg3][arg1].unk_00 = 
                     gKartTextureTable0[player->characterId]
                         [player->animGroupSelector[arg2]]
                         [player->animFrameSelector[arg2]];
-//                    D_800DDEB0[player->characterId]);
         }
     } else if (((temp & 0x400) == 0x400) || ((temp & 0x01000000) == 0x01000000) ||
                ((temp & 0x02000000) == 0x02000000) || ((temp & 0x10000) == 0x10000)) {
-       // dma_copy(&
        gEncodedKartTexture[arg4][arg3][arg1].unk_00 = 
                 gKartTextureTumbles[player->characterId]
                     [player->unk_0A8 >> 8];
-//                0x900);
     } else {
-        //dma_copy(&
         gEncodedKartTexture[arg4][arg3][arg1].unk_00 = 
                 gKartTextureTable0[player->characterId]
                     [player->animGroupSelector[arg2]]
                     [player->animFrameSelector[arg2]];
-//                D_800DDEB0[player->characterId]);
     }
 }
 

@@ -3312,6 +3312,7 @@ Gfx* func_80098558(Gfx* displayListHead, u32 arg1, u32 arg2, u32 arg3, u32 arg4,
     }
     return displayListHead;
 }
+void sincoss(u16 arg0, f32 *s, f32 *c);
 
 Gfx* func_800987D0(Gfx* displayListHead, u32 arg1, u32 arg2, u32 width, u32 height, s32 column, s32 row,
                    UNUSED u8* arg7, u32 textureWidth, UNUSED s32 textureHeight) {
@@ -3328,8 +3329,11 @@ Gfx* func_800987D0(Gfx* displayListHead, u32 arg1, u32 arg2, u32 width, u32 heig
     if (D_8018E7B8[0] == 0) {
         D_8018E7B8[0] = 1;
     }
-    temp_f24 = sins(((D_8018E7D0[0] * 0x4E20) / D_8018E7B8[0]) % 20000U);
-    temp_f0 = coss(((D_8018E7D0[0] * 0x4E20) / D_8018E7B8[0]) % 20000U);
+    u16 trigarg = ((D_8018E7D0[0] * 0x4E20) / D_8018E7B8[0]) % 20000U;
+    sincoss(trigarg, &temp_f24, &temp_f0);
+//    temp_f24 = sins();
+//    temp_f0 = coss(((D_8018E7D0[0] * 0x4E20) / D_8018E7B8[0]) % 20000U);
+
     temp_f18 = (((f32) D_8018E7D0[0] * 0.5) / D_8018E7B8[0]) + 1.0;
     columnCopy = column;
     for (var_v0_2 = arg2; (u32) var_v0_2 < height; var_v0_2 += 0x20) {

@@ -23,6 +23,17 @@
 #include <assets/common_data.h>
 #include "skybox_and_splitscreen.h"
 #include "spawn_players.h"
+void sincoss(u16 arg0, f32 *s, f32 *c);
+static inline void scaled_sincoss(u16 arg0, f32 *s, f32 *c, f32 scale) {
+    float farg0 = (float)arg0 * 0.00009587f;
+    f32 sf,cf;
+    sf = sinf(farg0);
+    cf = cosf(farg0);
+    sf *= scale;
+    cf *= scale;
+    *s = sf;//sinf(farg0) * scale;
+    *c = cf;//cosf(farg0) * scale;
+}
 
 s8 gRenderingFramebufferByPlayer[] = { 0x00, 0x02, 0x00, 0x01, 0x00, 0x01, 0x00, 0x02 };
 
@@ -122,12 +133,27 @@ u16 check_player_camera_collision(Player* player, Camera* camera, f32 arg2, f32 
             var_v0 = 0x1FFE;
             break;
     }
-    sp4C = (arg2 * coss((camera->rot[1] - var_v0))) + camera->pos[2];
-    sp58 = (arg2 * sins((camera->rot[1] - var_v0))) + camera->pos[0];
-    sp48 = (arg2 * coss((camera->rot[1] + var_v0))) + camera->pos[2];
-    sp54 = (arg2 * sins((camera->rot[1] + var_v0))) + camera->pos[0];
-    sp44 = (arg3 * coss((camera->rot[1] + 0x5FFA))) + camera->pos[2];
-    sp50 = (arg3 * sins((camera->rot[1] + 0x5FFA))) + camera->pos[0];
+    f32 trigarg0 = camera->rot[1] - var_v0;
+    f32 trigarg1 = camera->rot[1] + var_v0;
+    f32 trigarg2 = camera->rot[1] + 0x5FFA;
+
+    scaled_sincoss(trigarg2, &sp50, &sp44, arg2);
+    scaled_sincoss(trigarg1, &sp54, &sp48, arg2);
+    scaled_sincoss(trigarg0, &sp58, &sp4C, arg2);
+
+    sp4C += camera->pos[2];// = (arg2 * sp4C) + camera->pos[2];//(arg2 * coss((camera->rot[1] - var_v0))) + camera->pos[2];
+    sp58 += camera->pos[0];// = (arg2 * sp58) + camera->pos[0];//(arg2 * sins((camera->rot[1] - var_v0))) + camera->pos[0];
+//    sp48 = (arg2 * coss((camera->rot[1] + var_v0))) + camera->pos[2];
+//    sp54 = (arg2 * sins((camera->rot[1] + var_v0))) + camera->pos[0];
+//    sp44 = (arg3 * coss((camera->rot[1] + 0x5FFA))) + camera->pos[2];
+//    sp50 = (arg3 * sins((camera->rot[1] + 0x5FFA))) + camera->pos[0];
+
+    sp48 += camera->pos[2];// = (arg2 * sp48) + camera->pos[2];
+    sp54 += camera->pos[0];// = (arg2 * sp54) + camera->pos[0];
+
+    sp44 += camera->pos[2];// = (arg2 * sp44) + camera->pos[2];
+    sp50 += camera->pos[0];// = (arg2 * sp50) + camera->pos[0];
+
 
     sp64 = ((sp4C - player->pos[2]) * (sp54 - player->pos[0])) - ((sp48 - player->pos[2]) * (sp58 - player->pos[0]));
     sp60 = ((sp48 - player->pos[2]) * (sp50 - player->pos[0])) - ((sp44 - player->pos[2]) * (sp54 - player->pos[0]));
@@ -153,12 +179,20 @@ u16 xz_in_triangle(Player* player, f32 posX, UNUSED f32 arg2, f32 posZ) {
 
     ret = 0;
 
-    sp58 = (70.0f * coss(((player->unk_0C0 - player->rotation[1]) - 0x71C))) + player->pos[2];
-    sp64 = (70.0f * sins(((player->unk_0C0 - player->rotation[1]) - 0x71C))) + player->pos[0];
-    sp54 = (70.0f * coss(((player->unk_0C0 - player->rotation[1]) + 0x71C))) + player->pos[2];
-    sp60 = (70.0f * sins(((player->unk_0C0 - player->rotation[1]) + 0x71C))) + player->pos[0];
-    sp50 = (10.0f * coss(((player->unk_0C0 - player->rotation[1]) + 0x1C70))) + player->pos[2];
-    sp5c = (10.0f * sins(((player->unk_0C0 - player->rotation[1]) + 0x1C70))) + player->pos[0];
+    f32 trigarg0 = (player->unk_0C0 - player->rotation[1]) - 0x71C;
+    f32 trigarg1 = (player->unk_0C0 - player->rotation[1]) + 0x71C;
+    f32 trigarg2 = (player->unk_0C0 - player->rotation[1]) + 0x1C70;
+
+    scaled_sincoss(trigarg2, &sp5c, &sp50, 10.0f);
+    scaled_sincoss(trigarg1, &sp60, &sp54, 70.0f);
+    scaled_sincoss(trigarg0, &sp64, &sp58, 70.0f);
+ 
+    sp58 += player->pos[2];// = (70.0f * sp58) + player->pos[2];
+    sp64 += player->pos[0];// = (70.0f * sp64) + player->pos[0];
+    sp54 += player->pos[2];// = (70.0f * sp54) + player->pos[2];
+    sp60 += player->pos[0];// = (70.0f * sp60) + player->pos[0];
+    sp50 += player->pos[2];// = (10.0f * sp50) + player->pos[2];
+    sp5c += player->pos[0];// = (10.0f * sp5c) + player->pos[0];
 
     temp_f14 = ((sp58 - posZ) * (sp60 - posX)) - ((sp54 - posZ) * (sp64 - posX));
     thing0 = ((sp54 - posZ) * (sp5c - posX)) - ((sp50 - posZ) * (sp60 - posX));
@@ -1019,13 +1053,21 @@ void func_80021DA8(void) {
 }
 
 void mtxf_translate_rotate(Mat4 dest, Vec3f pos, Vec3s orientation) {
-    UNUSED f32 pad[3];
-    f32 sinX = sins(orientation[0]);
-    f32 cosX = coss(orientation[0]);
-    f32 sinY = sins(orientation[1]);
-    f32 cosY = coss(orientation[1]);
-    f32 sinZ = sins(orientation[2]);
-    f32 cosZ = coss(orientation[2]);
+    f32 sinX;// = sins(orientation[0]);
+    f32 cosX;// = coss(orientation[0]);
+    f32 sinY;// = sins(orientation[1]);
+    f32 cosY;// = coss(orientation[1]);
+    f32 sinZ;// = sins(orientation[2]);
+    f32 cosZ;// = coss(orientation[2]);
+
+    sincoss(orientation[2], &sinZ, &cosZ);
+    sincoss(orientation[1], &sinY, &cosY);
+    sincoss(orientation[0], &sinX, &cosX);
+
+    dest[0][3] = 0.0f;
+    dest[1][3] = 0.0f;
+    dest[2][3] = 0.0f;
+    dest[3][3] = 1.0f;
 
     dest[0][0] = (cosY * cosZ) + ((sinX * sinY) * sinZ);
     dest[1][0] = (-cosY * sinZ) + ((sinX * sinY) * cosZ);
@@ -1039,10 +1081,6 @@ void mtxf_translate_rotate(Mat4 dest, Vec3f pos, Vec3s orientation) {
     dest[1][2] = (sinY * sinZ) + ((sinX * cosY) * cosZ);
     dest[2][2] = cosX * cosY;
     dest[3][2] = pos[2];
-    dest[0][3] = 0.0f;
-    dest[1][3] = 0.0f;
-    dest[2][3] = 0.0f;
-    dest[3][3] = 1.0f;
 }
 
 UNUSED void func_80021F50(Mat4 arg0, Vec3f arg1) {
@@ -1071,7 +1109,8 @@ void mtxf_scale2(Mat4 arg0, f32 scale) {
  * The first sixteen entries contain only the integer parts and the second sixteen entries hold only the decimal
  * (fractional) parts.
  */
-UNUSED void failed_fixed_point_matrix_conversion(Mtx* dest, Mat4 src) {
+#if 0
+ UNUSED void failed_fixed_point_matrix_conversion(Mtx* dest, Mat4 src) {
     f32 toFixed = 65536.0f;
     dest->m[0][0] = src[0][0] * toFixed;
     dest->m[0][1] = src[0][1] * toFixed;
@@ -1090,6 +1129,7 @@ UNUSED void failed_fixed_point_matrix_conversion(Mtx* dest, Mat4 src) {
     dest->m[3][2] = src[3][2] * toFixed;
     dest->m[3][3] = src[3][3] * toFixed;
 }
+#endif
 
 /**
  * Takes a floating-point matrix and converts it to an s15.16 internal matrix.
@@ -1183,10 +1223,12 @@ void move_s32_towards(s32* startingValue, s32 targetValue, f32 somePercent) {
   * in a small range around it. Why they only do this for 0 is anyone's guess though
 **/
 void move_f32_towards(f32* startingValue, f32 targetValue, f32 somePercent) {
-    *startingValue -= ((*startingValue - targetValue) * somePercent);
-    if ((*startingValue < 0.001) && (-0.001 < *startingValue)) {
-        *startingValue = 0.0f;
+    f32 sv = *startingValue;
+    sv -= ((sv - targetValue) * somePercent);
+    if ((sv < 0.001) && (-0.001 < sv)) {
+        sv = 0.0f;
     }
+    *startingValue = sv;
 }
 
 void move_s16_towards(s16* startingValue, s16 targetValue, f32 somePercent) {
@@ -1630,7 +1672,7 @@ Gfx kart_common_square_plain_render[] = {
 
 void render_player_shadow(Player* player, s8 playerId, s8 screenId) {
     Mat4 sp118;
-    UNUSED Mat4 pad;
+//    UNUSED Mat4 pad;
     Vec3f spCC;
     Vec3s spC4;
     s16 temp_t9;
@@ -1638,14 +1680,18 @@ void render_player_shadow(Player* player, s8 playerId, s8 screenId) {
     Vec3f spB4;
     f32 spB0;
     f32 spAC;
-    UNUSED Vec3f pad2;
+//    UNUSED Vec3f pad2;
     f32 var_f2;
+    f32 ts1,tc1;
 
     temp_t9 = (u16) (player->unk_048[screenId] + player->rotation[1] + player->unk_0C0) / 128; // << 7) & 0xFFFF;
     spC0 = -player->rotation[1] - player->unk_0C0;
 
-    spB0 = -coss(temp_t9 << 7) * 2;
-    spAC = -sins(temp_t9 << 7) * 2;
+//    spB0 = -coss(temp_t9 << 7) * 2;
+//    spAC = -sins(temp_t9 << 7) * 2;
+    scaled_sincoss((temp_t9 << 7), &spAC, &spB0, -2.0f);
+
+    sincoss(spC0, &ts1, &tc1);
 
     if (((player->effects & UNKNOWN_EFFECT_0x1000000) == UNKNOWN_EFFECT_0x1000000) ||
         ((player->effects & 0x400) == 0x400) || ((player->effects & 0x80000) == 0x80000) ||
@@ -1653,7 +1699,7 @@ void render_player_shadow(Player* player, s8 playerId, s8 screenId) {
         ((player->unk_0CA & 2) == 2) || ((player->effects & HIT_BY_ITEM_EFFECT) == HIT_BY_ITEM_EFFECT) ||
         ((player->effects & UNKNOWN_EFFECT_0x10000) == UNKNOWN_EFFECT_0x10000) || ((player->effects & 8) == 8)) {
 
-        var_f2 = (f32) (1.0 - ((f64) player->collision.surfaceDistance[2] * 0.02));
+        var_f2 = (f32) (1.0f - ((f64) player->collision.surfaceDistance[2] * 0.02f));
         if (var_f2 < 0.0f) {
             var_f2 = 0.0f;
         }
@@ -1664,9 +1710,11 @@ void render_player_shadow(Player* player, s8 playerId, s8 screenId) {
         spB4[2] = player->collision.orientationVector[2];
         spB4[1] = player->collision.orientationVector[1];
 
-        spCC[0] = player->pos[0] + ((spB0 * sins(spC0)) + (spAC * coss(spC0)));
+
+
+        spCC[0] = player->pos[0] + ((spB0 * ts1) + (spAC * tc1));
         spCC[1] = player->unk_074 + 1.0f;
-        spCC[2] = player->pos[2] + ((spB0 * coss(spC0)) - (spAC * sins(spC0)));
+        spCC[2] = player->pos[2] + ((spB0 * tc1) - (spAC * ts1));
         set_transform_matrix(sp118, spB4, spCC, (spC0 + player->unk_042),
                              gCharacterSize[player->characterId] * player->size * var_f2);
     } else {
@@ -1674,9 +1722,9 @@ void render_player_shadow(Player* player, s8 playerId, s8 screenId) {
         spC4[1] = spC0;
         spC4[2] = player->unk_206 * 2;
 
-        spCC[0] = player->pos[0] + ((spB0 * sins(spC0)) + (spAC * coss(spC0)));
+        spCC[0] = player->pos[0] + ((spB0 * ts1) + (spAC * tc1));
         spCC[1] = player->unk_074 + 1.0f;
-        spCC[2] = player->pos[2] + ((spB0 * coss(spC0)) - (spAC * sins(spC0)));
+        spCC[2] = player->pos[2] + ((spB0 * tc1) - (spAC * ts1));
         mtxf_translate_rotate(sp118, spCC, spC4);
         mtxf_scale2(sp118, gCharacterSize[player->characterId] * player->size);
     }
@@ -1707,29 +1755,35 @@ void render_player_shadow(Player* player, s8 playerId, s8 screenId) {
 
 void render_player_shadow_credits(Player* player, s8 playerId, s8 arg2) {
     Mat4 sp118;
-    UNUSED Mat4 pad;
+//    UNUSED Mat4 pad;
     Vec3f spCC;
     Vec3s spC4;
     s16 temp_t9;
     s16 spC0;
-    UNUSED Vec3f pad2;
+//    UNUSED Vec3f pad2;
     f32 spB0;
     f32 spAC;
-    UNUSED Vec3f pad3;
+//    UNUSED Vec3f pad3;
+    f32 ts1,tc1;
     Vec3f sp94 = { 9.0f, 7.0f, 5.0f };
 
     temp_t9 = (u16) (player->unk_048[arg2] + player->rotation[1] + player->unk_0C0) / 128;
     spC0 = -player->rotation[1] - player->unk_0C0;
 
-    spB0 = -coss(temp_t9 << 7) * 3;
-    spAC = -sins(temp_t9 << 7) * 3;
+//    spB0 = -coss(temp_t9 << 7) * 3;
+//    spAC = -sins(temp_t9 << 7) * 3;
+    sincoss((temp_t9 << 7), &spAC, &spB0);
+    spB0 = -spB0 * 2.0f;
+    spAC = -spAC * 2.0f;
+
+    sincoss(spC0, &ts1, &tc1);
 
     spC4[0] = 0;
     spC4[1] = spC0;
     spC4[2] = 0;
 
-    spCC[0] = player->pos[0] + ((spB0 * sins(spC0)) + (spAC * coss(spC0)));
-    spCC[2] = player->pos[2] + ((spB0 * coss(spC0)) - (spAC * sins(spC0)));
+    spCC[0] = player->pos[0] + ((spB0 * ts1) + (spAC * tc1));
+    spCC[2] = player->pos[2] + ((spB0 * tc1) - (spAC * ts1));
     spCC[1] = gObjectList[indexObjectList1[playerId]].pos[1] + sp94[playerId];
 
     mtxf_translate_rotate(sp118, spCC, spC4);
@@ -1776,7 +1830,7 @@ void render_kart(Player* player, s8 playerId, s8 screenId, s8 arg3) {
         orientation[1] = player->unk_048[screenId];
         orientation[2] = 0;
         composite_rotation(&x, &y, &z, 0.0f, 1.5f, 0.0f, -player->unk_048[screenId], player->unk_050[screenId]);
-        result_pos[1] = (player->pos[1] - player->boundingBoxSize) + (y - 2.0);
+        result_pos[1] = (player->pos[1] - player->boundingBoxSize) + (y - 2.0f);
         result_pos[0] = player->pos[0] + x;
         result_pos[2] = player->pos[2] + z;
     } else {
@@ -1785,7 +1839,7 @@ void render_kart(Player* player, s8 playerId, s8 screenId, s8 arg3) {
         if ((player->effects & 8) == 8) {
             orientation[0] = cameras[screenId].rot[0] - 0x4000;
         } else {
-            orientation[0] = -temp_v1 * 0.8;
+            orientation[0] = -temp_v1 * 0.8f;
         }
         orientation[1] = player->unk_048[screenId];
         orientation[2] = player->unk_050[screenId];
@@ -1889,19 +1943,21 @@ void render_ghost(Player* player, s8 playerId, s8 screenId, s8 arg3) {
     f32 spCC;
     f32 spC8;
     s16 spC2;
-    s16 thing;
+//    s16 thing;
 
     if (D_8015F890 == 1) {
         spC2 = 0x00FF;
     } else {
         spC2 = 0x0070;
     }
-    thing = (u16) (player->unk_048[screenId] - player->rotation[1]);
-    spD4[0] = (-(s16) (sins(thing) * (0.0f * 0.0f)) * 0.8);
+    // fucking stupid sin(thing) TIMES ZERO IS ZERO
+//    thing = (u16) (player->unk_048[screenId] - player->rotation[1]);
+//    spD4[0] = (-(s16) (sins(thing) * (0.0f * 0.0f)) * 0.8);
+    spD4[0] = 0.0f;
     spD4[1] = player->unk_048[screenId];
     spD4[2] = player->unk_050[screenId];
-    composite_rotation(&spD0, &spCC, &spC8, 0, 1.5f, 0, -player->unk_048[screenId], player->unk_050[screenId]);
-    spDC[1] = (player->pos[1] - player->boundingBoxSize) + (spCC - 2.0);
+    composite_rotation(&spD0, &spCC, &spC8, 0.0f, 1.5f, 0.0f, -player->unk_048[screenId], player->unk_050[screenId]);
+    spDC[1] = (player->pos[1] - player->boundingBoxSize) + (spCC - 2.0f);
     spDC[0] = player->pos[0] + spD0;
     spDC[2] = player->pos[2] + spC8;
 
@@ -1948,9 +2004,12 @@ void render_boosted_kart(Player* player, s8 playerId, s8 screenId, s8 arg3) {
     Vec3f sp9C;
     Vec3s sp94;
 
-    sp9C[0] = player->pos[0] + (sins(-player->rotation[1]) * -1.5);
+    float ts1,tc1;
+    scaled_sincoss(-player->rotation[1], &ts1, &tc1, -1.5f);
+
+    sp9C[0] = player->pos[0] + (ts1);
     sp9C[1] = ((player->pos[1] - player->boundingBoxSize) + player->unk_108) + 0.1;
-    sp9C[2] = player->pos[2] + (coss(-player->rotation[1]) * -1.5);
+    sp9C[2] = player->pos[2] + (tc1);
     sp94[0] = -0x00B6;
     sp94[1] = player->unk_048[screenId];
     sp94[2] = player->unk_050[screenId];
@@ -2073,11 +2132,11 @@ void func_80026A48(Player* player, s8 arg1) {
         return;
     }
 
-    temp_f0 = ((player->speed * (1.0f + player->unk_104)) / 18.0f) * 216.0f;
+    temp_f0 = ((player->speed * (1.0f + player->unk_104)) * 12.0f);// / 18.0f) * 216.0f;
     if ((temp_f0 <= 1.0f) || (gIsPlayerTripleBButtonCombo[arg1] == 1)) {
         player->unk_240 = 0;
     } else {
-        player->unk_240 += D_800DDE74[(s32) (temp_f0 / 12.0f)];
+        player->unk_240 += D_800DDE74[(s32) (temp_f0 * 0.08333333f)];// / 12.0f)];
     }
     if (player->unk_240 >= 0x400) {
         player->unk_240 = 0;

@@ -1374,6 +1374,12 @@ f32 sins(u16 arg0) {
 #endif
 }
 
+void sincoss(u16 arg0, f32 *s, f32 *c) {
+    float farg0 = (float)arg0 * TRIG_ARG_SCALE;
+    *s = sinf(farg0);
+    *c = cosf(farg0);
+}
+
 f32 coss(u16 arg0) {
 #if 0
     return gCosineTable[arg0 >> 4];

@@ -124,7 +124,7 @@ static void gfx_dc_swap_buffers_end(void) {
     const unsigned int cur_time = GetSystemTimeLow();
     const unsigned int elapsed = cur_time - last_time;
     last_time = cur_time;
-#if 1
+
     if (force_30fps && elapsed < FRAME_TIME_MS) {
 #ifdef DEBUG
         printf("elapsed %d ms fps %f delay %d \n", elapsed, 1000.0f / elapsed, FRAME_TIME_MS - elapsed);
@@ -132,7 +132,7 @@ static void gfx_dc_swap_buffers_end(void) {
         DelayThread(FRAME_TIME_MS - elapsed);
         last_time += (FRAME_TIME_MS - elapsed);
     }
-#endif
+
     /* Lets us yield to other threads*/
     glKosSwapBuffers();
 }

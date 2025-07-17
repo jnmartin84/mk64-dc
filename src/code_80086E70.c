@@ -17,6 +17,18 @@
 #include "code_80057C60.h"
 #include "defines.h"
 
+void sincoss(u16 arg0, f32 *s, f32 *c);
+static inline void scaled_sincoss(u16 arg0, f32 *s, f32 *c, f32 scale) {
+    float farg0 = (float)arg0 * 0.00009587f;
+    f32 sf,cf;
+    sf = sinf(farg0);
+    cf = cosf(farg0);
+    sf *= scale;
+    cf *= scale;
+    *s = sf;//sinf(farg0) * scale;
+    *c = cf;//cosf(farg0) * scale;
+}
+
 void func_80086E70(s32 objectIndex) {
     gObjectList[objectIndex].unk_0AE = 1; // * 0xE0)) = 1;
     set_object_flag_status_false(objectIndex, 8);
@@ -134,14 +146,16 @@ s32 get_y_direction_angle(s32 objectIndex) {
     return atan2s(gObjectList[objectIndex].velocity[0], gObjectList[objectIndex].velocity[2]);
 }
 
-UNUSED void func_800873A4(s32 objectIndex) {
-    gObjectList[objectIndex].direction_angle[0] =
-        func_800417B4(gObjectList[objectIndex].direction_angle[0], get_x_direction_angle(objectIndex));
-}
 
 void func_800873F4(s32 objectIndex) {
     gObjectList[objectIndex].direction_angle[1] =
         func_800417B4(gObjectList[objectIndex].direction_angle[1], get_y_direction_angle(objectIndex));
+}
+
+#if 0
+UNUSED void func_800873A4(s32 objectIndex) {
+    gObjectList[objectIndex].direction_angle[0] =
+        func_800417B4(gObjectList[objectIndex].direction_angle[0], get_x_direction_angle(objectIndex));
 }
 
 UNUSED void func_80087444(s32 objectIndex) {
@@ -158,39 +172,52 @@ UNUSED void func_800874D4(s32 objectIndex) {
     gObjectList[objectIndex].velocity[2] =
         gObjectList[objectIndex].unk_034 * coss(gObjectList[objectIndex].direction_angle[1]);
 }
+        #endif
 
 void func_8008751C(s32 objectIndex) {
-    gObjectList[objectIndex].velocity[0] =
-        gObjectList[objectIndex].unk_034 * sins(gObjectList[objectIndex].direction_angle[1]);
-    gObjectList[objectIndex].velocity[2] =
-        gObjectList[objectIndex].unk_034 * coss(gObjectList[objectIndex].direction_angle[1]);
+    float ts1,tc1;
+    scaled_sincoss(gObjectList[objectIndex].direction_angle[1],&ts1,&tc1,gObjectList[objectIndex].unk_034);
+    gObjectList[objectIndex].velocity[0] = ts1;
+//        gObjectList[objectIndex].unk_034 * sins(gObjectList[objectIndex].direction_angle[1]);
+    gObjectList[objectIndex].velocity[2] = tc1;
+//        gObjectList[objectIndex].unk_034 * coss(gObjectList[objectIndex].direction_angle[1]);
 }
 
 void func_8008757C(s32 objectIndex) {
     f32 sp24;
+    float ts1,tc1;
+    float ts2,tc2;
 
-    sp24 = coss(gObjectList[objectIndex].direction_angle[0]);
+    sincoss(gObjectList[objectIndex].direction_angle[0], &ts1, &tc1);
+    sincoss(gObjectList[objectIndex].direction_angle[1], &ts2, &tc2);
+
+    sp24 = tc1;//coss(gObjectList[objectIndex].direction_angle[0]);
     gObjectList[objectIndex].velocity[0] =
-        (gObjectList[objectIndex].unk_034 * sp24) * sins(gObjectList[objectIndex].direction_angle[1]);
+        (gObjectList[objectIndex].unk_034 * sp24) * ts2;//sins(gObjectList[objectIndex].direction_angle[1]);
     gObjectList[objectIndex].velocity[1] =
-        -gObjectList[objectIndex].unk_034 * sins(gObjectList[objectIndex].direction_angle[0]);
-    sp24 = coss(gObjectList[objectIndex].direction_angle[0]);
+        -gObjectList[objectIndex].unk_034 * ts1;//sins(gObjectList[objectIndex].direction_angle[0]);
+    sp24 = tc1;//coss(gObjectList[objectIndex].direction_angle[0]);
     gObjectList[objectIndex].velocity[2] =
-        (gObjectList[objectIndex].unk_034 * sp24) * coss(gObjectList[objectIndex].direction_angle[1]);
+        (gObjectList[objectIndex].unk_034 * sp24) * tc2;//coss(gObjectList[objectIndex].direction_angle[1]);
 }
 
 void func_80087620(s32 objectIndex) {
-    gObjectList[objectIndex].velocity[0] =
-        gObjectList[objectIndex].unk_034 * sins(gObjectList[objectIndex].direction_angle[1] + 0x8000);
-    gObjectList[objectIndex].velocity[2] =
-        gObjectList[objectIndex].unk_034 * coss(gObjectList[objectIndex].direction_angle[1] + 0x8000);
+    float ts1,tc1;
+    scaled_sincoss(gObjectList[objectIndex].direction_angle[1] + 0x8000,&ts1,&tc1,gObjectList[objectIndex].unk_034);
+    gObjectList[objectIndex].velocity[0] = ts1;
+//        gObjectList[objectIndex].unk_034 * sins(gObjectList[objectIndex].direction_angle[1] + 0x8000);
+    gObjectList[objectIndex].velocity[2] = tc1;
+//        gObjectList[objectIndex].unk_034 * coss(gObjectList[objectIndex].direction_angle[1] + 0x8000);
 }
 
 void func_800876A0(s32 objectIndex) {
-    gObjectList[objectIndex].offset[0] +=
-        gObjectList[objectIndex].unk_034 * sins(gObjectList[objectIndex].direction_angle[1]);
-    gObjectList[objectIndex].offset[2] +=
-        gObjectList[objectIndex].unk_034 * coss(gObjectList[objectIndex].direction_angle[1]);
+    float ts1,tc1;
+    scaled_sincoss(gObjectList[objectIndex].direction_angle[1],&ts1,&tc1,gObjectList[objectIndex].unk_034);
+
+    gObjectList[objectIndex].offset[0] += ts1;
+//        gObjectList[objectIndex].unk_034 * sins(gObjectList[objectIndex].direction_angle[1]);
+    gObjectList[objectIndex].offset[2] += tc1;
+//        gObjectList[objectIndex].unk_034 * coss(gObjectList[objectIndex].direction_angle[1]);
 }
 
 void object_add_velocity_offset_xyz(s32 objectIndex) {
@@ -410,12 +437,14 @@ UNUSED s32 func_80087F14(s32 objectIndex, f32 arg1, f32 arg2, f32 arg3, s16 arg4
 void func_80088038(s32 objectIndex, f32 arg1, u16 arg2) {
     f32 temp_f4;
     f32 sp20;
+    float ts1,tc1;
+    scaled_sincoss(gObjectList[objectIndex].unk_0C4,&ts1,&tc1,arg1);
 
     temp_f4 = gObjectList[objectIndex].offset[0];
     sp20 = gObjectList[objectIndex].offset[2];
     gObjectList[objectIndex].unk_0C4 += arg2;
-    gObjectList[objectIndex].offset[0] = sins(gObjectList[objectIndex].unk_0C4) * arg1;
-    gObjectList[objectIndex].offset[2] = coss(gObjectList[objectIndex].unk_0C4) * arg1;
+    gObjectList[objectIndex].offset[0] = ts1;//sins(gObjectList[objectIndex].unk_0C4) * arg1;
+    gObjectList[objectIndex].offset[2] = tc1;//coss(gObjectList[objectIndex].unk_0C4) * arg1;
     gObjectList[objectIndex].velocity[0] = gObjectList[objectIndex].offset[0] - temp_f4;
     gObjectList[objectIndex].velocity[2] = gObjectList[objectIndex].offset[2] - sp20;
 }
@@ -1939,8 +1968,10 @@ void object_origin_pos_randomize_around_xyz(s32 objectIndex, s16 x, s16 y, s16 z
 }
 
 void object_origin_pos_around_player_one(s32 objectIndex, s16 dist, u16 angle) {
-    gObjectList[objectIndex].origin_pos[0] = gPlayerOneCopy->pos[0] + (sins(angle) * dist);
-    gObjectList[objectIndex].origin_pos[2] = gPlayerOneCopy->pos[2] + (coss(angle) * dist);
+    float ts1,tc1;
+    scaled_sincoss(angle,&ts1,&tc1,dist);
+    gObjectList[objectIndex].origin_pos[0] = gPlayerOneCopy->pos[0] + ts1;//(sins(angle) * dist);
+    gObjectList[objectIndex].origin_pos[2] = gPlayerOneCopy->pos[2] + tc1;//(coss(angle) * dist);
 }
 
 UNUSED void func_8008BEA4(s32 objectIndex, u16 arg1, u16 arg2) {

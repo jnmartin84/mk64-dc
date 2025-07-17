@@ -165,12 +165,17 @@ void move_segment_table_to_dmem(void) {
 void n64_memcpy(void* dst, const void* src, size_t size) {
     uint8_t* bdst = (uint8_t*) dst;
     uint8_t* bsrc = (uint8_t*) src;
+    uint16_t *sdst = (uint16_t *)dst;
+    uint16_t *ssrc = (uint16_t *)src;
     uint32_t* wdst = (uint32_t*) dst;
     uint32_t* wsrc = (uint32_t*) src;
 
     int size_to_copy = size;
     int words_to_copy = size_to_copy >> 2;
-    int bytes_to_copy = size_to_copy - (words_to_copy << 2);
+    int shorts_to_copy = size_to_copy >> 1;
+    int bytes_to_copy = size_to_copy - (words_to_copy<<2);
+    int sbytes_to_copy = size_to_copy - (shorts_to_copy<<1);
+
     __builtin_prefetch(bsrc);
     if ((!((uintptr_t) bdst & 3)) && (!((uintptr_t) bsrc & 3))) {
         while (words_to_copy--) {
@@ -183,12 +188,6 @@ void n64_memcpy(void* dst, const void* src, size_t size) {
         bdst = (uint8_t*) wdst;
         bsrc = (uint8_t*) wsrc;
 
-#if 0
-        while (bytes_to_copy--)
-        {
-            *bdst++ = *bsrc++;
-        }
-#else
         switch (bytes_to_copy) {
             case 0:
                 return;
@@ -207,7 +206,34 @@ void n64_memcpy(void* dst, const void* src, size_t size) {
             case 7:
                 goto n64copy7;
         }
-#endif
+
+        return;
+    } else if ((!((uintptr_t) bdst & 1)) && (!((uintptr_t) bsrc & 1))) {
+        while (shorts_to_copy--) {
+            *sdst++ = *ssrc++;
+        }
+
+        bdst = (uint8_t*) sdst;
+        bsrc = (uint8_t*) ssrc;
+
+        switch (sbytes_to_copy) {
+            case 0:
+                return;
+            case 1:
+                goto n64copy1;
+            case 2:
+                goto n64copy2;
+            case 3:
+                goto n64copy3;
+            case 4:
+                goto n64copy4;
+            case 5:
+                goto n64copy5;
+            case 6:
+                goto n64copy6;
+            case 7:
+                goto n64copy7;
+        }
         return;
     } else {
         while (words_to_copy > 0) {
@@ -227,12 +253,6 @@ void n64_memcpy(void* dst, const void* src, size_t size) {
             words_to_copy--;
         }
 
-#if 0
-        while (bytes_to_copy--)
-        {
-            *bdst++ = *bsrc++;
-        }
-#else
         switch (bytes_to_copy) {
             case 0:
                 return;
@@ -251,7 +271,6 @@ void n64_memcpy(void* dst, const void* src, size_t size) {
             case 7:
                 goto n64copy7;
         }
-#endif
         return;
     }
 
@@ -275,30 +294,36 @@ n64copy1:
 void n64_memset(void *dst, uint8_t val, size_t size)
 {
     uint8_t *bdst = (uint8_t *)dst;
+    uint16_t *sdst = (uint16_t *)dst;
     uint32_t *wdst = (uint32_t *)dst;
 
     int size_to_copy = size;
     int words_to_copy = size_to_copy >> 2;
+    int shorts_to_copy = size_to_copy >> 1;
     int bytes_to_copy = size_to_copy - (words_to_copy<<2);
+    int sbytes_to_copy = size_to_copy - (shorts_to_copy<<1);
 
-    if ((!((uintptr_t)bdst&3)))
-    {
-        while (words_to_copy--)
-        {
+    if ((!((uintptr_t)bdst&3))) {
+        while (words_to_copy--) {
             *wdst++ = 0;
         }
 
         bdst = (uint8_t *)wdst;
 
-        while (bytes_to_copy--)
-        {
+        while (bytes_to_copy--) {
             *bdst++ = 0;
         }
-    }
-    else
-    {
-        while (words_to_copy > 0)
-        {
+    } else if ((!((uintptr_t)sdst&1))) {
+        while (shorts_to_copy--) {
+            *sdst = 0;
+        }
+
+        bdst = (uint8_t *)sdst;
+        while (sbytes_to_copy--) {
+            *bdst++ = 0;
+        }
+    } else {
+        while (words_to_copy > 0) {
             *bdst++ = 0;
             *bdst++ = 0;
             *bdst++ = 0;
@@ -307,8 +332,7 @@ void n64_memset(void *dst, uint8_t val, size_t size)
             words_to_copy--;
         }
 
-        while(bytes_to_copy--)
-        {
+        while(bytes_to_copy--) {
             *bdst++ = 0;
         }
     }
