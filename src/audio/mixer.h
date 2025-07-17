@@ -73,6 +73,7 @@ void aDownsampleHalfImpl(uint16_t n_samples, uint16_t in_addr, uint16_t out_addr
 #define aSetBuffer(pkt, f, i, o, c) aSetBufferImpl(f, i, o, c)
 #define aInterleave(pkt, l, r) aInterleaveImpl(l, r)
 #define aDMEMMove(pkt, i, o, c) aDMEMMoveImpl(i, o, c)
+#define aDMEMCopy(pkt, i, o, c) aDMEMCopyImpl(i, o, c)
 #define aSetLoop(pkt, a) aSetLoopImpl(a)
 #define aADPCMdec(pkt, f, s) aADPCMdecImpl(f, s)
 #define aResample(pkt, f, p, s) aResampleImpl(f, p, s)

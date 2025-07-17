@@ -733,8 +733,10 @@ if ((state->buttons & CONT_START) && state->ltrig && state->rtrig) {
     //}
 
     if (state->buttons & CONT_START)
-        ucheld |= 0x1000;//START_BUTTON;
-    if (state->buttons & CONT_X)
+       ucheld |= 0x1000;//START_BUTTON;
+//       ucheld |= 0x0020;// 
+
+       if (state->buttons & CONT_X)
         ucheld |= 0x0001;//C_RIGHT
     if (state->buttons & CONT_Y)
         ucheld |= 0x0008;//C_UP

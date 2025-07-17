@@ -88,7 +88,7 @@ void calculate_track_offset_position(u16 pathPointIndex, f32 lerpFactor, f32 off
     UNUSED s32 pad2;
     f32 xdiff;
     f32 zdiff;
-    f32 rsegmentLength;
+    f32 segmentLength;
     UNUSED f32 temp_f12;
     UNUSED f32 temp_f2_2;
     UNUSED TrackPathPoint* path;
@@ -105,24 +105,19 @@ void calculate_track_offset_position(u16 pathPointIndex, f32 lerpFactor, f32 off
     // Calculate vector between path
     zdiff = pathPointTwoZ - pathPointOneZ;
     xdiff = pathPointTwoX - pathPointOneX;
-//    if (xdiff && xdiff) {}
-    if (xdiff == 0.0f && zdiff == 0.0f) {
-        gOffsetPosition[0] = pathPointTwoX;
-        gOffsetPosition[2] = pathPointTwoZ;
+    if (xdiff && xdiff) {}
 
-    } else {
-    rsegmentLength = 1.0f / sqrtf((xdiff * xdiff) + (zdiff * zdiff));
-    if (rsegmentLength > 100.0f) {
+    segmentLength = sqrtf((xdiff * xdiff) + (zdiff * zdiff));
+    if (segmentLength < 0.01f) {
         gOffsetPosition[0] = pathPointTwoX;
         gOffsetPosition[2] = pathPointTwoZ;
     } else {
         gOffsetPosition[0] =
-            ((0.5f - (lerpFactor * 0.5f)) * (((offsetDistance * zdiff) * rsegmentLength) + pathPointOneX)) +
-            ((1.0f - (0.5f - (lerpFactor * 0.5f))) * (((offsetDistance * -zdiff) * rsegmentLength) + pathPointOneX));
+            ((0.5f - (lerpFactor * 0.5f)) * (((offsetDistance * zdiff) / segmentLength) + pathPointOneX)) +
+            ((1.0f - (0.5f - (lerpFactor * 0.5f))) * (((offsetDistance * -zdiff) / segmentLength) + pathPointOneX));
         gOffsetPosition[2] =
-            ((0.5f - (lerpFactor * 0.5f)) * (((offsetDistance * -xdiff) * rsegmentLength) + pathPointOneZ)) +
-            ((1.0f - (0.5f - (lerpFactor * 0.5f))) * (((offsetDistance * xdiff) * rsegmentLength) + pathPointOneZ));
-    }
+            ((0.5f - (lerpFactor * 0.5f)) * (((offsetDistance * -xdiff) / segmentLength) + pathPointOneZ)) +
+            ((1.0f - (0.5f - (lerpFactor * 0.5f))) * (((offsetDistance * xdiff) / segmentLength) + pathPointOneZ));
     }
 }
 
@@ -168,17 +163,16 @@ void set_track_offset_position(u16 pathPointIndex, f32 trackOffset, s16 pathInde
     x4 = (f32) path2->posX;
     z4 = (f32) path2->posZ;
 
-    temp_f0 = 0.5f - (trackOffset * 0.5f);
+    temp_f0 = 0.5f - (trackOffset / 2.0f);
     temp_f12 = 1.0f - temp_f0;
-    gOffsetPosition[0] = ((temp_f0 * (x1 + x3)) * 0.5f) + ((temp_f12 * (x2 + x4)) * 0.5f);
-    gOffsetPosition[2] = ((temp_f0 * (z1 + z3)) * 0.5f) + ((temp_f12 * (z2 + z4)) * 0.5f);
+    gOffsetPosition[0] = ((temp_f0 * (x1 + x3)) / 2.0f) + ((temp_f12 * (x2 + x4)) / 2.0f);
+    gOffsetPosition[2] = ((temp_f0 * (z1 + z3)) / 2.0f) + ((temp_f12 * (z2 + z4)) / 2.0f);
 }
-#include <dc/vec3f.h>
+
 s16 func_8000BD94(f32 posX, f32 posY, f32 posZ, s32 pathIndex) {
     f32 x_dist;
     f32 y_dist;
     f32 z_dist;
-    vec3f_t vdist;
     f32 considerSquaredDistance;
     f32 minimumSquaredDistance;
     s32 considerPathPointIndex;
@@ -190,18 +184,17 @@ s16 func_8000BD94(f32 posX, f32 posY, f32 posZ, s32 pathIndex) {
     pathPathPoints = gTrackPaths[pathIndex];
     pathPathPointCount = gPathCountByPathIndex[pathIndex];
     considerPathPoint = &pathPathPoints[0];
-    vdist.x = (f32) considerPathPoint->posX - posX;
-    vdist.y = (f32) considerPathPoint->posY - posY;
-    vdist.z = (f32) considerPathPoint->posZ - posZ;
-    minimumSquaredDistance = vec_fipr(vdist);//(x_dist * x_dist) + (y_dist * y_dist) + (z_dist * z_dist);
+    x_dist = (f32) considerPathPoint->posX - posX;
+    y_dist = (f32) considerPathPoint->posY - posY;
+    z_dist = (f32) considerPathPoint->posZ - posZ;
+    minimumSquaredDistance = (x_dist * x_dist) + (y_dist * y_dist) + (z_dist * z_dist);
     nearestPathPointIndex = 0;
     for (considerPathPointIndex = 1; considerPathPointIndex < pathPathPointCount;
          considerPathPoint++, considerPathPointIndex++) {
-        vdist.x = (f32) considerPathPoint->posX - posX;
-        vdist.y = (f32) considerPathPoint->posY - posY;
-        vdist.z = (f32) considerPathPoint->posZ - posZ;
-        considerSquaredDistance = vec_fipr(vdist);//(x_dist * x_dist) + (y_dist * y_dist) + (z_dist * z_dist);
-//        considerSquaredDistance = (x_dist * x_dist) + (y_dist * y_dist) + (z_dist * z_dist);
+        x_dist = (f32) considerPathPoint->posX - posX;
+        y_dist = (f32) considerPathPoint->posY - posY;
+        z_dist = (f32) considerPathPoint->posZ - posZ;
+        considerSquaredDistance = (x_dist * x_dist) + (y_dist * y_dist) + (z_dist * z_dist);
         if (considerSquaredDistance < minimumSquaredDistance) {
             nearestPathPointIndex = considerPathPointIndex;
             minimumSquaredDistance = considerSquaredDistance;

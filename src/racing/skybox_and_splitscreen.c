@@ -136,9 +136,9 @@ void set_the_scissor(struct UnkStruct_800DC5EC* arg0) {
     }
     if (lry > SCREEN_HEIGHT) {
         lry = SCREEN_HEIGHT;
-    } else if (lry > 32) {
+    }/*  else if (lry > 32) {
         lry -= 32;
-    }
+    } */
 
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, ulx, uly, lrx, lry);
 }

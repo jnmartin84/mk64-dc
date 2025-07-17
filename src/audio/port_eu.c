@@ -8,16 +8,6 @@
 #include "audio/load.h"
 #include "audio/heap.h"
 #include "audio/data.h"
-static inline uint32_t Swap32(uint32_t val)
-{
-	return ((((val)&0xff000000) >> 24) | (((val)&0x00ff0000) >> 8) |
-		(((val)&0x0000ff00) << 8) | (((val)&0x000000ff) << 24));
-}
-
-static inline short SwapShort(short dat)
-{
-    return (((dat) & 0xff) << 8 | (((dat) >> 8) & 0xff));
-}
 
 s32 AosSendMesg( OSMesgQueue *mq,  OSMesg msg,  s32 flag);
 s32 AosRecvMesg( OSMesgQueue *mq,  OSMesg *msg,  s32 flag);

@@ -1340,8 +1340,6 @@ s32 func_80091D74(void) {
         return 0;
     }
 
-    return 0;
-#if 0
     osPfsIsPlug(&gSIEventMesgQueue, &sp67);
     if (sp67 & 1) {
         if (osPfsInit(&gSIEventMesgQueue, &gControllerPak1FileHandle, 0)) {
@@ -1364,7 +1362,6 @@ s32 func_80091D74(void) {
     }
     gControllerPak1NumPagesFree >>= 8;
     return 1;
-#endif
 }
 
 void func_80091EE4(void) {
@@ -5722,9 +5719,9 @@ void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
         case MENU_ITEM_TYPE_0BB:
             menuItem->param1 = func_800B5020(playerHUD[0].someTimer, gCharacterSelections[0]);
             menuItem->param2 = func_800B5218();
-            if (D_80162DD4 != 1) {
-                if (func_800051C4() > 0x3C00) {
-                    D_80162DD4 = 1;
+            if (bPlayerGhostDisabled != 1) {
+                if (compress_replay_ghost() > 0x3C00) {
+                    bPlayerGhostDisabled = 1;
                 }
             }
             if ((menuItem->param1 == 0) || (menuItem->param2 != 0)) {
@@ -7446,12 +7443,12 @@ void func_800A3E60(MenuItem* arg0) {
                 text_rainbow_effect(arg0->state - 5, var_s1, 1);
                 switch (var_s1) { /* switch 3; irregular */
                     case 4:       /* switch 3 */
-                        if (D_80162DF8 == 1) {
+                        if (gPostTimeTrialReplayCannotSave == 1) {
                             var_v1 = 1;
                         }
                         break;
                     case 5: /* switch 3 */
-                        if (D_80162DD4 != 0) {
+                        if (bPlayerGhostDisabled != 0) {
                             var_v1 = 2;
                         }
                         break;
@@ -9776,7 +9773,7 @@ void func_800AA2EC(MenuItem* arg0) {
 
             if (gControllerPak1State != 0) {
                 var_t1 = 0;
-#if 0
+#if 1
                 switch (osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName,
                                       (u8*) gExtCode, &gControllerPak1FileNote)) {
                     case 5:
@@ -9800,8 +9797,8 @@ void func_800AA2EC(MenuItem* arg0) {
                         arg0->state = 2;
                         break;
                     }
-                    temp_v0 = PFS_ERR_NOPACK;
-#if 0
+//                    temp_v0 = PFS_ERR_NOPACK;
+#if 1
                     temp_v0 = osPfsInit(&gSIEventMesgQueue, &gControllerPak1FileHandle, 0);
                     if (temp_v0 != 0) {
                         switch (temp_v0) {
@@ -11175,7 +11172,7 @@ void func_800AD2E8(MenuItem* arg0) {
                 arg0->param2 = 0;
                 arg0->column = 0;
                 arg0->state = gTimeTrialsResultCursorSelection;
-                if ((arg0->state == 9) && (D_80162DF8 == 1)) {
+                if ((arg0->state == 9) && (gPostTimeTrialReplayCannotSave == 1)) {
                     arg0->state--;
                 }
                 D_800DC5EC->screenStartX = 0x00F0;
@@ -11192,7 +11189,7 @@ void func_800AD2E8(MenuItem* arg0) {
                 if ((gControllerOne->buttonPressed | gControllerOne->stickPressed) & 0x800) {
                     if (arg0->state >= 6) {
                         arg0->state--;
-                        if ((D_80162DF8 == 1) && (arg0->state == 9)) {
+                        if ((gPostTimeTrialReplayCannotSave == 1) && (arg0->state == 9)) {
                             arg0->state--;
                         }
                         play_sound2(SOUND_MENU_CURSOR_MOVE);
@@ -11205,10 +11202,10 @@ void func_800AD2E8(MenuItem* arg0) {
                 if ((gControllerOne->buttonPressed | gControllerOne->stickPressed) & 0x400) {
                     if (arg0->state < 0xA) {
                         arg0->state++;
-                        if ((D_80162DF8 == 1) && (arg0->state == 9)) {
+                        if ((gPostTimeTrialReplayCannotSave == 1) && (arg0->state == 9)) {
                             arg0->state++;
                         }
-                        if ((arg0->state == 0x0000000A) && (D_80162DD4 != 0)) {
+                        if ((arg0->state == 0x0000000A) && (bPlayerGhostDisabled != 0)) {
                             arg0->state -= 2;
                         } else {
                             play_sound2(SOUND_MENU_CURSOR_MOVE);
@@ -11220,7 +11217,7 @@ void func_800AD2E8(MenuItem* arg0) {
                     }
                 }
                 if (gControllerOne->buttonPressed & 0x9000) {
-#if 0
+#if 1
                     if (arg0->state == 0x0000000A) {
                         var_v1 = 0;
                         if (arg0->paramf < 4.2) {
@@ -11429,7 +11426,7 @@ void func_800AD2E8(MenuItem* arg0) {
             break;
         case 25:
             if (arg0->param1 == 1) {
-#if 0
+#if 1
                 if (osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName, (u8*) gExtCode,
                                   &gControllerPak1FileNote) != 0) {
                     arg0->state = 0x0000001A;
@@ -11640,7 +11637,7 @@ void func_800AE218(MenuItem* arg0) {
                         }
                         if (gControllerPak1State != 0) {
                             var_v1 = 0;
-#if 0
+#if 1
                             switch (osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName,
                                                   (u8*) gExtCode, &gControllerPak1FileNote)) { /* switch 3; irregular */
                                 case PFS_ERR_INVALID:                                          /* switch 3 */
@@ -11694,7 +11691,7 @@ void func_800AE218(MenuItem* arg0) {
                                 play_sound2(SOUND_MENU_FILE_NOT_FOUND);
                                 return;
                             }
-#if 0
+#if 1
                             if (osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName,
                                               (u8*) gExtCode, &gControllerPak1FileNote) == 0) {
                                 func_800B6708();
@@ -11836,7 +11833,7 @@ void func_800AE218(MenuItem* arg0) {
             break;
         case 40:
             if (arg0->param1 == 1) {
-#if 0
+#if 1
                 if (osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName, (u8*) gExtCode,
                                   &gControllerPak1FileNote) != 0) {
                     arg0->state = 0x00000029;
@@ -11953,7 +11950,7 @@ void func_800AEF14(MenuItem* arg0) {
 void func_800AEF74(MenuItem* arg0) {
     switch (arg0->state) { /* irregular */
         case 0:
-            if (D_80162DF8 == 1) {
+            if (gPostTimeTrialReplayCannotSave == 1) {
                 arg0->state = 1;
                 arg0->param1 = 0;
             } else if (playerHUD[PLAYER_ONE].raceCompleteBool == (s8) 1) {

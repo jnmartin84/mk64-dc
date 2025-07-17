@@ -126,17 +126,6 @@ char loadAudioString37[] = " audiodata :[%6d]\n";
 char loadAudioString38[] = "---------------------------------------\n";
 
 
-static inline uint32_t Swap32(uint32_t val)
-{
-	return ((((val)&0xff000000) >> 24) | (((val)&0x00ff0000) >> 8) |
-		(((val)&0x0000ff00) << 8) | (((val)&0x000000ff) << 24));
-}
-
-static inline short SwapShort(short dat)
-{
-    return (((dat) & 0xff) << 8 | (((dat) >> 8) & 0xff));
-}
-
 void n64_memcpy(void *dst, const void *src, size_t size);
 
 /**
@@ -338,7 +327,7 @@ void func_800BB304(struct AudioBankSample* sample) {
         uint32_t sampleCopySize = sample->sampleSize;
         // this is why DK and Toad were broken once sound is active
         if (sampleCopySize > 0xffff) {
-            sampleCopySize = Swap32(sampleCopySize);
+            sampleCopySize = __builtin_bswap32(sampleCopySize);
         }
         // temp_a1 = sound->sampleAddr // unk10;
 //        mem = soundAlloc(&gNotesAndBuffersPool, sampleCopySize);
@@ -354,7 +343,7 @@ void func_800BB304(struct AudioBankSample* sample) {
       //  uint32_t sampleCopySize = sample->sampleSize;
         // this is why DK and Toad were broken once sound is active
 //        if (sampleCopySize > 0xffff) {
-  //          sampleCopySize = Swap32(sampleCopySize);
+  //          sampleCopySize = __builtin_bswap32(sampleCopySize);
     //    }
 //////////        audio_dma_copy_immediate(sample->sampleAddr, mem, sampleCopySize);//sample->sampleSize);
         sample->loaded = 0x81;
@@ -408,9 +397,9 @@ void func_800BB43C(ALSeqFile* f, u8* base, u8 swap) {
     u8* wut = base;
     for (i = 0; i < f->seqCount; i++) {
         if (swap)
-            f->seqArray[i].len = Swap32(f->seqArray[i].len);
+            f->seqArray[i].len = __builtin_bswap32(f->seqArray[i].len);
         if (swap)
-            f->seqArray[i].offset = Swap32(f->seqArray[i].offset);
+            f->seqArray[i].offset = __builtin_bswap32(f->seqArray[i].offset);
 
         if (f->seqArray[i].len != 0) {
             PATCH(f->seqArray[i].offset, wut, u8*);
@@ -424,32 +413,32 @@ void patch_sound(struct AudioBankSound* sound, u8* memBase, u8* offsetBase) {
     void* patched = NULL;
     u8* mem = NULL;
 #define PATCH(x, base) (patched = (void*) ((uintptr_t) (x) + (uintptr_t) base))
-    sound->sample = Swap32(sound->sample);
+    sound->sample = __builtin_bswap32(sound->sample);
     if (sound->sample != NULL) {
         sample = sound->sample = (struct AudioBankSample*) PATCH(sound->sample, memBase);
         if (sample->loaded == 0) {
-            sample->sampleAddr = Swap32(sample->sampleAddr);
+            sample->sampleAddr = __builtin_bswap32(sample->sampleAddr);
             sample->sampleAddr = (u8*) PATCH(sample->sampleAddr, offsetBase);
 
-            sample->loop = Swap32(sample->loop);
+            sample->loop = __builtin_bswap32(sample->loop);
             sample->loop = (struct AdpcmLoop*) PATCH(sample->loop, memBase);
 
-            sample->book = Swap32(sample->book);
+            sample->book = __builtin_bswap32(sample->book);
             sample->book = (struct AdpcmBook*) PATCH(sample->book, memBase);
 
             sample->loaded = 1;
         } else if (sample->loaded == 0x80) {
-            sample->sampleAddr = Swap32(sample->sampleAddr);
+            sample->sampleAddr = __builtin_bswap32(sample->sampleAddr);
             PATCH(sample->sampleAddr, offsetBase);
 
-            sample->sampleSize = Swap32(sample->sampleSize);
+            sample->sampleSize = __builtin_bswap32(sample->sampleSize);
             sample->loaded = 0x81;
             sample->sampleAddr = (u8*) patched;
 
-            sample->loop = Swap32(sample->loop);
+            sample->loop = __builtin_bswap32(sample->loop);
             sample->loop = (struct AdpcmLoop*) PATCH(sample->loop, memBase);
 
-            sample->book = Swap32(sample->book);
+            sample->book = __builtin_bswap32(sample->book);
             sample->book = (struct AdpcmBook*) PATCH(sample->book, memBase);
         }
     }
@@ -484,28 +473,28 @@ void patch_audio_bank(struct AudioBank* mem, u8* offset, u32 numInstruments, u32
     struct Drum** drums = NULL;
     u32 numDrums2 = 0;
 
-#define BASE_OFFSET_REAL(x, base) (void*) ((u32) (x) + (u32) Swap32(base))
+#define BASE_OFFSET_REAL(x, base) (void*) ((u32) (x) + (u32) __builtin_bswap32(base))
 #define PATCH(x, base) (patched = BASE_OFFSET_REAL(x, base))
 #define PATCH_MEM(x) x = PATCH(x, mem)
 
 #define BASE_OFFSET(x, base) BASE_OFFSET_REAL(base, x)
 
-    drums = Swap32(mem->drums);
+    drums = __builtin_bswap32(mem->drums);
     numDrums2 = numDrums;
 
     if (drums != NULL && numDrums2 > 0) {
-        mem->drums = PATCH(drums, Swap32(mem));
+        mem->drums = PATCH(drums, __builtin_bswap32(mem));
 
         for (i = 0; i < numDrums2; i++) {
-            patched = Swap32(mem->drums[i]);
+            patched = __builtin_bswap32(mem->drums[i]);
             if (patched != NULL) {
-                drum = PATCH(patched, Swap32(mem));
+                drum = PATCH(patched, __builtin_bswap32(mem));
                 mem->drums[i] = drum;
 
                 if (drum->loaded == 0) {
                     patch_sound(&drum->sound, (u8*) mem, offset);
-                    patched = Swap32(drum->envelope);
-                    drum->envelope = BASE_OFFSET(Swap32(mem), patched);
+                    patched = __builtin_bswap32(drum->envelope);
+                    drum->envelope = BASE_OFFSET(__builtin_bswap32(mem), patched);
                     drum->loaded = 1;
                 }
             }
@@ -529,8 +518,8 @@ void patch_audio_bank(struct AudioBank* mem, u8* offset, u32 numInstruments, u32
                     patch_sound(&instrument->lowNotesSound, (u8*) mem, offset);
                     patch_sound(&instrument->normalNotesSound, (u8*) mem, offset);
                     patch_sound(&instrument->highNotesSound, (u8*) mem, offset);
-                    patched = Swap32(instrument->envelope);
-                    instrument->envelope = BASE_OFFSET(Swap32(mem), patched);
+                    patched = __builtin_bswap32(instrument->envelope);
+                    instrument->envelope = BASE_OFFSET(__builtin_bswap32(mem), patched);
                     instrument->loaded = 1;
                 }
             }
@@ -845,29 +834,29 @@ void audio_init(void) {
     gAlCtlHeader = (ALSeqFile*) buf;
     data = _audio_banksSegmentRomStart;
     audio_dma_copy_immediate(data, gAlCtlHeader, 0x10);
-    ctlSeqCount = SwapShort(gAlCtlHeader->seqCount);
+    ctlSeqCount = __builtin_bswap16(gAlCtlHeader->seqCount);
     size = ALIGN16(ctlSeqCount * sizeof(ALSeqData) + 4);
     gAlCtlHeader = soundAlloc(&gAudioInitPool, size);
     audio_dma_copy_immediate(data, gAlCtlHeader, size);
-    gAlCtlHeader->revision = SwapShort(gAlCtlHeader->revision);
-    gAlCtlHeader->seqCount = SwapShort(gAlCtlHeader->seqCount);
+    gAlCtlHeader->revision = __builtin_bswap16(gAlCtlHeader->revision);
+    gAlCtlHeader->seqCount = __builtin_bswap16(gAlCtlHeader->seqCount);
     func_800BB43C(gAlCtlHeader, data, 1);
     gCtlEntries = soundAlloc(&gAudioInitPool, ctlSeqCount * sizeof(struct CtlEntry));
     for (i = 0; i < ctlSeqCount; i++) {
         audio_dma_copy_immediate(gAlCtlHeader->seqArray[i].offset, buf, 0x10);
-        gCtlEntries[i].numInstruments = Swap32(buf[0]);
-        gCtlEntries[i].numDrums = Swap32(buf[1]);
+        gCtlEntries[i].numInstruments = __builtin_bswap32(buf[0]);
+        gCtlEntries[i].numDrums = __builtin_bswap32(buf[1]);
     }
 
     // Load header for TBL (raw sound data)
     gAlTbl = (ALSeqFile*) buf;
     data = _audio_tablesSegmentRomStart;
     audio_dma_copy_immediate(data, gAlTbl, 0x10);
-    size = SwapShort(gAlTbl->seqCount) * sizeof(ALSeqData) + 4;
+    size = __builtin_bswap16(gAlTbl->seqCount) * sizeof(ALSeqData) + 4;
     size = ALIGN16(size);
     gAlTbl = soundAlloc(&gAudioInitPool, size);
     audio_dma_copy_immediate(data, gAlTbl, size);
-    gAlTbl->seqCount = SwapShort(gAlTbl->seqCount);
+    gAlTbl->seqCount = __builtin_bswap16(gAlTbl->seqCount);
     func_800BB43C(gAlTbl, data, 1);
 
     // Load bank sets for each sequence

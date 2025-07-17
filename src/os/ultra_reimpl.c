@@ -11,6 +11,9 @@
 #include <PR/libultra.h>
 //#include "macros.h"
 #include <kos.h>
+#include <ultra64.h>
+#include "save.h"
+char *get_vmu_fn(maple_device_t *vmudev, char *fn);
 //extern OSMgrArgs piMgrArgs;
 void* segmented_to_virtual(void* addr);
 
@@ -156,18 +159,216 @@ s32 osAiSetFrequency(u32 freq) {
     return D_8033491C / (s32) a1;
 }
 
-s32 osEepromProbe(UNUSED OSMesgQueue *mq) {
-    return -1;
+
+struct state_pak {
+    OSPfsState state;
+    file_t file;
+    char filename[64];
+};
+
+struct state_pak openFile[16];
+
+int fileIndex = 0;
+
+s32 osEepromProbe(OSMesgQueue* mq) {
+    return EEPROM_TYPE_4K;
+}
+uint8_t *vmu_load_data(int channel, const char *name, uint8_t *outbuf, uint32_t *bytes_read);
+
+s32 osEepromLongRead(OSMesgQueue* mq, unsigned char address, unsigned char* buffer, s32 length) {
+    u8 content[512];
+#if 0
+    FILE* fp = fopen("/pc/default.sav", "rb");
+    if (fp == NULL) {
+        return -1;
+    }
+    if (fread(content, 1, 512, fp) == 512) {
+        memcpy(buffer, content + address * 8, length);
+        ret = 0;
+    }
+    fclose(fp);
+#endif
+    uint32_t bsize;
+    uint8_t *rv = vmu_load_data(0, "mariokart64.eep", content, &bsize);
+    if (!rv || bsize != 512) {
+        return -1;
+    }
+
+    memcpy(buffer, content + address * 8, length);
+    return 0;
+}
+
+s32 osEepromRead(OSMesgQueue* mq, u8 address, u8* buffer) {
+    return osEepromLongRead(mq, address, buffer, 8);
+}
+
+#define _EEPROM 0
+#define _GHOST 1
+uint32_t vmu_store_data(int channel, const char *name, int itype, void *bytes, int32_t len);
+
+s32 osEepromLongWrite(OSMesgQueue* mq, unsigned char address, unsigned char* buffer, s32 length) {
+    u8 content[512] = { 0 };
+    if (address != 0 || length != 512) {
+        osEepromLongRead(mq, 0, content, 512);
+    }
+    memcpy(content + address * 8, buffer, length);
+#if 0
+    FILE* fp = fopen("/pc/default.sav", "wb");
+    if (fp == NULL) {
+        return -1;
+    }
+    s32 ret = fwrite(content, 1, 512, fp) == 512 ? 0 : -1;
+    fclose(fp);
+    return ret;
+#endif
+    return !vmu_store_data(0, "mariokart64.eep", _EEPROM, content + address * 8, length);
+}
+
+s32 osEepromWrite(OSMesgQueue* mq, unsigned char address, unsigned char* buffer) {
+    return osEepromLongWrite(mq, address, buffer, 8);
+}
+static vmu_pkg_t ghostpkg;
+s32 osPfsDeleteFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8* ext_name) {
+//    char filename[1024];
+//    sprintf(filename, "/pc/channel_%d_%hu_%hd_%s.sav", pfs->channel, company_code, game_code, game_name);
+//    remove(filename);
+//    return PFS_NO_ERROR;
+	maple_device_t *vmudev = NULL;
+
+	vmudev = maple_enum_type(pfs->channel, MAPLE_FUNC_MEMCARD);
+	if (!vmudev)
+		return PFS_ERR_NOPACK;
+
+	int rv = fs_unlink(get_vmu_fn(vmudev, "mk64.gho"));
+	if (rv)
+		return PFS_ERR_ID_FATAL;
+
+	return PFS_NO_ERROR;
+}
+
+s32 osPfsReadWriteFile(OSPfs* pfs, s32 file_no, u8 flag, int offset, int size_in_bytes, u8* data_buffer) {
+    if (flag == PFS_READ) {
+//        fseek(openFile[file_no].file, offset, SEEK_SET);
+//        fread(data_buffer, size_in_bytes, 1, openFile[file_no].file);
+        fs_seek(openFile[file_no].file, offset, SEEK_SET);
+        fs_read(openFile[file_no].file, data_buffer, size_in_bytes);
+} else {
+//        fseek(openFile[file_no].file, offset, SEEK_SET);
+//        fwrite(data_buffer, size_in_bytes, 1, openFile[file_no].file);
+        fs_seek(openFile[file_no].file, offset, SEEK_SET);
+        fs_write(openFile[file_no].file, data_buffer, size_in_bytes);
+        fs_close(openFile[file_no].file);
+        openFile[file_no].file = fs_open(openFile[file_no].filename, O_RDWR | O_META);//fopen(filename, "w+");
+    }
+    return PFS_NO_ERROR;
+}
+
+s32 osPfsAllocateFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8* ext_name, int file_size_in_bytes,
+                      s32* file_no) {
+//    char filename[1024];
+//    sprintf(filename, "/pc/channel_%d_%hu_%hd_%s.sav", pfs->channel, company_code, game_code, game_name);
+	maple_device_t *vmudev = NULL;
+
+	vmudev = maple_enum_type(pfs->channel, MAPLE_FUNC_MEMCARD);
+	if (!vmudev)
+		return PFS_NO_PAK_INSERTED;
+
+	char *filename = get_vmu_fn(vmudev, "mk64.gho");
+
+    *file_no = fileIndex++;
+    openFile[*file_no].file = fs_open(filename, O_RDWR | O_CREAT | O_META);//fopen(filename, "w+");
+    strcpy(openFile[*file_no].filename, filename);
+    //fwrite("\0", 1, file_size_in_bytes, openFile[*file_no].file);
+    if (!openFile[*file_no].file) {
+        return PFS_INVALID_DATA;
+    }
+    uint8_t azero = 0;
+    fs_write(openFile[*file_no].file, &azero, file_size_in_bytes);
+    fs_close(openFile[*file_no].file);
+    openFile[*file_no].file = fs_open(openFile[*file_no].filename, O_RDWR | O_CREAT | O_META);//fopen(filename, "w+");
+    openFile[*file_no].state.company_code = company_code;
+    openFile[*file_no].state.game_code = game_code;
+    strcpy(openFile[*file_no].state.game_name, game_name);
+    strcpy(openFile[*file_no].state.ext_name, ext_name);
+    return PFS_NO_ERROR;
+}
+
+s32 osPfsIsPlug(OSMesgQueue* queue, u8* pattern) {
+    *pattern = 1;
+    return 1;
+}
+
+s32 osPfsInit(OSMesgQueue* queue, OSPfs* pfs, int channel) {
+//    pfs->queue =  queue;
+    if (channel != 0) {
+        return PFS_NO_PAK_INSERTED;
+    }
+    pfs->channel = channel;
+    pfs->status = 0;
+    pfs->status |= PFS_INITIALIZED;
+    return PFS_NO_ERROR;
+}
+
+s32 osPfsNumFiles(OSPfs* pfs, s32* max_files, s32* files_used) {
+    *max_files = 16;
+    *files_used = fileIndex;
+    return 0;
+}
+
+s32 osPfsFileState(OSPfs* pfs, s32 file_no, OSPfsState* state) {
+    return PFS_NO_ERROR;
+}
+
+s32 osPfsFreeBlocks(OSPfs* pfs, s32* bytes_not_used) {
+    *bytes_not_used = 0x1000;
+    return PFS_NO_ERROR;
+}
+
+s32 osPfsFindFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8* ext_name, s32* file_no) {
+//    char filename[1024];
+//    sprintf(filename, "/pc/channel_%d_%hu_%hd_%s.sav", pfs->channel, company_code, game_code, game_name);
+
+	maple_device_t *vmudev = NULL;
+
+	vmudev = maple_enum_type(pfs->channel, MAPLE_FUNC_MEMCARD);
+	if (!vmudev) {
+        printf("couldn't get vmu for pfs->channel %d\n", pfs->channel);
+        return PFS_NO_PAK_INSERTED;
+    }
+	char *filename = get_vmu_fn(vmudev, "mk64.gho");
+
+    for (size_t i = 0; i < 16; i++) {
+        if (openFile[i].state.game_code == game_code && openFile[i].state.company_code == company_code &&
+            strcmp(openFile[i].state.game_name, game_name) == 0 && strcmp(openFile[i].state.ext_name, ext_name) == 0) {
+            *file_no = i;
+            return PFS_NO_ERROR;
+        }
+    }
+    printf("didn't find open file\n");
+    *file_no = fileIndex++;
+//    openFile[*file_no].file = fs_open(//fopen(filename, "r+");
+//            if (openFile[*file_no].file == NULL) {
+
+    openFile[*file_no].file = fs_open(filename, O_RDONLY | O_META);
+    strcpy(openFile[*file_no].filename, filename);
+	if (!openFile[*file_no].file) {
+        printf("\tcouldn't open it for read\n");
+        openFile[*file_no].file = fs_open(filename, O_RDWR | O_CREAT | O_META);
+        //fopen(filename, "w+");
+        if (!openFile[*file_no].file) {
+            printf("\t\tcouldn't open it for read write create either\n");
+            return PFS_INVALID_DATA;
+        }
+    }
+    openFile[*file_no].state.company_code = company_code;
+    openFile[*file_no].state.game_code = game_code;
+    strcpy(openFile[*file_no].state.game_name, game_name);
+    strcpy(openFile[*file_no].state.ext_name, ext_name);
+    return PFS_NO_ERROR;
 }
 
 
-s32 osEepromLongRead(UNUSED OSMesgQueue *mq, u8 address, u8 *buffer, int nbytes) {
-    return -1;
-}
 
-s32 osEepromLongWrite(UNUSED OSMesgQueue *mq, u8 address, u8 *buffer, int nbytes) {
-	return -1;
-}
 
 #if 0
 /* file system interface */

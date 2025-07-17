@@ -11,13 +11,6 @@
 #include "audio/external.h"
 #include <stdio.h>
 
-
-static inline uint32_t Swap32(uint32_t val)
-{
-	return ((((val)&0xff000000) >> 24) | (((val)&0x00ff0000) >> 8) |
-		(((val)&0x0000ff00) << 8) | (((val)&0x000000ff) << 24));
-}
-
 /**
  * Given that (almost) all of these are format strings, it is highly likely
  * that they are meant to be used in some sort of printf variant. But I don't
@@ -351,10 +344,6 @@ u16 m64_read_compressed_u16(struct M64ScriptState* state) {
     }
     return ret;
 }
-static inline short SwapShort(short dat)
-{
-    return (((dat) & 0xff) << 8 | (((dat) >> 8) & 0xff));
-}
 
 void seq_channel_layer_process_script(struct SequenceChannelLayer* layer) {
     struct SequencePlayer* seqPlayer = NULL;
@@ -663,7 +652,7 @@ void seq_channel_layer_process_script(struct SequenceChannelLayer* layer) {
                     uint32_t *stuning = (uint32_t *)&_tuning;
                     //printf("original l s tuning is %f\n", _tuning);
                     //printf("original l s tuning is %08x\n", *stuning);
-                    *stuning = Swap32(*stuning);
+                    *stuning = __builtin_bswap32(*stuning);
 
                     //printf("INIT_FREQ_SCALE: layer->sound->tuning %f\n", _tuning);
                     layer->freqScale = _tuning;
@@ -694,7 +683,7 @@ void seq_channel_layer_process_script(struct SequenceChannelLayer* layer) {
                             layer->sound = sound;
                             tuning = sound->tuning;
                             uint32_t *stuning = (uint32_t *)&tuning;
-                            *stuning = Swap32(*stuning);
+                            *stuning = __builtin_bswap32(*stuning);
                         } else {
                             layer->sound = NULL;
                             tuning = 1.0f;
@@ -742,7 +731,7 @@ void seq_channel_layer_process_script(struct SequenceChannelLayer* layer) {
 
                         float _tuning = sound->tuning;
                         uint32_t *stuning = (uint32_t *)&_tuning;
-                        *stuning = Swap32(*stuning);
+                        *stuning = __builtin_bswap32(*stuning);
                         layer->freqScale = gNoteFrequencies[cmd] * _tuning;
                         //printf("INIT_FREQ_SCALE: %f * %f == %f\n", gNoteFrequencies[cmd],_tuning, layer->freqScale);
                     } else {

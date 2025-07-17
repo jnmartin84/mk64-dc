@@ -137,7 +137,7 @@ void* segmented_to_virtual(const void* addr) {
     /* if (segment < 0x2) {
         printf("%08x converts to bad segment %02x %08x\n", addr, segment, uip_addr);
     } */
-
+#if DEBUG
     if (segment > 0xf) {
         printf("%08x converts to bad segment %02x %08x\n", (uintptr_t) addr, segment, (uintptr_t) uip_addr);
         printf("\n");
@@ -146,7 +146,7 @@ void* segmented_to_virtual(const void* addr) {
         while (1) {}
         exit(-1);
     }
-
+#endif
     /* if (gSegmentTable[segment] == 0) {
         printf("segment %02x has null base address, original address %08x\n", segment, uip_addr);
     } */
@@ -500,11 +500,7 @@ void decompress_textures(UNUSED u32* arg0) {
     set_segment_base_addr(0x5, (void*)SEG5_BUF);
     printf("loaded course textures\n");
 }
-static inline uint32_t Swap32(uint32_t val)
-{
-	return ((((val)&0xff000000) >> 24) | (((val)&0x00ff0000) >> 8) |
-		(((val)&0x0000ff00) << 8) | (((val)&0x000000ff) << 24));
-}
+
 void mio0decode_noinval(const unsigned char *in, unsigned char *out);
 
 void* decompress_segments(u8* start, u8 *target) {

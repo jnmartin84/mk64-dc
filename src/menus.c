@@ -601,7 +601,7 @@ void options_menu_act(struct Controller* controller, u16 controllerIdx) {
                     play_sound2(SOUND_MENU_FILE_NOT_FOUND);
                     return;
                 }
-#if 0
+#if 1
                 res = osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName,
                                     (u8*) gExtCode, &gControllerPak1FileNote);
                 if (res == PFS_NO_ERROR) {
@@ -893,9 +893,9 @@ void controller_pak_menu_act(struct Controller* controller, UNUSED u16 controlle
     s32 selectedTableRow;
     UNUSED s8 pad;
 
-    gControllerPakMenuSelection = CONTROLLER_PAK_MENU_ERASE_ERROR_NO_PAK;
-    return;
-#if 0
+//    gControllerPakMenuSelection = CONTROLLER_PAK_MENU_ERASE_ERROR_NO_PAK;
+//    return;
+#if 1
     btnAndStick = controller->buttonPressed | controller->stickPressed;
     if (is_screen_being_faded() == 0) {
         switch (gControllerPakMenuSelection) {
@@ -1005,10 +1005,10 @@ void controller_pak_menu_act(struct Controller* controller, UNUSED u16 controlle
                 selectedTableRow = gControllerPakVisibleTableRows[gControllerPakSelectedTableRow + 2] - 1;
                 osPfsState = &pfsState[selectedTableRow];
 
-                gControllerPakMenuSelection = CONTROLLER_PAK_MENU_ERASE_ERROR_NO_PAK;
-                return;
+                //gControllerPakMenuSelection = CONTROLLER_PAK_MENU_ERASE_ERROR_NO_PAK;
+                //return;
 
-#if 0
+#if 1
                 switch (osPfsDeleteFile(&gControllerPak1FileHandle, osPfsState->company_code, osPfsState->game_code,
                                         (u8*) &osPfsState->game_name, (u8*) &osPfsState->ext_name)) {
                     default:
@@ -1827,7 +1827,7 @@ void load_menu_states(s32 menuSelection) {
     gDebugGotoScene = DEBUG_GOTO_RACING;
     gGhostPlayerInit = 0;
     D_8016556E = 0;
-    D_80162DD4 = 1;
+    bPlayerGhostDisabled = 1;
     D_80162DD8 = 1;
     D_80162E00 = 0;
     D_80162DC8 = 1;

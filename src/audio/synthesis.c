@@ -12,18 +12,6 @@
 #include "mixer.h"
 #include <stdio.h>
 
-
-static inline uint32_t Swap32(uint32_t val)
-{
-	return ((((val)&0xff000000) >> 24) | (((val)&0x00ff0000) >> 8) |
-		(((val)&0x0000ff00) << 8) | (((val)&0x000000ff) << 24));
-}
-
-static inline short SwapShort(short dat)
-{
-    return (((dat) & 0xff) << 8 | (((dat) >> 8) & 0xff));
-}
-
 #define aSetLoadBufferPair(pkt, c, off)                                               \
     aSetBuffer(pkt, 0, c + DMEM_ADDR_WET_LEFT_CH, 0, DEFAULT_LEN_1CH - c);            \
     aLoadBuffer(pkt, VIRTUAL_TO_PHYSICAL2(gSynthesisReverb.ringBuffer.left + (off))); \
@@ -422,7 +410,7 @@ Acmd* synthesis_process_note(s32 noteIndex, struct NoteSubEu* noteSubEu, struct 
             exit(-1);
         }
         loopInfo = audioBookSample->loop;
-        endPos = Swap32(loopInfo->end);
+        endPos = __builtin_bswap32(loopInfo->end);
         sampleAddr = audioBookSample->sampleAddr;
         resampledTempLen = 0;
 
@@ -441,7 +429,7 @@ Acmd* synthesis_process_note(s32 noteIndex, struct NoteSubEu* noteSubEu, struct 
 
             if (curLoadedBook != (*bankSample->book).book) {
                 curLoadedBook = bankSample->book->book;
-                nEntries = (16 * Swap32(bankSample->book->order)) * Swap32(bankSample->book->npredictors);
+                nEntries = (16 * __builtin_bswap32(bankSample->book->order)) * __builtin_bswap32(bankSample->book->npredictors);
                 aLoadADPCM(cmd++, nEntries, VIRTUAL_TO_PHYSICAL2(noteSubEu->bookOffset + curLoadedBook));
             }
             if (noteSubEu->bookOffset != 0) {
@@ -550,7 +538,7 @@ Acmd* synthesis_process_note(s32 noteIndex, struct NoteSubEu* noteSubEu, struct 
                 if (restart) {
                     synthesisState->restart = 1;
                     ////printf("loopInfo->start %08x\n", loopInfo->start);
-                    synthesisState->samplePosInt = Swap32(loopInfo->start);
+                    synthesisState->samplePosInt = __builtin_bswap32(loopInfo->start);
                 } else {
                     synthesisState->samplePosInt += nSamplesToProcess;
                 }

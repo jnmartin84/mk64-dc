@@ -33,7 +33,8 @@ s8 sControllerPak2State = BAD;
 const u8 D_800F2E60[4] = { 0xc0, 0x27, 0x09, 0x00 };
 // osPfsFindFile -> gGameName ("MARIOKART64" in nosFont)
 const u8 gGameName[] = {
-    0x26, 0x1a, 0x2b, 0x22, 0x28, 0x24, 0x1a, 0x2b, 0x2d, 0x16, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00
+    'm','a','r','i','o','k','a','r','t','6','4',0,
+//    0x26, 0x1a, 0x2b, 0x22, 0x28, 0x24, 0x1a, 0x2b, 0x2d, 0x16, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 // ext_name param to osPfsFindFile (four total bytes, but only one is setable)
 const u8 gExtCode[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -543,12 +544,16 @@ s32 validate_save_data_checksum_backup(void) {
 
     return 0;
 }
-
+extern int vmu_status(void);
 // Check if controller has a Controller Pak connected.
 // Return PAK if it does, otherwise return NO_PAK.
 s32 check_for_controller_pak(UNUSED s32 controller) {
-    return NO_PAK;
-#if 0
+//    int rv = vmu_status();
+//    if (rv)
+//        return NO_PAK;
+
+//    return PAK;
+#if 1
     u8 controllerBitpattern;
     UNUSED s32 phi_v0;
 
@@ -568,8 +573,7 @@ s32 check_for_controller_pak(UNUSED s32 controller) {
 
 // gives status info about controller pak insterted in controller 1
 s32 controller_pak_1_status(void) {
-    return PFS_NO_PAK_INSERTED;
-#if 0
+#if 1
     if (gControllerPak1State) {
         switch (osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName, (u8*) gExtCode,
                               &gControllerPak1FileNote)) {
@@ -633,8 +637,7 @@ s32 controller_pak_1_status(void) {
 
 // gives status info about controller pak insterted in controller 2
 s32 controller_pak_2_status(void) {
-    return PFS_NO_PAK_INSERTED;
-#if 0
+#if 1
     s32 stateBorrow = sControllerPak2State;
 
     if (stateBorrow) {
@@ -687,8 +690,7 @@ s32 controller_pak_2_status(void) {
 }
 
 s32 func_800B5F30(void) {
-    return PAK_NOT_INSERTED;
-#if 0
+#if 1
     s32 errorCode;
 
     if (gControllerPak1State) {
@@ -716,8 +718,7 @@ s32 func_800B5F30(void) {
 }
 
 s32 func_800B6014(void) {
-    return PAK_NOT_INSERTED;
-#if 0
+#if 1
     s32 errorCode;
 
     if (sControllerPak2State) {
@@ -735,7 +736,7 @@ s32 func_800B6014(void) {
 }
 
 s32 func_800B6088(UNUSED s32 arg0) {
-#if 0
+#if 1
     struct_8018EE10_entry* temp_v1;
 
     temp_v1 = &D_8018EE10[arg0];
@@ -744,7 +745,7 @@ s32 func_800B6088(UNUSED s32 arg0) {
                               arg0 * 0x80 /* 0x80 == sizeof(struct_8018EE10_entry) */, sizeof(struct_8018EE10_entry),
                               (u8*) temp_v1);
 #endif
-    return PFS_ERR_INVALID;
+//    return PFS_ERR_INVALID;
 }
 
 u8 func_800B60E8(s32 page) {
@@ -752,7 +753,7 @@ u8 func_800B60E8(s32 page) {
     u32 checksum = 0;
     u8* addr;
 
-    for (i = 0, addr = (u8*) &((u8*) D_800DC714)[page * 256]; i < 256; i++) {
+    for (i = 0, addr = (u8*) &((u8*) gReplayGhostCompressed)[page * 256]; i < 256; i++) {
         checksum += (*addr++ * (page + 1) + i);
     }
     return checksum;
@@ -771,7 +772,7 @@ s32 func_800B6178(s32 arg0) {
             return -1;
     }
     if (gGamestate == RACING) {
-        func_800051C4();
+        compress_replay_ghost();
     }
     temp_s3 = &D_8018EE10[arg0];
     temp_s3->ghostDataSaved = 0;
@@ -782,8 +783,9 @@ s32 func_800B6178(s32 arg0) {
             temp_s3->unk_07[var_s0] = var_s0;
         }
     } else {
-        var_v0 = PFS_ERR_INVALID; /* osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, 1U, (arg0 * 0x3C00) + 0x100,
-                                    0x00003C00, (u8*) D_800DC714); */
+        var_v0 = //PFS_ERR_INVALID; 
+        osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, 1U, (arg0 * 0x3C00) + 0x100,
+                                    0x00003C00, (u8*) gReplayGhostCompressed);
         if (var_v0 == 0) {
             temp_s3->ghostDataSaved = 1;
             if (gGamestate == RACING) {
@@ -831,8 +833,8 @@ s32 func_800B63F0(s32 arg0) {
     u8* phi_s1;
     s32 phi_s3;
 
-    func_800051C4();
-    D_80162DD6 = 1;
+    compress_replay_ghost();
+    bCourseGhostDisabled = 1;
     func_80005AE8(gPlayerThree);
 
     phi_s3 = 0;
@@ -871,8 +873,9 @@ s32 func_800B64EC(s32 arg0) {
         return -1;
     }
 
-    temp_v0 = PFS_ERR_INVALID; /* osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, PFS_READ, (arg0 * 0x3C00) + 0x100,
-                                 0x3C00, (u8*) D_800DC714); */
+    temp_v0 = //PFS_ERR_INVALID;
+     osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, PFS_READ, (arg0 * 0x3C00) + 0x100,
+                                 0x3C00, (u8*) gReplayGhostCompressed);
     if (temp_v0 == 0) {
         // clang-format off
         phi_s1 = (u8 *) &D_8018EE10[arg0]; temp_s0 = 0; while (1) {
@@ -886,7 +889,7 @@ s32 func_800B64EC(s32 arg0) {
             ++phi_s1;
             if ((++temp_s0) == 0x3C) {
                 func_8000522C();
-                D_80162DD4 = 0;
+                bPlayerGhostDisabled = 0;
                 D_80162DE0 = (s32) D_8018EE10[arg0].characterId;
                 D_80162DFC = D_8018EE10[arg0].unk_00;
                 break;
@@ -909,8 +912,9 @@ s32 func_800B65F4(s32 arg0, s32 arg1) {
         default:
             return -1;
     }
-    writeStatus = PFS_ERR_INVALID; /* osPfsReadWriteFile(&gControllerPak2FileHandle, gControllerPak2FileNote, 0U, (arg0 * 0x3C00) + 0x100,
-                                     0x00003C00, (u8*) D_800DC714); */
+    writeStatus = //PFS_ERR_INVALID; 
+    osPfsReadWriteFile(&gControllerPak2FileHandle, gControllerPak2FileNote, 0U, (arg0 * 0x3C00) + 0x100,
+                                     0x00003C00, (u8*) gReplayGhostCompressed);
     if (writeStatus == 0) {
         temp_s3 = &((struct_8018EE10_entry*) gSomeDLBuffer)[arg0];
         for (i = 0; i < 0x3C; i++) {
@@ -929,7 +933,7 @@ s32 func_800B65F4(s32 arg0, s32 arg1) {
 void func_800B6708(void) {
     s32 temp_s0;
 
-#if 0
+#if 1
     osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, PFS_READ, 0,
                        0x100 /*  2*sizeof(struct_8018EE10_entry) ? */, (u8*) &D_8018EE10);
 #endif
@@ -946,7 +950,7 @@ void func_800B6798(void) {
     u8* tmp;
 
     tmp = (u8*) gSomeDLBuffer;
-#if 0
+#if 1
     osPfsReadWriteFile(&gControllerPak2FileHandle, gControllerPak2FileNote, PFS_READ, 0,
                        0x100 /*  2*sizeof(struct_8018EE10_entry) ? */, tmp);
 #endif
@@ -995,8 +999,9 @@ s32 func_800B69BC(s32 arg0) {
     }
     plz->checksum = func_800B6828(arg0);
 
-    return PFS_ERR_INVALID; /* osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, PFS_WRITE,
-                              (s32) sizeof(struct_8018EE10_entry) * arg0, sizeof(struct_8018EE10_entry), (u8*) plz); */
+    return // PFS_ERR_INVALID; 
+    osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, PFS_WRITE,
+                              (s32) sizeof(struct_8018EE10_entry) * arg0, sizeof(struct_8018EE10_entry), (u8*) plz);
 }
 
 s32 func_800B6A68(void) {
@@ -1004,8 +1009,9 @@ s32 func_800B6A68(void) {
     s32 ret;
     s32 i;
 
-    ret = PFS_ERR_INVALID; /* osPfsAllocateFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) &gGameName, (u8*) &gExtCode,
-                            0x7900, &gControllerPak1FileNote); */
+    ret = //PFS_ERR_INVALID;
+    osPfsAllocateFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) &gGameName, (u8*) &gExtCode,
+                            0x7900, &gControllerPak1FileNote);
     if (ret == 0) {
         for (i = 0; i < 2; i++) {
             func_800B69BC(i);
