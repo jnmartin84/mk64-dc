@@ -786,7 +786,7 @@ $(ELF):	$(O_FILES) memcpy32.o test.o data_segment2.o $(COURSE_DATA_TARGETS) $(BU
 cdi:
 	@test -s ${BUILD_DIR_BASE}/mario-kart.elf || { echo "Please run make before running make cdi . Exiting"; exit 1; }
 	$(RM) mariokart64.cdi
-	mkdcdisc -d dc_data -e $(BUILD_DIR_BASE)/mario-kart.elf -o mariokart64.cdi -n "Mario Kart 64" -N -v 3
+	mkdcdisc -f kart.ico -f ghost.ico -d dc_data -e $(BUILD_DIR_BASE)/mario-kart.elf -o mariokart64.cdi -n "Mario Kart 64" -N -v 3
 
 dcload:
 	sudo ./dcload-ip/host-src/tool/dc-tool-ip -x ${BUILD_DIR_BASE}/mario-kart.elf -c ./

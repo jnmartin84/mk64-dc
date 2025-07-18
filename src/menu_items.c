@@ -1259,12 +1259,12 @@ void func_80091B78(void) {
         gVersusResultCursorSelection = 10;
         gTimeTrialsResultCursorSelection = 5;
         gBattleResultCursorSelection = 10;
-//        if (osEepromProbe(&gSIEventMesgQueue) != 0) {
-//            load_save_data();
-//        }
-//        if (func_80091D74() != 0) {
-//            gMenuSelection = CONTROLLER_PAK_MENU;
-//        }
+        if (osEepromProbe(&gSIEventMesgQueue) != 0) {
+            load_save_data();
+        }
+        if (func_80091D74() != 0) {
+            gMenuSelection = CONTROLLER_PAK_MENU;
+        }
     }
     if (gMenuSelection == LOGO_INTRO_MENU) {
 		void *startup_decomp = decompress_segments((u8*) STARTUP_LOGO_ROM_START, CEREMONY_ACTOR_BUF);

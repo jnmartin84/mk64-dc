@@ -91,6 +91,8 @@ int vmu_file_exists(const char *name) {
     }
 }
 
+static uint8_t vmutmpdata[512*4];
+
 uint8_t *vmu_load_data(int channel, const char *name, uint8_t *outbuf, uint32_t *bytes_read) {
 	ssize_t size;
 	maple_device_t *vmudev = NULL;
@@ -113,7 +115,8 @@ uint8_t *vmu_load_data(int channel, const char *name, uint8_t *outbuf, uint32_t 
 	}
 
 	size = fs_total(d);
-	data = calloc(1, size);
+    printf("total size for read is %d\n", size);
+	data = vmutmpdata;//calloc(1, size);
 
 	if (!data) {
 		fs_close(d);
@@ -154,7 +157,7 @@ uint8_t *vmu_load_data(int channel, const char *name, uint8_t *outbuf, uint32_t 
 	fs_close(d);
 
 	if(vmu_pkg_parse(data, size, &pkg) < 0) {
-		free(data);
+		//free(data);
  		*bytes_read = 0;
 		printf("could not vmu_pkg_parse\n");
 		return NULL;
@@ -162,7 +165,7 @@ uint8_t *vmu_load_data(int channel, const char *name, uint8_t *outbuf, uint32_t 
 
 	uint8_t *bytes = outbuf;//mem_temp_alloc(pkg.data_len);
 	if (!bytes) {
-		free(data);
+		//free(data);
  		*bytes_read = 0;
 		printf("could not mem_temp_alloc bytes\n");
 		return NULL;
@@ -170,7 +173,7 @@ uint8_t *vmu_load_data(int channel, const char *name, uint8_t *outbuf, uint32_t 
 
 	memcpy(bytes, pkg.data, pkg.data_len);
 	ControllerPakStatus = 1;
-	free(data);
+	//free(data);
 
 	*bytes_read = pkg.data_len;
 
@@ -192,31 +195,23 @@ uint32_t vmu_store_data(int channel, const char *name, int itype, void *bytes, i
 
 	vmu_pkg_t pkg;
 	memset(&pkg, 0, sizeof(vmu_pkg_t));
-	strcpy(pkg.desc_short,"Mario Kart 64");
+	strcpy(pkg.desc_short,"Records");
 	strcpy(pkg.desc_long, "Mario Kart 64");
 	strcpy(pkg.app_id, "Mario Kart 64");
-/*    if (itype == 0) {
-        sprintf(texfn, "%s/kart.ico", fnpre);
-    } else { // GHOST
-        sprintf(texfn, "%s/ghost.ico", fnpre);
-    }
+    sprintf(texfn, "%s/kart.ico", fnpre);
 	pkg.icon_cnt = 2;
 	pkg.icon_data = frames;
-	pkg.icon_anim_speed = 4;
-*/
-    pkg.icon_cnt = 0;
-    pkg.icon_data = NULL;
-    pkg.icon_anim_speed = 0;
+	pkg.icon_anim_speed = 5;
     pkg.data_len = len;
 	pkg.data = bytes;
-//    vmu_pkg_load_icon(&pkg, texfn);
+    vmu_pkg_load_icon(&pkg, texfn);
 
 	file_t d = fs_open(get_vmu_fn(vmudev, name), O_RDONLY | O_META);
 	if (!d) {
-		if (Pak_Memory < 60){
-			printf("no %s file and not enough space\n", name);
-			return 0;
-		}
+//		if (Pak_Memory < 5){
+//			printf("no %s file and not enough space\n", name);
+//			return 0;
+//		}
 		d = fs_open(get_vmu_fn(vmudev, name), O_RDWR | O_CREAT | O_META);
 		if (!d) {
 			printf("cant open %s for rdwr|creat\n", name);
