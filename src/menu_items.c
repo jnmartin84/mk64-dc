@@ -1249,7 +1249,7 @@ extern u8 __attribute__((aligned(32))) CEREMONY_ACTOR_BUF[65536];//15200];//6553
 extern u16 reflection_map_brass[];
 
 extern u16 reflection_map_silver[];
-
+extern int ever_loaded_save_yet;
 void func_80091B78(void) {
     s32 why = 0;
     s32 i;
@@ -1267,7 +1267,10 @@ void func_80091B78(void) {
         }
     }
     if (gMenuSelection == LOGO_INTRO_MENU) {
-		void *startup_decomp = decompress_segments((u8*) STARTUP_LOGO_ROM_START, CEREMONY_ACTOR_BUF);
+//        if (ever_loaded_save_yet) {
+//            store_save_data();
+//        }
+        void *startup_decomp = decompress_segments((u8*) STARTUP_LOGO_ROM_START, CEREMONY_ACTOR_BUF);
         set_segment_base_addr(6, startup_decomp);
 
         uint16_t *reflp = (uint16_t *)segmented_to_virtual(reflection_map_gold);
@@ -9773,7 +9776,7 @@ void func_800AA2EC(MenuItem* arg0) {
 
             if (gControllerPak1State != 0) {
                 var_t1 = 0;
-#if 1
+
                 switch (osPfsFindFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) gGameName,
                                       (u8*) gExtCode, &gControllerPak1FileNote)) {
                     case 5:
@@ -9789,7 +9792,6 @@ void func_800AA2EC(MenuItem* arg0) {
                         gControllerPak1State = 0;
                         break;
                 }
-#endif
             }
             if (var_t1 == 0) {
                 if (gControllerPak1State == 0) {
@@ -9797,8 +9799,7 @@ void func_800AA2EC(MenuItem* arg0) {
                         arg0->state = 2;
                         break;
                     }
-//                    temp_v0 = PFS_ERR_NOPACK;
-#if 1
+
                     temp_v0 = osPfsInit(&gSIEventMesgQueue, &gControllerPak1FileHandle, 0);
                     if (temp_v0 != 0) {
                         switch (temp_v0) {
@@ -9833,7 +9834,7 @@ void func_800AA2EC(MenuItem* arg0) {
                         arg0->state = 3;
                         break;
                     }
-#endif
+
                     gControllerPak1NumPagesFree = (s32) gControllerPak1NumPagesFree >> 8;
                 }
                 if (gControllerPak1MaxWriteableFiles >= gControllerPak1NumFilesUsed) {

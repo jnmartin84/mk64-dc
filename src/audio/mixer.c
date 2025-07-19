@@ -101,7 +101,7 @@ void n64_memset(void *dst, uint8_t val, size_t size);
 
 void aClearBufferImpl(uint16_t addr, int nbytes) {
     nbytes = ROUND_UP_16(nbytes);
-    n64_memset(BUF_U8(addr), 0, nbytes);
+    /* n64_ */memset(BUF_U8(addr), 0, nbytes);
 }
 
 #include <stdio.h>
@@ -150,14 +150,14 @@ void aLoadADPCMImpl(int num_entries_times_16, const int16_t* book_source_addr) {
         tmp[7] = (short)__builtin_bswap16(book_source_addr[i + 7]);
 
         MEM_BARRIER_PREF(&book_source_addr[i + 8]);
-        aptr[i + 0] = (f32)(s32)tmp[0];
-        aptr[i + 1] = (f32)(s32)tmp[1];
-        aptr[i + 2] = (f32)(s32)tmp[2];
-        aptr[i + 3] = (f32)(s32)tmp[3];
-        aptr[i + 4] = (f32)(s32)tmp[4];
-        aptr[i + 5] = (f32)(s32)tmp[5];
-        aptr[i + 6] = (f32)(s32)tmp[6];
-        aptr[i + 7] = (f32)(s32)tmp[7];
+        aptr[i + 0] = 0.00048828f * (f32)(s32)tmp[0];
+        aptr[i + 1] = 0.00048828f * (f32)(s32)tmp[1];
+        aptr[i + 2] = 0.00048828f * (f32)(s32)tmp[2];
+        aptr[i + 3] = 0.00048828f * (f32)(s32)tmp[3];
+        aptr[i + 4] = 0.00048828f * (f32)(s32)tmp[4];
+        aptr[i + 5] = 0.00048828f * (f32)(s32)tmp[5];
+        aptr[i + 6] = 0.00048828f * (f32)(s32)tmp[6];
+        aptr[i + 7] = 0.00048828f * (f32)(s32)tmp[7];
     }
 }
 
@@ -214,7 +214,7 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
 #endif
 #if 1
 void aInterleaveImpl(uint16_t left, uint16_t right) {
-    int count = ROUND_UP_16(rspa.nbytes) / sizeof(int16_t) / 4;
+    int count = ROUND_UP_16(rspa.nbytes) / sizeof(int16_t) / 8;
     int16_t* l = BUF_S16(left);
     int16_t* r = BUF_S16(right);
 
@@ -225,10 +225,14 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
 
     while (count > 0) {
         __builtin_prefetch(r+16);
-        int32_t lr0 = (*r++ << 16) | (*l++ & 0xffff);
-        int32_t lr1 = (*r++ << 16) | (*l++ & 0xffff);
-        int32_t lr2 = (*r++ << 16) | (*l++ & 0xffff);
-        int32_t lr3 = (*r++ << 16) | (*l++ & 0xffff);
+        int32_t lr0 = (*r++ << 16) | ((u16)*l++);
+        int32_t lr1 = (*r++ << 16) | ((u16)*l++);
+        int32_t lr2 = (*r++ << 16) | ((u16)*l++);
+        int32_t lr3 = (*r++ << 16) | ((u16)*l++);
+        int32_t lr4 = (*r++ << 16) | ((u16)*l++);
+        int32_t lr5 = (*r++ << 16) | ((u16)*l++);
+        int32_t lr6 = (*r++ << 16) | ((u16)*l++);
+        int32_t lr7 = (*r++ << 16) | ((u16)*l++);
 #if 1
             asm volatile("": : : "memory");
 #endif
@@ -236,6 +240,10 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
         *d++ = lr1;
         *d++ = lr2;
         *d++ = lr3;
+        *d++ = lr4;
+        *d++ = lr5;
+        *d++ = lr6;
+        *d++ = lr7;
 
         --count;
     }
@@ -417,21 +425,43 @@ SHZ_FORCE_INLINE void shz_zero_16_shorts(void *dst) {
     : "r" (dst)
     : "r0", "memory");
 }
+
+
+#define recip8192 0.00012207f
+#define recip2048 0.00048828f
+
 #if 0
 static inline float clamp16f(float v) {
-    float temp = v + 32767.0f - fabsf(v - 32767.0f);
-    return (temp + (-65536.0f) + fabsf(temp + 65536.0f)) * 0.25f;
+//    float tv = v * 0.00048828f;
+//    float temp = tv + 32767.0f - fabsf(tv - 32767.0f);
+//    return (temp + (-65536.0f) + fabsf(temp + 65536.0f)) * 0.25f;
+    float tv = v * recip8192;
+    float temp = tv + 8191.0f - fabsf(tv - 8191.0f);
+    return (temp + (-16384.0f) + fabsf(temp + 16384.0f));
 }
 #endif
+#if 1
 static inline float clamp16f(float v) {
-    if (v < (float)INT16_MIN) {
-        return (float)INT16_MIN;
-    } else if (v > (float)INT16_MAX) {
-        return (float)INT16_MAX;
+    v *= 0.00048828f;
+    if (v < -32768.0f) {
+        return -32768.0f;
+    } else if (v > 32767.0f) {
+        return 32767.0f;
     }
     return v;
 }
-void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
+
+static inline int16_t clamp16fs(float v) {
+//    v *= 0.00048828f;
+    if (v < -32768.0f) {//-67108864.0f) {
+        v = -32768.0f;//-67108864.0f;
+    } else if (v > 32767.0f) {//67106816.0f) {
+        v = 32767.0f;//67106816.0f;
+    }
+    return (int16_t)(((s32)v));// >> 11);
+}
+#endif
+void __attribute__((optimization("-Os"))) aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
     int16_t* out = BUF_S16(rspa.out);
     __builtin_prefetch(out);
     uint8_t* in = BUF_U8(rspa.in);
@@ -463,7 +493,7 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
             int j, k;
             shz_vec4_t acc_vec[2];
             float *accf = (float *)acc_vec;
-            const shz_vec4_t in_vec = { .x = prev2, .y = prev1, .z = 2048.0f };
+            const shz_vec4_t in_vec = { .x = prev2, .y = prev1, .z = 1.0f/* 2048.0f */ };
             {
                 uint8_t in81 = *in++;
                 uint8_t in82 = *in++;
@@ -492,18 +522,63 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
                                     &ins[4]);
 
             acc_vec[1] = shz_xmtrx_trans_vec4(in_vec);           
-
+#if 0
             for(j = 0; j < 8; ++j) {
                 for(k = 0; k < j; ++k)
                     accf[j] += tbl[1][((j - k) - 1)] * ins[k];
 
-                accf[j] *= 0.00048828f; // /= 2048.0f;
+//                accf[j] *= 0.00048828f; // /= 2048.0f;
                 accf[j] = clamp16f(accf[j]);
                 *out++ = accf[j];
             }
+#else
+            //float accaccf = accf[0];
+            //accf[0] = clamp16f(accaccf);
+//            *out++ = clamp16f(accaccf);
 
-            prev1 = accf[7];
-            prev2 = accf[6];
+            accf[1] = accf[1] + (tbl[1][0] * ins[0]);
+//            *out++ = clamp16f(accaccf);
+
+            accf[2] = fipr(accf[2], tbl[1][1], tbl[1][0], 0, 1, ins[0], ins[1], 0);
+            //*out++ = clamp16f(accaccf);
+
+            accf[3] = fipr(accf[3], tbl[1][2], tbl[1][1], tbl[1][0], 1, ins[0], ins[1], ins[2]);
+            //*out++ = clamp16f(accaccf);
+
+            accf[4] = fipr(accf[4], tbl[1][3], tbl[1][2], tbl[1][1], 1, ins[0], ins[1], ins[2]);
+            accf[4] += (tbl[1][0] * ins[3]);
+            //*out++ = clamp16f(accaccf);
+
+            accf[5] = fipr(accf[5], tbl[1][4], tbl[1][3], tbl[1][2], 1, ins[0], ins[1], ins[2]);
+            accf[5] += (tbl[1][1] * ins[3]) + (tbl[1][0] * ins[4]);
+// if you leave this in it gets spooky
+            ///            *out++ = clamp16f(accaccf);
+
+            accf[6] = fipr(accf[6], tbl[1][5], tbl[1][4], tbl[1][3], 1, ins[0], ins[1], ins[2]);  
+            accf[6] += fipr(tbl[1][2], tbl[1][1], tbl[1][0], 0, ins[3], ins[4], ins[5], 0);   
+            //prev2 = clamp16f(accaccf);
+            //*out++ = prev2;//clamp16f(accaccf);
+
+            accf[7] = fipr(accf[7], tbl[1][6], tbl[1][5], tbl[1][4], 1, ins[0], ins[1], ins[2]);
+            accf[7] += fipr(tbl[1][3], tbl[1][2], tbl[1][1], tbl[1][0], ins[3], ins[4], ins[5], ins[6]);
+
+//MEM_BARRIER();
+
+            //prev1 = clamp16f(accaccf);//accf[7];
+            //*out++ = prev1;
+            *out++ = clamp16fs(accf[0]);
+            *out++ = clamp16fs(accf[1]);
+            *out++ = clamp16fs(accf[2]);
+            *out++ = clamp16fs(accf[3]);
+            *out++ = clamp16fs(accf[4]);
+            *out++ = clamp16fs(accf[5]);
+            prev2 = *out++ = clamp16fs(accf[6]);
+            prev1 = *out++ = clamp16fs(accf[7]);
+
+
+            #endif
+//            prev1 = accf[7];
+  //          prev2 = accf[6];
         }
         MEM_BARRIER_PREF(in);
         nbytes -= 16 * sizeof(int16_t);
@@ -665,7 +740,7 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     int16_t *dp,*sp;
 
     if (flags & A_INIT) {
-        n64_memset(tmp, 0, 5 * sizeof(int16_t));
+        /* n64_ */memset(tmp, 0, 5 * sizeof(int16_t));
     } else {
         n64_memcpy(tmp, state, 16 * sizeof(int16_t));
     }

@@ -40,12 +40,13 @@ const u8 gGameName[] = {
 const u8 gExtCode[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 // new file start?
-void func_800B45E0(s32 arg0) {
+void write_courseTimeTrialRecords(s32 arg0) {
     CourseTimeTrialRecords* courseTimeTrialRecordsPtr =
         &gSaveData.allCourseTimeTrialRecords.cupRecords[arg0 / 4].courseRecords[arg0 % 4];
 
     courseTimeTrialRecordsPtr->checksum = checksum_time_trial_records(arg0);
-    osEepromLongWrite(&gSIEventMesgQueue, EEPROM_ADDR(courseTimeTrialRecordsPtr), (u8*) courseTimeTrialRecordsPtr,
+    //if (gGamestate == ENDING)
+                osEepromLongWrite(&gSIEventMesgQueue, EEPROM_ADDR(courseTimeTrialRecordsPtr), (u8*) courseTimeTrialRecordsPtr,
                       sizeof(CourseTimeTrialRecords));
 }
 
@@ -53,7 +54,8 @@ void write_save_data_grand_prix_points_and_sound_mode(void) {
     Stuff* main = &gSaveData.main;
     main->checksum[1] = compute_save_data_checksum_1();
     main->checksum[2] = compute_save_data_checksum_2();
-    osEepromLongWrite(&gSIEventMesgQueue, EEPROM_ADDR(main), (u8*) main, sizeof(Stuff));
+    //if (gGamestate == ENDING)
+                osEepromLongWrite(&gSIEventMesgQueue, EEPROM_ADDR(main), (u8*) main, sizeof(Stuff));
 }
 
 void func_800B46D0(void) {
@@ -86,7 +88,7 @@ void func_800B4728(s32 arg0) {
 
     courseTimeTrialRecords->unknownBytes[0] = 0;
     courseTimeTrialRecords->checksum = checksum_time_trial_records(arg0);
-    func_800B45E0(arg0);
+    write_courseTimeTrialRecords(arg0);
 }
 
 void reset_save_data_grand_prix_points_and_sound_mode(void) {
@@ -135,6 +137,10 @@ u8 compute_save_data_checksum_2(void) {
     return (tmp % 256);
 }
 
+void store_save_data(void) {
+    osEepromLongWrite(&gSIEventMesgQueue, EEPROM_ADDR(&gSaveData), (u8*) &gSaveData, sizeof(SaveData));
+}
+extern int ever_loaded_save_yet;
 void load_save_data(void) {
     s32 i;
 
@@ -150,6 +156,8 @@ void load_save_data(void) {
     if (gSoundMode >= NUM_SOUND_MODES) {
         gSoundMode = SOUND_MONO;
     }
+
+    ever_loaded_save_yet = 1;
 }
 
 void func_800B4A9C(s32 course) {
@@ -189,7 +197,7 @@ void func_800B4A9C(s32 course) {
             } else {
                 sp24->unknownBytes[0] = 1;
             }
-            func_800B45E0(course);
+            write_courseTimeTrialRecords(course);
         }
         // L800B4C78
         func_800B559C(course);
@@ -215,7 +223,8 @@ void validate_save_data(void) {
             main->saveInfo.soundMode = backup->saveInfo.soundMode;
             main->checksum[1] = compute_save_data_checksum_backup_1();
             main->checksum[2] = compute_save_data_checksum_backup_2();
-            osEepromLongWrite(&gSIEventMesgQueue, EEPROM_ADDR(main), (u8*) main, sizeof(Stuff));
+            //if (gGamestate == ENDING)
+                osEepromLongWrite(&gSIEventMesgQueue, EEPROM_ADDR(main), (u8*) main, sizeof(Stuff));
         }
         update_save_data_backup();
         return;
@@ -310,7 +319,7 @@ s32 func_800B5020(u32 time, s32 charId) {
 
     populate_time_trial_record(tt->records[i], time, charId);
     tt->unknownBytes[0] = 1;
-    func_800B45E0(course);
+    write_courseTimeTrialRecords(course);
 
     return i;
 }
@@ -342,7 +351,7 @@ s32 func_800B5218(void) {
     if (playerHUD->lapDurations[fastestLapIndex] < (func_800B4F2C() & 0xFFFFF)) {
         populate_time_trial_record(recordPointer + 0xF, playerHUD->lapDurations[fastestLapIndex], character);
         recordPointer[0x12] = 1;
-        func_800B45E0(recordIndex);
+        write_courseTimeTrialRecords(recordIndex);
         return lapBitmask;
     } else {
         return 0;
@@ -458,7 +467,8 @@ void func_800B559C(s32 arg0) {
     bestRecord = &gSaveData.onlyBestTimeTrialRecords[x];
     bestRecord->unknownBytes[6] = func_800B578C(x);
     bestRecord->unknownBytes[7] = func_800B5888(x);
-    osEepromLongWrite(&gSIEventMesgQueue, ((u32) (((u8*) bestRecord) - ((u8*) (&gSaveData)))) >> 3,
+    //if (gGamestate == ENDING)
+        osEepromLongWrite(&gSIEventMesgQueue, ((u32) (((u8*) bestRecord) - ((u8*) (&gSaveData)))) >> 3,
                       bestRecord->bestThreelaps[0], 0x38);
 }
 
@@ -515,7 +525,8 @@ void update_save_data_backup(void) {
     backup->saveInfo.soundMode = main->saveInfo.soundMode;
     backup->checksum[1] = compute_save_data_checksum_backup_1();
     backup->checksum[2] = compute_save_data_checksum_backup_2();
-    osEepromLongWrite(&gSIEventMesgQueue, EEPROM_ADDR(backup), (u8*) backup, sizeof(Stuff));
+            //if (gGamestate == ENDING)
+                osEepromLongWrite(&gSIEventMesgQueue, EEPROM_ADDR(backup), (u8*) backup, sizeof(Stuff));
 }
 
 u8 compute_save_data_checksum_backup_1(void) {
@@ -544,19 +555,14 @@ s32 validate_save_data_checksum_backup(void) {
 
     return 0;
 }
-extern int vmu_status(void);
+extern int vmu_status(int channel);
 // Check if controller has a Controller Pak connected.
 // Return PAK if it does, otherwise return NO_PAK.
+#include <stdio.h>
 s32 check_for_controller_pak(UNUSED s32 controller) {
-//    int rv = vmu_status();
-//    if (rv)
-//        return NO_PAK;
-
-//    return PAK;
-#if 1
     u8 controllerBitpattern;
     UNUSED s32 phi_v0;
-
+    printf("%s(%d)\n", __func__, controller);
     if ((controller >= MAXCONTROLLERS) || (controller < 0)) {
         return NO_PAK;
     }
@@ -564,11 +570,11 @@ s32 check_for_controller_pak(UNUSED s32 controller) {
     osPfsIsPlug(&gSIEventMesgQueue, &controllerBitpattern);
 
     if ((controllerBitpattern & (1 << controller)) != 0) {
+        printf("\tfound pak %d\n",controller);
         return PAK;
     }
 
     return NO_PAK;
-#endif
 }
 
 // gives status info about controller pak insterted in controller 1
@@ -690,12 +696,12 @@ s32 controller_pak_2_status(void) {
 }
 
 s32 func_800B5F30(void) {
-#if 1
     s32 errorCode;
 
     if (gControllerPak1State) {
         return PFS_PAK_STATE_OK;
     }
+
     if (check_for_controller_pak(CONTROLLER_1) != NO_PAK) {
         errorCode = osPfsInit(&gSIEventMesgQueue, &gControllerPak1FileHandle, CONTROLLER_1);
         if (osPfsNumFiles(&gControllerPak1FileHandle, &gControllerPak1NumFilesUsed,
@@ -714,11 +720,9 @@ s32 func_800B5F30(void) {
         return errorCode;
     }
     return PAK_NOT_INSERTED;
-#endif
 }
 
 s32 func_800B6014(void) {
-#if 1
     s32 errorCode;
 
     if (sControllerPak2State) {
@@ -732,11 +736,9 @@ s32 func_800B6014(void) {
         return errorCode;
     }
     return PAK_NOT_INSERTED;
-#endif
 }
 
 s32 func_800B6088(UNUSED s32 arg0) {
-#if 1
     struct_8018EE10_entry* temp_v1;
 
     temp_v1 = &D_8018EE10[arg0];
@@ -744,8 +746,6 @@ s32 func_800B6088(UNUSED s32 arg0) {
     return osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, PFS_WRITE,
                               arg0 * 0x80 /* 0x80 == sizeof(struct_8018EE10_entry) */, sizeof(struct_8018EE10_entry),
                               (u8*) temp_v1);
-#endif
-//    return PFS_ERR_INVALID;
 }
 
 u8 func_800B60E8(s32 page) {
@@ -783,8 +783,7 @@ s32 func_800B6178(s32 arg0) {
             temp_s3->unk_07[var_s0] = var_s0;
         }
     } else {
-        var_v0 = //PFS_ERR_INVALID; 
-        osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, 1U, (arg0 * 0x3C00) + 0x100,
+        var_v0 = osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, 1U, (arg0 * 0x3C00) + 0x100,
                                     0x00003C00, (u8*) gReplayGhostCompressed);
         if (var_v0 == 0) {
             temp_s3->ghostDataSaved = 1;
@@ -873,8 +872,7 @@ s32 func_800B64EC(s32 arg0) {
         return -1;
     }
 
-    temp_v0 = //PFS_ERR_INVALID;
-     osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, PFS_READ, (arg0 * 0x3C00) + 0x100,
+    temp_v0 = osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, PFS_READ, (arg0 * 0x3C00) + 0x100,
                                  0x3C00, (u8*) gReplayGhostCompressed);
     if (temp_v0 == 0) {
         // clang-format off
@@ -912,8 +910,7 @@ s32 func_800B65F4(s32 arg0, s32 arg1) {
         default:
             return -1;
     }
-    writeStatus = //PFS_ERR_INVALID; 
-    osPfsReadWriteFile(&gControllerPak2FileHandle, gControllerPak2FileNote, 0U, (arg0 * 0x3C00) + 0x100,
+    writeStatus = osPfsReadWriteFile(&gControllerPak2FileHandle, gControllerPak2FileNote, 0U, (arg0 * 0x3C00) + 0x100,
                                      0x00003C00, (u8*) gReplayGhostCompressed);
     if (writeStatus == 0) {
         temp_s3 = &((struct_8018EE10_entry*) gSomeDLBuffer)[arg0];
@@ -933,10 +930,8 @@ s32 func_800B65F4(s32 arg0, s32 arg1) {
 void func_800B6708(void) {
     s32 temp_s0;
 
-#if 1
     osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, PFS_READ, 0,
                        0x100 /*  2*sizeof(struct_8018EE10_entry) ? */, (u8*) &D_8018EE10);
-#endif
 
     for (temp_s0 = 0; temp_s0 < 2; ++temp_s0) {
         if (D_8018EE10[temp_s0].checksum != func_800B6828(temp_s0)) {
@@ -950,10 +945,10 @@ void func_800B6798(void) {
     u8* tmp;
 
     tmp = (u8*) gSomeDLBuffer;
-#if 1
+
     osPfsReadWriteFile(&gControllerPak2FileHandle, gControllerPak2FileNote, PFS_READ, 0,
                        0x100 /*  2*sizeof(struct_8018EE10_entry) ? */, tmp);
-#endif
+
     for (temp_s0 = 0; temp_s0 < 2; ++temp_s0) {
         // if (gSomeDLBuffer[temp_s0]->checksum != func_800B68F4(temp_s0)) {
         //     gSomeDLBuffer[temp_s0]->ghostDataSaved = 0;
@@ -999,8 +994,7 @@ s32 func_800B69BC(s32 arg0) {
     }
     plz->checksum = func_800B6828(arg0);
 
-    return // PFS_ERR_INVALID; 
-    osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, PFS_WRITE,
+    return osPfsReadWriteFile(&gControllerPak1FileHandle, gControllerPak1FileNote, PFS_WRITE,
                               (s32) sizeof(struct_8018EE10_entry) * arg0, sizeof(struct_8018EE10_entry), (u8*) plz);
 }
 
@@ -1009,8 +1003,7 @@ s32 func_800B6A68(void) {
     s32 ret;
     s32 i;
 
-    ret = //PFS_ERR_INVALID;
-    osPfsAllocateFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) &gGameName, (u8*) &gExtCode,
+    ret = osPfsAllocateFile(&gControllerPak1FileHandle, gCompanyCode, gGameCode, (u8*) &gGameName, (u8*) &gExtCode,
                             0x7900, &gControllerPak1FileNote);
     if (ret == 0) {
         for (i = 0; i < 2; i++) {

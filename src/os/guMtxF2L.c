@@ -48,7 +48,11 @@ void guMtxF2L(float mf[4][4], Mtx* m) {
 }
 #endif
 
+#include "sh4zam.h"
+void n64_memset(void *dst, uint8_t val, size_t size);
+
 void guMtxIdentF(float mf[4][4]) {
+#if 0
     int r, c;
     for (r = 0; r < 4; r++) {
         for (c = 0; c < 4; c++) {
@@ -58,6 +62,14 @@ void guMtxIdentF(float mf[4][4]) {
                 mf[r][c] = 0.0f;
             }
         }
+    }
+#endif
+    if ((uintptr_t)mf & 15 == 0) {
+        shz_xmtrx_set_identity();
+        shz_xmtrx_store_4x4(mf);
+    } else {
+        /* n64_ */memset(mf, 0, 64);
+        mf[0][0] = mf[1][1] = mf[2][2] = mf[3][3] = 1.0f;
     }
 }
 

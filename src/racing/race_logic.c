@@ -526,7 +526,8 @@ void func_8028EF28(void) {
 
             if ((gPlayers[i].type & PLAYER_HUMAN) != 0) {
                 // jnmartin84 - testing hack
-                if (gPlayers[i].lapCount == 1) { //3) {
+                if (gPlayers[i].lapCount == //1) { //
+                    3) {
                     func_8028EEF0(i);
 
                     currentPosition = gPlayers[i].currentRank;

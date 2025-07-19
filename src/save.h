@@ -28,7 +28,7 @@
 
 /* Function Prototypes */
 
-void func_800B45E0(s32);
+void write_courseTimeTrialRecords(s32);
 void write_save_data_grand_prix_points_and_sound_mode(void);
 void func_800B46D0(void);
 void func_800B4728(s32);
@@ -39,6 +39,7 @@ s32 func_800B639C(s32);
 s32 func_800B63F0(s32);
 u8 compute_save_data_checksum_1(void);
 u8 compute_save_data_checksum_2(void);
+void store_save_data(void);
 void load_save_data(void);
 void func_800B4A9C(s32);
 void validate_save_data(void);

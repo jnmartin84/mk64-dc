@@ -211,6 +211,8 @@ int inited = 0;
 #include "gfx/gfx_opengl.h"
 #include "gfx/gfx_dc.h"
 
+int ever_loaded_save_yet = 0;
+
 extern struct GfxWindowManagerAPI gfx_glx;
 extern struct GfxRenderingAPI gfx_opengl_api;
 static struct GfxWindowManagerAPI *wm_api = &gfx_dc;
