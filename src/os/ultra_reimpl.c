@@ -183,7 +183,7 @@ static int eeprom_init = 0;
  * VMU VFS driver to only write to the VMU once we're done modifying the file. */
 static oneshot_timer_t *timer;
 
-void eeprom_flush(void) {
+void eeprom_flush(void *arg) {
 	mutex_lock_scoped(&eeprom_lock);
 
     if (eeprom_file != -1) {
@@ -203,19 +203,19 @@ s32 osEepromProbe(OSMesgQueue* mq) {
 
     vmudev = maple_enum_type(0, MAPLE_FUNC_MEMCARD);
 	if (!vmudev) {
-		dbgio_printf("eeprom probe: could not enum\n");
-        vid_border_color(255,0,0);
+		//dbgio_printf("eeprom probe: could not enum\n");
+        //vid_border_color(255,0,0);
 		return 0;
 	}
-    printf("EEPROM PROBE:\n");
-    vid_border_color(0,0,255);
+    //printf("EEPROM PROBE:\n");
+    //vid_border_color(0,0,255);
     eeprom_file = fs_open(get_vmu_fn(vmudev, "mk64.rec"), O_RDONLY | O_META);
 	if (-1 == eeprom_file) {
-        printf("\tmk64.rec did not exist on VMU a1\n");
+        //printf("\tmk64.rec did not exist on VMU a1\n");
         eeprom_file = fs_open(get_vmu_fn(vmudev, "mk64.rec"), O_RDWR | O_CREAT | O_META);
 		if (-1 == eeprom_file) {
-			printf("\tcant open mk64.rec for rdwr|creat\n");
-            vid_border_color(255,0,0);
+			//printf("\tcant open mk64.rec for rdwr|creat\n");
+            //vid_border_color(255,0,0);
 			return 1;
 		}
 
@@ -223,7 +223,7 @@ s32 osEepromProbe(OSMesgQueue* mq) {
         memset(eeprom_block, 0, 512);
         memset(&pkg, 0, sizeof(vmu_pkg_t));
         strcpy(pkg.desc_short,"Records");
-        strcpy(pkg.desc_long, "Saved Settings");
+        strcpy(pkg.desc_long, "Mario Kart 64");
         strcpy(pkg.app_id, "Mario Kart 64");
         sprintf(texfn, "%s/kart.ico", fnpre);
         pkg.icon_cnt = 2;
@@ -236,79 +236,85 @@ s32 osEepromProbe(OSMesgQueue* mq) {
         ssize_t pkg_size;
 	    vmu_pkg_build(&pkg, &pkg_out, &pkg_size);
 	    if (!pkg_out || pkg_size <= 0) {
-		    printf("vmu_pkg_build failed\n");
+		    //printf("vmu_pkg_build failed\n");
 		    fs_close(eeprom_file);
             eeprom_file = -1;
-            vid_border_color(255,0,0);
+            //vid_border_color(255,0,0);
 		    return 0;
 	    }
-        vid_border_color(0,255,0);
+        //vid_border_color(0,255,0);
         fs_write(eeprom_file, pkg_out, pkg_size);
         free(pkg_out);
-        printf("\tcreated mk64.rec\n");
+        //printf("\tcreated mk64.rec\n");
         oneshot_timer_reset(timer);
     } else {
-        printf("\teeprom file existed on vmu a1\n");
+        //printf("\teeprom file existed on vmu a1\n");
         fs_close(eeprom_file);
         eeprom_file = -1;
         eeprom_file = fs_open(get_vmu_fn(vmudev, "mk64.rec"), O_RDWR | O_META);
 		if (-1 == eeprom_file) {
-			printf("\tcant open mk64.rec for rdwr\n");
-            vid_border_color(255,0,0);
-			return 1;
+			//printf("\tcant open mk64.rec for rdwr\n");
+            //vid_border_color(255,0,0);
+			return EEPROM_TYPE_4K;
 		}
 
         oneshot_timer_reset(timer);
     }
 
-    vid_border_color(0,0,0);
-    printf("successfully returning from EEPROM probe\n");
+    //vid_border_color(0,0,0);
+    //printf("successfully returning from EEPROM probe\n");
     return EEPROM_TYPE_4K;
 }
 uint8_t* vmu_load_data(int channel, const char* name, uint8_t* outbuf, uint32_t* bytes_read);
 
+static int reopen_vmu_eeprom(void) {
+    maple_device_t* vmudev = NULL;
+    vmudev = maple_enum_type(0, MAPLE_FUNC_MEMCARD);
+    if (!vmudev) {
+        //vid_border_color(255, 0, 0);
+        return 1;
+    }
+
+    eeprom_file = fs_open(get_vmu_fn(vmudev, "mk64.rec"), O_RDWR | O_META);
+    return 0;
+}
+
 s32 osEepromLongRead(OSMesgQueue* mq, unsigned char address, unsigned char* buffer, s32 length) {
     if (eeprom_file == -1) {
-        maple_device_t *vmudev = NULL;
-        vmudev = maple_enum_type(0, MAPLE_FUNC_MEMCARD);
-        if (!vmudev) {
-            dbgio_printf("eeprom read: could not enum\n");
-            vid_border_color(255,0,0);
+        if (reopen_vmu_eeprom()) {
             return 1;
         }
-
-        eeprom_file = fs_open(get_vmu_fn(vmudev, "mk64.rec"), O_RDWR | O_META);
     }
     
-    printf("EEPROM READ:\n");
-    vid_border_color(0,0,255);
+    //printf("EEPROM READ:\n");
+    //vid_border_color(0,0,255);
 
     if (-1 != eeprom_file) {
         mutex_lock_scoped(&eeprom_lock);
         ssize_t size = fs_total(eeprom_file);
-        printf("\tKOS claims mk64.rec exists on vmu A1 with size: %d\n", size);
+        //printf("\tKOS claims mk64.rec exists on vmu A1 with size: %d\n", size);
         if (size != 2048) {
             fs_close(eeprom_file);
-            printf("\tbut the size was wrong (%d, expect 2048)\n", size);
-            vid_border_color(255,0,0);
+            //printf("\tbut the size was wrong (%d, expect 2048)\n", size);
+            //vid_border_color(255,0,0);
             return 1;
         }
         // skip header
-        vid_border_color(0,255,0);
+        //vid_border_color(0,255,0);
         fs_seek(eeprom_file, (512*3) + (address * 8), SEEK_SET);
         ssize_t rv = fs_read(eeprom_file, buffer, length);
         if (rv != length) {
-            printf("\tcould not read %d bytes from mk64.rec\n", length);
-            vid_border_color(255,0,0);
+            //printf("\tcould not read %d bytes from mk64.rec\n", length);
+            //vid_border_color(255,0,0);
             return 1;
         }
 
-        vid_border_color(0,0,0);
-        printf("success reading EEPROM file\n");
+        //vid_border_color(0,0,0);
+        //printf("success reading EEPROM file\n");
         oneshot_timer_reset(timer);
         return 0;
     } else {
-        vid_border_color(255,0,0);
+        //vid_border_color(255,0,0);
         return 1;
     }
 }
@@ -317,53 +323,43 @@ s32 osEepromRead(OSMesgQueue* mq, u8 address, u8* buffer) {
     return osEepromLongRead(mq, address, buffer, 8);
 }
 
-#define _EEPROM 0
-#define _GHOST 1
-uint32_t vmu_store_data(int channel, const char* name, int itype, void* bytes, int32_t len);
-
 s32 osEepromLongWrite(OSMesgQueue* mq, unsigned char address, unsigned char* buffer, s32 length) {
     if (eeprom_file == -1) {
-        maple_device_t *vmudev = NULL;
-        vmudev = maple_enum_type(0, MAPLE_FUNC_MEMCARD);
-        if (!vmudev) {
-            dbgio_printf("eeprom write: could not enum\n");
-            vid_border_color(255,0,0);
+        if (reopen_vmu_eeprom()) {
             return 1;
         }
-
-        eeprom_file = fs_open(get_vmu_fn(vmudev, "mk64.rec"), O_RDWR | O_META);
     }
 
-    printf("EEPROM WRITE:\n");
-    vid_border_color(0,0,255);
+    //printf("EEPROM WRITE:\n");
+    //vid_border_color(0,0,255);
 
     if (-1 != eeprom_file) {
         mutex_lock_scoped(&eeprom_lock);
         ssize_t size = fs_total(eeprom_file);
-        printf("\tKOS claims mk64.rec exists on vmu A1 with size: %d\n", size);
+        //printf("\tKOS claims mk64.rec exists on vmu A1 with size: %d\n", size);
         if (size != 2048) {
             fs_close(eeprom_file);
-            printf("\tbut the size was wrong (%d, expect 2048)\n", size);
-            vid_border_color(255,0,0);
+            //printf("\tbut the size was wrong (%d, expect 2048)\n", size);
+            //vid_border_color(255,0,0);
             return 1;
         }
         // skip header
-        vid_border_color(0,0,255);
+        //vid_border_color(0,0,255);
 
         fs_seek(eeprom_file, (512*3) + (address * 8), SEEK_SET);
         ssize_t rv = fs_write(eeprom_file, buffer, length);
         if (rv != length) {
-            printf("\tcould not write %d bytes to mk64.rec\n", length);
-            vid_border_color(255,0,0);
+            //printf("\tcould not write %d bytes to mk64.rec\n", length);
+            //vid_border_color(255,0,0);
             return 1;
         }
 
-        vid_border_color(0,0,0);
-        printf("success writing EEPROM file\n");
+        //vid_border_color(0,0,0);
+        //printf("success writing EEPROM file\n");
         oneshot_timer_reset(timer);
         return 0;
     } else {
-        vid_border_color(255,0,0);
+        //vid_border_color(255,0,0);
         return 1;
     }
 }
@@ -374,7 +370,7 @@ s32 osEepromWrite(OSMesgQueue* mq, unsigned char address, unsigned char* buffer)
 static vmu_pkg_t ghostpkg;
 s32 osPfsDeleteFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8* ext_name) {
     maple_device_t* vmudev = NULL;
-    printf("%s\n",__func__);
+    //printf("%s\n",__func__);
 
     vmudev = maple_enum_type(pfs->channel, MAPLE_FUNC_MEMCARD);
     if (!vmudev)
@@ -390,9 +386,8 @@ s32 osPfsDeleteFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, 
 static uint8_t __attribute__((aligned(32))) tempblock[32768];//64 * 512];
 
 s32 osPfsReadWriteFile(OSPfs* pfs, s32 file_no, u8 flag, int offset, int size_in_bytes, u8* data_buffer) {
-    printf("%s(%s,%d,%d)\n",__func__, flag ? "WRITE" : "READ", offset, size_in_bytes);
-
-    printf("openFile[%d].file == %d .filename == %s\n", file_no, openFile[file_no].file, openFile[file_no].filename);
+    //printf("%s(%s,%d,%d)\n",__func__, flag ? "WRITE" : "READ", offset, size_in_bytes);
+    //printf("openFile[%d].file == %d .filename == %s\n", file_no, openFile[file_no].file, openFile[file_no].filename);
     if (openFile[file_no].file == -1) {
         return PFS_ERR_INVALID;
     }
@@ -404,7 +399,7 @@ s32 osPfsReadWriteFile(OSPfs* pfs, s32 file_no, u8 flag, int offset, int size_in
         ssize_t res = fs_read(openFile[file_no].file, data_buffer, size_in_bytes);
 
         if (res != size_in_bytes) {
-            printf("could not read it right\n");
+            //printf("could not read it right\n");
             fs_close(openFile[file_no].file);
             openFile[file_no].file = -1;
             return PFS_ERR_BAD_DATA;
@@ -416,7 +411,7 @@ s32 osPfsReadWriteFile(OSPfs* pfs, s32 file_no, u8 flag, int offset, int size_in
         fs_seek(openFile[file_no].file, (512*3) + offset, SEEK_SET);
         ssize_t rv = fs_write(openFile[file_no].file, data_buffer, size_in_bytes);
         if (rv != size_in_bytes) {
-            printf("could not write it right\n");
+            //printf("could not write it right\n");
             fs_close(openFile[file_no].file);
             openFile[file_no].file = -1;
             return PFS_CORRUPTED;
@@ -425,7 +420,7 @@ s32 osPfsReadWriteFile(OSPfs* pfs, s32 file_no, u8 flag, int offset, int size_in
         fs_close(openFile[file_no].file);
         openFile[file_no].file = fs_open(openFile[file_no].filename, O_RDWR | O_META); // fopen(filename, "w+");
         if (-1 == openFile[file_no].file) {
-            printf("write was fucked upon reopen attempt\n");
+            //printf("write was fucked upon reopen attempt\n");
             return PFS_CORRUPTED;
         }
     }
@@ -435,7 +430,7 @@ s32 osPfsReadWriteFile(OSPfs* pfs, s32 file_no, u8 flag, int offset, int size_in
 s32 osPfsAllocateFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8* ext_name, int file_size_in_bytes,
                       s32* file_no) {
     maple_device_t* vmudev = NULL;
-    printf("%s(%s) %d\n", __func__, game_name, file_size_in_bytes);
+    //printf("%s(%s) %d\n", __func__, game_name, file_size_in_bytes);
 
     vmudev = maple_enum_type(pfs->channel, MAPLE_FUNC_MEMCARD);
     if (!vmudev)
@@ -446,7 +441,7 @@ s32 osPfsAllocateFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name
     *file_no = fileIndex++;
     openFile[*file_no].file = fs_open(filename, O_RDWR | O_CREAT | O_META);
     if (-1 == openFile[*file_no].file) {
-        printf("couldnt open file in allocate\n");
+        //printf("couldnt open file in allocate\n");
         return PFS_INVALID_DATA;
     }
 
@@ -468,7 +463,7 @@ s32 osPfsAllocateFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name
     ssize_t* pkg_size;
     u8* pkg_out;
     vmu_pkg_build(&newpkg, &pkg_out, &pkg_size);
-    printf("built ghostdata package\n");
+    //printf("built ghostdata package\n");
     ssize_t rv = fs_write(openFile[*file_no].file, pkg_out, pkg_size);
     if (rv != pkg_size) {
             fs_close(openFile[*file_no].file);
@@ -491,14 +486,14 @@ s32 osPfsAllocateFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name
 extern int vmu_status(int channel);
 
 s32 osPfsIsPlug(OSMesgQueue* queue, u8* pattern) {
-    printf("%s\n",__func__);
+    //printf("%s\n",__func__);
     *pattern = 0;
     if (!vmu_status(0))
         *pattern = 1;
     return 1;
 }
 s32 osPfsInit(OSMesgQueue* queue, OSPfs* pfs, int channel) {
-    printf("%s(%d)\n",__func__,channel);
+    //printf("%s(%d)\n",__func__,channel);
     int rv = vmu_status(channel);
     if (rv) {
         return PFS_NO_PAK_INSERTED;
@@ -514,20 +509,20 @@ s32 osPfsInit(OSMesgQueue* queue, OSPfs* pfs, int channel) {
 }
 
 s32 osPfsNumFiles(OSPfs* pfs, s32* max_files, s32* files_used) {
-    printf("%s\n",__func__);
+    //printf("%s\n",__func__);
     *max_files = 16;
     *files_used = fileIndex;
     return 0;
 }
 
 s32 osPfsFileState(OSPfs* pfs, s32 file_no, OSPfsState* state) {
-    printf("%s\n",__func__);
+    //printf("%s\n",__func__);
     return PFS_NO_ERROR;
 }
 extern int32_t Pak_Memory;
 
 s32 osPfsFreeBlocks(OSPfs* pfs, s32* bytes_not_used) {
-    printf("%s\n",__func__);
+    //printf("%s\n",__func__);
     vmu_status(pfs->channel);
 
     *bytes_not_used = Pak_Memory * 512;//0x10000;
@@ -536,11 +531,11 @@ s32 osPfsFreeBlocks(OSPfs* pfs, s32* bytes_not_used) {
 
 s32 osPfsFindFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8* ext_name, s32* file_no) {
     maple_device_t* vmudev = NULL;
-    printf("%s(%d,%s)\n", __func__, pfs->channel, game_name);
+    //printf("%s(%d,%s)\n", __func__, pfs->channel, game_name);
 
     vmudev = maple_enum_type(pfs->channel, MAPLE_FUNC_MEMCARD);
     if (!vmudev) {
-        printf("couldn't get vmu for pfs->channel %d\n", pfs->channel);
+        //printf("couldn't get vmu for pfs->channel %d\n", pfs->channel);
         return PFS_NO_PAK_INSERTED;
     }
     char* filename = get_vmu_fn(vmudev, "mk64.gho");
@@ -552,20 +547,20 @@ s32 osPfsFindFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8
             return PFS_NO_ERROR;
         }
     }
-    printf("\tdidn't find open file in cache\n");
+    //printf("\tdidn't find open file in cache\n");
     *file_no = fileIndex++;
 
     openFile[*file_no].file = fs_open(filename, O_RDONLY | O_META);
     strcpy(openFile[*file_no].filename, filename);
     if (-1 == openFile[*file_no].file) {
-        printf("\t\tcouldn't find it on vmu either\n");
+        //printf("\t\tcouldn't find it on vmu either\n");
         return PFS_ERR_INVALID;
     } else {
         fs_close(openFile[*file_no].file);
         openFile[*file_no].file = -1;
         openFile[*file_no].file = fs_open(filename, O_RDWR | O_META);
         if (-1 == openFile[*file_no].file) {
-            printf("\t\tcouldn't re-open read-write\n");
+            //printf("\t\tcouldn't re-open read-write\n");
             return PFS_CORRUPTED;
         }
     }
@@ -576,59 +571,3 @@ s32 osPfsFindFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8
     strcpy(openFile[*file_no].state.ext_name, ext_name);
     return PFS_NO_ERROR;
 }
-
-#if 0
-/* file system interface */
-
-s32 osPfsInitPak(OSMesgQueue*, OSPfs*, int);
-s32 osPfsRepairId(OSPfs*);
-s32 osPfsInit(OSMesgQueue*, OSPfs*, int);
-s32 osPfsReFormat(OSPfs*, OSMesgQueue*, int);
-s32 osPfsChecker(OSPfs*);
-s32 osPfsAllocateFile(OSPfs*, u16, u32, u8*, u8*, int, s32*);
-s32 osPfsFindFile(OSPfs*, u16, u32, u8*, u8*, s32*);
-s32 osPfsDeleteFile(OSPfs*, u16, u32, u8*, u8*);
-s32 osPfsReadWriteFile(OSPfs*, s32, u8, int, int, u8*);
-s32 osPfsFileState(OSPfs*, s32, OSPfsState*);
-s32 osPfsGetLabel(OSPfs*, u8*, int*);
-s32 osPfsSetLabel(OSPfs*, u8*);
-s32 osPfsIsPlug(OSMesgQueue*, u8*);
-s32 osPfsFreeBlocks(OSPfs*, s32*);
-s32 osPfsNumFiles(OSPfs*, s32*, s32*);
-
-int32_t ControllerPakStatus = 1;
-int32_t Pak_Memory = 0;
-
-static char full_fn[20];
-
-char *get_vmu_fn(maple_device_t *vmudev, char *fn) {
-	if (fn)
-		sprintf(full_fn, "/vmu/%c%d/%s", 'a'+vmudev->port, vmudev->unit, fn);
-	else
-		sprintf(full_fn, "/vmu/%c%d", 'a'+vmudev->port, vmudev->unit);
-
-	return full_fn;
-}
-
-/* Description
-osPfsAllocateFile creates a new game note (file) in a Controller Pak.
-The company_code (company code), game_code (game code), game_name (note name),
-ext_name (note extension), and length (size) arguments must be specified as the
-information for the game note.
-*/
-s32 osPfsAllocateFile(OSPfs *pfs,  u16 company_code,  u32 game_code,  u8 *game_name, 
-                      u8 *ext_name,  int length,  s32 *file_no) {
-	ssize_t size;
-	maple_device_t *vmudev = NULL;
-	uint8_t *data;
-
-	ControllerPakStatus = 0;
-
-	vmudev = maple_enum_type(0, MAPLE_FUNC_MEMCARD);
-
-}
-
-s32 osPfsInitPak(OSMesgQueue* a, OSPfs* b, int c) {
-    return 0;
-}
-#endif
