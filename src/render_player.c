@@ -24,26 +24,18 @@
 #include "skybox_and_splitscreen.h"
 #include "spawn_players.h"
 void sincoss(u16 arg0, f32 *s, f32 *c);
-static inline void NVMATH_SINCOS_I(u16 angle, float *sine, float *cosine)
-    {
-        register float __s __asm__("fr2");
-        register float __c __asm__("fr3");
+static inline void scaled_sincoss(u16 arg0, f32* s, f32* c, f32 scale) {
+    register float __s __asm__("fr2");
+    register float __c __asm__("fr3");
 
-        asm(    "lds    %2,fpul\n\t"
-            "fsca    fpul,dr2\n\t"
-            : "=f" (__s), "=f" (__c)
-            : "r" (angle)
-            : "fpul");
+    asm("lds    %2,fpul\n\t"
+        "fsca    fpul,dr2\n\t"
+        : "=f"(__s), "=f"(__c)
+        : "r"(arg0)
+        : "fpul");
 
-        *sine = __s; *cosine = __c;
-    }
-
-static inline void scaled_sincoss(u16 arg0, f32 *s, f32 *c, f32 scale) {
-    f32 sf,cf;
-    NVMATH_SINCOS_I(arg0,&sf,&cf);
-
-    *s = sf * scale;
-    *c = cf * scale;
+    *s = __s * scale;
+    *c = __c * scale;
 }
 
 s8 gRenderingFramebufferByPlayer[] = { 0x00, 0x02, 0x00, 0x01, 0x00, 0x01, 0x00, 0x02 };

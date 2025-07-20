@@ -3673,26 +3673,18 @@ void func_80060B14(Player* player, s16 arg1, s32 arg2, s8 arg3, s8 arg4) {
     }
 }
 
-static inline void NVMATH_SINCOS_I(u16 angle, float *sine, float *cosine)
-    {
-        register float __s __asm__("fr2");
-        register float __c __asm__("fr3");
+static inline void scaled_sincoss(u16 arg0, f32* s, f32* c, f32 scale) {
+    register float __s __asm__("fr2");
+    register float __c __asm__("fr3");
 
-        asm(    "lds    %2,fpul\n\t"
-            "fsca    fpul,dr2\n\t"
-            : "=f" (__s), "=f" (__c)
-            : "r" (angle)
-            : "fpul");
+    asm("lds    %2,fpul\n\t"
+        "fsca    fpul,dr2\n\t"
+        : "=f"(__s), "=f"(__c)
+        : "r"(arg0)
+        : "fpul");
 
-        *sine = __s; *cosine = __c;
-    }
-
-static inline void scaled_sincoss(u16 arg0, f32 *s, f32 *c, f32 scale) {
-    f32 sf,cf;
-    NVMATH_SINCOS_I(arg0,&sf,&cf);
-
-    *s = sf * scale;
-    *c = cf * scale;
+    *s = __s * scale;
+    *c = __c * scale;
 }
 
 void func_80060BCC(Player* player, s16 arg1, s32 arg2, UNUSED s8 arg3, UNUSED s8 arg4) {
