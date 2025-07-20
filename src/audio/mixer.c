@@ -21,15 +21,18 @@
 #define ROUND_UP_8(v) (((v) + 7) & ~7)
 #define ROUND_DOWN_16(v) ((v) & ~0xf)
 
-#define DMEM_BUF_SIZE 0x17E0
+#define DMEM_BUF_SIZE 0x1000
+//0x17E0
 #define BUF_U8(a) (rspa.buf.as_u8 + (a))
 #define BUF_S16(a) (rspa.buf.as_s16 + (a) / sizeof(int16_t))
 
 static struct  __attribute__((aligned(32)))  {
+//    int16_t __attribute__((aligned(32))) after[512];;
     union  __attribute__((aligned(32))) {
         int16_t __attribute__((aligned(32))) as_s16[DMEM_BUF_SIZE / sizeof(int16_t)];
         uint8_t __attribute__((aligned(32))) as_u8[DMEM_BUF_SIZE];
     } buf;
+//    int16_t __attribute__((aligned(32))) before[512];;
 
     ADPCM_STATE* adpcm_loop_state;
     uint16_t in;
@@ -47,7 +50,7 @@ static struct  __attribute__((aligned(32)))  {
 #endif
     int16_t  __attribute__((aligned(32))) filter[8];
 
-} rspa;
+} rspa = {0};
 
 #define MEM_BARRIER()         asm volatile("": : : "memory");
 #define MEM_BARRIER_PREF(ptr) asm volatile("pref @%0" : : "r" ((ptr)) : "memory")
@@ -134,30 +137,30 @@ void aLoadADPCMImpl(int num_entries_times_16, const int16_t* book_source_addr) {
 void aLoadADPCMImpl(int num_entries_times_16, const int16_t* book_source_addr) {
     float *aptr = (float*)rspa.adpcm_table;
     short tmp[8];
-    int i = 0;
 
     __builtin_prefetch(book_source_addr);
 
     for (int i=0;i<num_entries_times_16 / 2; i += 8) {
-//        __builtin_prefetch(&aptr[i]);
-        tmp[0] = (short)__builtin_bswap16(book_source_addr[i + 0]);
-        tmp[1] = (short)__builtin_bswap16(book_source_addr[i + 1]);
-        tmp[2] = (short)__builtin_bswap16(book_source_addr[i + 2]);
-        tmp[3] = (short)__builtin_bswap16(book_source_addr[i + 3]);
-        tmp[4] = (short)__builtin_bswap16(book_source_addr[i + 4]);
-        tmp[5] = (short)__builtin_bswap16(book_source_addr[i + 5]);
-        tmp[6] = (short)__builtin_bswap16(book_source_addr[i + 6]);
-        tmp[7] = (short)__builtin_bswap16(book_source_addr[i + 7]);
-
+        __builtin_prefetch(&aptr[i]);
+#if 1
+        tmp[0] = (short)/* __builtin_bswap16 */BSWAP16(book_source_addr[i + 0]);
+        tmp[1] = (short)/* __builtin_bswap16 */BSWAP16(book_source_addr[i + 1]);
+        tmp[2] = (short)/* __builtin_bswap16 */BSWAP16(book_source_addr[i + 2]);
+        tmp[3] = (short)/* __builtin_bswap16 */BSWAP16(book_source_addr[i + 3]);
+        tmp[4] = (short)/* __builtin_bswap16 */BSWAP16(book_source_addr[i + 4]);
+        tmp[5] = (short)/* __builtin_bswap16 */BSWAP16(book_source_addr[i + 5]);
+        tmp[6] = (short)/* __builtin_bswap16 */BSWAP16(book_source_addr[i + 6]);
+        tmp[7] = (short)/* __builtin_bswap16 */BSWAP16(book_source_addr[i + 7]);
+#endif
         MEM_BARRIER_PREF(&book_source_addr[i + 8]);
-        aptr[i + 0] = 0.00048828f * (f32)(s32)tmp[0];
-        aptr[i + 1] = 0.00048828f * (f32)(s32)tmp[1];
-        aptr[i + 2] = 0.00048828f * (f32)(s32)tmp[2];
-        aptr[i + 3] = 0.00048828f * (f32)(s32)tmp[3];
-        aptr[i + 4] = 0.00048828f * (f32)(s32)tmp[4];
-        aptr[i + 5] = 0.00048828f * (f32)(s32)tmp[5];
-        aptr[i + 6] = 0.00048828f * (f32)(s32)tmp[6];
-        aptr[i + 7] = 0.00048828f * (f32)(s32)tmp[7];
+        aptr[i + 0] = 0.00048828f * (f32)(s32)/* book_source_addr[i + 0]; */tmp[0];
+        aptr[i + 1] = 0.00048828f * (f32)(s32)/* book_source_addr[i + 1]; */tmp[1];
+        aptr[i + 2] = 0.00048828f * (f32)(s32)/* book_source_addr[i + 2]; */tmp[2];
+        aptr[i + 3] = 0.00048828f * (f32)(s32)/* book_source_addr[i + 3]; */tmp[3];
+        aptr[i + 4] = 0.00048828f * (f32)(s32)/* book_source_addr[i + 4]; */tmp[4];
+        aptr[i + 5] = 0.00048828f * (f32)(s32)/* book_source_addr[i + 5]; */tmp[5];
+        aptr[i + 6] = 0.00048828f * (f32)(s32)/* book_source_addr[i + 6]; */tmp[6];
+        aptr[i + 7] = 0.00048828f * (f32)(s32)/* book_source_addr[i + 7]; */tmp[7];
     }
 }
 
@@ -220,19 +223,21 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
 
     //int16_t* d = BUF_S16(rspa.out);
     int32_t* d = (int32_t*)(((uintptr_t)BUF_S16(rspa.out)+3) & ~3);
-
+//for(int i=0;i<512;i+=64) {
+//    printf("before %d after %d\n", rspa.before[0], rspa.after[511]);
+//}
     __builtin_prefetch(r);
 
     while (count > 0) {
         __builtin_prefetch(r+16);
-        int32_t lr0 = (*r++ << 16) | ((u16)*l++);
-        int32_t lr1 = (*r++ << 16) | ((u16)*l++);
-        int32_t lr2 = (*r++ << 16) | ((u16)*l++);
-        int32_t lr3 = (*r++ << 16) | ((u16)*l++);
-        int32_t lr4 = (*r++ << 16) | ((u16)*l++);
-        int32_t lr5 = (*r++ << 16) | ((u16)*l++);
-        int32_t lr6 = (*r++ << 16) | ((u16)*l++);
-        int32_t lr7 = (*r++ << 16) | ((u16)*l++);
+        int32_t lr0 = (*r++ << 16) | (*l++ & 0xffff);
+        int32_t lr1 = (*r++ << 16) | (*l++ & 0xffff);
+        int32_t lr2 = (*r++ << 16) | (*l++ & 0xffff);
+        int32_t lr3 = (*r++ << 16) | (*l++ & 0xffff);
+        int32_t lr4 = (*r++ << 16) | (*l++ & 0xffff);
+        int32_t lr5 = (*r++ << 16) | (*l++ & 0xffff);
+        int32_t lr6 = (*r++ << 16) | (*l++ & 0xffff);
+        int32_t lr7 = (*r++ << 16) | (*l++ & 0xffff);
 #if 1
             asm volatile("": : : "memory");
 #endif
@@ -442,7 +447,7 @@ static inline float clamp16f(float v) {
 #endif
 #if 1
 static inline float clamp16f(float v) {
-    v *= 0.00048828f;
+//    v *= 0.00048828f;
     if (v < -32768.0f) {
         return -32768.0f;
     } else if (v > 32767.0f) {
@@ -481,7 +486,7 @@ void __attribute__((optimization("-Os"))) aADPCMdecImpl(uint8_t flags, ADPCM_STA
     while (nbytes > 0) {
         uint8_t si_in = *in++;
         MEM_BARRIER_PREF(out);
-        int shift = (si_in >> 4);          // should be in 0..12 or 0..14
+        int shift = (si_in >> 4) & 0xf;          // should be in 0..12 or 0..14
         int table_index = si_in & 0xf; // should be in 0..7
         float(*tbl)[8] = rspa.adpcm_table[table_index];
         int i;
@@ -566,14 +571,14 @@ void __attribute__((optimization("-Os"))) aADPCMdecImpl(uint8_t flags, ADPCM_STA
 
             //prev1 = clamp16f(accaccf);//accf[7];
             //*out++ = prev1;
-            *out++ = clamp16fs(accf[0]);
-            *out++ = clamp16fs(accf[1]);
-            *out++ = clamp16fs(accf[2]);
-            *out++ = clamp16fs(accf[3]);
-            *out++ = clamp16fs(accf[4]);
-            *out++ = clamp16fs(accf[5]);
-            prev2 = *out++ = clamp16fs(accf[6]);
-            prev1 = *out++ = clamp16fs(accf[7]);
+            *out++ = clamp16f(accf[0]);
+            *out++ = clamp16f(accf[1]);
+            *out++ = clamp16f(accf[2]);
+            *out++ = clamp16f(accf[3]);
+            *out++ = clamp16f(accf[4]);
+            *out++ = clamp16f(accf[5]);
+            prev2 = *out++ = clamp16f(accf[6]);
+            prev1 = *out++ = clamp16f(accf[7]);
 
 
             #endif
@@ -760,6 +765,43 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     *dp++ = *sp++;
 
     do {
+#if 0
+        uint32_t pa[8];
+        uint32_t inp[8];
+        int16_t tbls[8];
+        pa[0] = pitch_accumulator;
+        inp[0] = 0;
+        tbls[0] = resample_table[pa[0] >> 10];
+
+        pa[1] = pa[0] + (pitch << 1);
+        inp[1] = inp[0] + (pa[1] >> 16);
+        tbl[1] = resample_table[pa[1] >> 10];
+
+        pa[2] = (pa[1]&0xffff) + (pitch << 1);
+        inp[2] = inp[1] + (pa[2] >> 16);
+        tbls[2] = resample_table[pa[2] >> 10];
+
+        pa[3] = (pa[2]0xffff) + (pitch << 1);
+        inp[3] = inp[2] + (pa[3] >> 16);
+        tbls[3] = resample_table[pa[3] >> 10];
+
+        pa[4] = (pa[3]&0xffff) + (pitch << 1);
+        inp[4] = inp[3] + (pa[4] >> 16);
+        tbls[4] = resample_table[pa[4] >> 10];
+
+        pa[5] = (pa[4]&0xffff) + (pitch << 1);
+        inp[5] = inp[4] + (pa[5] >> 16);
+        tbls[5] = resample_table[pa[5] >> 10];
+
+        pa[6] = (pa[5]&0xffff) + (pitch << 1);
+        inp[6] = inp[5] + (pa[6] >> 16);
+        tbls[6] = resample_table[pa[6] >> 10];
+
+        pa[7] = (pa[6]&0xffff) + (pitch << 1);
+        inp[7] = inp[6] + (pa[7] >> 16);
+        tbls[7] = resample_table[pa[7] >> 10];
+#endif
+
         for (i = 0; i < 8; i++) {
             tbl = resample_table[pitch_accumulator >> 10];
             float in_f[4] = {(float)(int)in[0],(float)(int)in[1],(float)(int)in[2],(float)(int)in[3]};

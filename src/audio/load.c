@@ -128,6 +128,66 @@ char loadAudioString38[] = "---------------------------------------\n";
 
 void n64_memcpy(void *dst, const void *src, size_t size);
 
+extern u8 *_audio_banksSegmentRomStart;
+extern u8 *_audio_tablesSegmentRomStart;
+extern u8 *_instrument_setsSegmentRomStart;
+extern u8 *_sequencesSegmentRomStart;
+#include <os/libaudio_internal.h>
+void fixupALBankFile(void) {
+    ALBankFile *alBankFile = _audio_banksSegmentRomStart;
+    printf("alBankFile %08x\n", alBankFile);
+    s16 bankCount = __builtin_bswap16(alBankFile->bankCount);
+    s32 *offsets = (s32 *)&alBankFile->bankArray[0];
+    printf("offsets is %08x\n", offsets);
+    for (s16 i = 0; i < bankCount; i++) {
+        printf("\tbank %d / %d\n", i, bankCount);
+        s32 bankOffs = __builtin_bswap32(offsets[i]);
+        printf("bankOffs is %08x\n", bankOffs);
+        ALBank *nextBank = (ALBank *)(alBankFile + bankOffs);
+        if (nextBank->flags == 1) {
+            printf("how the fuck is this pointers\n");
+            return;
+        }
+        printf("\tnextBank %08x\n", nextBank);
+        s16 instCount = __builtin_bswap16(nextBank->instCount);
+        s32 *iOffsets = (s32 *)&nextBank->instArray[0];
+        for (s16 j = 0; j < instCount; j++) {
+            printf("\t\tinst %d / %d\n", j, instCount);
+            s32 insOffs = __builtin_bswap32(iOffsets[j]);
+            printf("insOffs %08x\n", insOffs);
+            ALInstrument *nextIns = (ALInstrument *)(nextBank + insOffs);
+            printf("\t\tnextIns %08x\n", nextIns);
+            s16 sndCnt = __builtin_bswap16(nextIns->soundCount);
+            s32 *sOffsets = (s32 *)&nextIns->soundArray[0];
+            for (s16 k = 0; k < sndCnt; k++) {
+                printf("\t\t\tsnd %d / %d\n", k, sndCnt);
+                s32 sndOffs = __builtin_bswap32(sOffsets[k]);
+                ALSound *nextSnd = (ALSound *)(nextIns + sndOffs);
+                printf("\t\t\tnextSnd %08x\n", nextSnd);
+                s32 wavetable = __builtin_bswap32(nextSnd->wavetable);
+                ALWaveTable *nWvTbl = (ALWaveTable *)(nextSnd + wavetable);
+                printf("\t\t\tnWvTbl %08x\n", nWvTbl);
+                if (nWvTbl->type == AL_ADPCM_WAVE) {
+                    ALADPCMWaveInfo *awavInfo = (ALADPCMWaveInfo *)&nWvTbl->waveInfo.adpcmWave;
+                    printf("\t\t\t\tawavInfo %08x\n", awavInfo);
+                    ALADPCMBook *book = (ALADPCMBook *)(nWvTbl + __builtin_bswap32(awavInfo->book));
+                    printf("\t\t\t\tbook %08x\n", book);
+                    /* s32 order = __builtin_bswap32(book->order);
+                    s32 npred = __builtin_bswap32(book->npredictors);
+                    s32 nEntries = 16 * order * npred;
+                    s16 *bookPtr = (s16 *)book->book;
+                    printf("\t\t\t\tbookPtr %08x nEntries16 %d\n", bookPtr, nEntries);
+                    for (int i = 0;i < nEntries / 2; i++) {
+                        bookPtr[i] = __builtin_bswap16(bookPtr[i]);
+                    } */
+                }
+            }
+        }
+    }
+}
+
+
+
 /**
  * Performs an immediate DMA copy
  */
@@ -317,10 +377,8 @@ void func_800BB030(UNUSED s32 arg0) {
 // Similar to patch_sound, but not really
 void func_800BB304(struct AudioBankSample* sample) {
     u8* mem = NULL;
-    //printf("%s(%08x)\n",__func__,sample);
     if (sample == (void*) NULL) {
-        //printf("sample null\n");
-        return;// -1;
+        return;
     }
 
     if (sample->loaded == 1) {
@@ -329,55 +387,31 @@ void func_800BB304(struct AudioBankSample* sample) {
         if (sampleCopySize > 0xffff) {
             sampleCopySize = __builtin_bswap32(sampleCopySize);
         }
-        // temp_a1 = sound->sampleAddr // unk10;
-//        mem = soundAlloc(&gNotesAndBuffersPool, sampleCopySize);
-        // temp_a1_2 = temp_v0;
-  //      if (mem == (void*) NULL) {
-            //printf("mem null\n");
-    //        return;// -1;
-      //  }
-
-        //printf("about to copy to %08x\n", mem);
-        //printf("sample addr is %08x\n", sample->sampleAddr);
-        //printf("sample size is %08x\n", sample->sampleSize);
-      //  uint32_t sampleCopySize = sample->sampleSize;
-        // this is why DK and Toad were broken once sound is active
-//        if (sampleCopySize > 0xffff) {
-  //          sampleCopySize = __builtin_bswap32(sampleCopySize);
-    //    }
-//////////        audio_dma_copy_immediate(sample->sampleAddr, mem, sampleCopySize);//sample->sampleSize);
         sample->loaded = 0x81;
         sample->sampleSize = sampleCopySize;
-        sample->sampleAddr = sample->sampleAddr;//mem; // sound->unk4
+        sample->sampleAddr = sample->sampleAddr;
     }
-    //printf("returning from the func\n");
 }
 
 s32 func_800BB388(s32 bankId, s32 instId, s32 arg2) {
     struct Instrument* instr = NULL;
     struct Drum* drum = NULL;
-    //printf("%s(%d,%d,%d)\n",__func__,bankId,instId,arg2);
     if (instId < 0x7F) {
         instr = get_instrument_inner(bankId, instId);
         if (instr == NULL) {
-            //printf("instr null return -1\n");
             return -1;
         }
-        //printf("instr is %08x\n", instr);
         if (instr->normalRangeLo != 0) {
-            //printf("normalRangeLo != 0\n");
             func_800BB304(instr->lowNotesSound.sample);
         }
         func_800BB304(instr->normalNotesSound.sample);
         if (instr->normalRangeHi != 0x7F) {
-            //printf("normalRangeHi != 0x7f\n");
             func_800BB304(instr->highNotesSound.sample);
         }
         //! @bug missing return
     } else if (instId == 0x7F) {
         drum = get_drum(bankId, arg2);
         if (drum == NULL) {
-            //printf("drum null return -1\n");
             return -1;
         }
         func_800BB304(drum->sound.sample);
@@ -426,6 +460,12 @@ void patch_sound(struct AudioBankSound* sound, u8* memBase, u8* offsetBase) {
             sample->book = __builtin_bswap32(sample->book);
             sample->book = (struct AdpcmBook*) PATCH(sample->book, memBase);
 
+            /* s32 nEntries = (__builtin_bswap32(sample->book->order) * __builtin_bswap32(sample->book->npredictors) * 16);
+            s16 *bookPtr = (s16 *)sample->book->book;
+            printf("\t\t\t\tbookPtr %08x nEntries16 %d\n", bookPtr, nEntries);
+            for (int i = 0;i < nEntries  / 2 ; i++) {
+                bookPtr[i] = __builtin_bswap16(bookPtr[i]);
+            } */
             sample->loaded = 1;
         } else if (sample->loaded == 0x80) {
             sample->sampleAddr = __builtin_bswap32(sample->sampleAddr);
@@ -440,6 +480,12 @@ void patch_sound(struct AudioBankSound* sound, u8* memBase, u8* offsetBase) {
 
             sample->book = __builtin_bswap32(sample->book);
             sample->book = (struct AdpcmBook*) PATCH(sample->book, memBase);
+            /* s32 nEntries = (__builtin_bswap32(sample->book->order) * __builtin_bswap32(sample->book->npredictors) * 16);
+            s16 *bookPtr = (s16 *)sample->book->book;
+            printf("\t\t\t\tbookPtr %08x nEntries16 %d\n", bookPtr, nEntries);
+            for (int i = 0;i < nEntries  / 2 ; i++) {
+                bookPtr[i] = __builtin_bswap16(bookPtr[i]);
+            } */
         }
     }
 
@@ -718,10 +764,6 @@ void load_sequence_internal(u32 player, u32 seqId) {
     seqPlayer->scriptState.pc = sequenceData;
 }
 
-extern u8 *_audio_banksSegmentRomStart;
-extern u8 *_audio_tablesSegmentRomStart;
-extern u8 *_instrument_setsSegmentRomStart;
-extern u8 *_sequencesSegmentRomStart;
 /**
  * There is some wild bullshit going on in this function
  *  It is an unholy cross between SM64's EU and Shindou
@@ -787,7 +829,7 @@ void audio_init(void) {
     gRefreshRate = 60;
 
     port_eu_init();
-
+//    fixupALBankFile();
 //    if (k) {} // fake
 
     for (i = 0; i < NUMAIBUFFERS; i++) {

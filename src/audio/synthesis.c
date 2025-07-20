@@ -404,11 +404,13 @@ Acmd* synthesis_process_note(s32 noteIndex, struct NoteSubEu* noteSubEu, struct 
         synthesisState->samplePosInt += nSamplesToLoad;
     } else {
         audioBookSample = noteSubEu->sound.audioBankSound->sample;
+#if 0
         if ((uintptr_t)audioBookSample < (uintptr_t)0x8c010000) {
             printf("bad audioBookSample %08x\n", audioBookSample);
 //            while(1) {}
             exit(-1);
         }
+#endif
         loopInfo = audioBookSample->loop;
         endPos = __builtin_bswap32(loopInfo->end);
         sampleAddr = audioBookSample->sampleAddr;
