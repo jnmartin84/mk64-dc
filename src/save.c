@@ -562,7 +562,7 @@ extern int vmu_status(int channel);
 s32 check_for_controller_pak(UNUSED s32 controller) {
     u8 controllerBitpattern;
     UNUSED s32 phi_v0;
-    printf("%s(%d)\n", __func__, controller);
+    //printf("%s(%d)\n", __func__, controller);
     if ((controller >= MAXCONTROLLERS) || (controller < 0)) {
         return NO_PAK;
     }
@@ -570,7 +570,7 @@ s32 check_for_controller_pak(UNUSED s32 controller) {
     osPfsIsPlug(&gSIEventMesgQueue, &controllerBitpattern);
 
     if ((controllerBitpattern & (1 << controller)) != 0) {
-        printf("\tfound pak %d\n",controller);
+        //printf("\tfound pak %d\n",controller);
         return PAK;
     }
 
