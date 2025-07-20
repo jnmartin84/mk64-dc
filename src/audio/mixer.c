@@ -21,7 +21,8 @@
 #define ROUND_UP_8(v) (((v) + 7) & ~7)
 #define ROUND_DOWN_16(v) ((v) & ~0xf)
 
-#define DMEM_BUF_SIZE 0x1000
+#define DMEM_BUF_SIZE 2560
+//0x1000
 //0x17E0
 #define BUF_U8(a) (rspa.buf.as_u8 + (a))
 #define BUF_S16(a) (rspa.buf.as_s16 + (a) / sizeof(int16_t))
@@ -38,7 +39,6 @@ static struct  __attribute__((aligned(32)))  {
     uint16_t in;
     uint16_t out;
     uint16_t nbytes;
-    uint16_t filter_count;
     uint16_t vol_wet;
     uint16_t rate_wet;
     uint16_t vol[2];
@@ -48,8 +48,6 @@ static struct  __attribute__((aligned(32)))  {
 #else
     int16_t  __attribute__((aligned(32))) adpcm_table[8][2][8];
 #endif
-    int16_t  __attribute__((aligned(32))) filter[8];
-
 } rspa = {0};
 
 #define MEM_BARRIER()         asm volatile("": : : "memory");
@@ -101,7 +99,6 @@ static inline int32_t clamp32(int64_t v) {
 //void checked_memeset
 uintptr_t DMEM_END = rspa.buf.as_u8 + DMEM_BUF_SIZE;
 void n64_memset(void *dst, uint8_t val, size_t size);
-
 void aClearBufferImpl(uint16_t addr, int nbytes) {
     nbytes = ROUND_UP_16(nbytes);
     /* n64_ */memset(BUF_U8(addr), 0, nbytes);
@@ -111,6 +108,28 @@ void aClearBufferImpl(uint16_t addr, int nbytes) {
 void n64_memcpy(void *dst, const void *src, size_t size);
 
 void aLoadBufferImpl(const void* source_addr, uint16_t dest_addr, uint16_t nbytes) {
+#if 0
+    static int called = 0;
+    if (!called) {
+        for (int i=0;i<512;i++) {
+            rspa.before[i] = 0;
+            rspa.after[i] = 0;
+        }
+        for (int i=0;i<2560;i++) {
+            rspa.buf.as_u8[i] = i&0xf;
+        }
+    }
+    if (called == 32768) {
+        for (int i=0;i<4096;i++) {
+            printf("%02x ", rspa.buf.as_u8[i]);
+            if (i % 16 == 0) {
+                printf("\n");
+            }
+        }
+        printf("\n");
+    }
+    called++;
+#endif
     n64_memcpy(BUF_U8(dest_addr), source_addr, ROUND_DOWN_16(nbytes));
 }
 
