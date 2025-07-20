@@ -2520,9 +2520,9 @@ void func_8005C728(void) {
 }
 
 void func_8005C980(void) {
-    s32 var_v0;
-    s32 sp0;
-    s32 temp_v1;
+    s32 var_v0 = 0;
+    s32 sp0 = 0;
+    s32 temp_v1 = 0;
     for (var_v0 = 0; var_v0 < NUM_PLAYERS; var_v0++) {
         temp_v1 = gGPCurrentRaceRankByPlayerId[var_v0];
         if (D_80165590 == 0) {
@@ -2838,21 +2838,21 @@ void func_8005D794(Player* player, UnkPlayerStruct258* arg1, f32 arg2, f32 arg3,
     arg1->unk_010 = arg6;
 }
 
-s32 func_8005D7D8(UnkPlayerStruct258* arg0, s8 arg1, f32 arg2) {
+void func_8005D7D8(UnkPlayerStruct258* arg0, s8 arg1, f32 arg2) {
     arg0->unk_01C = 1;
     arg0->unk_012 = arg1;
     arg0->unk_01E = 0;
     arg0->unk_00C = arg2;
 }
 
-s32 func_8005D800(UnkPlayerStruct258* arg0, s32 arg1, s16 arg2) {
+void func_8005D800(UnkPlayerStruct258* arg0, s32 arg1, s16 arg2) {
     arg0->unk_038 = (u8) (arg1 >> 16);
     arg0->unk_03A = (u8) (arg1 >> 8);
     arg0->unk_03C = (u8) arg1;
     arg0->unk_03E = arg2;
 }
 
-s32 func_8005D82C(UnkPlayerStruct258* arg0, s32 arg1, s16 arg2) {
+void func_8005D82C(UnkPlayerStruct258* arg0, s32 arg1, s16 arg2) {
     s32 temp_v0;
     temp_v0 = random_int(0x30);
 
@@ -3672,15 +3672,27 @@ void func_80060B14(Player* player, s16 arg1, s32 arg2, s8 arg3, s8 arg4) {
         }
     }
 }
+
+static inline void NVMATH_SINCOS_I(u16 angle, float *sine, float *cosine)
+    {
+        register float __s __asm__("fr2");
+        register float __c __asm__("fr3");
+
+        asm(    "lds    %2,fpul\n\t"
+            "fsca    fpul,dr2\n\t"
+            : "=f" (__s), "=f" (__c)
+            : "r" (angle)
+            : "fpul");
+
+        *sine = __s; *cosine = __c;
+    }
+
 static inline void scaled_sincoss(u16 arg0, f32 *s, f32 *c, f32 scale) {
-    float farg0 = (float)arg0 * 0.00009587f;
     f32 sf,cf;
-    sf = sinf(farg0);
-    cf = cosf(farg0);
-    sf *= scale;
-    cf *= scale;
-    *s = sf;//sinf(farg0) * scale;
-    *c = cf;//cosf(farg0) * scale;
+    NVMATH_SINCOS_I(arg0,&sf,&cf);
+
+    *s = sf * scale;
+    *c = cf * scale;
 }
 
 void func_80060BCC(Player* player, s16 arg1, s32 arg2, UNUSED s8 arg3, UNUSED s8 arg4) {
@@ -3705,7 +3717,7 @@ void func_80060BCC(Player* player, s16 arg1, s32 arg2, UNUSED s8 arg3, UNUSED s8
         return;
     }
 
-    scaled_sincoss(sp54 * 0xB6, &ts1, &tc1, -1.8f);
+    scaled_sincoss((s16)(sp54 * 0xB6), &ts1, &tc1, -1.8f);
 
     if ((arg1 == 0) && ((player->unk_258[arg2 + 10].unk_01E > 0) || (player->unk_258[arg2 + 10].unk_01C == 0))) {
         func_8005D794(player, &player->unk_258[arg1 + 10], 0.0f, 0.0f, 0.0f, (s8) 0, (s8) 0);
@@ -4350,7 +4362,7 @@ void func_80062F98(Player* player, s16 arg1, s8 arg2, UNUSED s8 arg3) {
 
 void func_800630C0(Player* player, s16 arg1, s8 arg2, UNUSED s8 arg3) {
     f32 ts1,tc1;
-    scaled_sincoss(player->unk_258[10 + arg1].unk_020, &ts1, &tc1,
+    scaled_sincoss((u16)(player->unk_258[10 + arg1].unk_020), &ts1, &tc1,
         -5.8f);
 
     ++player->unk_258[arg1].unk_01E;
