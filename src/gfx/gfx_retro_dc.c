@@ -592,7 +592,7 @@ static void import_texture_ia4(int tile) {
 		}
 	} else {
 		uint8_t ia4_xform_buf[8192];
-		n64_memset(ia4_xform_buf, 0, width*height);
+		n64_memset(ia4_xform_buf, 0, 8192);//(last_set_texture_image_width + 1)*height);
 		uint8_t* start =
 			(uint8_t*) &rdp.loaded_texture[tile]
 				.addr[(((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) >> 1) * (last_set_texture_image_width + 1)) +
@@ -729,7 +729,7 @@ static void import_texture_i4(int tile) {
 		}
 	} else {
 //		uint8_t xform_buf[8192];
-		n64_memset(rgba16_buf,0,width*height);//8192);
+		n64_memset(rgba16_buf,0,8192);
 		uint8_t* start =
 			(uint8_t*) &rdp.loaded_texture[tile]
 				.addr[(((((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC)-1)/2) * (width)/2)) +
