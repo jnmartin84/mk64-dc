@@ -23,15 +23,26 @@
 #include "sounds.h"
 
 void sincoss(u16 arg0, f32 *s, f32 *c);
+static inline void NVMATH_SINCOS_I(u16 angle, float *sine, float *cosine)
+    {
+        register float __s __asm__("fr2");
+        register float __c __asm__("fr3");
+
+        asm(    "lds    %2,fpul\n\t"
+            "fsca    fpul,dr2\n\t"
+            : "=f" (__s), "=f" (__c)
+            : "r" (angle)
+            : "fpul");
+
+        *sine = __s; *cosine = __c;
+    }
+
 static inline void scaled_sincoss(u16 arg0, f32 *s, f32 *c, f32 scale) {
-    float farg0 = (float)arg0 * 0.00009587f;
     f32 sf,cf;
-    sf = sinf(farg0);
-    cf = cosf(farg0);
-    sf *= scale;
-    cf *= scale;
-    *s = sf;//sinf(farg0) * scale;
-    *c = cf;//cosf(farg0) * scale;
+    NVMATH_SINCOS_I(arg0,&sf,&cf);
+
+    *s = sf * scale;
+    *c = cf * scale;
 }
 
 extern s32 D_8018D168;
