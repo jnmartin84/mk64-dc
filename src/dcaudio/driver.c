@@ -299,7 +299,7 @@ void mute_stream(void) {
 }
 
 void unmute_stream(void) {
-    snd_stream_volume(shnd, 192); // Set maximum volume
+    snd_stream_volume(shnd, 160); // Set maximum volume
 }
 
 void *audio_callback(UNUSED snd_stream_hnd_t hnd, int samples_requested_bytes, int *samples_returned_bytes) {
@@ -364,7 +364,7 @@ static bool audio_dc_init(void) {
     }
 #endif
     // Set maximum volume
-    snd_stream_volume(shnd, 192); 
+    snd_stream_volume(shnd, 160); 
 
     printf("Sound init complete!\n");
     
