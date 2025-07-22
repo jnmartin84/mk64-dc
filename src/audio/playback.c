@@ -93,7 +93,7 @@ void note_set_vel_pan_reverb(struct Note* note, f32 velocity, u8 pan, u8 reverbV
 void note_set_resampling_rate(struct Note* note, f32 resamplingRateInput) {
     f32 resamplingRate = 0.0f;
     struct NoteSubEu* tempSub = &note->noteSubEu;
-   // printf("%s(%08x,%f)\n",__func__,note,resamplingRateInput);
+
     if (resamplingRateInput < 0.0f) {
         stubbed_printf("Audio: setpitch: pitch minus %f\n", resamplingRateInput);
         resamplingRateInput = 0.0f;
@@ -120,7 +120,6 @@ void note_set_resampling_rate(struct Note* note, f32 resamplingRateInput) {
 
 struct AudioBankSound* instrument_get_audio_bank_sound(struct Instrument* instrument, s32 semitone) {
     struct AudioBankSound* sound = NULL;
-    //printf("%s(%08x,%d)\n", __func__, instrument, semitone);
 
     if (semitone < instrument->normalRangeLo) {
         sound = &instrument->lowNotesSound;
@@ -134,7 +133,6 @@ struct AudioBankSound* instrument_get_audio_bank_sound(struct Instrument* instru
 
 struct Instrument* get_instrument_inner(s32 bankId, s32 instId) {
     struct Instrument* inst = NULL;
-    //printf("%s(%d,%d)\n", __func__, bankId, instId);
 
     if (IS_BANK_LOAD_COMPLETE(bankId) == 0) {
         stubbed_printf("Audio: voiceman: No bank error %d\n", bankId);
@@ -159,7 +157,6 @@ struct Instrument* get_instrument_inner(s32 bankId, s32 instId) {
 
 struct Drum* get_drum(s32 bankId, s32 drumId) {
     struct Drum* drum = NULL;
-    //printf("%s(%d,%d)\n", __func__, bankId, drumId);
     if (IS_BANK_LOAD_COMPLETE(bankId) == 0) {
         stubbed_printf("Audio: voiceman: No bank error %d\n", bankId);
         gAudioErrorFlags = bankId + 0x10000000;
@@ -211,8 +208,7 @@ void note_disable(struct Note* note) {
     note->noteSubEu.enabled = 0;
     note->noteSubEu.finished = 0;
 }
-#include <stdio.h>
-#include <stdlib.h>
+
 void process_notes(void) {
     f32 scale = 0;
     f32 frequency = 0;
@@ -230,24 +226,8 @@ void process_notes(void) {
 
     for (i = 0; i < gMaxSimultaneousNotes; i++) {
         note = &gNotes[i];
-//        printf("gNotes %08x &gNotes[%d] %08x \n", gNotes, i, note);
-        if ((uintptr_t)note < 0x8c010000U || (uintptr_t)note > 0x8cffffffU) {
-
-            printf("WTF INVALID NOTE\n");
-            exit(-1);
-        }
         playbackState = (struct NotePlaybackState*) &note->priority;
         if (note->parentLayer != NO_LAYER) {
-#if 0
-//ndef NO_SEGMENTED_MEMORY
-            if ((uintptr_t) playbackState->parentLayer < 0x8c010000U) {
-                continue;
-            }
-            if ((uintptr_t) playbackState->parentLayer > 0x8cffffffU) {
-                continue;
-            }
-#endif
-
 #ifdef VERSION_EU_V10
             // Just threw these in here. They are probably wrong place and variables.
             stubbed_printf("----------------------Double-Error CH: %x %f\n", &note, note->parentLayer->seqChannel);
@@ -322,25 +302,20 @@ void process_notes(void) {
             note_vibrato_update(note);
             attributes = &playbackState->attributes;
             if (playbackState->priority == NOTE_PRIORITY_STOPPING) {
-                //printf("attributes->freqScale %f\n", attributes->freqScale);
                 frequency = attributes->freqScale;
-            //    printf("from the if: frequency == %f\n", frequency);
                 velocity = attributes->velocity;
                 pan = attributes->pan;
                 reverbVol = attributes->reverbVol;
                 bookOffset = noteSubEu->bookOffset;
             } else {
                 frequency = playbackState->parentLayer->noteFreqScale;
-           //     printf("from the else: frequency == %f\n", frequency);
-  //              //printf("playbackState->parentLayer->noteFreqScale %f\n", playbackState->parentLayer->noteFreqScale);
                 velocity = playbackState->parentLayer->noteVelocity;
                 pan = playbackState->parentLayer->notePan;
                 reverbVol = playbackState->parentLayer->seqChannel->reverbVol;
                 bookOffset = playbackState->parentLayer->seqChannel->bookOffset & 0x7;
             }
-////printf("vibratoFreqScale %f portFreqScale %f\n",playbackState->vibratoFreqScale, playbackState->portamentoFreqScale );
+
             frequency *= playbackState->vibratoFreqScale * playbackState->portamentoFreqScale;
-           // printf("after: frequency == %f\n", frequency);
 
             velocity = velocity * scale;
             note_set_resampling_rate(note, frequency);
@@ -356,18 +331,11 @@ void seq_channel_layer_decay_release_internal(struct SequenceChannelLayer* seqLa
     struct Note* note = NULL;
     struct NoteAttributes* attributes = NULL;
 
-    //printf("seqLayer is %08x\n", seqLayer);
-
     if ((seqLayer == NO_LAYER) || (seqLayer->note == NULL)) {
         return;
     }
 
     note = seqLayer->note;
-    if ((uintptr_t) seqLayer->note < (uintptr_t) 0x8c010000) {
-        printf("playback.c INVALID NOTE %08x\n", (uintptr_t) seqLayer->note);
-        printf("\n");
-        exit(-1);
-    }
 
     attributes = &note->attributes;
 
@@ -386,7 +354,6 @@ void seq_channel_layer_decay_release_internal(struct SequenceChannelLayer* seqLa
     } else {
         seqLayer->status = SOUND_LOAD_STATUS_NOT_LOADED;
         if (note->adsr.state != ADSR_STATE_DECAY) {
-            //printf("seqLayer->noteFreqScale %f\n", seqLayer->noteFreqScale);
             attributes->freqScale = seqLayer->noteFreqScale;
             attributes->velocity = seqLayer->noteVelocity;
             attributes->pan = seqLayer->notePan;
@@ -421,11 +388,9 @@ void seq_channel_layer_decay_release_internal(struct SequenceChannelLayer* seqLa
 
 void seq_channel_layer_note_decay(struct SequenceChannelLayer* seqLayer) {
     seq_channel_layer_decay_release_internal(seqLayer, ADSR_STATE_DECAY);
-    ////printf("\nseq_channel_layer_note_decay(%08x)\n", seqLayer);
 }
 
 void seq_channel_layer_note_release(struct SequenceChannelLayer* seqLayer) {
-//    //printf("\nseq_channel_layer_note_release(%08x)\n", seqLayer);
     seq_channel_layer_decay_release_internal(seqLayer, ADSR_STATE_RELEASE);
 }
 
@@ -444,7 +409,6 @@ s32 build_synthetic_wave(struct Note* note, struct SequenceChannelLayer* seqLaye
     freqScale = seqLayer->freqScale;
     if (seqLayer->portamento.mode != 0 && 0.0f < seqLayer->portamento.extent) {
         freqScale *= (seqLayer->portamento.extent + 1.0f);
-        //printf("extent freqscale %f\n", freqScale);
     }
     if (freqScale < 1.0f) {
         sampleCountIndex = 0;
@@ -460,7 +424,6 @@ s32 build_synthetic_wave(struct Note* note, struct SequenceChannelLayer* seqLaye
         ratio = 0.13081f;
     }
     seqLayer->freqScale *= ratio;
-            //printf("ratiod seqLayer->freqScale %f\n", seqLayer->freqScale);
 
     note->waveId = waveId;
     note->sampleCountIndex = sampleCountIndex;

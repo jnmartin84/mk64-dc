@@ -27,43 +27,6 @@ void DelayThread(unsigned int ms) {
     thd_sleep(ms);
 }
 
-//-----------------------------------------------------------------------------
-#if 0
-typedef void (*assert_handler_t)(const char * file, int line, const char * expr,
-                                 const char * msg, const char * func);
-assert_handler_t assert_set_handler(assert_handler_t hnd);
-extern void bfont_draw_str(uint16_t *buffer, int bufwidth, int opaque, char *str);
-static void drawtext(int x, int y, char *string) {
-    extern uint16_t *vram_s;
-    printf("%s\n", string);
-    int offset = ((y * 640) + x);
-    bfont_draw_str(vram_s + offset, 640, 1, string);
-}
-
-static void assert_hnd(const char *file, int line, const char *expr, const char *msg, const char *func) {
-    char strbuffer[1024];
-
-    /* Reset video mode, clear screen */
-    vid_set_mode(DM_640x480,  1 /*PM_RGB565*/);
-    vid_empty();
-
-    /* Display the error message on screen */
-    drawtext(32, 64, "nuQuake - Assertion failure");
-
-    sprintf(strbuffer, " Location: %s, line %d (%s)", file, line, func);
-    drawtext(32, 96, strbuffer);
-
-    sprintf(strbuffer, "Assertion: %s", expr);
-    drawtext(32, 128, strbuffer);
-
-    sprintf(strbuffer, "  Message: %s", msg);
-    drawtext(32, 160, strbuffer);
-    arch_exit();
-}
-#endif
-
-//=============================================================================
-extern void setSystemRam(void);
 static void gfx_dc_init(UNUSED const char *game_name, UNUSED uint8_t start_in_fullscreen) {
     last_time = GetSystemTimeLow();
 }
@@ -102,7 +65,7 @@ const unsigned int FRAME_TIME_MS = 33; // hopefully get right on target @ 33.3
 static uint8_t gfx_dc_start_frame(void) {
     const unsigned int cur_time = GetSystemTimeLow();
     const unsigned int elapsed = cur_time - last_time;
-#if 0
+
     if (skip_debounce) {
         skip_debounce--;
         return 1;
@@ -113,7 +76,6 @@ static uint8_t gfx_dc_start_frame(void) {
         last_time = cur_time;
         return 0;
     }
-#endif        
     return 1;
 }
 

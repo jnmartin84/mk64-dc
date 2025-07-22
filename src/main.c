@@ -2286,12 +2286,12 @@ void SPINNING_THREAD(UNUSED void *arg) {
     uint64_t last_vbltick = vblticker;
 
     while (1) {
-//        {
-//        irq_disable_scoped();
-        while (vblticker <= last_vbltick + 1)
-            thd_pass();
-        //            genwait_wait(&vblticker, NULL, 15, NULL);
-//        }
+        {
+            irq_disable_scoped();
+            while (vblticker <= last_vbltick + 1)
+                genwait_wait(&vblticker, NULL, 15, NULL);
+        }
+        //thd_pass();
         last_vbltick = vblticker;
 
         u32 num_audio_samples = SAMPLES_HIGH;//even_frame ? SAMPLES_HIGH : SAMPLES_LOW;//448;

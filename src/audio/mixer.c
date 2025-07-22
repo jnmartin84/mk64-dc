@@ -26,8 +26,6 @@
 #define ROUND_DOWN_16(v) ((v) & ~0xf)
 
 #define DMEM_BUF_SIZE 2048
-//0x1000
-//0x17E0
 #define BUF_U8(a) (rspa.buf.as_u8 + (a))
 #define BUF_S16(a) (rspa.buf.as_s16 + (a) / sizeof(int16_t))
 
@@ -49,32 +47,7 @@ static struct  __attribute__((aligned(32)))  {
 
 #define MEM_BARRIER()         asm volatile("": : : "memory");
 #define MEM_BARRIER_PREF(ptr) asm volatile("pref @%0" : : "r" ((ptr)) : "memory")
-#if 0
-static int16_t __attribute__((aligned(32))) resample_table[64][4] = {
-    { 0x0c39, 0x66ad, 0x0d46, 0xffdf }, { 0x0b39, 0x6696, 0x0e5f, 0xffd8 }, { 0x0a44, 0x6669, 0x0f83, 0xffd0 },
-    { 0x095a, 0x6626, 0x10b4, 0xffc8 }, { 0x087d, 0x65cd, 0x11f0, 0xffbf }, { 0x07ab, 0x655e, 0x1338, 0xffb6 },
-    { 0x06e4, 0x64d9, 0x148c, 0xffac }, { 0x0628, 0x643f, 0x15eb, 0xffa1 }, { 0x0577, 0x638f, 0x1756, 0xff96 },
-    { 0x04d1, 0x62cb, 0x18cb, 0xff8a }, { 0x0435, 0x61f3, 0x1a4c, 0xff7e }, { 0x03a4, 0x6106, 0x1bd7, 0xff71 },
-    { 0x031c, 0x6007, 0x1d6c, 0xff64 }, { 0x029f, 0x5ef5, 0x1f0b, 0xff56 }, { 0x022a, 0x5dd0, 0x20b3, 0xff48 },
-    { 0x01be, 0x5c9a, 0x2264, 0xff3a }, { 0x015b, 0x5b53, 0x241e, 0xff2c }, { 0x0101, 0x59fc, 0x25e0, 0xff1e },
-    { 0x00ae, 0x5896, 0x27a9, 0xff10 }, { 0x0063, 0x5720, 0x297a, 0xff02 }, { 0x001f, 0x559d, 0x2b50, 0xfef4 },
-    { 0xffe2, 0x540d, 0x2d2c, 0xfee8 }, { 0xffac, 0x5270, 0x2f0d, 0xfedb }, { 0xff7c, 0x50c7, 0x30f3, 0xfed0 },
-    { 0xff53, 0x4f14, 0x32dc, 0xfec6 }, { 0xff2e, 0x4d57, 0x34c8, 0xfebd }, { 0xff0f, 0x4b91, 0x36b6, 0xfeb6 },
-    { 0xfef5, 0x49c2, 0x38a5, 0xfeb0 }, { 0xfedf, 0x47ed, 0x3a95, 0xfeac }, { 0xfece, 0x4611, 0x3c85, 0xfeab },
-    { 0xfec0, 0x4430, 0x3e74, 0xfeac }, { 0xfeb6, 0x424a, 0x4060, 0xfeaf }, { 0xfeaf, 0x4060, 0x424a, 0xfeb6 },
-    { 0xfeac, 0x3e74, 0x4430, 0xfec0 }, { 0xfeab, 0x3c85, 0x4611, 0xfece }, { 0xfeac, 0x3a95, 0x47ed, 0xfedf },
-    { 0xfeb0, 0x38a5, 0x49c2, 0xfef5 }, { 0xfeb6, 0x36b6, 0x4b91, 0xff0f }, { 0xfebd, 0x34c8, 0x4d57, 0xff2e },
-    { 0xfec6, 0x32dc, 0x4f14, 0xff53 }, { 0xfed0, 0x30f3, 0x50c7, 0xff7c }, { 0xfedb, 0x2f0d, 0x5270, 0xffac },
-    { 0xfee8, 0x2d2c, 0x540d, 0xffe2 }, { 0xfef4, 0x2b50, 0x559d, 0x001f }, { 0xff02, 0x297a, 0x5720, 0x0063 },
-    { 0xff10, 0x27a9, 0x5896, 0x00ae }, { 0xff1e, 0x25e0, 0x59fc, 0x0101 }, { 0xff2c, 0x241e, 0x5b53, 0x015b },
-    { 0xff3a, 0x2264, 0x5c9a, 0x01be }, { 0xff48, 0x20b3, 0x5dd0, 0x022a }, { 0xff56, 0x1f0b, 0x5ef5, 0x029f },
-    { 0xff64, 0x1d6c, 0x6007, 0x031c }, { 0xff71, 0x1bd7, 0x6106, 0x03a4 }, { 0xff7e, 0x1a4c, 0x61f3, 0x0435 },
-    { 0xff8a, 0x18cb, 0x62cb, 0x04d1 }, { 0xff96, 0x1756, 0x638f, 0x0577 }, { 0xffa1, 0x15eb, 0x643f, 0x0628 },
-    { 0xffac, 0x148c, 0x64d9, 0x06e4 }, { 0xffb6, 0x1338, 0x655e, 0x07ab }, { 0xffbf, 0x11f0, 0x65cd, 0x087d },
-    { 0xffc8, 0x10b4, 0x6626, 0x095a }, { 0xffd0, 0x0f83, 0x6669, 0x0a44 }, { 0xffd8, 0x0e5f, 0x6696, 0x0b39 },
-    { 0xffdf, 0x0d46, 0x66ad, 0x0c39 }
-};
-#else
+
 static float __attribute__((aligned(32))) resample_table[64][4] = {
 { (f32)3129, (f32)26285, (f32)3398, (f32)-33, },
 { (f32)2873, (f32)26262, (f32)3679, (f32)-40, },
@@ -141,7 +114,7 @@ static float __attribute__((aligned(32))) resample_table[64][4] = {
 { (f32)-40, (f32)3679, (f32)26262, (f32)2873, },
 { (f32)-33, (f32)3398, (f32)26285, (f32)3129, },
 };
-#endif
+
 static inline int16_t clamp16(int32_t v) {
     if (v < -0x8000) {
         return -0x8000;
@@ -151,7 +124,6 @@ static inline int16_t clamp16(int32_t v) {
     return (int16_t) v;
 }
 
-void n64_memset(void *dst, uint8_t val, size_t size);
 void aClearBufferImpl(uint16_t addr, int nbytes) {
     memset(BUF_U8(addr), 0, ROUND_UP_16(nbytes));
 }
@@ -212,15 +184,26 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
     __builtin_prefetch(r);
 
     while (count > 0) {
-        __builtin_prefetch(r+16);
-        uint32_t lr0 = ((uint16_t)*r++ << 16) | ((uint16_t)*l++);
-        uint32_t lr1 = ((uint16_t)*r++ << 16) | ((uint16_t)*l++);
-        uint32_t lr2 = ((uint16_t)*r++ << 16) | ((uint16_t)*l++);
-        uint32_t lr3 = ((uint16_t)*r++ << 16) | ((uint16_t)*l++);
-        uint32_t lr4 = ((uint16_t)*r++ << 16) | ((uint16_t)*l++);
-        uint32_t lr5 = ((uint16_t)*r++ << 16) | ((uint16_t)*l++);
-        uint32_t lr6 = ((uint16_t)*r++ << 16) | ((uint16_t)*l++);
-        uint32_t lr7 = ((uint16_t)*r++ << 16) | ((uint16_t)*l++);
+        __builtin_prefetch(l);
+        uint32_t lr0 = ((uint16_t)*r++ << 16);// | ((uint16_t)*l++);
+        uint32_t lr1 = ((uint16_t)*r++ << 16);// | ((uint16_t)*l++);
+        uint32_t lr2 = ((uint16_t)*r++ << 16);// | ((uint16_t)*l++);
+        uint32_t lr3 = ((uint16_t)*r++ << 16);// | ((uint16_t)*l++);
+        uint32_t lr4 = ((uint16_t)*r++ << 16);// | ((uint16_t)*l++);
+        uint32_t lr5 = ((uint16_t)*r++ << 16);// | ((uint16_t)*l++);
+        uint32_t lr6 = ((uint16_t)*r++ << 16);// | ((uint16_t)*l++);
+        uint32_t lr7 = ((uint16_t)*r++ << 16);// | ((uint16_t)*l++);
+
+        __builtin_prefetch(r);
+
+        lr0 |= ((uint16_t)*l++);
+        lr1 |= ((uint16_t)*l++);
+        lr2 |= ((uint16_t)*l++);
+        lr3 |= ((uint16_t)*l++);
+        lr4 |= ((uint16_t)*l++);
+        lr5 |= ((uint16_t)*l++);
+        lr6 |= ((uint16_t)*l++);
+        lr7 |= ((uint16_t)*l++);
 #if 1
             asm volatile("": : : "memory");
 #endif
@@ -232,6 +215,7 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
         *d++ = lr5;
         *d++ = lr6;
         *d++ = lr7;
+        __builtin_prefetch(d);
 
         --count;
     }
@@ -376,7 +360,7 @@ static inline s16 clamp16f(float v) {
 
 
 static inline float shift_to_float_multiplier(uint8_t shift) {
-    const static float shift_to_float[16] = {
+    const static float __attribute__((aligned(32))) shift_to_float[16] = {
        1.0f,
        2.0f,
        4.0f, 
@@ -397,7 +381,7 @@ static inline float shift_to_float_multiplier(uint8_t shift) {
     return shift_to_float[shift];
 }
 
-static const float nyblls_as_floats[256][2] = {
+static const float __attribute__((aligned(32))) nyblls_as_floats[256][2] = {
         {  0.0f,  0.0f },
         {  0.0f,  1.0f },
         {  0.0f,  2.0f },
@@ -662,7 +646,6 @@ static inline void extend_nyblls_to_floats(uint8_t nybll, float *fp1, float *fp2
     *fp2 = fpair[1];
 }
 
-
 void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
     int16_t* out = BUF_S16(rspa.out);
     MEM_BARRIER_PREF(out);
@@ -684,7 +667,7 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
         uint8_t si_in = *in++;
         int table_index = si_in & 0xf; // should be in 0..7
         float(*tbl)[8] = rspa.adpcm_table[table_index];
-        float shift = shift_to_float_multiplier(si_in >> 4);          // should be in 0..12 or 0..14
+        float shift = shift_to_float_multiplier(si_in >> 4); // should be in 0..12 or 0..14
 
         float instr[2][8];
         for(int i = 0; i < 2; ++i) {
@@ -764,273 +747,6 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
     shz_copy_16_shorts(state, (out - 16));
 }
 
-
-#if 0
-void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
-    int16_t* out = BUF_S16(rspa.out);
-    __builtin_prefetch(out);
-    uint8_t* in = BUF_U8(rspa.in);
-    int nbytes = ROUND_UP_32(rspa.nbytes);
-    if (flags & A_INIT) {
-        shz_zero_16_shorts(out);
-    } else if (flags & A_LOOP) {
-        shz_copy_16_shorts(out, rspa.adpcm_loop_state);
-    } else {
-        shz_copy_16_shorts(out, state);
-    }   
-    __builtin_prefetch(in);
-    out += 16;
-    float prev1 = (f32)(s32)out[-1];
-    float prev2 = (f32)(s32)out[-2];
-
-    while (nbytes > 0) {
-        uint8_t si_in = *in++;
-        MEM_BARRIER_PREF(out);
-        int shift = (si_in >> 4) & 0xf;          // should be in 0..12 or 0..14
-//        if (shift) shift--;
-        int table_index = si_in & 0xf; // should be in 0..7
-        float(*tbl)[8] = rspa.adpcm_table[table_index];
-        int i;
-        __builtin_prefetch(tbl);
-
-        for (i = 0; i < 2; i++) {
-            float ins[8];
-
-            int j, k;
-            shz_vec4_t acc_vec[2];
-            float *accf = (float *)acc_vec;
-            const shz_vec4_t in_vec = { .x = prev2, .y = prev1, .z = 2048.0f };
-            {
-                uint8_t in81 = *in++;
-                uint8_t in82 = *in++;
-                ins[0] = (f32)((s32)extend_nyb((in81 >> 4)  & 0xf) << shift);
-                ins[1] = (f32)((s32)extend_nyb( in81        & 0xf) << shift);
-                ins[2] = (f32)((s32)extend_nyb((in82 >> 4)  & 0xf) << shift);
-                ins[3] = (f32)((s32)extend_nyb( in82        & 0xf) << shift);
-            }
-            
-            shz_xmtrx_load_3x4_rows(&tbl[0][0],
-                                    &tbl[1][0],
-                                    &ins[0]);
-        
-            acc_vec[0] = shz_xmtrx_trans_vec4(in_vec);
-            {
-                uint8_t in83 = *in++;
-                uint8_t in84 = *in++;
-                ins[4] = (f32)((s32)extend_nyb((in83 >> 4)  & 0xf) << shift);
-                ins[5] = (f32)((s32)extend_nyb( in83        & 0xf) << shift);
-                ins[6] = (f32)((s32)extend_nyb((in84 >> 4)  & 0xf) << shift);
-                ins[7] = (f32)((s32)extend_nyb( in84        & 0xf) << shift);
-            }
-
-            shz_xmtrx_load_3x4_rows(&tbl[0][4],
-                                    &tbl[1][4],
-                                    &ins[4]);
-
-            acc_vec[1] = shz_xmtrx_trans_vec4(in_vec);           
-#if 0
-            for(j = 0; j < 8; ++j) {
-                for(k = 0; k < j; ++k)
-                    accf[j] += tbl[1][((j - k) - 1)] * ins[k];
-
-//                accf[j] *= 0.00048828f; // /= 2048.0f;
-                accf[j] = clamp16f(accf[j]);
-                *out++ = accf[j];
-            }
-#else
-            //float accaccf = accf[0];
-            //accf[0] = clamp16f(accaccf);
-//            *out++ = clamp16f(accaccf);
-
-            accf[1] = accf[1] + (tbl[1][0] * ins[0]);
-//            *out++ = clamp16f(accaccf);
-
-            accf[2] = shz_dot8f(accf[2], tbl[1][1], tbl[1][0], 0, 1, ins[0], ins[1], 0);
-            //*out++ = clamp16f(accaccf);
-
-            accf[3] = shz_dot8f(accf[3], tbl[1][2], tbl[1][1], tbl[1][0], 1, ins[0], ins[1], ins[2]);
-            //*out++ = clamp16f(accaccf);
-
-            accf[4] = shz_dot8f(accf[4], tbl[1][3], tbl[1][2], tbl[1][1], 1, ins[0], ins[1], ins[2]);
-            accf[4] += (tbl[1][0] * ins[3]);
-            //*out++ = clamp16f(accaccf);
-
-            accf[5] = shz_dot8f(accf[5], tbl[1][4], tbl[1][3], tbl[1][2], 1, ins[0], ins[1], ins[2]);
-            accf[5] += (tbl[1][1] * ins[3]) + (tbl[1][0] * ins[4]);
-// if you leave this in it gets spooky
-            ///            *out++ = clamp16f(accaccf);
-
-            accf[6] = shz_dot8f(accf[6], tbl[1][5], tbl[1][4], tbl[1][3], 1, ins[0], ins[1], ins[2]);  
-            accf[6] += shz_dot8f(tbl[1][2], tbl[1][1], tbl[1][0], 0, ins[3], ins[4], ins[5], 0);   
-            //prev2 = clamp16f(accaccf);
-            //*out++ = prev2;//clamp16f(accaccf);
-
-            accf[7] = shz_dot8f(accf[7], tbl[1][6], tbl[1][5], tbl[1][4], 1, ins[0], ins[1], ins[2]);
-            accf[7] += shz_dot8f(tbl[1][3], tbl[1][2], tbl[1][1], tbl[1][0], ins[3], ins[4], ins[5], ins[6]);
-
-MEM_BARRIER();
-
-            //prev1 = clamp16f(accaccf);//accf[7];
-            //*out++ = prev1;
-            *out++ = clamp16f(accf[0]);
-            *out++ = clamp16f(accf[1]);
-            *out++ = clamp16f(accf[2]);
-            *out++ = clamp16f(accf[3]);
-            *out++ = clamp16f(accf[4]);
-            *out++ = clamp16f(accf[5]);
-            prev2 = *out++ = clamp16f(accf[6]);
-            prev1 = *out++ = clamp16f(accf[7]);
-
-
-            #endif
-//            prev1 = accf[7];
-  //          prev2 = accf[6];
-        }
-        MEM_BARRIER_PREF(in);
-        nbytes -= 16 * sizeof(int16_t);
-    }
-
-    shz_copy_16_shorts(state, (out - 16));
-}
-#endif
-#if 0
-void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
-    uint8_t* in = BUF_U8(rspa.in);
-    int16_t* out = BUF_S16(rspa.out);
-    int nbytes = ROUND_UP_32(rspa.nbytes);
-    if (flags & A_INIT) {
-        n64_memset(out, 0, 16 * sizeof(int16_t));
-    } else if (flags & A_LOOP) {
-        n64_memcpy(out, rspa.adpcm_loop_state, 16 * sizeof(int16_t));
-    } else {
-        n64_memcpy(out, state, 16 * sizeof(int16_t));
-    }
-    out += 16;
-
-    while (nbytes > 0) {
-        uint8_t si_in = *in++;
-        int shift = (si_in >> 4);          // should be in 0..12 or 0..14
-        int table_index = si_in & 0xf; // should be in 0..7
-        int16_t(*tbl)[8] = rspa.adpcm_table[table_index];
-        int i;
-
-        for (i = 0; i < 2; i++) {
-            int16_t ins[8];
-            float prev1 = (f32)(s32)out[-1];
-            float prev2 = (f32)(s32)out[-2];
-            int j, k;
-//            for (j = 0; j < 8; j+=2) {
-            {
-                uint8_t in81 = *in++;
-                uint8_t in82 = *in++;
-                uint8_t in83 = *in++;
-                uint8_t in84 = *in++;
-                ins[0] = extend_nyb((in81 >> 4)  & 0xf) << shift;
-                ins[1] = extend_nyb( in81        & 0xf) << shift;
-                ins[2] = extend_nyb((in82 >> 4)  & 0xf) << shift;
-                ins[3] = extend_nyb( in82        & 0xf) << shift;
-                ins[4] = extend_nyb((in83 >> 4)  & 0xf) << shift;
-                ins[5] = extend_nyb( in83        & 0xf) << shift;
-                ins[6] = extend_nyb((in84  >> 4) & 0xf) << shift;
-                ins[7] = extend_nyb( in84        & 0xf) << shift;
-            }
-//            }
-            for (j = 0; j < 8; j++) {
-                int32_t acc = 
-                (s32)fipr((f32)(s32)tbl[0][j], (f32)(s32)tbl[1][j], (f32)(s32)ins[j], 0, prev2, prev1, 2048.0f, 0);
-
-                for (k = 0; k < j; k++) {
-                    acc += tbl[1][((j - k) - 1)] * ins[k];
-                }
-                acc >>= 11;
-
-                *out++ = clamp16(acc);
-            }
-        }
-        nbytes -= 16 * sizeof(int16_t);
-    }
-//    n64_memcpy(state, out - 16, 16 * sizeof(int16_t));
-    int16_t *sp = state;
-    int16_t *op = (int16_t *)(out - 16);
-    *sp++ = *op++;
-    *sp++ = *op++;
-    *sp++ = *op++;
-    *sp++ = *op++;
-    *sp++ = *op++;
-    *sp++ = *op++;
-    *sp++ = *op++;
-    *sp++ = *op++;
-    *sp++ = *op++;
-    *sp++ = *op++;
-    *sp++ = *op++;
-    *sp++ = *op++;
-    *sp++ = *op++;
-    *sp++ = *op++;
-    *sp++ = *op++;
-    *sp++ = *op++;
-}
-#endif
-#if 0
-void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
-    uint8_t* in = BUF_U8(rspa.in);
-    int16_t* out = BUF_S16(rspa.out);
-    int nbytes = ROUND_UP_32(rspa.nbytes);
-
-    if (flags & A_INIT) {
-        n64_memset(out, 0, 16 * sizeof(int16_t));
-    } else if (flags & A_LOOP) {
-        n64_memcpy(out, rspa.adpcm_loop_state, 16 * sizeof(int16_t));
-    } else {
-        n64_memcpy(out, state, 16 * sizeof(int16_t));
-    }
-    out += 16;
-
-    while (nbytes > 0) {
-        int shift = 28 - (*in >> 4);      // scale factor
-        int table_index = *in++ & 0xF;    // predictor index
-        int16_t(*tbl)[8] = rspa.adpcm_table[table_index];
-
-        for (int i = 0; i < 2; i++) {
-            int16_t ins[8];
-            int32_t acc[8];
-            int16_t prev1 = out[-1];
-            int16_t prev2 = out[-2];
-
-            // Expand 4 bytes -> 8 samples
-            for (int j = 0; j < 8; j+=2) {
-                uint8_t in8 = *in++;
-                // Sign extend nibble: shift left into sign bit, then shift back down
-                ins[j]     = (((in8 >> 4) & 0x0F) << 28) >> shift;
-                ins[j + 1] = (((in8 & 0x0F)) << 28) >> shift;
-            }
-
-            // Init each output sample with taps for prev1, prev2, and ins[j]
-            for (int j = 0; j < 8; j++) {
-                acc[j] = //tbl[0][j] * prev2 + tbl[1][j] * prev1 + (ins[j] << 11);
-                (s32)(fipr((f32)(s32)tbl[0][j], (f32)(s32)tbl[1][j], (f32)(s32)ins[j], 0, (f32)(s32)prev2, (f32)(s32)prev1, 2048.0f, 0));
-            }
-
-            // Accumulate FIR taps: k outer, j inner
-            for (int k = 0; k < 7; k++) {
-                for (int j = k + 1; j < 8; j++) {
-                    acc[j] += tbl[1][(j - k) - 1] * ins[k];
-                }
-            }
-
-            // Finalize, shift, clamp, output
-            for (int j = 0; j < 8; j++) {
-                int32_t sample = acc[j] >> 11;
-                *out++ = clamp16(sample);
-            }
-        }
-
-        nbytes -= 16 * sizeof(int16_t);
-    }
-
-    n64_memcpy(state, out - 16, 16 * sizeof(int16_t));
-}
-#endif
-
 void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     int16_t __attribute__((aligned(32))) tmp[32] = {0};
     int16_t* in_initial = BUF_S16(rspa.in);
@@ -1047,10 +763,18 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     if (flags & A_INIT) {
         memset(tmp, 0, 5 * sizeof(int16_t));
     } else {
-        n64_memcpy(tmp, state, 16 * sizeof(int16_t));
+        dp = tmp;
+        sp = state;
+        for (int l=0;l<16;l++) {
+            *dp++ = *sp++;
+        }
     }
     if (flags & 2) {
-        n64_memcpy(in - 8, tmp + 8, 8 * sizeof(int16_t));
+        dp = in[-8];
+        sp = tmp[8];
+        for (int l=0;l<8;l++) {
+            *dp++ = *sp++;
+        }
         in -= (tmp[5] >> 1);
     }
     in -= 4;
@@ -1058,19 +782,16 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     
     dp = in;
     sp = tmp;
-    *dp++ = *sp++;
-    *dp++ = *sp++;
-    *dp++ = *sp++;
-    *dp++ = *sp++;
+    for (int l=0;l<4;l++)
+        *dp++ = *sp++;
 
     do {
         for (i = 0; i < 8; i++) {
             tbl_f = resample_table[pitch_accumulator >> 10];
             float in_f[4] = {(float)(int)in[0],(float)(int)in[1],(float)(int)in[2],(float)(int)in[3]};
-            //float tbl_f[4] = {(float)(int)tbl[0],(float)(int)tbl[1],(float)(int)tbl[2],(float)(int)tbl[3]};
 
-            sample_f = (shz_dot8f(in_f[0],in_f[1],in_f[2],in_f[3],
-                tbl_f[0],tbl_f[1],tbl_f[2],tbl_f[3]) + 65536.0f) * 0.00003052f;
+            sample_f = shz_dot8f(in_f[0],in_f[1],in_f[2],in_f[3],
+                tbl_f[0],tbl_f[1],tbl_f[2],tbl_f[3]) * 0.00003052f;
 
             *out++ = clamp16((s32)(sample_f));
 
@@ -1082,31 +803,21 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     } while (nbytes > 0);
 
     state[4] = (int16_t) pitch_accumulator;
-//    n64_memcpy(state, in, 4 * sizeof(int16_t));
     dp = (int16_t*)(state);
     sp = in;
-    *dp++ = *sp++;
-    *dp++ = *sp++;
-    *dp++ = *sp++;
-    *dp++ = *sp++;
+    for (int l=0;l<4;l++)
+        *dp++ = *sp++;
+
     i = (in - in_initial + 4) & 7;
     in -= i;
     if (i != 0) {
         i = -8 - i;
     }
     state[5] = i;
-//    n64_memcpy(state + 8, in, 8 * sizeof(int16_t));
     dp = (int16_t*)(state + 8);
     sp = in;
-
-    *dp++ = *sp++;
-    *dp++ = *sp++;
-    *dp++ = *sp++;
-    *dp++ = *sp++;
-    *dp++ = *sp++;
-    *dp++ = *sp++;
-    *dp++ = *sp++;
-    *dp++ = *sp++;
+    for (int l=0;l<8;l++)
+        *dp++ = *sp++;
 }
 
 void aEnvSetup1Impl(UNUSED uint8_t initial_vol_wet, UNUSED uint16_t rate_wet, uint16_t rate_left, uint16_t rate_right) {
@@ -1148,6 +859,7 @@ void aEnvMixerImpl(uint16_t in_addr, uint16_t n_samples, UNUSED int swap_reverb,
 }
 
 void aDMEMMove2Impl(uint8_t t, uint16_t in_addr, uint16_t out_addr, uint16_t count) {
+#if 0
     uint8_t* in = BUF_U8(in_addr);
     uint8_t* out = BUF_U8(out_addr);
     int nbytes = ROUND_UP_32(count);
@@ -1157,6 +869,7 @@ void aDMEMMove2Impl(uint8_t t, uint16_t in_addr, uint16_t out_addr, uint16_t cou
         n64_memcpy(out, in, nbytes);
         out += nbytes;
     } while (t-- > 0);
+#endif
 }
 
 void aDownsampleHalfImpl(
@@ -1174,10 +887,9 @@ void aDownsampleHalfImpl(
         uint32_t pair2 = *in++;
         uint32_t pair3 = *in++;
         asm volatile("pref @%0" : : "r" (in) : "memory");
-//        *out++ = (pair0 & 0xffff0000) | (uint16_t)(pair1>>16)&0xffff; // keep first, discard second
-//        *out++ = (pair2 & 0xffff0000) | (uint16_t)(pair3>>16)&0xffff; // keep first, discard second
-        *out++ = (pair0 << 16) | (pair1&0xffff); // keep first, discard second
-        *out++ = (pair2 << 16) | (pair3&0xffff); // keep first, discard second
+        // its easier to do this the "wrong" way
+        *out++ = (pair0 << 16) | ((uint16_t)pair1); // keep second, discard first
+        *out++ = (pair2 << 16) | ((uint16_t)pair3); // keep second, discard first
         n -= 4;
     } while (n > 0);
 }
