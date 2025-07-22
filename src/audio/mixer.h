@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdbool.h>
+//#include <stdbool.h>
 #include <stdint.h>
 #include "PR/abi.h"
 
@@ -45,8 +45,8 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state);
 void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state);
 void aEnvSetup1Impl(uint8_t initial_vol_wet, uint16_t rate_wet, uint16_t rate_left, uint16_t rate_right);
 void aEnvSetup2Impl(uint16_t initial_vol_left, uint16_t initial_vol_right);
-void aEnvMixerImpl(uint16_t in_addr, uint16_t n_samples, bool swap_reverb,
-                   bool neg_left, bool neg_right,
+void aEnvMixerImpl(uint16_t in_addr, uint16_t n_samples, int swap_reverb,
+                   int neg_left, int neg_right,
                    uint16_t dry_left_addr, uint16_t dry_right_addr,
                    uint16_t wet_left_addr, uint16_t wet_right_addr);
 void aSMixImpl(uint16_t in_addr, uint16_t out_addr, uint16_t count);

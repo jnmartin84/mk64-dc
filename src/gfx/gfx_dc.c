@@ -102,17 +102,18 @@ const unsigned int FRAME_TIME_MS = 33; // hopefully get right on target @ 33.3
 static uint8_t gfx_dc_start_frame(void) {
     const unsigned int cur_time = GetSystemTimeLow();
     const unsigned int elapsed = cur_time - last_time;
-
+#if 0
     if (skip_debounce) {
         skip_debounce--;
         return 1;
     }
     // skip if frame took longer than 1 / 30 = 33.3 ms
     if (elapsed > FRAME_TIME_MS) {
-        skip_debounce = 3; // skip a max of once every 4 frames
+        skip_debounce = 2; // skip a max of once every 4 frames
         last_time = cur_time;
         return 0;
     }
+#endif        
     return 1;
 }
 

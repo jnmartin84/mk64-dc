@@ -221,13 +221,12 @@ static struct GfxRenderingAPI *rendering_api = &gfx_opengl_api;
 extern void gfx_run(Gfx *commands);
 
 extern void thread5_game_loop(void *arg);
-#define SAMPLES_ACTUAL 446
-#define SAMPLES_HIGH 454
-#define SAMPLES_LOW 438
+
 #include "dcaudio/audio_api.h"
 #include "dcaudio/audio_dc.h"
 extern void create_next_audio_buffer(s16* samples, u32 num_samples);
 
+#define SAMPLES_HIGH 448
 extern s16 audio_buffer[SAMPLES_HIGH * 2 * 2] __attribute__((aligned(64)));
 static struct AudioAPI *audio_api = NULL;
 
@@ -253,12 +252,6 @@ void game_loop_one_iteration(void) {
 
     game_state_handler();
 
-//            u32 num_audio_samples = 448;
-  //      create_next_audio_buffer(audio_buffer, 448);
-    //    create_next_audio_buffer(audio_buffer + 896, 448);
-      //  audio_api->play((u8 *)audio_buffer, 3584);
-
-
     end_master_display_list();
 
     display_and_vsync();
@@ -267,11 +260,6 @@ void game_loop_one_iteration(void) {
 }
 
 static void send_display_list(struct SPTask *spTask) {
-
-//    if (!inited) {
-//        return;
-//    }
-
     gfx_run((Gfx *)spTask->task.t.data_ptr);
 }
 
@@ -280,7 +268,7 @@ uint16_t __attribute__((aligned(32))) fb[3][4];
 void create_thread(UNUSED OSThread* thread, UNUSED OSId id, void (*entry)(void*), void* arg, void* sp, OSPri pri) {
     kthread_attr_t main_attr;
     main_attr.create_detached = 1;
-	main_attr.stack_size = STACKSIZE;
+	main_attr.stack_size = 32768;
 	main_attr.stack_ptr = sp;
 	main_attr.prio = pri;
 	main_attr.label = "thread";
@@ -501,13 +489,13 @@ void setup_audio_data(void) {
 
 s32 osAppNmiBuffer[16];
 void isPrintfInit(void);
+
 int main(UNUSED int argc, UNUSED char **argv) {
     thd_set_hz(300);
     wasSoftReset = (s16)0;
     gPhysicalFramebuffers[0] = fb[0];//(u16*) &gFramebuffer0;
     gPhysicalFramebuffers[1] = fb[1];//(u16*) &gFramebuffer1;
     gPhysicalFramebuffers[2] = fb[2];//(u16*) &gFramebuffer2;
-
     //file_t *test = /pc/dc_data/common_data.bin
     FILE* fntest = fopen("/pc/dc_data/common_data.bin", "rb");
     if (NULL == fntest) {
@@ -1066,6 +1054,7 @@ extern void load_ceremony_data(void);
  * Setup main segments and framebuffers.
  */
 void n64_memset(void *dst, uint8_t val, size_t size);
+static char texfn[256];
 
 void setup_game_memory(void) {
     set_segment_base_addr(0, 0x8C010000);//0xDEADBEEF);
@@ -1073,11 +1062,11 @@ void setup_game_memory(void) {
 //    memset(SEG2_BUF, 0, sizeof(SEG2_BUF));
     n64_memset(COMMON_BUF, 0, sizeof(COMMON_BUF));
     set_segment_base_addr(2, SEG_DATA_START);//(void*) load_data(SEG_DATA_START, SEG_DATA_END, SEG2_BUF));
-    char texfn[256];
 
     sprintf(texfn, "%s/dc_data/common_data.bin", fnpre);
 
-    FILE* file = fopen(texfn, "rb");
+    FILE* file = NULL;
+    file = fopen(texfn, "rb");
     if (!file) {
         perror("fopen");
         exit(-1);
@@ -1102,6 +1091,7 @@ void setup_game_memory(void) {
     }
 
     fclose(file);
+    file = NULL;
 
     set_segment_base_addr(0xD, (void*) COMMON_BUF);
     // Common course data does not get reloaded when the race state resets.
@@ -1592,7 +1582,6 @@ void setup_game_memory(void) {
 
         sgm_run = 1;
     }
-
     load_ceremony_data();
 }
 
@@ -2293,27 +2282,27 @@ void _AudioInit(void) {
         while (!(vblticker > (last_vbltick+1)))
             thd_sleep(5);
 #endif
-#define SAMPLES_HIGH 448
-#define SAMPLES_LOW 432
 void SPINNING_THREAD(UNUSED void *arg) {
     uint64_t last_vbltick = vblticker;
 
     while (1) {
-        {
-        irq_disable_scoped();
+//        {
+//        irq_disable_scoped();
         while (vblticker <= last_vbltick + 1)
-            genwait_wait(&vblticker, NULL, 15, NULL);
-        }
+            thd_pass();
+        //            genwait_wait(&vblticker, NULL, 15, NULL);
+//        }
         last_vbltick = vblticker;
-// todo move the poll back to a thread again
-// jfc
+
         u32 num_audio_samples = SAMPLES_HIGH;//even_frame ? SAMPLES_HIGH : SAMPLES_LOW;//448;
         create_next_audio_buffer(audio_buffer, num_audio_samples);
         create_next_audio_buffer(audio_buffer + num_audio_samples*2, num_audio_samples);
+
         audio_api->play((u8 *)audio_buffer, num_audio_samples * 2 * 2 * 2);
     }
 }
 
+#if 0
 /**
  * Sound processing thread. Runs at 50 or 60 FPS according to osTvType.
  */
@@ -2338,3 +2327,4 @@ void thread4_audio(UNUSED void* arg) {
         ////profiler_log_thread4_time();
     }
 }
+#endif

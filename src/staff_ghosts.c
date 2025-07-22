@@ -68,11 +68,10 @@ u32* gReplayGhostCompressed = (u32*) &D_802BFB80.arraySize8[1][1][3];
 
 extern s32 gLapCountByPlayerId[];
 
-extern StaffGhost* d_mario_raceway_staff_ghost;
-extern StaffGhost* d_royal_raceway_staff_ghost;
-extern StaffGhost* d_luigi_raceway_staff_ghost;
+extern StaffGhost d_mario_raceway_staff_ghost[];
+extern StaffGhost d_royal_raceway_staff_ghost[];
+extern StaffGhost d_luigi_raceway_staff_ghost[];
 
-uint8_t stupidbuff[16384];
 #define REPLAY_FRAME_COUNTER 0xff0000
 void load_course_ghost(void) {
     // jnmartin84 - wtf

@@ -143,7 +143,7 @@ UNUSED void* vec3f_set_return(Vec3f dest, f32 x, f32 y, f32 z) {
     dest[2] = z;
     return &dest;
 }
-
+#if 0
 void mtxf_copy(Mat4 mat1, Mat4 mat2) {
     asm volatile(R"(
         fschg
@@ -180,7 +180,7 @@ void mtxf_copy(Mat4 mat1, Mat4 mat2) {
     )"
     : [dst] "+&r" (mat2), [src] "+&r" (mat1), "=m" (mat2));
 }
-#if 0
+#else
 // Copy mat1 to mat2
 void mtxf_copy(Mat4 mat1, Mat4 mat2) {
     s32 row;
@@ -205,18 +205,18 @@ void n64_memset(void *dst, uint8_t val, size_t size);
 #include "sh4zam.h"
 // Transform a matrix to a matrix identity
 void mtxf_identity(Mat4 mtx) {
-#if 0
+#if 1
     s32 i;
     s32 k;
 
-//    for (i = 0; i < 4; i++) {
-//        for (k = 0; k < 4; k++) {
-//            mtx[i][k] = (i == k) ? 1.0f : 0.0f;
-//        }
-//    }
-    n64_memset(mtx, 0, sizeof(float)*16);
-    mtx[0][0] = mtx[1][1] = mtx[2][2] = mtx[3][3] = 1.0f;
-#endif
+    for (i = 0; i < 4; i++) {
+        for (k = 0; k < 4; k++) {
+            mtx[i][k] = (i == k) ? 1.0f : 0.0f;
+        }
+    }
+//    n64_memset(mtx, 0, sizeof(float)*16);
+//    mtx[0][0] = mtx[1][1] = mtx[2][2] = mtx[3][3] = 1.0f;
+#else
     if ((uintptr_t)mtx & 15 == 0) {
         shz_xmtrx_set_identity();
         shz_xmtrx_store_4x4(mtx);
@@ -224,6 +224,7 @@ void mtxf_identity(Mat4 mtx) {
         /* n64_ */memset(mtx, 0, 64);
         mtx[0][0] = mtx[1][1] = mtx[2][2] = mtx[3][3] = 1.0f;
     }
+#endif
 }
 
 // Add a translation vector to a matrix, mat is the matrix to add, dest is the destination matrix, pos is the
@@ -977,7 +978,6 @@ inline static void mat_load_apply(const matrix_t* matrix1, const matrix_t* matri
 				 : "fr0", "fr1", "fr2", "fr3", "fr4", "fr5", "fr6", "fr7", "fr8", "fr9", "fr10", "fr11", "fr12", "fr13",
 				   "fr14", "fr15");
 }
-
 void mtxf_multiplication(Mat4 dest, Mat4 mat1, Mat4 mat2) {
     mat_load_apply(mat2, mat1);
     fast_mat_store(dest);

@@ -1335,7 +1335,7 @@ void update_vehicles(void) {
                 func_8000DF8C(i);
             }
         }
-#if !ENABLE_CUSTOM_COURSE_ENGINE
+
         switch (gCurrentCourseId) {
             case COURSE_KALAMARI_DESERT:
                 update_vehicle_trains();
@@ -1350,9 +1350,6 @@ void update_vehicles(void) {
                 update_vehicle_cars();
                 break;
         }
-#else
-
-#endif
     }
 }
 
@@ -2045,7 +2042,7 @@ void init_course_path_point(void) {
     }
 
     // Skip several cpu cycles.
-    for (i = 0; i < 4; i++) {}
+//    for (i = 0; i < 4; i++) {}
 
     for (i = 0; i < 4; i++) {
         if (gSizePath[i] >= 2) {
@@ -2058,7 +2055,7 @@ void init_course_path_point(void) {
     }
 
     gSelectedPathCount = *gPathCountByPathIndex;
-#if !ENABLE_CUSTOM_COURSE_ENGINE
+
     switch (gCurrentCourseId) {
         case COURSE_KALAMARI_DESERT:
             generate_train_path();
@@ -2075,9 +2072,7 @@ void init_course_path_point(void) {
             init_vehicles_cars();
             break;
     }
-#else
 
-#endif
     set_bomb_kart_spawn_positions();
     func_8000EEDC();
 }
@@ -2090,7 +2085,6 @@ void init_players(void) {
     TrackPositionFactorInstruction* var_s5;
     UNUSED s32 temp_v1;
     UNUSED s32 pad;
-//printf("init_players\n");
     for (i = 0; i < NUM_PLAYERS; i++) {
         Player* player = &gPlayers/*One*/[i];
 
@@ -2100,7 +2094,7 @@ void init_players(void) {
         if (gCurrentCourseId < (NUM_COURSES - 1)) {
             update_player_position_factor(i, 0, 0);
         }
-        //printf("update_player_position_factor(%d, 0, 0) done\n", i);
+
         cpu_TargetSpeed[i] = GET_COURSE_cpu_CurveTargetSpeed(gCCSelection);
         D_801630E8[i] = 0;
         D_80163100[i] = 0;
@@ -2246,7 +2240,6 @@ void init_players(void) {
         }
     }
     copy_courses_cpu_behaviour();
-    //printf("out of copy courses cpu behavior\n");
 }
 
 #include "cpu_vehicles_camera_path/path_calc.inc.c"

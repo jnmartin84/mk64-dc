@@ -50,7 +50,8 @@ void* segmented_to_virtual(void* addr);
 #define RATIO_X (gfx_current_dimensions.width / (2.0f * HALF_SCREEN_WIDTH))
 #define RATIO_Y (gfx_current_dimensions.height / (2.0f * HALF_SCREEN_HEIGHT))
 
-#define MAX_BUFFERED (256)
+// enough to submit the nintendo logo in one go
+#define MAX_BUFFERED (384)
 #define MAX_LIGHTS 2
 #define MAX_VERTICES 64
 
@@ -109,9 +110,9 @@ struct TextureHashmapNode {
 	// 24
 	uint8_t cms, cmt;
 	// 26
-	uint8_t *compd;
+	uint32_t pad4;
 	// 30
-	uint16_t pad;
+	uint16_t pad2;
 };
 
 struct TextureHashmapNode oops_node;
@@ -223,8 +224,21 @@ int do_fill_rect = 0;
 
 extern s16 gCurrentCourseId;
 
+#if 0
+int max_tris = 0;
+int frame_tris = 0;
+int frame_verts = 0;
+int frame_quads = 0;
+#endif
+
 static void gfx_flush(void) {
 	if (buf_vbo_len > 0) {
+#if 0
+		if (buf_vbo_num_tris > max_tris) {
+			max_tris = buf_vbo_num_tris;
+			printf("max tris %d\n", max_tris);
+		}
+#endif
 		// int num = buf_vbo_num_tris;
 		// unsigned long t0 = get_time();
 		gfx_rapi->draw_triangles((void*) buf_vbo, buf_vbo_len, buf_vbo_num_tris);
@@ -322,29 +336,6 @@ void reset_texcache(void) {
 	gfx_texture_cache.pool_pos = 0;
 }
 
-extern u8 *upr_ptr[8];
-extern u8 *lwr_ptr[8];
-extern u8 *compd_kart[8];
-
-uint8_t tex_is_kart(void *addr) {
-	u8 *segaddr = (u8*)segmented_to_virtual(addr);
-
-	uint8_t found = 0;
-
-	for (int i=0;i<8;i++) {
-		if (upr_ptr[i] == segaddr){
-			found = i+1;
-			break;
-		}
-		if (lwr_ptr[i] == segaddr){
-			found = i+1;
-			break;
-		}
-	}
-
-	return found;
-}
-
 void gfx_texture_cache_invalidate(void* orig_addr) {
  	void* segaddr = segmented_to_virtual(orig_addr);
 
@@ -363,50 +354,13 @@ void gfx_texture_cache_invalidate(void* orig_addr) {
 
 void gfx_opengl_replace_texture(const uint8_t* rgba32_buf, int width, int height, unsigned int type);
 
-/*
-
-    new kart invalidation system
-
-    when a kart texture is loaded for first time:
-        set a field in the hashmap entry that holds the compressed address
-        this can be found by calling `tex_is_kart` , getting a non-zero index returned
-        subtracting one from that index and looking up the compd_addr:
-            compd_karts[idx-1]
-
-    the rest of the texture caching procedes like it always has
-
-    upon future lookups
-        IF `tex_is_kart` is true, that means that the values of `upr` , `lwr` and `compd`
-            are synchronized
-
-            if we find a texture that matches `upr` or `lwr` then find the `compd` for it
-                if the `compd` for it matches the `compd` in the hashmap entry
-                    update the return argument with the node and return 1
-
-            if nothing matches, we are creating new kart texture, see above "first time"
-
-    no special invalidation ever required for kart textures
-        if we blow up the pool, everything becomes invalid anyway
-
-
-*/
 extern void gfx_opengl_set_tile_addr(int tile, GLuint addr);
-/* 
-static int addr_miss = 0;
-static int tmem_miss = 0;
-static int inv_miss = 0;
-static int fmt_miss = 0;
-static int siz_miss = 0;
-static int uls_miss = 0;
-static int ult_miss = 0; */
 
 static uint8_t gfx_texture_cache_lookup(int tile, struct TextureHashmapNode** n, const uint8_t* orig_addr,
 										uint32_t tmem, uint32_t fmt, uint32_t siz, uint16_t uls, uint16_t ult) {
 	void* segaddr = segmented_to_virtual((void *)orig_addr);
 	size_t hash = (uintptr_t) segaddr;
 	hash = (hash >> 5) & 0x3ff;
-
-//	uint8_t is_kart = tex_is_kart(segaddr);
 
 	struct TextureHashmapNode** node = &gfx_texture_cache.hashmap[hash];
 	if ((uintptr_t)rdp.loaded_texture[tile].addr < 0x8c010000u) {
@@ -416,7 +370,6 @@ static uint8_t gfx_texture_cache_lookup(int tile, struct TextureHashmapNode** n,
 	}
 	__builtin_prefetch(*node);
 
-//	while (*node != NULL && *node - gfx_texture_cache.pool < (int) gfx_texture_cache.pool_pos) {
 	uintptr_t last_node = &gfx_texture_cache.pool[gfx_texture_cache.pool_pos];
 	while (*node != NULL && ((uintptr_t)*node < last_node)) {
 		__builtin_prefetch((*node)->next);
@@ -453,8 +406,6 @@ static uint8_t gfx_texture_cache_lookup(int tile, struct TextureHashmapNode** n,
 
 	gfx_rapi->set_sampler_parameters(tile, 0, 0, 0);
 
-//((*node)->texture_addr == segaddr && (*node)->fmt == fmt && (*node)->siz == siz &&
-//			(*node)->ult == ult && (*node)->uls == uls)
 	(*node)->texture_addr = segaddr;
 	(*node)->fmt = fmt;
 	(*node)->siz = siz;
@@ -467,14 +418,6 @@ static uint8_t gfx_texture_cache_lookup(int tile, struct TextureHashmapNode** n,
 	(*node)->cmt = 0;
 	(*node)->linear_filter = 0;
 	(*node)->next = NULL;
-//	(*node)->invalid = 0;
-
-/* if (is_kart) {
-		(*node)->compd = compd_kart[is_kart-1];
-		printf("should be adding new comp kart %08x", compd_kart[is_kart-1]);
-	}
-	else */
-		(*node)->compd = NULL;
 	*n = *node;
 
 	return 0;
@@ -497,7 +440,6 @@ static void import_texture_rgba16(int tile) {
 		for (i = 0; i < loopcount; i++) {
 			uint16_t col16 = __builtin_bswap16(start[i]);
 			rgba16_buf[i] = ((col16 & 1) << 15) | (col16 >> 1);
-			//(r << 10)  | (g << 5) | (b);
 		}
 	} else {
 		u32 src_width = last_set_texture_image_width + 1;
@@ -1088,12 +1030,11 @@ inline static void mat_load_apply(const matrix_t* matrix1, const matrix_t* matri
 }
 
 // typedef float[4][4] __attribute__((aligned(32))) matrix_t;
-
 // float res[4][4], const float a[4][4], const float b[4][4]) {
 static void gfx_matrix_mul(matrix_t res, const matrix_t a, const matrix_t b) {
 	mat_load_apply(b, a);
 	fast_mat_store(res);
-#if 0
+	#if 0
 	float tmp[4][4];
 	int i,j;
 
@@ -1189,7 +1130,7 @@ static void  __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t d
 		const Vtx_t* v = &vertices[i].v;
 		const Vtx_tn* vn = &vertices[i].n;
 		struct LoadedVertex* d = &rsp.loaded_vertices[dest_index];
-
+		//frame_verts++;//= n_vertices;
 		// todo sh4?
 #if 0
 		float x = v->ob[0] * rsp.MP_matrix[0][0] + v->ob[1] * rsp.MP_matrix[1][0] + v->ob[2] * rsp.MP_matrix[2][0] +
@@ -1405,7 +1346,7 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         }
     }
 #endif
-
+	//frame_tris++;
     // gfx_flush();
     if (matrix_dirty) {
         glMatrixMode(GL_PROJECTION);
@@ -2452,7 +2393,7 @@ static void  __attribute__((noinline)) gfx_draw_rectangle(int32_t ulx, int32_t u
 	if (cycle_type == G_CYC_COPY) {
 		rdp.other_mode_h = (rdp.other_mode_h & ~(3U << G_MDSFT_TEXTFILT)) | G_TF_POINT;
 	}
-
+	//frame_quads++;
 	// U10.2 coordinates
 	float ulxf = ulx;
 	float ulyf = uly;
@@ -2922,6 +2863,7 @@ struct GfxRenderingAPI* gfx_get_current_rendering_api(void) {
 }
 
 void gfx_start_frame(void) {
+	//frame_quads = frame_tris = frame_verts = 0;
 	gfx_wapi->handle_events();
 }
 
@@ -2943,6 +2885,7 @@ void gfx_run(Gfx* commands) {
 }
 
 void gfx_end_frame(void) {
+	//printf("verts %d tris %d quads %d\n", frame_verts, frame_tris, frame_quads);
 	if (!dropped_frame) {
 		gfx_rapi->finish_render();
 		gfx_wapi->swap_buffers_end();

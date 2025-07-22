@@ -1,7 +1,7 @@
 #include "libultra_internal.h"
-#ifdef GBI_FLOATS
+//#ifdef GBI_FLOATS
 #include <string.h>
-#endif
+//#endif
 
 #ifndef GBI_FLOATS
 void guMtxF2L(float mf[4][4], Mtx* m) {

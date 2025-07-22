@@ -1064,7 +1064,7 @@ void splash_menu_act(struct Controller* controller, u16 controllerIdx) {
                     func_800CA330(0x19);
                     play_sound2(SOUND_INTRO_ENTER_MENU);
 //   gDebugMenuSelection = DEBUG_MENU_OPTION_SELECTED;
-  //                      gDebugGotoScene = DEBUG_GOTO_ENDING;// CREDITS_SEQUENCE_DEFAULT;
+//                        gDebugGotoScene = DEBUG_GOTO_ENDING;// CREDITS_SEQUENCE_DEFAULT;
 //                    break;   
                 } else {
                     break;

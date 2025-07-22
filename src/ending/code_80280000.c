@@ -127,6 +127,7 @@ void credits_loop(void) {
         }
     }
 }
+extern void load_ceremony_data(void);
 
 extern char *fnpre;
 //extern uint8_t __attribute__((aligned(32))) CEREMONY_BUF[36232];
@@ -148,6 +149,8 @@ void load_credits(void) {
     gScreenModeSelection = SCREEN_MODE_1P;
     gActiveScreenMode = SCREEN_MODE_1P;
     load_course(gCurrentCourseId);
+    load_ceremony_data();
+
 #if 0
     {
 #if 1

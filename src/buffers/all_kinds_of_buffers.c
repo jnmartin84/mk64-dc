@@ -7,7 +7,7 @@ uint8_t __attribute__((aligned(32))) COMMON_BUF[184664];
 // size of data in data_segment2.o
 //uint8_t __attribute__((aligned(32))) SEG2_BUF[47688];
 // 
-uint8_t __attribute__((aligned(32))) SEG3_BUF[0x18000];
+uint8_t __attribute__((aligned(32))) SEG3_BUF[100352];//0x18000];
 // largest observed value -- Bowser's Castle
 uint8_t __attribute__((aligned(32))) SEG4_BUF[228656];
 // largest *tex.bin -- Luigi's Raceway
@@ -18,14 +18,14 @@ uint8_t __attribute__((aligned(32))) SEG5_BUF[133120];
 uint8_t __attribute__((aligned(32))) CEREMONY_ACTOR_BUF[65536]; 
 
 uint8_t __attribute__((aligned(32))) OTHER_BUF[96*1024];
-uint8_t __attribute__((aligned(32))) STARTUP_BUF[38016];
+uint8_t __attribute__((aligned(32))) STARTUP_BUF[65536];
 uint8_t __attribute__((aligned(32))) COURSE_BUF[146464];
 uint8_t __attribute__((aligned(32))) UNPACK_BUF[51008];
-uint8_t __attribute__((aligned(32))) CEREMONY_BUF[36232];
+uint8_t __attribute__((aligned(32))) CEREMONY_BUF[65536];////36232];
 uint8_t __attribute__((aligned(32))) COMP_VERT_BUF[65536];
 uint8_t __attribute__((aligned(32))) DECOMP_VERT_BUF[228656];
 
-uint16_t __attribute__((aligned(32))) colls[2800];//16384];
+uint16_t __attribute__((aligned(32))) colls[16384];//2800];//16384];
 CollisionTriangle __attribute__((aligned(32))) allColTris[2800];//2048+1024];
 
 struct __attribute__((aligned(32))) GfxPool gGfxPools[2];
@@ -36,7 +36,7 @@ uint8_t __attribute__((aligned(32))) backing_gMenuCompressedBuffer[65536];
 uint8_t __attribute__((aligned(32))) backing_sTKMK00_LowResBuffer[320*240];
 uint8_t __attribute__((aligned(32))) backing_gSomeDLBuffer[0x1000];
 
-#define SAMPLES_HIGH 454
+#define SAMPLES_HIGH 448
 int16_t audio_buffer[SAMPLES_HIGH * 2 * 2] __attribute__((aligned(64)));
 
 extern u8 d_course_koopa_troopa_beach_palm_frond[];

@@ -1944,7 +1944,8 @@ s32 is_triangle_intersecting_bounding_box(s16 minX, s16 maxX, s16 minZ, s16 maxZ
     return 0;
 }
 
-extern u16 __attribute__((aligned(32))) colls[2800];//16384];//2800];//2798];//16384];//32768];
+extern u16 __attribute__((aligned(32))) colls[16384];//2800];
+
 /**
  * Splits the collision mesh into 32x32 sections. This allows the game to check only
  * nearby geography for a collision rather than checking against the whole collision mesh.
@@ -1953,7 +1954,6 @@ extern u16 __attribute__((aligned(32))) colls[2800];//16384];//2800];//2798];//1
 void generate_collision_grid(void) {
     CollisionTriangle* triangle;
     s32 i, j, k;
-    UNUSED s32 pad[5];
     s16 maxX;
     s16 maxZ;
     s16 minX;

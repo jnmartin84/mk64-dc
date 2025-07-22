@@ -132,6 +132,7 @@ extern u8 *_audio_banksSegmentRomStart;
 extern u8 *_audio_tablesSegmentRomStart;
 extern u8 *_instrument_setsSegmentRomStart;
 extern u8 *_sequencesSegmentRomStart;
+#if 0
 #include <os/libaudio_internal.h>
 void fixupALBankFile(void) {
     ALBankFile *alBankFile = _audio_banksSegmentRomStart;
@@ -185,8 +186,7 @@ void fixupALBankFile(void) {
         }
     }
 }
-
-
+#endif
 
 /**
  * Performs an immediate DMA copy
@@ -604,7 +604,7 @@ struct AudioBank* bank_load_immediate(s32 bankId, s32 arg1) {
 
 void* sequence_dma_immediate(s32 seqId, s32 arg1) {
     s32 seqLength = 0;
-    void* ptr = NULL;
+    //void* ptr = NULL;
     u8* seqData = 0;
 
     seqLength = gSeqFileHeader->seqArray[seqId].len;
@@ -618,13 +618,13 @@ void* sequence_dma_immediate(s32 seqId, s32 arg1) {
  //   }
 
    // audio_dma_copy_immediate(seqData, ptr, seqLength);
-    ptr = seqData;
+    //ptr = seqData;
 
     if (gSeqLoadStatus[seqId] != 5) {
         gSeqLoadStatus[seqId] = 2;
     }
 
-    return ptr;
+    return seqData;//ptr;
 }
 
 u8 get_missing_bank(u32 seqId, s32* nonNullCount, s32* nullCount) {

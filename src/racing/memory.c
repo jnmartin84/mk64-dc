@@ -177,7 +177,7 @@ void n64_memcpy(void* dst, const void* src, size_t size) {
     int sbytes_to_copy = size_to_copy - (shorts_to_copy<<1);
 
     __builtin_prefetch(bsrc);
-    if ((!((uintptr_t) bdst & 3)) && (!((uintptr_t) bsrc & 3))) {
+    if ((!(((uintptr_t)bdst | (uintptr_t)bsrc) & 3))) {
         while (words_to_copy--) {
             if (words_to_copy & 3 == 0) {
                 __builtin_prefetch(bsrc + 16);
@@ -208,7 +208,7 @@ void n64_memcpy(void* dst, const void* src, size_t size) {
         }
 
         return;
-    } else if ((!((uintptr_t) bdst & 1)) && (!((uintptr_t) bsrc & 1))) {
+    } else if ((!(((uintptr_t)bdst | (uintptr_t)bsrc) & 1))) {
         while (shorts_to_copy--) {
             *sdst++ = *ssrc++;
         }

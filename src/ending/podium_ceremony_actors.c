@@ -296,7 +296,7 @@ extern u8 __attribute__((aligned(32))) CEREMONY_ACTOR_BUF[65536];//15200];
 void balloons_and_fireworks_init(void) {
     D_802874D8.actorTimer = 0;
     sPodiumActorList = (CeremonyActor*)CEREMONY_ACTOR_BUF; 
-    bzero(sPodiumActorList, (sizeof(CeremonyActor) * 200));
+    bzero(sPodiumActorList, 65536);//(sizeof(CeremonyActor) * 200));
     new_actor(&initDummy);
 }
 
@@ -443,8 +443,8 @@ void func_80281530(void) {
 void func_80281538(void) {
 }
 
-void func_80281540(void) {
-}
+//void func_80281540(void) {
+//}
 
 void podium_ceremony_loop(void) {
     gMatrixObjectCount = 0;
@@ -460,10 +460,10 @@ void podium_ceremony_loop(void) {
         update_vehicles();
     }
     render_podium_ceremony();
-    func_80281540();
-#if DVDL
-    display_dvdl();
-#endif
+//    func_80281540();
+//#if DVDL
+//    display_dvdl();
+//#endif
     gDPFullSync(gDisplayListHead++);
     gSPEndDisplayList(gDisplayListHead++);
 }

@@ -390,7 +390,7 @@ void runtime_reset(void) {
     if (!cb_init(RING_BUFFER_MAX_BYTES)) {
         printf("CB INIT FAILURE!\n");
     }
-    snd_stream_volume(shnd,192);
+    snd_stream_volume(shnd,160);
     mutex_unlock(&reset_mutex);
 }
 

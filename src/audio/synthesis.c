@@ -11,7 +11,6 @@
 #undef VIRTUAL_TO_PHYSICAL2
 #include "mixer.h"
 #include <stdio.h>
-
 #define aSetLoadBufferPair(pkt, c, off)                                               \
     aSetBuffer(pkt, 0, c + DMEM_ADDR_WET_LEFT_CH, 0, DEFAULT_LEN_1CH - c);            \
     aLoadBuffer(pkt, VIRTUAL_TO_PHYSICAL2(gSynthesisReverb.ringBuffer.left + (off))); \

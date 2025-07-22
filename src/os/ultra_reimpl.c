@@ -1,7 +1,11 @@
 // #include <stdio.h>
 // #include <string.h>
 // #include "lib/src/libultra_internal.h"
+#ifdef __GNUC__
+#define UNUSED __attribute__((unused))
+#else
 #define UNUSED
+#endif
 #include <string.h>
 #include <PR/ultratypes.h>
 #include <PR/os_message.h>
@@ -70,7 +74,7 @@ s32 osRecvMesg(UNUSED OSMesgQueue* mq, UNUSED OSMesg* msg, UNUSED s32 flag) {
 
 extern mutex_t mq_mutex;
 extern OSMesgQueue* D_800EA3B4;
-s32 AosSendMesg(OSMesgQueue* mq, OSMesg msg, s32 flag) {
+s32 AosSendMesg(OSMesgQueue* mq, OSMesg msg, UNUSED s32 flag) {
     s32 index;
     if (mq->validCount >= mq->msgCount) {
         return -1;
@@ -84,7 +88,7 @@ s32 AosSendMesg(OSMesgQueue* mq, OSMesg msg, s32 flag) {
     return 0;
 }
 
-s32 AosRecvMesg(OSMesgQueue* mq, OSMesg* msg, s32 flag) {
+s32 AosRecvMesg(OSMesgQueue* mq, OSMesg* msg, UNUSED s32 flag) {
     if (mq->validCount == 0) {
         return -1;
     }
@@ -115,7 +119,7 @@ void osViSetSpecialFeatures(UNUSED u32 func) {
 }
 void osViSwapBuffer(UNUSED void* vaddr) {
 }
-void osSetTime(OSTime time) {
+void osSetTime(UNUSED OSTime time) {
 }
 OSTime osGetTime(void) {
     return 0;
@@ -159,7 +163,7 @@ s32 osAiSetFrequency(u32 freq) {
 
 extern char* fnpre;
 static char texfn[256];
-static char icondata[512 * 2];
+static uint8_t icondata[512 * 2];
 
 struct state_pak {
     OSPfsState state;
@@ -171,7 +175,7 @@ struct state_pak openFile[16] = { 0 };
 
 int fileIndex = 0;
 
-static char eeprom_block[512];
+static uint8_t eeprom_block[512];
 #include <kos.h>
 static file_t eeprom_file = -1;
 static mutex_t eeprom_lock;
@@ -183,7 +187,7 @@ static int eeprom_init = 0;
  * VMU VFS driver to only write to the VMU once we're done modifying the file. */
 static oneshot_timer_t *timer;
 
-void eeprom_flush(void *arg) {
+void eeprom_flush(UNUSED void *arg) {
 	mutex_lock_scoped(&eeprom_lock);
 
     if (eeprom_file != -1) {
@@ -192,7 +196,7 @@ void eeprom_flush(void *arg) {
     }
 }
 
-s32 osEepromProbe(OSMesgQueue* mq) {
+s32 osEepromProbe(UNUSED OSMesgQueue* mq) {
 	maple_device_t *vmudev = NULL;
 
     if (!eeprom_init) {
@@ -279,7 +283,7 @@ static int reopen_vmu_eeprom(void) {
     return 0;
 }
 
-s32 osEepromLongRead(OSMesgQueue* mq, unsigned char address, unsigned char* buffer, s32 length) {
+s32 osEepromLongRead(UNUSED OSMesgQueue* mq, unsigned char address, unsigned char* buffer, s32 length) {
     if (eeprom_file == -1) {
         if (reopen_vmu_eeprom()) {
             return 1;
@@ -323,7 +327,7 @@ s32 osEepromRead(OSMesgQueue* mq, u8 address, u8* buffer) {
     return osEepromLongRead(mq, address, buffer, 8);
 }
 
-s32 osEepromLongWrite(OSMesgQueue* mq, unsigned char address, unsigned char* buffer, s32 length) {
+s32 osEepromLongWrite(UNUSED OSMesgQueue* mq, unsigned char address, unsigned char* buffer, s32 length) {
     if (eeprom_file == -1) {
         if (reopen_vmu_eeprom()) {
             return 1;
@@ -367,8 +371,8 @@ s32 osEepromLongWrite(OSMesgQueue* mq, unsigned char address, unsigned char* buf
 s32 osEepromWrite(OSMesgQueue* mq, unsigned char address, unsigned char* buffer) {
     return osEepromLongWrite(mq, address, buffer, 8);
 }
-static vmu_pkg_t ghostpkg;
-s32 osPfsDeleteFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8* ext_name) {
+
+s32 osPfsDeleteFile(OSPfs* pfs, UNUSED u16 company_code, UNUSED u32 game_code, UNUSED u8* game_name, UNUSED u8* ext_name) {
     maple_device_t* vmudev = NULL;
     //printf("%s\n",__func__);
 
@@ -385,7 +389,7 @@ s32 osPfsDeleteFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, 
 
 static uint8_t __attribute__((aligned(32))) tempblock[32768];//64 * 512];
 
-s32 osPfsReadWriteFile(OSPfs* pfs, s32 file_no, u8 flag, int offset, int size_in_bytes, u8* data_buffer) {
+s32 osPfsReadWriteFile(UNUSED OSPfs* pfs, s32 file_no, u8 flag, int offset, int size_in_bytes, u8* data_buffer) {
     //printf("%s(%s,%d,%d)\n",__func__, flag ? "WRITE" : "READ", offset, size_in_bytes);
     //printf("openFile[%d].file == %d .filename == %s\n", file_no, openFile[file_no].file, openFile[file_no].filename);
     if (openFile[file_no].file == -1) {
@@ -427,7 +431,7 @@ s32 osPfsReadWriteFile(OSPfs* pfs, s32 file_no, u8 flag, int offset, int size_in
     return PFS_NO_ERROR;
 }
 
-s32 osPfsAllocateFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8* ext_name, int file_size_in_bytes,
+s32 osPfsAllocateFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8* ext_name, UNUSED int file_size_in_bytes,
                       s32* file_no) {
     maple_device_t* vmudev = NULL;
     //printf("%s(%s) %d\n", __func__, game_name, file_size_in_bytes);
@@ -460,7 +464,7 @@ s32 osPfsAllocateFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name
     newpkg.icon_anim_speed = 5;
     sprintf(texfn, "%s/ghost.ico", fnpre);
     vmu_pkg_load_icon(&newpkg, texfn);
-    ssize_t* pkg_size;
+    ssize_t pkg_size;
     u8* pkg_out;
     vmu_pkg_build(&newpkg, &pkg_out, &pkg_size);
     //printf("built ghostdata package\n");
@@ -478,27 +482,27 @@ s32 osPfsAllocateFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name
     }
     openFile[*file_no].state.company_code = company_code;
     openFile[*file_no].state.game_code = game_code;
-    strcpy(openFile[*file_no].state.game_name, game_name);
-    strcpy(openFile[*file_no].state.ext_name, ext_name);
+    strcpy(openFile[*file_no].state.game_name, (char *)game_name);
+    strcpy(openFile[*file_no].state.ext_name, (char *)ext_name);
     return PFS_NO_ERROR;
 }
 
 extern int vmu_status(int channel);
 
-s32 osPfsIsPlug(OSMesgQueue* queue, u8* pattern) {
+s32 osPfsIsPlug(UNUSED OSMesgQueue* queue, u8* pattern) {
     //printf("%s\n",__func__);
     *pattern = 0;
     if (!vmu_status(0))
         *pattern = 1;
     return 1;
 }
-s32 osPfsInit(OSMesgQueue* queue, OSPfs* pfs, int channel) {
+s32 osPfsInit(UNUSED OSMesgQueue* queue, OSPfs* pfs, int channel) {
     //printf("%s(%d)\n",__func__,channel);
     int rv = vmu_status(channel);
     if (rv) {
         return PFS_NO_PAK_INSERTED;
     }
-    pfs->queue =  queue;
+    pfs->queue = queue;
     if (channel != 0) {
         return PFS_NO_PAK_INSERTED;
     }
@@ -508,14 +512,14 @@ s32 osPfsInit(OSMesgQueue* queue, OSPfs* pfs, int channel) {
     return PFS_NO_ERROR;
 }
 
-s32 osPfsNumFiles(OSPfs* pfs, s32* max_files, s32* files_used) {
+s32 osPfsNumFiles(UNUSED OSPfs* pfs, s32* max_files, s32* files_used) {
     //printf("%s\n",__func__);
     *max_files = 16;
     *files_used = fileIndex;
     return 0;
 }
 
-s32 osPfsFileState(OSPfs* pfs, s32 file_no, OSPfsState* state) {
+s32 osPfsFileState(UNUSED OSPfs* pfs, UNUSED s32 file_no, UNUSED OSPfsState* state) {
     //printf("%s\n",__func__);
     return PFS_NO_ERROR;
 }
@@ -542,7 +546,7 @@ s32 osPfsFindFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8
 
     for (size_t i = 0; i < 16; i++) {
         if (openFile[i].state.game_code == game_code && openFile[i].state.company_code == company_code &&
-            strcmp(openFile[i].state.game_name, game_name) == 0 && strcmp(openFile[i].state.ext_name, ext_name) == 0) {
+            strcmp(openFile[i].state.game_name, (char *)game_name) == 0 && strcmp(openFile[i].state.ext_name, (char *)ext_name) == 0) {
             *file_no = i;
             return PFS_NO_ERROR;
         }
@@ -567,7 +571,7 @@ s32 osPfsFindFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8
 
     openFile[*file_no].state.company_code = company_code;
     openFile[*file_no].state.game_code = game_code;
-    strcpy(openFile[*file_no].state.game_name, game_name);
-    strcpy(openFile[*file_no].state.ext_name, ext_name);
+    strcpy(openFile[*file_no].state.game_name, (char *)game_name);
+    strcpy(openFile[*file_no].state.ext_name, (char *)ext_name);
     return PFS_NO_ERROR;
 }

@@ -117,7 +117,7 @@ extern Gfx d_course_royal_raceway_packed_dl_A618[];
 extern Gfx d_course_royal_raceway_packed_dl_A618[];
 extern Gfx d_course_royal_raceway_packed_dl_23F8[];
 extern Gfx d_course_royal_raceway_packed_dl_2478[];
-extern uint8_t __attribute__((aligned(32))) CEREMONY_BUF[36232];
+extern uint8_t __attribute__((aligned(32))) CEREMONY_BUF[65536];
 extern uint8_t __attribute__((aligned(32))) COURSE_BUF[146464];
 extern u16 reflection_map_silver[1024];
 extern u16 reflection_map_gold[1024];
@@ -181,7 +181,7 @@ void load_ceremony_cutscene(void) {
     gActiveScreenMode = SCREEN_MODE_1P;
     gModeSelection = GRAND_PRIX;
     load_course(gCurrentCourseId);
-
+    load_ceremony_data();
     sprintf(texfn, "%s/dc_data/banshee_boardwalk_data.bin", fnpre);
 
     FILE* file = fopen(texfn, "rb");
