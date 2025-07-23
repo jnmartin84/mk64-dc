@@ -46,14 +46,14 @@ void n64_memset(void *dst, uint8_t val, size_t size);
 // a1[out]: pointer to output (1 byte per pixel)
 // a2[out]: pointer to output (RGBA16, 2 bytes per pixel)
 // a3[in]: RGBA color to set alpha to 0, values observed: 0x01, 0xBE
-void tkmk00decode(uint32_t *_tkmk, uint8_t *tmp_buf, uint16_t *_rgba16, int32_t alpha_color)  // 800405D0/0411D0
+void tkmk00decode(uint32_t *_tkmk, uint8_t *tmp_buf, uint16_t *_rgba16, uint32_t alpha_color)  // 800405D0/0411D0
 {
    unsigned offset;
    unsigned test_bits;
    int width, height;
    int col, row;
    int pixels;
-   int alpha;
+   unsigned int alpha;
    unsigned i;
    uint16_t rgba0;
    uint16_t rgba1;
@@ -63,13 +63,14 @@ void tkmk00decode(uint32_t *_tkmk, uint8_t *tmp_buf, uint16_t *_rgba16, int32_t 
    uint8_t *rgba16 = (uint8_t*)_rgba16;
    width = read_u16_be(&tkmk[0x8]);
    height = read_u16_be(&tkmk[0xA]);
-
-   alpha = alpha_color;// > 1 ? 0xFF : 0x00;
+   t1 = t7 = t8 = t9 = s0 = s1 = s3 = s4 = s6 = s7 = v0 = v1 = 0;
+   alpha = alpha_color;
    header6 = tkmk[0x6];
    pixels = width * height;
+//   printf("format byte is %02x\n", tkmk[0xc]);
    n64_memset(rgba_buf, 0xFF, sizeof(rgba_buf));
-   n64_memset(rgba16, 0x0, 2 * pixels);
-   n64_memset(tmp_buf, 0x0, pixels);
+   n64_memset(rgba16, 0xFF, 2 * pixels);
+   n64_memset(tmp_buf, 0xFF, pixels);
    for (i = 0; i < 8; i++) {
        offset = read_u32_be(&tkmk[0xC + i*4]);
        if (0 == (header6 & (0x1 << i))) {

@@ -80,3 +80,72 @@ int vmu_file_exists(const char *name) {
         return 1;
     }
 }
+
+// do all of the swapping needed to draw with vmu_draw_lcd
+void fix_xbm(unsigned char *p)
+{
+    unsigned char tmp[6*32];
+	for (int i = 31; i > -1; i--) {
+		memcpy(&tmp[(31 - i) * 6], &p[i * 6], 6);
+	}
+
+	memcpy(p, tmp, 6 * 32);
+
+	for (int j = 0; j < 32; j++) {
+		for (int i = 0; i < 6; i++) {
+			uint8_t tmpb = p[(j * 6) + (5 - i)];
+			tmp[(j * 6) + i] = tmpb;
+		}
+	}
+
+	memcpy(p, tmp, 6 * 32);
+}
+
+#include "mario.xbm"
+#include "luigi.xbm"
+#include "yoshi.xbm"
+#include "dk.xbm"
+#include "wario.xbm"
+#include "peach.xbm"
+#include "toad.xbm"
+#include "bowser.xbm"
+#if 1
+//defined(SONIC_BUILD)
+#include "sonic.xbm"
+const char *xbms[] = { mario_xbm, luigi_xbm, yoshi_xbm,
+                    sonic_xbm, dk_xbm, wario_xbm,
+					peach_xbm, bowser_xbm };
+#else
+const char *xbms[] = { mario_xbm, luigi_xbm, yoshi_xbm,
+                    todd_xbm, dk_xbm, wario_xbm,
+					peach_xbm, bowser_xbm };
+#endif
+void fixup_vmu_icons(void) {
+	for(int i=0;i<8;i++) {
+		fix_xbm(xbms[i]);
+	}
+}
+static int ever_fixup = 0;
+void draw_vmu_icon(int controller, int charid) {
+	file_t d;
+	char tmpfn[256];
+	char contid[4] = {'a','b','c','d'};
+	maple_device_t *vmudev = NULL;
+	if (!ever_fixup) {
+		fixup_vmu_icons();
+		ever_fixup++;
+	}
+	vmudev = maple_enum_type(controller, MAPLE_FUNC_MEMCARD);
+	if (!vmudev)
+		return;
+
+	sprintf(tmpfn, "/vmu/%c1/", contid[controller]);
+	d = fs_open(tmpfn, O_RDONLY | O_DIR);
+	if(-1 == d)
+		return;
+
+	fs_close(d);
+
+	// draw on the first vmu screen found
+	vmu_draw_lcd(vmudev, xbms[charid]);
+}

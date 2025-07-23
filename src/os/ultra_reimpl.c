@@ -195,7 +195,9 @@ void eeprom_flush(UNUSED void *arg) {
         eeprom_file = -1;
     }
 }
-
+#include "save_data.h"
+extern SaveData gSaveData;
+extern s32 D_800DC5AC;
 s32 osEepromProbe(UNUSED OSMesgQueue* mq) {
 	maple_device_t *vmudev = NULL;
 
@@ -234,7 +236,11 @@ s32 osEepromProbe(UNUSED OSMesgQueue* mq) {
         pkg.icon_data = icondata;
         pkg.icon_anim_speed = 5;
         pkg.data_len = 512;
-        pkg.data = eeprom_block;
+// see menus.c : 443 for real initialization
+        func_800B46D0();
+        D_800DC5AC = 0;
+
+        pkg.data = &gSaveData;//eeprom_block;
         vmu_pkg_load_icon(&pkg, texfn);
         uint8_t *pkg_out;
         ssize_t pkg_size;
@@ -251,6 +257,8 @@ s32 osEepromProbe(UNUSED OSMesgQueue* mq) {
         free(pkg_out);
         //printf("\tcreated mk64.rec\n");
         oneshot_timer_reset(timer);
+
+
     } else {
         //printf("\teeprom file existed on vmu a1\n");
         fs_close(eeprom_file);

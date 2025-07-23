@@ -489,9 +489,13 @@ void setup_audio_data(void) {
 
 s32 osAppNmiBuffer[16];
 void isPrintfInit(void);
+extern int must_inval_bg;
+extern int stupid_fucking_faces_hack;
 
 int main(UNUSED int argc, UNUSED char **argv) {
     thd_set_hz(300);
+must_inval_bg = 0;
+stupid_fucking_faces_hack = 0;
     wasSoftReset = (s16)0;
     gPhysicalFramebuffers[0] = fb[0];//(u16*) &gFramebuffer0;
     gPhysicalFramebuffers[1] = fb[1];//(u16*) &gFramebuffer1;
@@ -724,7 +728,7 @@ if ((state->buttons & CONT_START) && state->ltrig && state->rtrig) {
 
     if (state->buttons & CONT_START)
        ucheld |= 0x1000;//START_BUTTON;
-//       ucheld |= 0x0020;// 
+       //ucheld |= 0x0020;// 
 
        if (state->buttons & CONT_X)
         ucheld |= 0x0001;//C_RIGHT
@@ -904,8 +908,8 @@ void clear_framebuffer(s32 color) {
     gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
     gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
 
-    gDPSetFillColor(gDisplayListHead++, color);
-//    gDPFillRectangle(gDisplayListHead++, 0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
+    //gDPSetFillColor(gDisplayListHead++, color);
+    //gDPFillRectangle(gDisplayListHead++, 0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
 
     gDPPipeSync(gDisplayListHead++);
 

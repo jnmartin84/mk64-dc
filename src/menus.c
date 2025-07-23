@@ -710,6 +710,8 @@ void data_menu_act(struct Controller* controller, UNUSED u16 controllerIdx) {
 /**
  * Navigation of the course records data menu
  */
+extern int     must_inval_bg;
+
 void course_data_menu_act(struct Controller* controller, UNUSED u16 controllerIdx) {
     u16 btnAndStick; // sp2E
     MenuItem* sp28;
@@ -791,6 +793,8 @@ void course_data_menu_act(struct Controller* controller, UNUSED u16 controllerId
                     }
                     if (gCourseRecordsMenuSelection == COURSE_RECORDS_MENU_RETURN_MENU) {
                         func_8009E208();
+    must_inval_bg = 1;
+
                         play_sound2(SOUND_MENU_GO_BACK);
                     } else {
                         gSubMenuSelection = SUB_MENU_DATA_ERASE_CONFIRM;
@@ -1521,6 +1525,9 @@ s32 is_character_spot_free(s32 gridId) {
     return 1;
 }
 
+
+void draw_vmu_icon(int controller, int charid);
+
 /**
  * Navigation of the player select screen
  * Grid positions are from right to left, then top to bottom
@@ -1559,6 +1566,8 @@ void player_select_menu_act(struct Controller* controller, u16 controllerIdx) {
             
                 if ((btnAndStick & A_BUTTON) && (gCharacterGridIsSelected[controllerIdx] == 0)) {
                     gCharacterGridIsSelected[controllerIdx] = 1;
+                    draw_vmu_icon(controllerIdx, ((sCharacterGridOrder - 1)[gCharacterGridSelections[controllerIdx]]));
+
                     func_800C90F4(controllerIdx, 
                         ((sCharacterGridOrder - 1)[gCharacterGridSelections[controllerIdx]] * 0x10) + 0x2900800E);
                 }

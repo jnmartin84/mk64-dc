@@ -30,7 +30,7 @@ CollisionTriangle __attribute__((aligned(32))) allColTris[2800];//2048+1024];
 
 struct __attribute__((aligned(32))) GfxPool gGfxPools[2];
 
-uint8_t __attribute__((aligned(32))) backing_gCourseOutline[0x16][128*96/2];
+uint8_t __attribute__((aligned(32))) backing_gCourseOutline[0x14][128*96/2];
 uint8_t __attribute__((aligned(32))) backing_gMenuTextureBuffer[0x000900B0];
 uint8_t __attribute__((aligned(32))) backing_gMenuCompressedBuffer[65536];
 uint8_t __attribute__((aligned(32))) backing_sTKMK00_LowResBuffer[320*240];
@@ -38,6 +38,10 @@ uint8_t __attribute__((aligned(32))) backing_gSomeDLBuffer[0x1000];
 
 #define SAMPLES_HIGH 448
 int16_t audio_buffer[SAMPLES_HIGH * 2 * 2] __attribute__((aligned(64)));
+
+int must_inval_bg;
+int stupid_fucking_faces_hack;
+
 
 extern u8 d_course_koopa_troopa_beach_palm_frond[];
 extern Vtx d_course_koopa_troopa_beach_unknown_model4[];

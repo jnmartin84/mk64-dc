@@ -57,14 +57,15 @@
 //! @todo Move gGfxPool out of main.h
 // Unfortunately that's not a small effort due to weird import structure in this project
 #include "main.h"
-extern u8 __attribute__((aligned(32))) backing_gCourseOutline[0x16][128*96/2];
+
 extern u8 __attribute__((aligned(32))) backing_gMenuTextureBuffer[0x000900B0];
 extern u8 __attribute__((aligned(32))) backing_gMenuCompressedBuffer[65536];
 extern u8 __attribute__((aligned(32))) backing_sTKMK00_LowResBuffer[320*240];
 extern u8 __attribute__((aligned(32))) backing_gSomeDLBuffer[0x1000];
 
-int must_inval_bg = 0;
-
+int in_course_data_menu = 0;
+extern int must_inval_bg;
+extern int stupid_fucking_faces_hack;
 void gfx_texture_cache_invalidate(void *orig_addr);
 
 void guMtxCatL(Mtx* m, Mtx* n, Mtx* res);
@@ -120,7 +121,7 @@ s32 gControllerPak1NumPagesFree;
 s32 gControllerPak1FileNote;
 s32 gControllerPak2FileNote;
 s32 menu_item_bss_pad2;
-ALIGNED8 SaveData gSaveData;
+ALIGNED8 SaveData gSaveData = {0};
 
 u8 D_8018ED90;
 u8 D_8018ED91;
@@ -590,13 +591,13 @@ char* D_800E7938[] = {
 
 // In a perfect world this would be `char *D_800E7940[][4]`
 char* D_800E7940[] = {
-    "NO N64 CONTROLLER PAK DETECTED",
+    "NO DREAMCAST VMU DETECTED",
     "TO SAVE GHOST DATA, ",
-    "INSERT N64 CONTROLLER PAK ",
+    "INSERT DREAMCAST VMU ",
     "INTO CONTROLLER 1",
 
     "UNABLE TO READ ",
-    "N64 CONTROLLER PAK DATA",
+    "DREAMCAST VMU DATA",
     "",
     "",
 
@@ -606,15 +607,16 @@ char* D_800E7940[] = {
     "",
 
     "INSUFFICIENT FREE PAGES AVAILABLE ",
-    "IN N64 CONTROLLER PAK TO CREATE ",
-    "GAME DATA, PLEASE FREE 121 PAGES.",
-    "SEE INSTRUCTION BOOKLET FOR DETAILS.",
+    "ON DREAMCAST VMU TO CREATE ",
+    "GAME DATA, PLEASE FREE 67 BLOCKS",
+    "TO SAVE TIME TRIAL GHOSTS."
+//    "                                 ",
 };
 
 // Unused?
 char* D_800E7980[] = {
     "TO SAVE GHOST DATA, ",
-    "INSERT N64 CONTROLLER PAK ",
+    "INSERT DREAMCAST VMU ",
     "INTO CONTROLLER 1",
 };
 
@@ -2267,7 +2269,21 @@ void func_800940EC(s32 arg0) {
     gSPDisplayList(gDisplayListHead++, D_02007F48);
     func_80057CE4();
 }
-
+Gfx l_D_02007F60[] = {
+    gsDPSetCycleType(G_CYC_FILL),
+//    gsDPSetRenderMode(G_RM_OPA_SURF, G_RM_OPA_SURF2),
+    gsSPClearGeometryMode(G_ZBUFFER | G_CULL_BACK | G_LIGHTING),
+//    gsDPSetFillColor(0x00010001),
+//    gsDPFillRectangle(0, 0, 319, 239),
+    gsSPSetGeometryMode(G_ZBUFFER | G_CULL_BACK | G_LIGHTING),
+    gsDPSetRenderMode(G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2),
+    gsDPSetCycleType(G_CYC_1CYCLE),
+    gsDPSetCombineMode(G_CC_SHADE, G_CC_SHADE),
+    gsSPSetGeometryMode(G_SHADE | G_CULL_BACK | G_LIGHTING | G_SHADING_SMOOTH),
+    gsDPPipeSync(),
+    gsSPDisplayList(startup_texture_dl3),
+    gsSPEndDisplayList(),
+};
 void func_800942D0(void) {
     Mtx* test;
     f32 var_f26;
@@ -2284,7 +2300,7 @@ void func_800942D0(void) {
     gSPMatrix(gDisplayListHead++, test++, G_MTX_PUSH | G_MTX_MUL | G_MTX_MODELVIEW);
     gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
     gDPSetEnvColor(gDisplayListHead++, 0x00, 0x00, 0x00, 0x00);
-    gSPDisplayList(gDisplayListHead++, D_02007F60);
+    gSPDisplayList(gDisplayListHead++, l_D_02007F60);
     gSPPopMatrix(gDisplayListHead++, G_MTX_MODELVIEW);
     if (sIntroModelMotionSpeed > 0) {
         var_f26 = sIntroModelSpeed;
@@ -2762,23 +2778,11 @@ Gfx* func_80095BD0(Gfx* displayListHead, u8* arg1, f32 arg2, f32 arg3, u32 arg4,
     Vtx* var_a1;
     Mtx* sp28;
 
-    // A match is a match, but why are goto's required here?
     if (gMatrixEffectCount >= 0x2F7) {
-        goto func_80095BD0_label1;
+        return displayListHead;
     }
+
     sp28 = &gGfxPool->mtxEffect[gMatrixEffectCount];
-#if 0
-    if (gMatrixEffectCount < 0) {
-        rmonPrintf("effectcount < 0 !!!!!!(kawano)\n");
-    }
-#endif
-    goto func_80095BD0_label2;
-func_80095BD0_label1:
-#if 0
-    rmonPrintf("MAX effectcount(760) over!!!!(kawano)\n");
-#endif
-    return displayListHead;
-func_80095BD0_label2:
     func_80095AE0((void*) sp28, arg2, arg3, arg6, arg7);
     gSPMatrix(displayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxEffect[gMatrixEffectCount]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
@@ -2802,6 +2806,15 @@ func_80095BD0_label2:
 
     return func_800959F8(displayListHead, var_a1);
 }
+
+#define gSPSignaling(pkt)                                       \
+    {                                                                                   \
+        Gfx* _g = (Gfx*) (pkt);                                                         \
+                                                                                        \
+        _g->words.w0 = 0x424C4E44; \
+        _g->words.w1 = 0x4655434B;                                           \
+    }
+int doing_previews = 0;
 
 Gfx* func_80095E10(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, s32 arg8,
                    s32 arg9, u8* argA, u32 argB, u32 argC) {
@@ -2888,6 +2901,9 @@ Gfx* func_80095E10(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, s32 arg4, 
             } else {
                 var_s2 = var_t0;
             }
+//            if (doing_previews) {
+  //              gSPSignaling(displayListHead++);
+    //        }
             gDPLoadTextureTile(displayListHead++, argA, arg1, G_IM_SIZ_16b, argB, 0, var_a1_2, var_s3,
                                var_a1_2 + var_s2, var_s3 + var_s4, 0, G_TX_NOMIRROR | G_TX_WRAP,
                                G_TX_NOMIRROR | G_TX_WRAP, sp68, sp64, G_TX_NOLOD, G_TX_NOLOD);
@@ -2895,7 +2911,10 @@ Gfx* func_80095E10(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, s32 arg4, 
        //                         G_TX_NOMIRROR | G_TX_WRAP, 0, 0, G_TX_NOLOD, G_TX_NOLOD);
             gSPTextureRectangle(displayListHead++, arg8 * 4, arg9 * 4, (arg8 + var_s2) * 4, (arg9 + var_s4) * 4, 0,
                                 (var_a1_2 * 32) & 0xFFFF, (var_s3 * 32) & 0xFFFF, arg2, arg3);
-            
+         //               if (doing_previews) {
+           //     gSPSignaling(displayListHead++);
+            //}
+
             arg8 += var_t0;
         }
 
@@ -2904,6 +2923,8 @@ Gfx* func_80095E10(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, s32 arg4, 
     }
     return displayListHead;
 }
+
+
 
 Gfx* func_800963F0(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, f32 arg4, f32 arg5, s32 arg6, s32 arg7, s32 arg8,
                    s32 arg9, s32 argA, s32 argB, u8* argC, u32 argD, u32 argE) {
@@ -2988,12 +3009,18 @@ Gfx* func_800963F0(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, f32 arg4, 
                 var_s2 = var_t0;
             }
             a = var_s2 * arg4;
+//if(doing_previews) {
+  //  gSPSignaling(displayListHead++);
+//}
 
             gDPLoadTextureTile(displayListHead++, argC, arg1, G_IM_SIZ_16b, argD, argE, var_a1_2, var_s3,
                                var_a1_2 + var_s2, var_s3 + var_s4, 0, G_TX_NOMIRROR | G_TX_WRAP,
                                G_TX_NOMIRROR | G_TX_WRAP, sp68, sp64, G_TX_NOLOD, G_TX_NOLOD);
             gSPTextureRectangle(displayListHead++, argA * 4, argB * 4, (argA + a) * 4, (argB + b) * 4, 0,
                                 (var_a1_2 * 32) & 0xFFFF, (var_s3 * 32) & 0xFFFF, arg2, arg3);
+//if(doing_previews) {
+  //  gSPSignaling(displayListHead++);
+//}
 
             argA += var_t0 * arg4;
         }
@@ -3240,6 +3267,8 @@ Gfx* func_80097AE4(Gfx* displayListHead, s8 fmt, s32 arg2, s32 arg3, u8* arg4, s
     return displayListHead;
 }
 
+
+
 Gfx* func_80097E58(Gfx* displayListHead, s8 fmt, UNUSED u32 arg2, u32 arg3, UNUSED u32 arg4, u32 arg5, s32 arg6,
                    s32 arg7, u8* someTexture, u32 arg9, UNUSED u32 argA, s32 width) {
     u32 ult;
@@ -3259,6 +3288,18 @@ Gfx* func_80097E58(Gfx* displayListHead, s8 fmt, UNUSED u32 arg2, u32 arg3, UNUS
 
     lrs = arg9 / 2;
     spDC = arg9 - lrs;
+
+        if (stupid_fucking_faces_hack) {//} || doing_previews) {
+     gSPSignaling(displayListHead++);
+
+gDPLoadTextureTile(displayListHead++, someTexture, fmt, G_IM_SIZ_16b, 
+    /* arg9 */64, /* argA */64, 0, 0, (63 << 2) , (63 << 2), 0, 0, 0, 0, 0, G_TX_NOLOD, G_TX_NOLOD);
+gSPTextureRectangle(displayListHead++, (arg6) << 2, (arg7) << 2, (arg6+64) << 2,
+                            (arg7+64) << 2, 0, 0, 0, 4096, 1024);
+ gSPSignaling(displayListHead++);
+return displayListHead;
+        }
+
     for (ult = arg3; ult < arg5; ult += 32) {
         temp = 0;
         if ((ult + temp2) > arg5) {
@@ -3271,20 +3312,30 @@ Gfx* func_80097E58(Gfx* displayListHead, s8 fmt, UNUSED u32 arg2, u32 arg3, UNUS
         }
         temp_v1 = ((32 * lrs) << 10) / (lrs * (32 - width));
 
+       // if (stupid_fucking_faces_hack) {//} || doing_previews) {
+          //  gSPSignaling(displayListHead++);
+//            gDPSetRenderMode(displayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
+  //          gDPSetCombineMode(displayListHead++, G_CC_MODULATERGB_PRIM, G_CC_MODULATERGB_PRIM2);//G_CC_DECALRGBA, G_CC_DECALRGBA);
+        //}
         gDPLoadTextureTile(displayListHead++, someTexture, fmt, G_IM_SIZ_16b, arg9, argA, temp, ult, temp + lrs,
-                           ult + var_s2, 0, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMIRROR | G_TX_WRAP, 5, 5, G_TX_NOLOD,
+                           ult + var_s2, 0,0/*  G_TX_NOMIRROR | G_TX_WRAP */, 0/* G_TX_NOMIRROR | G_TX_WRAP */, 5, 5, G_TX_NOLOD,
                            G_TX_NOLOD);
         gSPTextureRectangle(displayListHead++, (arg6 + lrs * width / 32) << 2, arg7 << 2, (arg6 + lrs) << 2,
                             (arg7 + var_s2) << 2, 0, 0, (ult << 5) & 0xFFFF, temp_v1, 1024);
         arg6 += lrs;
         temp_v1 = ((32 * spDC) << 10) / (spDC * (32 - width));
+#if 1
         gDPLoadTextureTile(displayListHead++, someTexture, fmt, G_IM_SIZ_16b, arg9, argA, temp + lrs, ult, temp + arg9,
-                           ult + var_s2, 0, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMIRROR | G_TX_WRAP, 5, 5, G_TX_NOLOD,
+                           ult + var_s2, 0, 0/* G_TX_NOMIRROR | G_TX_WRAP */,0/*  G_TX_NOMIRROR | G_TX_WRAP */, 5, 5, G_TX_NOLOD,
                            G_TX_NOLOD);
         gSPTextureRectangle(displayListHead++, arg6 << 2, arg7 << 2, (arg6 + spDC * (32 - width) / 32) << 2,
                             (arg7 + var_s2) << 2, 0, (lrs << 5) & 0xFFFF, (ult << 5) & 0xFFFF, temp_v1, 1024);
-        arg6 = arg6Copy;
+#endif
+                            arg6 = arg6Copy;
         arg7 += temp2;
+        //if (stupid_fucking_faces_hack) {//} || doing_previews) {
+            //gSPSignaling(displayListHead++);
+        //}
     }
     return displayListHead;
 }
@@ -3338,14 +3389,21 @@ Gfx* func_800987D0(Gfx* displayListHead, u32 arg1, u32 arg2, u32 width, u32 heig
     columnCopy = column;
     for (var_v0_2 = arg2; (u32) var_v0_2 < height; var_v0_2 += 0x20) {
         for (var_a2 = arg1; (u32) var_a2 < width; var_a2 += 0x20) {
+//            if (doing_previews) {
+  //              gSPSignaling(displayListHead++);
+    //        }
             gDPLoadTextureTile(displayListHead++, gMenuTextureBuffer, G_IM_FMT_RGBA, G_IM_SIZ_16b, textureWidth, 0,
                                var_a2, var_v0_2, var_a2 + 0x20, var_v0_2 + 0x20, 0, G_TX_NOMIRROR | G_TX_WRAP,
                                G_TX_NOMIRROR | G_TX_WRAP, 5, 5, G_TX_NOLOD, G_TX_NOLOD);
             temp_f6 = (temp_f18 * ((temp_f0 * (column - 0xA0)) + (temp_f24 * (row - 0x78)))) + 160.0f;
             temp_f4_2 = (temp_f18 * ((-temp_f24 * (column - 0xA0)) + (temp_f0 * (row - 0x78)))) + 120.0f;
             gSPTextureRectangle(displayListHead++, temp_f6 * 4, temp_f4_2 * 4, ((temp_f6 + 0x20) ^ 0) * 4,
-                                ((temp_f4_2 + 0x20) ^ 0) * 4, 0, 0, 0, 1024, 1024);
+                                ((temp_f4_2 + 0x20)/*  ^ 0 */) * 4, 0, 0, 0, 1024, 1024);
             column += 0x20;
+            //            if (doing_previews) {
+              //  gSPSignaling(displayListHead++);
+            //}
+
         }
         column = columnCopy;
         row += 0x20;
@@ -3383,7 +3441,10 @@ Gfx* draw_box_fill(Gfx* displayListHead, s32 ulx, s32 uly, s32 lrx, s32 lry, s32
     if (lry >= 0xF0) {
         lry = 0xEF;
     }
-    gSPDisplayList(displayListHead++, D_02008030);
+
+    gDPSetCycleType(displayListHead++,G_CYC_1CYCLE);
+    gDPSetRenderMode(displayListHead++,G_RM_ZB_OPA_SURF, G_RM_ZB_OPA_SURF2);
+    gDPSetCombineMode(displayListHead++,G_CC_SHADE, G_CC_SHADE);
     gDPSetFillColor(displayListHead++, (GPACK_RGBA5551(red, green, (u32) blue, alpha) << 0x10 |
                                         GPACK_RGBA5551(red, green, (u32) blue, alpha)));
     gDPFillRectangle(displayListHead++, ulx, uly, lrx, lry);
@@ -3396,7 +3457,8 @@ Gfx* draw_box(Gfx* displayListHead, s32 ulx, s32 uly, s32 lrx, s32 lry, u32 red,
     red &= 0xFF;
     green &= 0xFF;
     blue &= 0xFF;
-    alpha &= 0xFF;
+    alpha &= 0xFF; 
+    //printf("alpha %d\n", alpha);
     if (lrx < ulx) {
         swap_values(&ulx, &lrx);
     }
@@ -3838,7 +3900,7 @@ void func_8009A238(MenuTexture* arg0, s32 arg1) {
     sp24 = arg0->textureData;
     var_a3 = arg0->size;
     var_a3 = ((var_a3+ 7)) & ~7;
-
+    
     tkmk00decode(sp24, sTKMK00_LowResBuffer, &gMenuTextureBuffer[temp_v1], 1);
     sMenuTextureMap[arg1].textureData = sp24;
     gfx_texture_cache_invalidate(&gMenuTextureBuffer[temp_v1]);
@@ -3945,10 +4007,8 @@ void func_8009A594(s32 arg0, s32 arg1, MkAnimation* arg2) {
     temp_v0 = segmented_to_virtual_dupe_2(arg2);
     D_8018DEE0[arg0].textureSequence = temp_v0;
     D_8018DEE0[arg0].sequenceIndex = arg1;
-    // All hail the fake match gods who, in their infinite grace, have blessed us
-    // with this enigma of a match on the first iteration of permutation
-    D_8018DEE0[arg0].frameCountDown = //(temp_v0 + arg1)->frame_length;
-        temp_v0[arg1].frame_length;
+
+    D_8018DEE0[arg0].frameCountDown = temp_v0[arg1].frame_length;
     temp_a0 = segmented_to_virtual_dupe(temp_v0[arg1].mk64Texture);
     if (D_8018DEE0[arg0].unk14 != 0) {
         func_80099A94(temp_a0, D_8018DEE0[arg0].menuTextureIndex);
@@ -4411,7 +4471,9 @@ Gfx* print_letter(Gfx* arg0, MenuTexture* glyphTexture, f32 arg2, f32 arg3, s32 
         } else {
             temp_v0_2 = (u8*) func_8009B8C4(var_s0->textureData);
             if (temp_v0_2 != 0) {
-                    switch (mode) { /* irregular */
+                if (in_course_data_menu)
+                    gfx_texture_cache_invalidate(temp_v0_2);
+                switch (mode) { /* irregular */
                     case 1:
                         gSPDisplayList(arg0++, D_020077F8);
                         arg0 = func_80095BD0(arg0, temp_v0_2, var_s0->dX + arg2, var_s0->dY + arg3, var_s0->width,
@@ -4473,6 +4535,7 @@ Gfx* func_8009C204(Gfx* arg0, MenuTexture* arg1, s32 arg2, s32 arg3, s32 arg4) {
     return arg0;
 }
 
+
 Gfx* func_8009C434(Gfx* arg0, struct_8018DEE0_entry* arg1, s32 arg2, s32 arg3, s32 arg4) {
     s32 var_t0;
     s32 var_t1;
@@ -4481,22 +4544,35 @@ Gfx* func_8009C434(Gfx* arg0, struct_8018DEE0_entry* arg1, s32 arg2, s32 arg3, s
 
     var_s0 = segmented_to_virtual_dupe(arg1->textureSequence[arg1->sequenceIndex].mk64Texture);
     temp = D_02007728;
+        if (stupid_fucking_faces_hack) {
+//    gSPSignaling(arg0++);
+        }
     while (var_s0->textureData != NULL) {
         var_t1 = 0;
-        switch (var_s0->type) { /* irregular */
-            default:
-                gSPDisplayList(arg0++, temp);
-                break;
-            case 0:
-                gSPDisplayList(arg0++, D_02007708);
-                break;
-            case 1:
-                gSPDisplayList(arg0++, temp);
-                break;
-            case 3:
-                gSPDisplayList(arg0++, D_02007768);
-                var_t1 = 3;
-                break;
+        if (stupid_fucking_faces_hack) {
+//            printf("FUCK");
+    //        var_t1 = 3;
+
+                gDPSetRenderMode(arg0++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
+                gDPSetCombineMode(arg0++, G_CC_DECALRGB, G_CC_DECALRGB);//G_CC_DECALRGBA, G_CC_DECALRGBA);
+    //        gDPSetCombineMode(arg0++, G_CC_DECALRGB, G_CC_DECALRGB);
+    //        gDPSetRenderMode(arg0++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
+        } else {
+            switch (var_s0->type) { /* irregular */
+                default:
+                    gSPDisplayList(arg0++, temp);
+                    break;
+                case 0:
+                    gSPDisplayList(arg0++, D_02007708);
+                    break;
+                case 1:
+                    gSPDisplayList(arg0++, temp);
+                    break;
+                case 3:
+                    gSPDisplayList(arg0++, D_02007768);
+                    var_t1 = 3;
+                    break;
+            }
         }
         if (arg1->unk14 != 0) {
             var_t0 = sMenuTextureMap[arg1->menuTextureIndex + 1].offset;
@@ -4523,6 +4599,10 @@ Gfx* func_8009C434(Gfx* arg0, struct_8018DEE0_entry* arg1, s32 arg2, s32 arg3, s
         }
         var_s0++;
     }
+            if (stupid_fucking_faces_hack) {
+  //  gSPSignaling(arg0++);
+        }
+
     return arg0;
 }
 
@@ -4533,9 +4613,10 @@ Gfx* func_8009C708(Gfx* arg0, struct_8018DEE0_entry* arg1, s32 arg2, s32 arg3, s
     MenuTexture* var_s1;
 
     var_s1 = segmented_to_virtual_dupe(arg1->textureSequence[arg1->sequenceIndex].mk64Texture);
-    temp = D_02007728;
+    
+    temp = D_02007708;//D_02007728;
     while (var_s1->textureData != NULL) {
-        var_t0 = 0;
+                var_t0 = 0;
         switch (var_s1->type) { /* irregular */
             case 0:
                 gSPDisplayList(arg0++, D_02007708);
@@ -5135,7 +5216,7 @@ void func_8009DB8C(void) {
     if ((u32) var_v1 >= D_8018E7B8[4]) {
         if ((u32) var_v1 == D_8018E7B8[4]) {
             for (var_s0 = 0; var_s0 < 0x4B0; var_s0++) {
-                sTKMK00_LowResBuffer[var_s0] = 1;
+                sTKMK00_LowResBuffer[var_s0] = 0xff;//1;
             }
         } else {
             func_8009CE64(4);
@@ -5172,7 +5253,9 @@ void func_8009DB8C(void) {
     if (var_v1 >= 0x100) {
         var_v1 = 0x000000FF;
     }
+///////////    gDPSetPrimColor(gDisplayListHead++, 0, 0, 0x00, 0x00, 0x00, var_v1);
     gDisplayListHead = draw_box(gDisplayListHead, 0, 0, 0x00000140, 0x000000F0, 0, 0, 0, var_v1);
+    //draw_box(gDisplayListHead, 0, 0, 0x00000140, 0x000000F0, 0, 0, 0, var_v1);
 }
 
 void func_8009DEF8(u32 arg0, u32 arg1) {
@@ -5623,7 +5706,9 @@ void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
             menuItem->param1 = (s32) gCupSelection;
             menuItem->param2 = func_800B54C0(gCupSelection, gCCSelection);
             menuItem->D_8018DEE0_index = animate_character_select_menu(
-                segmented_to_virtual_dupe_2(D_800E7E20[((gCCSelection / 2) * 4) - menuItem->param2]));
+                segmented_to_virtual_dupe_2(
+                    D_800E7E20[0]//((gCCSelection / 2) * 4) - menuItem->param2]
+                ));
             menuItem->column = D_800E7268[0].column;
             menuItem->row = D_800E7268[0].row;
             break;
@@ -5840,7 +5925,7 @@ void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
 
 extern int in_intro;
 extern void nuke_everything(void);
-
+#include <GL/gl.h>
 void render_menus(MenuItem* arg0) {
     s32 var_a1 = 0;
     s32 var_v1 = 0;
@@ -5963,8 +6048,42 @@ void render_menus(MenuItem* arg0) {
             case MAIN_MENU_BACKGROUND:
             case CHARACTER_SELECT_BACKGROUND:
             case COURSE_SELECT_BACKGROUND:
-                gDisplayListHead = func_8009BC9C(gDisplayListHead, gMenuTexturesBackground[has_unlocked_extra_mode()],
+#if 0
+    glClearDepth(0.00004);                          // Enables Clearing Of The Depth Buffer
+//    glDepthFunc(GL_LESS);                               // The Type Of Depth Test To Do
+  //  glEnable(GL_DEPTH_TEST);                    // Enables Depth Testing
+glDisable(GL_DEPTH_TEST);
+glDepthMask(0);
+glMatrixMode(GL_MODELVIEW);
+glPushMatrix();
+glLoadIdentity();
+
+glMatrixMode(GL_PROJECTION);
+glPushMatrix();
+glLoadIdentity();
+glBegin(GL_QUADS);
+glColor3f(1.0f,1.0f,1.0f);
+
+    glTexCoord2f(0.0f, 0.0f); glVertex3f( 0.0f, 0.0f,  1.0f);  // Bottom Right Of The Texture and Quad
+glColor3f(1.0f,1.0f,1.0f);
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f,  479.0f,  1.0f);  // Top Left Of The Texture and Quad
+
+glColor3f(1.0f,1.0f,1.0f);
+    glTexCoord2f(1.0f, 1.0f); glVertex3f( 639.0f,  479.0f,  1.0f);  // Top Right Of The Texture and Quad
+    glColor3f(1.0f,1.0f,1.0f);
+  glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f, 479.0f,  1.0f);  // Bottom Left Of The Texture and Quad
+
+
+    glEnd();
+glPopMatrix();
+glMatrixMode(GL_MODELVIEW);
+glPopMatrix();
+glDepthMask(1);
+glEnable(GL_DEPTH_TEST);
+#else
+            gDisplayListHead = func_8009BC9C(gDisplayListHead, gMenuTexturesBackground[has_unlocked_extra_mode()],
                                                  arg0->column, arg0->row, 3, 0);
+#endif
                 break;
             case MENU_ITEM_UI_GAME_SELECT:
                 gDisplayListHead =
@@ -6113,7 +6232,9 @@ void render_menus(MenuItem* arg0) {
                 /* fallthrough */
             case MENU_ITEM_TYPE_0A0: /* switch 6 */
             case MENU_ITEM_TYPE_0A1: /* switch 6 */
+                    stupid_fucking_faces_hack = 1;
                 func_8009A76C(arg0->D_8018DEE0_index, arg0->column, arg0->row, arg0->param1);
+                    stupid_fucking_faces_hack = 0;
                 break;
             case MENU_ITEM_TYPE_058:         /* switch 6 */
             case COURSE_SELECT_COURSE_NAMES: /* switch 6 */
@@ -6121,18 +6242,23 @@ void render_menus(MenuItem* arg0) {
             case MENU_ITEM_TYPE_05B:         /* switch 6 */
             case COURSE_SELECT_BATTLE_NAMES: /* switch 6 */
                 func_800A8A98(arg0);
+//                doing_previews = 1;
                 gDisplayListHead = render_menu_textures(
                     gDisplayListHead,
                     segmented_to_virtual_dupe(gMenuTexturesTrackSelection[arg0->type - COURSE_SELECT_MAP_SELECT]),
                     arg0->column, arg0->row);
                 func_800A8CA4(arg0);
+  //              doing_previews = 0;
                 break;
             case COURSE_SELECT_MAP_SELECT: /* switch 6 */
+//            doing_previews = 1;
                 gDisplayListHead = render_menu_textures(
                     gDisplayListHead,
                     segmented_to_virtual_dupe(gMenuTexturesTrackSelection[arg0->type - COURSE_SELECT_MAP_SELECT]),
                     arg0->column, arg0->row);
-                break;
+  //          doing_previews = 0;
+
+                    break;
             case MENU_ITEM_TYPE_05F: /* switch 6 */
             case MENU_ITEM_TYPE_060: /* switch 6 */
             case MENU_ITEM_TYPE_061: /* switch 6 */
@@ -6593,7 +6719,7 @@ void render_cursor_player(MenuItem* arg0, s32 arg1, s32 arg2) {
 
     temp_v1 = &D_800E74A8[arg1];
     gDPSetPrimColor(gDisplayListHead++, 0, 0, temp_v1->red, temp_v1->green, temp_v1->blue, temp_v1->alpha);
-    gDPSetEnvColor(gDisplayListHead++, arg2, arg2, arg2, 0x00);
+    gDPSetEnvColor(gDisplayListHead++, arg2, arg2, arg2, 0xff);
     gDisplayListHead = render_menu_textures(
         gDisplayListHead, segmented_to_virtual_dupe(gMenuTexturesBorderPlayer[arg1]), arg0->column, arg0->row);
 }
@@ -6681,11 +6807,14 @@ void func_800A1500(MenuItem* arg0) {
     }
 }
 
+// data menu shit
 void func_800A15EC(MenuItem* arg0) {
     s16 courseId = gCupCourseOrder[(arg0->type - 0x7C) / 4][(arg0->type - 0x7C) % 4];
+//doing_previews = 1;
     gDisplayListHead =
         func_8009C204(gDisplayListHead, segmented_to_virtual_dupe(gMenuTexturesCoursePreview[courseId]), arg0->column, arg0->row, 2);
-    gDisplayListHead = draw_box(gDisplayListHead, arg0->column, arg0->row + 0x27, arg0->column + 0x40, arg0->row + 0x30,
+//doing_previews = 0;
+        gDisplayListHead = draw_box(gDisplayListHead, arg0->column, arg0->row + 0x27, arg0->column + 0x40, arg0->row + 0x30,
                                 0, 0, 0, 0xFF);
     gDisplayListHead = func_8009C204(gDisplayListHead, segmented_to_virtual_dupe(gMenuTexturesCourseTitle[courseId]), arg0->column,
                                      arg0->row + 0x27, 3);
@@ -6693,10 +6822,14 @@ void func_800A15EC(MenuItem* arg0) {
         // The "^ 0" is required to force the use of v1 instead of a 4th s* register
         gDisplayListHead = draw_flash_select_case_slow(gDisplayListHead, arg0->column + 0x20, arg0->row /* ^ 0 */,
                                                        arg0->column + 0x3F, arg0->row + 9);
-        gDisplayListHead =
+//doing_previews = 1;
+                                                       gDisplayListHead =
             func_8009C204(gDisplayListHead, segmented_to_virtual_dupe(&D_02004A0C), arg0->column + 0x20, arg0->row, 2);
+//doing_previews = 0;
+        }
+//doing_previews = 0;
+
     }
-}
 
 void func_800A1780(MenuItem* arg0) {
     RGBA16* temp_a1;
@@ -6721,7 +6854,10 @@ void func_800A1780(MenuItem* arg0) {
 
 void render_menu_item_data_course_image(MenuItem* arg0) {
     // render course preview
+    //doing_previews = 1;
     func_8009A76C(arg0->D_8018DEE0_index, 0x17, 0x84, -1);
+    //doing_previews = 0;
+
     if (func_800B639C(gTimeTrialDataCourseIndex) >= TIME_TRIAL_DATA_LUIGI_RACEWAY) {
         gDisplayListHead = draw_flash_select_case_slow(gDisplayListHead, 0x57, 0x84, 0x96, 0x95);
         gDisplayListHead = render_menu_textures(gDisplayListHead, D_02004A0C, 0x57, 0x84);
@@ -6737,7 +6873,7 @@ void render_menu_item_data_course_info(MenuItem* arg0) {
     s16 courseId;
     s32 recordType;
     s32 rowOffset;
-
+    in_course_data_menu = 1;
     courseId = gCupCourseOrder[gTimeTrialDataCourseIndex / 4][gTimeTrialDataCourseIndex % 4];
     arg0->column = 0x14;
     // name of the course
@@ -6761,6 +6897,7 @@ void render_menu_item_data_course_info(MenuItem* arg0) {
     set_text_color(TEXT_YELLOW);
     print_text_mode_1(0xA0, arg0->row + 0xD5, gBestTimeText[1], 0, 0.75f, 0.75f);
     render_lap_times(TIME_TRIAL_1LAP_RECORD, 0x96, arg0->row + 0xE1);
+    in_course_data_menu = 0;
 }
 
 void menu_item_data_course_selectable(MenuItem* arg0) {
@@ -7600,12 +7737,12 @@ void render_lap_time(s32 lapNumber, s32 column, s32 row) {
 }
 
 void render_lap_times(s32 recordType, s32 column, s32 row) {
-    UNUSED s32 pad;
+//    UNUSED s32 pad;
     u32 timeRecord;
-    UNUSED s32 pad2;
+ //   UNUSED s32 pad2;
     s32 textColor;
     s32 temp_t0;
-    char sp38[3];
+    char sp38[32];
     MenuItem* item;
     s32 sp30;
 
@@ -9174,10 +9311,12 @@ void func_800A8F48(UNUSED MenuItem* arg0) {
             break;
         case SUB_MENU_MAP_SELECT_COURSE:
         default:
+//            doing_previews = 1;
             if (func_800B639C((gCupSelection * 4) + gCourseIndexInCup) >= 0) {
                 gDisplayListHead = func_80098FC8(gDisplayListHead, 0x00000057, 0x00000070, 0x00000096, 0x00000081);
                 gDisplayListHead = render_menu_textures(gDisplayListHead, D_02004A0C, 0x00000057, 0x00000070);
             }
+  //          doing_previews = 0;
             break;
     }
 }
@@ -10478,7 +10617,9 @@ void func_800AB9B0(MenuItem* arg0) {
         arg0->param1 = gCupSelection;
         arg0->param2 = func_800B54C0((s32) gCupSelection, gCCSelection);
         func_8009A594(arg0->D_8018DEE0_index, 0,
-                      segmented_to_virtual_dupe_2(D_800E7E20[((gCCSelection / 2) * 4) - arg0->param2]));
+                      segmented_to_virtual_dupe_2(
+                        D_800E7E20[0]//((gCCSelection / 2) * 4) - arg0->param2]
+                    ));
         arg0->column = (s32) D_800E7268->column;
         arg0->row = D_800E7268->row;
     }
@@ -11906,12 +12047,12 @@ void func_800AEDBC(MenuItem* arg0) {
         func_8009A594(arg0->D_8018DEE0_index, 0,
                       segmented_to_virtual_dupe_2(
                           D_800E7E34[gCupCourseOrder[gTimeTrialDataCourseIndex / 4][gTimeTrialDataCourseIndex % 4]]));
-//        if (controller_pak_1_status() == PFS_NO_ERROR) {
-//            func_800B6708();
-//        } else {
+        if (controller_pak_1_status() == PFS_NO_ERROR) {
+            func_800B6708();
+        } else {
             D_8018EE10[0].ghostDataSaved = 0;
             D_8018EE10[1].ghostDataSaved = 0;
-//        }
+        }
     }
 }
 

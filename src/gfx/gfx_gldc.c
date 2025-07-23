@@ -53,6 +53,7 @@ struct SamplerState {
 
 uint32_t shaderlist[64];
 uint8_t shaderidx;
+int first_2d = 1;
 
 static struct ShaderProgram shader_program_pool[64];
 static uint8_t shader_program_pool_size;
@@ -241,7 +242,7 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
     if (!prg->enabled) {
         // we only need to do this once
         prg->enabled = 1;
-#if 0
+#if 1
         if (prg->shader_id & SHADER_OPT_TEXTURE_EDGE) {
             glEnable(GL_ALPHA_TEST);
             glAlphaFunc(GL_GREATER, /*1.0f / 3.0f*/ 0.8f);
@@ -340,7 +341,7 @@ GLuint newest_texture;
 static void gfx_clear_all_textures(void) {
     GLuint index = 0;
     if (newest_texture != 0) {
-        for (index = 1; index <= newest_texture; index++) {
+        for (index = 2; index <= newest_texture; index++) {
             glDeleteTextures(0, &index);
         }
         tmu_state[0].tex = 0;
@@ -355,6 +356,17 @@ void gfx_clear_texidx(GLuint texidx) {
         tmu_state[0].tex = 0;
     if (tmu_state[1].tex == texidx)
         tmu_state[1].tex = 0;
+}
+static uint16_t bg_staging[512*256];
+void setup_the_bg_texture(void) {
+    GLuint ret;
+    glGenTextures(1, &ret);
+    if (ret != 1) {
+        printf("fucked up other texid is %d\n", ret);
+        return;
+    }
+    glBindTexture(GL_TEXTURE_2D, ret);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ARGB1555_KOS, 512, 256, 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, bg_staging);
 }
 
 static uint32_t gfx_opengl_new_texture(void) {
@@ -704,6 +716,9 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len
 }
 
 #if 1
+extern int blend_fuck;
+extern u8 gTextureMarioFace00[];
+extern u8 gTextureBowserFace16_end[];
 extern void gfx_opengl_2d_projection(void);
 extern void gfx_opengl_reset_projection(void);
 void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size_t buf_vbo_num_tris) {
@@ -728,8 +743,48 @@ void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size
         if (cur_shader->texture_used[1])
             glBindTexture(GL_TEXTURE_2D, tmu_state[cur_shader->texture_ord[0]].tex);
     } else {
+    glDisable(GL_TEXTURE_2D);
         glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     }
+//if(first_2d) {
+  //  glDisable(GL_BLEND);
+//}
+//    if (!in_intro) {
+       
+        //        glDisable(GL_BLEND);
+  // FRAGILE AS FUCK
+
+  /*
+  
+  
+  someTexture 8c9376e0
+someTexture 8c9376e0
+someTexture 8c93bce0
+someTexture 8c93bce0
+someTexture 8c9422e0
+someTexture 8c9422e0
+someTexture 8c9448e0
+someTexture 8c9448e0
+someTexture 8c94aee0
+someTexture 8c94aee0
+someTexture 8c953ae0
+someTexture 8c953ae0
+someTexture 8c9560e0
+someTexture 8c9560e0
+  
+  */
+  //  if (blend_fuck) {
+//            glDisable(GL_BLEND);
+//            printf("in there\n");
+    //} else {
+      //  glEnable(GL_BLEND);
+    //}
+//}
+        ////        glDisable(GL_DEPTH_TEST);
+    ////    glDepthMask(GL_FALSE);
+        ////glDepthFunc(GL_LEQUAL);
+  //  }
+#if 0
 #if 1
     if (in_intro &&
         cur_shader->shader_id == 0x01200200) { // 18874437){ // 0x1200045, skybox  // may need to relook at this
@@ -761,8 +816,28 @@ void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size
         glTranslatef(0.0f, 2.1f, 0.9f); // magic values need fine tuning.
     }
 #endif
+#endif
+  if (blend_fuck) {
+//
+    for(int i=0;i<6;i++) {
+        tris[i].color.packed = 0xff000000;
+    }
+  }
+
+
     glDrawArrays(GL_TRIANGLES, 0, 3 * 2 /* 2 tri quad */);
-#if 1
+
+//if(first_2d) {
+  //  glEnable(GL_BLEND);
+    //first_2d = 0;
+// }
+
+    #if 0
+    if (!in_intro) {
+        glDepthMask(GL_TRUE);
+        glDepthFunc(GL_LESS);
+    }
+    #if 1
     if (in_intro && is_zmode_decal) {
         glPopMatrix();
         glDepthFunc(GL_LESS); // Reset depth function
@@ -780,8 +855,8 @@ void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size
         glPopMatrix();
     }
 #endif
-//    glEnable(GL_BLEND);
-
+#endif
+/////    glEnable(GL_BLEND);
     gfx_opengl_reset_projection();
 }
 #endif
@@ -895,11 +970,23 @@ void nuke_everything(void) {
     reset_texcache();
 }
 
+void gfx_opengl_reset_frame(int r, int g, int b) {
+    first_2d = 1;
+    screen_2d_z = -1.0f;
+    glDisable(GL_SCISSOR_TEST);
+    glDepthMask(GL_TRUE); // Must be set to clear Z-buffer
+    glClearColor((float)r/255.0f, (float)g/255.0f, (float)b/255.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_SCISSOR_TEST);
+    newest_texture = 0;
+}
+
 static void gfx_opengl_start_frame(void) {
 #if 0
     shaderidx = 0;
     n64_memset(shaderlist, 0, sizeof(shaderlist));
 #endif
+    first_2d = 1;
     screen_2d_z = -1.0f;
     glDisable(GL_SCISSOR_TEST);
     glDepthMask(GL_TRUE); // Must be set to clear Z-buffer

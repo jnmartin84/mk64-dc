@@ -45,9 +45,8 @@ void write_courseTimeTrialRecords(s32 arg0) {
         &gSaveData.allCourseTimeTrialRecords.cupRecords[arg0 / 4].courseRecords[arg0 % 4];
 
     courseTimeTrialRecordsPtr->checksum = checksum_time_trial_records(arg0);
-    //if (gGamestate == ENDING)
-                osEepromLongWrite(&gSIEventMesgQueue, EEPROM_ADDR(courseTimeTrialRecordsPtr), (u8*) courseTimeTrialRecordsPtr,
-                      sizeof(CourseTimeTrialRecords));
+    osEepromLongWrite(&gSIEventMesgQueue, EEPROM_ADDR(courseTimeTrialRecordsPtr), (u8*) courseTimeTrialRecordsPtr,
+        sizeof(CourseTimeTrialRecords));
 }
 
 void write_save_data_grand_prix_points_and_sound_mode(void) {
@@ -460,15 +459,15 @@ void func_800B559C(s32 arg0) {
         } else {
             for (j = 0; j < 3; j++) {
                 bestRecord->bestThreelaps[i % 8][j] = courseRecord->records[0][j];
-                bestRecord->bestSinglelaps[i % 8][j] = courseRecord->records[0][j + 0x0f];
+                bestRecord->bestSinglelaps[i % 8][j] = courseRecord->records[5][j];
+                //courseRecord->records[0][j + 0x0f];
             }
         }
     }
     bestRecord = &gSaveData.onlyBestTimeTrialRecords[x];
     bestRecord->unknownBytes[6] = func_800B578C(x);
     bestRecord->unknownBytes[7] = func_800B5888(x);
-    //if (gGamestate == ENDING)
-        osEepromLongWrite(&gSIEventMesgQueue, ((u32) (((u8*) bestRecord) - ((u8*) (&gSaveData)))) >> 3,
+    osEepromLongWrite(&gSIEventMesgQueue, ((u32) (((u8*) bestRecord) - ((u8*) (&gSaveData)))) >> 3,
                       bestRecord->bestThreelaps[0], 0x38);
 }
 
@@ -525,8 +524,7 @@ void update_save_data_backup(void) {
     backup->saveInfo.soundMode = main->saveInfo.soundMode;
     backup->checksum[1] = compute_save_data_checksum_backup_1();
     backup->checksum[2] = compute_save_data_checksum_backup_2();
-            //if (gGamestate == ENDING)
-                osEepromLongWrite(&gSIEventMesgQueue, EEPROM_ADDR(backup), (u8*) backup, sizeof(Stuff));
+    osEepromLongWrite(&gSIEventMesgQueue, EEPROM_ADDR(backup), (u8*) backup, sizeof(Stuff));
 }
 
 u8 compute_save_data_checksum_backup_1(void) {
@@ -692,6 +690,7 @@ s32 controller_pak_2_status(void) {
                 return PFS_PAK_BAD_READ;
         }
     }
+    return PFS_FILE_OVERFLOW;
 #endif
 }
 

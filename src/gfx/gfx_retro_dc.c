@@ -423,7 +423,7 @@ static uint8_t gfx_texture_cache_lookup(int tile, struct TextureHashmapNode** n,
 	return 0;
 }
 
-uint16_t __attribute__((aligned(32))) rgba16_buf[4096 * 2];
+uint16_t __attribute__((aligned(32))) rgba16_buf[4096 * 4];
 
 int last_cl_rv;
 
@@ -1645,11 +1645,21 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
 }
 
 #if 1
+extern int first_2d;
+extern void gfx_opengl_reset_frame(int r, int g, int b);
 extern void gfx_opengl_draw_triangles_2d(void* buf_vbo, size_t buf_vbo_len, size_t buf_vbo_num_tris);
 static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, uint8_t vtx1_idx2, uint8_t vtx2_idx2,
 						   uint8_t vtx3_idx2) {
 	gfx_flush();
-	dc_fast_t* v1 = &rsp.loaded_vertices_2D[vtx1_idx];
+/* 
+	if (first_2d) {
+//		printf("framebuffer clear");
+		gfx_opengl_reset_frame(rdp.fill_color.r, rdp.fill_color.g, rdp.fill_color.b);
+		first_2d = 0;
+		return;
+	}
+
+ */	dc_fast_t* v1 = &rsp.loaded_vertices_2D[vtx1_idx];
 	dc_fast_t* v2 = &rsp.loaded_vertices_2D[vtx2_idx];
 	dc_fast_t* v3 = &rsp.loaded_vertices_2D[vtx3_idx];
 
@@ -1792,29 +1802,37 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 		struct RGBA* color = &white;
 		// struct RGBA tmp;
 		int j, k;
-#if 0
-		uint32_t color_r = 1;
-		uint32_t color_g = 1;
-		uint32_t color_b = 1;
-		uint32_t color_a = 1;
+//		int shade_a = -1;
+//		int prim_a = -1;
+#if 1
+//		uint32_t color_r = 1;
+//		uint32_t color_g = 1;
+//		uint32_t color_b = 1;
+//		uint32_t color_a = 1;
+//						color = (struct RGBA *)&v_arr[tri_num_vert]->color;
 
 		for (j = 0; j < num_inputs; j++) {
 			/*@Note: use_alpha ? 1 : 0 */
 			for (k = 0; k < 1 + (use_alpha ? 0 : 0); k++) {
 				switch (comb->shader_input_mapping[k][j]) {
 					case CC_PRIM:
+//						printf("%d prim %d\n", j, rdp.prim_color.a);
 						color = &rdp.prim_color;
+//						prim_a = rdp.prim_color.a;
 						break;
 					case CC_SHADE:
 						color = (struct RGBA *)&v_arr[tri_num_vert]->color;
-
+//						printf("%d shade %d\n", j, color->a);
+//						color_a = rdp.prim_color.a;
+//						shade_a = color->a;
 						break;
 					case CC_ENV:
 						color = &rdp.env_color;
-						color_r = rdp.prim_color.r;
-						color_g = rdp.prim_color.g;
-						color_b = rdp.prim_color.b;
-						color_a = rdp.prim_color.a;
+//						printf("%d env %d\n", j, color->a);
+//						color_r = rdp.prim_color.r;
+//						color_g = rdp.prim_color.g;
+//						color_b = rdp.prim_color.b;
+//						color_a = rdp.prim_color.a;
 						break;
 					default:
 						//n64_memset(&tmp, 0, sizeof(tmp));
@@ -1825,15 +1843,28 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 			}
 		}
 //        buf_vbo[buf_num_vert].color.packed =  PACK_ARGB8888(rdp.prim_color.r*rdp.env_color.r/255, rdp.prim_color.g*rdp.env_color.g/255, rdp.prim_color.b*rdp.env_color.b/255, rdp.prim_color.a*rdp.env_color.a/255);
+ 			if (do_fill_rect) {
+				//color = &v_arr[i]->color;
+				//color->a = rdp.prim_color.a ;
+			}
+
+		quad_vbo[tri_num_vert].color.array.r = (color->r);//*color_r)>>8;
+		quad_vbo[tri_num_vert].color.array.g = (color->g);//*color_g)>>8;
+		quad_vbo[tri_num_vert].color.array.b = (color->b);//*color_b)>>8;
+		quad_vbo[tri_num_vert].color.array.a = (color->a);//*color_a)>>8;
+
+		/* 		if (prim_a > -1 && shade_a == -1) {
+			quad_vbo[tri_num_vert].color.array.a = prim_a;
+		} else if (prim_a == -1 && shade_a > -1) {
+			quad_vbo[tri_num_vert].color.array.a = shade_a;
+		} else if (prim_a > -1 && shade_a > -1) {
+			quad_vbo[tri_num_vert].color.array.a = (prim_a * shade_a) >> 8;
+		} */
 
 
-		quad_vbo[tri_num_vert].color.array.r = color->r*color_r;
-		quad_vbo[tri_num_vert].color.array.g = color->g*color_g;
-		quad_vbo[tri_num_vert].color.array.b = color->b*color_b;
-		quad_vbo[tri_num_vert].color.array.a = color->a;//*color_a;
-#endif
-
-#if 1
+		#endif
+#if 0
+#if 0
 		uint32_t color_r = 0;
 		uint32_t color_g = 0;
 		uint32_t color_b = 0;
@@ -2065,14 +2096,29 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 					}
 				}
 			}
-			if (do_fill_rect) {
-				color = &v_arr[i]->color;
-			}
-			quad_vbo[tri_num_vert].color.array.r = color->r;
+// 			if (do_fill_rect) {
+//				color = &v_arr[i]->color;
+//			}
+ 			quad_vbo[tri_num_vert].color.array.r = color->r;
 			quad_vbo[tri_num_vert].color.array.g = color->g;
 			quad_vbo[tri_num_vert].color.array.b = color->b;
 			quad_vbo[tri_num_vert].color.array.a = color->a;
+#if 0
+			if (do_fill_rect) {
+				quad_vbo[tri_num_vert].color.array.r = v_arr[i]->color.array.r;
+				quad_vbo[tri_num_vert].color.array.g = v_arr[i]->color.array.g;
+				quad_vbo[tri_num_vert].color.array.b = v_arr[i]->color.array.b;
+				quad_vbo[tri_num_vert].color.array.a = v_arr[i]->color.array.a;
+				if (comb->shader_input_mapping[0][0] == CC_PRIM) {
+					quad_vbo[tri_num_vert].color.array.r = rdp.prim_color.r;
+					quad_vbo[tri_num_vert].color.array.g = rdp.prim_color.g;
+					quad_vbo[tri_num_vert].color.array.b = rdp.prim_color.b;
+					quad_vbo[tri_num_vert].color.array.a = (rdp.prim_color.a * v_arr[i]->color.array.a)>>8;
+				}
+			}
+#endif
 		}
+#endif
 	}
 	gfx_opengl_draw_triangles_2d((void*) quad_vbo, 0, use_texture);
 }
@@ -2535,12 +2581,12 @@ static void  __attribute__((noinline)) gfx_dp_fill_rectangle(int32_t ulx, int32_
 		v->color.array.r = rdp.fill_color.r;
 	}
 
-	uint32_t saved_combine_mode = rdp.combine_mode;
-	gfx_dp_set_combine_mode(color_comb(0, 0, 0, G_CCMUX_SHADE), color_comb(0, 0, 0, G_ACMUX_SHADE));
+//	uint32_t saved_combine_mode = rdp.combine_mode;
+//	gfx_dp_set_combine_mode(color_comb(0, 0, 0, G_CCMUX_SHADE), color_comb(0, 0, 0, G_ACMUX_SHADE));
 	gfx_draw_rectangle(ulx, uly, lrx, lry);
-	rdp.combine_mode = saved_combine_mode;
+//	rdp.combine_mode = saved_combine_mode;
 
-	do_fill_rect = 0;
+//	do_fill_rect = 0;
 }
 
 static void  __attribute__((noinline)) gfx_dp_set_z_image(void* z_buf_address) {
@@ -2565,12 +2611,22 @@ static inline void* seg_addr(uintptr_t w1) {
 #define C0(pos, width) ((cmd->words.w0 >> (pos)) & ((1U << width) - 1))
 #define C1(pos, width) ((cmd->words.w1 >> (pos)) & ((1U << width) - 1))
 
+int blend_fuck=0;
+
 static void gfx_run_dl(Gfx* cmd) {
 	//printf("starting at %08x\n", cmd);
 
 	cmd = seg_addr((uintptr_t) cmd);
 	for (;;) {
 		uint32_t opcode = cmd->words.w0 >> 24;
+
+			// special signal
+		if (cmd->words.w0 == 0x424C4E44) {
+			blend_fuck ^= 1;
+//			printf("blend fuck == %d\n", blend_fuck);
+			++cmd;
+			continue;
+		}
 
 		switch (opcode) {
 			// RSP commands:
