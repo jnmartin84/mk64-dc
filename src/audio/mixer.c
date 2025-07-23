@@ -740,8 +740,6 @@ static inline void extend_nyblls_to_floats(uint8_t nybll, float* fp1, float* fp2
 }
 
 void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
-    // printf("adpcmdec in %04x out %04x nbytes %d\n", rspa.in, rspa.out, rspa.nbytes);
-
     int16_t* out = BUF_S16(rspa.out);
     MEM_BARRIER_PREF(out);
     uint8_t* in = BUF_U8(rspa.in);
@@ -759,31 +757,36 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
     float prev2 = out[-2];
 
     while (nbytes > 0) {
-        uint8_t si_in = *in++;
-        int table_index = si_in & 0xf; // should be in 0..7
-        float (*tbl)[8] = rspa.adpcm_table[table_index];
-        float shift = shift_to_float_multiplier((si_in >> 4)&0xf); // should be in 0..12 or 0..14
-
+        const uint8_t si_in = *in++;
+        const uint8_t next = *in++;
+        MEM_BARRIER_PREF(nyblls_as_floats[next]);
+        const uint8_t in_array[2][4] = {
+            { next, *in++, *in++, *in++ },
+            { *in++, *in++, *in++, *in++ }
+        };
+        const unsigned table_index = si_in & 0xf; // should be in 0..7
+        const float(*tbl)[8] = rspa.adpcm_table[table_index];
+        const float shift = shift_to_float_multiplier(si_in >> 4); // should be in 0..12 or 0..14
         float instr[2][8];
-        for (int i = 0; i < 2; ++i) {
-            MEM_BARRIER_PREF((void*) ((uintptr_t) tbl) + 4 * i);
-            const uint8_t in_array[4] = { *in++, *in++, *in++, *in++ };
+
+        for(int i = 0; i < 2; ++i) {
             {
-                MEM_BARRIER_PREF(nyblls_as_floats[in_array[1]]);
-                extend_nyblls_to_floats(in_array[0], &instr[i][0], &instr[i][1]);
+                MEM_BARRIER_PREF(nyblls_as_floats[in_array[i][1]]);
+                extend_nyblls_to_floats(in_array[i][0], &instr[i][0], &instr[i][1]);
                 instr[i][0] *= shift;
                 instr[i][1] *= shift;
-                MEM_BARRIER_PREF(nyblls_as_floats[in_array[2]]);
-                extend_nyblls_to_floats(in_array[1], &instr[i][2], &instr[i][3]);
+                MEM_BARRIER_PREF(nyblls_as_floats[in_array[i][2]]);
+                extend_nyblls_to_floats(in_array[i][1], &instr[i][2], &instr[i][3]);
                 instr[i][2] *= shift;
                 instr[i][3] *= shift;
             }
             {
-                MEM_BARRIER_PREF(nyblls_as_floats[in_array[3]]);
-                extend_nyblls_to_floats(in_array[2], &instr[i][4], &instr[i][5]);
+                MEM_BARRIER_PREF(nyblls_as_floats[in_array[i][3]]);
+                extend_nyblls_to_floats(in_array[i][2], &instr[i][4], &instr[i][5]);
                 instr[i][4] *= shift;
                 instr[i][5] *= shift;
-                extend_nyblls_to_floats(in_array[3], &instr[i][6], &instr[i][7]);
+                MEM_BARRIER_PREF(&tbl[i][0]);
+                extend_nyblls_to_floats(in_array[i][3], &instr[i][6], &instr[i][7]);
                 instr[i][6] *= shift;
                 instr[i][7] *= shift;
             }
@@ -791,9 +794,9 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
         MEM_BARRIER_PREF(in);
 
         for (int i = 0; i < 2; i++) {
-            float* ins = instr[i];
+            const float *ins = instr[i];
             shz_vec4_t acc_vec[2];
-            float* accf = (float*) acc_vec;
+            float *accf = (float *)acc_vec;
             const shz_vec4_t in_vec = { .x = prev2, .y = prev1, .z = 1.0f };
 
             shz_xmtrx_load_3x4_rows(&tbl[0][0], &tbl[1][0], &ins[0]);
@@ -802,34 +805,34 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
             acc_vec[1] = shz_xmtrx_trans_vec4(in_vec);
 
             {
-                register float fone asm("fr8") = 1.0f;
-                register float ins0 asm("fr9") = ins[0];
+                register float fone asm("fr8")  = 1.0f;
+                register float ins0 asm("fr9")  = ins[0];
                 register float ins1 asm("fr10") = ins[1];
                 register float ins2 asm("fr11") = ins[2];
                 accf[2] = shz_dot8f(fone, ins0, ins1, ins2, accf[2], tbl[1][1], tbl[1][0], 0.0f);
                 accf[7] = shz_dot8f(fone, ins0, ins1, ins2, accf[7], tbl[1][6], tbl[1][5], tbl[1][4]);
+                accf[1] += (tbl[1][0] * ins0);
                 shz_xmtrx_load_4x4_cols(&accf[3], &tbl[1][2], &tbl[1][1], &tbl[1][0]);
-                *(SHZ_ALIASING shz_vec4_t*) &accf[3] =
-                    shz_xmtrx_trans_vec4((shz_vec4_t) { .x = 1.0f, .y = ins[0], .z = ins[1], .w = ins[2] });
-                accf[1] += (tbl[1][0] * ins[0]);
+                *(SHZ_ALIASING shz_vec4_t*)&accf[3] =
+                    shz_xmtrx_trans_vec4((shz_vec4_t) { .x = fone, .y = ins0, .z = ins1, .w = ins2 });
             }
             {
-                register float ins3 asm("fr8") = ins[3];
-                register float ins4 asm("fr9") = ins[4];
+                register float ins3 asm("fr8")  = ins[3];
+                register float ins4 asm("fr9")  = ins[4];
                 register float ins5 asm("fr10") = ins[5];
                 register float ins6 asm("fr11") = ins[6];
                 accf[7] += shz_dot8f(ins3, ins4, ins5, ins6, tbl[1][3], tbl[1][2], tbl[1][1], tbl[1][0]);
                 accf[6] += shz_dot8f(ins3, ins4, ins5, ins6, tbl[1][2], tbl[1][1], tbl[1][0], 0.0f);
-                accf[5] += (tbl[1][1] * ins[3]) + (tbl[1][0] * ins[4]);
-                accf[4] += (tbl[1][0] * ins[3]);
+                accf[5] += (tbl[1][1] * ins3) + (tbl[1][0] * ins4);
+                accf[4] += (tbl[1][0] * ins3);
             }
 
             for (int j = 0; j < 6; ++j)
                 *out++ = clamp16f(accf[j]);
 
-            prev2 = clamp16f(accf[6]);
+            prev2  = clamp16f(accf[6]);
             *out++ = prev2;
-            prev1 = clamp16f(accf[7]);
+            prev1  = clamp16f(accf[7]);
             *out++ = prev1;
         }
         MEM_BARRIER_PREF(out);
@@ -840,11 +843,10 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
 }
 
 void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
-    // printf("resample in %04x out %04x nbytes %d\n", rspa.in, rspa.out, rspa.nbytes);
-
     int16_t __attribute__((aligned(32))) tmp[32] = { 0 };
     int16_t* in_initial = BUF_S16(rspa.in);
     int16_t* in = in_initial;
+    MEM_BARRIER_PREF(in);
     int16_t* out = BUF_S16(rspa.out);
     int nbytes = ROUND_UP_16(rspa.nbytes);
     uint32_t pitch_accumulator = 0;
@@ -864,8 +866,8 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
         }
     }
     if (flags & 2) {
-        dp = in[-8];
-        sp = tmp[8];
+        dp = &in[-8];
+        sp = &tmp[8];
         for (int l = 0; l < 8; l++) {
             *dp++ = *sp++;
         }
@@ -873,6 +875,8 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     }
     in -= 4;
     pitch_accumulator = (uint16_t) tmp[4];
+    tbl_f = resample_table[pitch_accumulator >> 10];
+    __builtin_prefetch(tbl_f);
 
     dp = in;
     sp = tmp;
@@ -880,18 +884,24 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
         *dp++ = *sp++;
 
     do {
+        __builtin_prefetch(out);
         for (i = 0; i < 8; i++) {
-            tbl_f = resample_table[pitch_accumulator >> 10];
+
             float in_f[4] = { (float) (int) in[0], (float) (int) in[1], (float) (int) in[2], (float) (int) in[3] };
 
             sample_f =
                 shz_dot8f(in_f[0], in_f[1], in_f[2], in_f[3], tbl_f[0], tbl_f[1], tbl_f[2], tbl_f[3]) * 0.00003052f;
 
-            *out++ = clamp16((s32) (sample_f));
-
+            MEM_BARRIER();
             pitch_accumulator += (pitch << 1);
             in += pitch_accumulator >> 16;
+            MEM_BARRIER_PREF(in);
             pitch_accumulator %= 0x10000;
+            MEM_BARRIER();
+            *out++ = clamp16f((sample_f));
+            MEM_BARRIER();
+            tbl_f = resample_table[pitch_accumulator >> 10];
+            MEM_BARRIER_PREF(tbl_f);
         }
         nbytes -= 8 * sizeof(int16_t);
     } while (nbytes > 0);
@@ -942,9 +952,9 @@ void aEnvMixerImpl(uint16_t in_addr, uint16_t n_samples, UNUSED int swap_reverb,
 
             int32_t dsampl1 = *dry[0] + (sample * vols[0] >> 16);
             int32_t dsampl2 = *dry[1] + (sample * vols[1] >> 16);
-#if 1
-            asm volatile("" : : : "memory");
-#endif
+
+            MEM_BARRIER();
+
             *dry[0]++ = clamp16(dsampl1);
             *dry[1]++ = clamp16(dsampl2);
         }
