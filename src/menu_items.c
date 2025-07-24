@@ -58,10 +58,11 @@
 // Unfortunately that's not a small effort due to weird import structure in this project
 #include "main.h"
 
-extern u8 __attribute__((aligned(32))) backing_gMenuTextureBuffer[0x000900B0];
-extern u8 __attribute__((aligned(32))) backing_gMenuCompressedBuffer[65536];
-extern u8 __attribute__((aligned(32))) backing_sTKMK00_LowResBuffer[320*240];
-extern u8 __attribute__((aligned(32))) backing_gSomeDLBuffer[0x1000];
+#include "buffer_sizes.h"
+extern u8 __attribute__((aligned(32))) backing_gMenuTextureBuffer[MENUTEX_BUF_SIZE];
+extern u8 __attribute__((aligned(32))) backing_gMenuCompressedBuffer[MENUCOMP_BUF_SIZE];
+extern u8 __attribute__((aligned(32))) backing_sTKMK00_LowResBuffer[LOWRES_BUF_SIZE];
+extern u8 __attribute__((aligned(32))) backing_gSomeDLBuffer[SOMEDL_BUF_SIZE];
 
 int in_course_data_menu = 0;
 extern int must_inval_bg;
@@ -1244,10 +1245,9 @@ void swap_values(s32* arg0, s32* arg1) {
 
 extern s8 D_800E852C;
 
-
+#include "buffer_sizes.h"
 // save space by reusing this for startup
-//extern u8 __attribute__((aligned(32))) CEREMONY_ACTOR_BUF[65536];//15200];//65536]; 
-extern uint8_t __attribute__((aligned(32))) STARTUP_BUF[65536];
+extern uint8_t __attribute__((aligned(32))) STARTUP_BUF[STARTUP_BUF_SIZE];
 
 extern u16 reflection_map_brass[];
 
@@ -2202,18 +2202,13 @@ void func_80093E40(void) {
     func_80093C98(1);
 }
 
-/*extern u8 __attribute__((aligned(32))) backing_gMenuTextureBuffer[0x000900B0];
-extern u8 __attribute__((aligned(32))) backing_gMenuCompressedBuffer[0x0000FFFF];
-extern u8 __attribute__((aligned(32))) backing_sTKMK00_LowResBuffer[320*240];
-extern u8 __attribute__((aligned(32))) backing_gSomeDLBuffer[0x1000];*/
-
 void func_80093E60(void) {
     s32 i;
 
-    gMenuCompressedBuffer = backing_gMenuCompressedBuffer;//get_next_available_memory_addr(0x00002800);
-    gMenuTextureBuffer = (u16*) backing_gMenuTextureBuffer;//get_next_available_memory_addr(0x000124F8);
-    sTKMK00_LowResBuffer = backing_sTKMK00_LowResBuffer;//get_next_available_memory_addr(0x00001000);
-    sGPPointsCopy = backing_sGPPointsCopy;//sGPPointsCopyBacking;//get_next_available_memory_addr(4U);
+    gMenuCompressedBuffer = backing_gMenuCompressedBuffer;
+    gMenuTextureBuffer = (u16*) backing_gMenuTextureBuffer;
+    sTKMK00_LowResBuffer = backing_sTKMK00_LowResBuffer;
+    sGPPointsCopy = backing_sGPPointsCopy;
 
     for (i = 0; i < 5; i++) {
         D_8018E7AC[i] = 0;

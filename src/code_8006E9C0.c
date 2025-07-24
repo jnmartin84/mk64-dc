@@ -153,7 +153,8 @@ void func_8006EEE8(s32 courseId) {
     D_8018D2B8 = D_800E5548[courseId * 2 + 1];
 }
 
-extern u8 __attribute__((aligned(32))) backing_gCourseOutline[0x14][128*96/2];
+#include "buffer_sizes.h"
+extern uint8_t __attribute__((aligned(32))) backing_gCourseOutline[OUTLINE_BUF_COUNT][OUTLIZE_BUF_SIZE];
 void func_8006EF60(void) {
     s32 i;
 

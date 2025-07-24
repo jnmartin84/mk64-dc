@@ -117,12 +117,13 @@ extern Gfx d_course_royal_raceway_packed_dl_A618[];
 extern Gfx d_course_royal_raceway_packed_dl_A618[];
 extern Gfx d_course_royal_raceway_packed_dl_23F8[];
 extern Gfx d_course_royal_raceway_packed_dl_2478[];
-extern uint8_t __attribute__((aligned(32))) CEREMONY_BUF[65536];
-extern uint8_t __attribute__((aligned(32))) COURSE_BUF[146464];
+#include "buffer_sizes.h"
+extern uint8_t __attribute__((aligned(32))) CEREMONY_BUF[CEREMONY_BUF_SIZE];
+extern uint8_t __attribute__((aligned(32))) COURSE_BUF[COURSE_BUF_SIZE];
 extern u16 reflection_map_silver[1024];
 extern u16 reflection_map_gold[1024];
 extern u16 reflection_map_brass[1024];
-extern CollisionTriangle __attribute__((aligned(32))) allColTris[2800];
+extern CollisionTriangle __attribute__((aligned(32))) allColTris[allColTris_SIZE];
 
 extern char *fnpre;
 

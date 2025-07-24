@@ -291,12 +291,12 @@ void unused_80280FA0(UNUSED CeremonyActor* actor) {
 
 void unused_80280FA8(UNUSED CeremonyActor* actor) {
 }
-
-extern u8 __attribute__((aligned(32))) CEREMONY_ACTOR_BUF[65536];//15200];
+#include "buffer_sizes.h"
+extern u8 __attribute__((aligned(32))) CEREMONY_ACTOR_BUF[CEREMONY_ACTOR_BUF_SIZE];
 void balloons_and_fireworks_init(void) {
     D_802874D8.actorTimer = 0;
     sPodiumActorList = (CeremonyActor*)CEREMONY_ACTOR_BUF; 
-    bzero(sPodiumActorList, 65536);//(sizeof(CeremonyActor) * 200));
+    bzero(sPodiumActorList, CEREMONY_ACTOR_BUF_SIZE);//(sizeof(CeremonyActor) * 200));
     new_actor(&initDummy);
 }
 

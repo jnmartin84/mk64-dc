@@ -2753,8 +2753,8 @@ void func_8005D1F4(s32 arg0) {
 }
 
 extern u8 *ROVING_SEG3_BUF;
-
-extern u8 __attribute__((aligned(32))) OTHER_BUF[96*1024];
+#include "buffer_sizes.h"
+extern u8 __attribute__((aligned(32))) OTHER_BUF[OTHER_BUF_SIZE];
 
 // Appears to load GP Mode race staging balloons and kart shadows.
 void load_race_common_tex(void) {

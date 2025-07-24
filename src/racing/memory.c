@@ -19,12 +19,14 @@
 #include <kos.h>
 
 extern s16 gCurrentCourseId;
-extern uint8_t __attribute__((aligned(32))) COURSE_BUF[146464];
-extern uint8_t __attribute__((aligned(32))) UNPACK_BUF[51008];
-extern uint8_t __attribute__((aligned(32))) SEG4_BUF[228656];
-extern uint8_t __attribute__((aligned(32))) SEG5_BUF[133120];
-extern uint8_t __attribute__((aligned(32))) COMP_VERT_BUF[65536];
-extern uint8_t __attribute__((aligned(32))) DECOMP_VERT_BUF[228656];
+
+#include "buffer_sizes.h"
+extern uint8_t __attribute__((aligned(32))) COURSE_BUF[COURSE_BUF_SIZE];
+extern uint8_t __attribute__((aligned(32))) UNPACK_BUF[UNPACK_BUF_SIZE];
+extern uint8_t __attribute__((aligned(32))) SEG4_BUF[SEG4_BUF_SIZE];
+extern uint8_t __attribute__((aligned(32))) SEG5_BUF[SEG5_BUF_SIZE];
+extern uint8_t __attribute__((aligned(32))) COMP_VERT_BUF[COMP_VERT_BUF_SIZE];
+extern uint8_t __attribute__((aligned(32))) DECOMP_VERT_BUF[DECOMP_VERT_BUF_SIZE];
 
 static char __attribute__((aligned(32))) texfn[256];
 

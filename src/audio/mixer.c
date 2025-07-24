@@ -855,24 +855,25 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     float sample_f = 0;
 
     int16_t *dp, *sp;
+    int32_t *wdp, *wsp;
 
     if (flags & A_INIT) {
-        memset(tmp, 0, 5 * sizeof(int16_t));
+        tmp[0] = 0;
+        tmp[1] = 0;
+        tmp[2] = 0;
+        tmp[3] = 0;
+        tmp[4] = 0;
     } else {
-        dp = tmp;
-        sp = state;
-        for (int l = 0; l < 16; l++) {
-            *dp++ = *sp++;
-        }
-    }
-    if (flags & 2) {
-        dp = &in[-8];
-        sp = &tmp[8];
+        wdp = dp = tmp;
+        wsp = sp = state;
+        if ((((uintptr_t)wdp | (uintptr_t)wsp) & 3) == 0)
         for (int l = 0; l < 8; l++) {
+            *wdp++ = *wsp++;
+        } else for (int l = 0; l < 16; l++) {
             *dp++ = *sp++;
         }
-        in -= (tmp[5] >> 1);
     }
+
     in -= 4;
     pitch_accumulator = (uint16_t) tmp[4];
     tbl_f = resample_table[pitch_accumulator >> 10];

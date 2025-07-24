@@ -226,8 +226,8 @@ extern void thread5_game_loop(void *arg);
 #include "dcaudio/audio_dc.h"
 extern void create_next_audio_buffer(s16* samples, u32 num_samples);
 
-#define SAMPLES_HIGH 448
-extern s16 audio_buffer[SAMPLES_HIGH * 2 * 2] __attribute__((aligned(64)));
+#include "buffer_sizes.h"
+extern s16 audio_buffer[AUDIOBUF_SIZE] __attribute__((aligned(64)));
 static struct AudioAPI *audio_api = NULL;
 
 static int frameno = 0;
@@ -965,9 +965,8 @@ void display_and_vsync(void) {
 void dma_copy(u8* dest, u8* romAddr, size_t size) {
     n64_memcpy(segmented_to_virtual(dest), segmented_to_virtual(romAddr), size);
 }
-
-//extern u8 __attribute__((aligned(32))) SEG2_BUF[47688];
-extern u8 __attribute__((aligned(32))) COMMON_BUF[184664];
+#include "buffer_sizes.h"
+extern u8 __attribute__((aligned(32))) COMMON_BUF[COMMON_BUF_SIZE];
 extern u16 common_texture_minimap_kart_toad[];
 extern u16 common_texture_minimap_kart_luigi[];
 extern u16 common_texture_minimap_kart_peach[];
@@ -2295,14 +2294,13 @@ void SPINNING_THREAD(UNUSED void *arg) {
             while (vblticker <= last_vbltick + 1)
                 genwait_wait(&vblticker, NULL, 15, NULL);
         }
-        //thd_pass();
+
         last_vbltick = vblticker;
 
-        u32 num_audio_samples = SAMPLES_HIGH;//even_frame ? SAMPLES_HIGH : SAMPLES_LOW;//448;
-        create_next_audio_buffer(audio_buffer, num_audio_samples);
-        create_next_audio_buffer(audio_buffer + num_audio_samples*2, num_audio_samples);
+        create_next_audio_buffer(audio_buffer, SAMPLES_HIGH);
+        create_next_audio_buffer(audio_buffer + (SAMPLES_HIGH * 2), SAMPLES_HIGH);
 
-        audio_api->play((u8 *)audio_buffer, num_audio_samples * 2 * 2 * 2);
+        audio_api->play((u8 *)audio_buffer, (AUDIOBUF_SIZE * 2));
     }
 }
 

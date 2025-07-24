@@ -1,43 +1,39 @@
 #include <stdint.h>
 #include "common_structs.h"
 #include "main.h"
-
+#include "buffer_sizes.h"
 // uncompressed common data segment size
-uint8_t __attribute__((aligned(32))) COMMON_BUF[184664];
-// size of data in data_segment2.o
-//uint8_t __attribute__((aligned(32))) SEG2_BUF[47688];
-// 
-uint8_t __attribute__((aligned(32))) SEG3_BUF[100352];//0x18000];
+uint8_t __attribute__((aligned(32))) COMMON_BUF[COMMON_BUF_SIZE];
+uint8_t __attribute__((aligned(32))) SEG3_BUF[SEG3_BUF_SIZE];//0x18000];
 // largest observed value -- Bowser's Castle
-uint8_t __attribute__((aligned(32))) SEG4_BUF[228656];
+uint8_t __attribute__((aligned(32))) SEG4_BUF[SEG4_BUF_SIZE];
 // largest *tex.bin -- Luigi's Raceway
-uint8_t __attribute__((aligned(32))) SEG5_BUF[133120];
+uint8_t __attribute__((aligned(32))) SEG5_BUF[SEG5_BUF_SIZE];
 
 // DO NOT MAKE THIS SMALLER
 // THERE IS A BUFFER OVERWRITE ISSUE AND IT CORRUPTS SEG5_BUF
-uint8_t __attribute__((aligned(32))) CEREMONY_ACTOR_BUF[65536]; 
+uint8_t __attribute__((aligned(32))) CEREMONY_ACTOR_BUF[CEREMONY_ACTOR_BUF_SIZE]; 
 
-uint8_t __attribute__((aligned(32))) OTHER_BUF[96*1024];
-uint8_t __attribute__((aligned(32))) STARTUP_BUF[65536];
-uint8_t __attribute__((aligned(32))) COURSE_BUF[146464];
-uint8_t __attribute__((aligned(32))) UNPACK_BUF[51008];
-uint8_t __attribute__((aligned(32))) CEREMONY_BUF[65536];////36232];
-uint8_t __attribute__((aligned(32))) COMP_VERT_BUF[65536];
-uint8_t __attribute__((aligned(32))) DECOMP_VERT_BUF[228656];
+uint8_t __attribute__((aligned(32))) OTHER_BUF[OTHER_BUF_SIZE];
+uint8_t __attribute__((aligned(32))) STARTUP_BUF[STARTUP_BUF_SIZE];
+uint8_t __attribute__((aligned(32))) COURSE_BUF[COURSE_BUF_SIZE];
+uint8_t __attribute__((aligned(32))) UNPACK_BUF[UNPACK_BUF_SIZE];
+uint8_t __attribute__((aligned(32))) CEREMONY_BUF[CEREMONY_BUF_SIZE];////36232];
+uint8_t __attribute__((aligned(32))) COMP_VERT_BUF[COMP_VERT_BUF_SIZE];
+uint8_t __attribute__((aligned(32))) DECOMP_VERT_BUF[DECOMP_VERT_BUF_SIZE];
 
-uint16_t __attribute__((aligned(32))) colls[16384];//2800];//16384];
-CollisionTriangle __attribute__((aligned(32))) allColTris[2800];//2048+1024];
+uint16_t __attribute__((aligned(32))) colls[colls_SIZE];
+CollisionTriangle __attribute__((aligned(32))) allColTris[allColTris_SIZE];
 
 struct __attribute__((aligned(32))) GfxPool gGfxPools[2];
 
-uint8_t __attribute__((aligned(32))) backing_gCourseOutline[0x14][128*96/2];
-uint8_t __attribute__((aligned(32))) backing_gMenuTextureBuffer[0x000900B0];
-uint8_t __attribute__((aligned(32))) backing_gMenuCompressedBuffer[65536];
-uint8_t __attribute__((aligned(32))) backing_sTKMK00_LowResBuffer[320*240];
-uint8_t __attribute__((aligned(32))) backing_gSomeDLBuffer[0x1000];
+uint8_t __attribute__((aligned(32))) backing_gCourseOutline[OUTLINE_BUF_COUNT][OUTLIZE_BUF_SIZE];
+uint8_t __attribute__((aligned(32))) backing_gMenuTextureBuffer[MENUTEX_BUF_SIZE];
+uint8_t __attribute__((aligned(32))) backing_gMenuCompressedBuffer[MENUCOMP_BUF_SIZE];
+uint8_t __attribute__((aligned(32))) backing_sTKMK00_LowResBuffer[LOWRES_BUF_SIZE];
+uint8_t __attribute__((aligned(32))) backing_gSomeDLBuffer[SOMEDL_BUF_SIZE];
 
-#define SAMPLES_HIGH 448
-int16_t audio_buffer[SAMPLES_HIGH * 2 * 2] __attribute__((aligned(64)));
+int16_t audio_buffer[AUDIOBUF_SIZE] __attribute__((aligned(64)));
 
 int must_inval_bg;
 int stupid_fucking_faces_hack;
