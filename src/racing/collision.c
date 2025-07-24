@@ -1944,7 +1944,8 @@ s32 is_triangle_intersecting_bounding_box(s16 minX, s16 maxX, s16 minZ, s16 maxZ
     return 0;
 }
 
-extern u16 __attribute__((aligned(32))) colls[16384];//2800];
+#include "buffer_sizes.h"
+extern u16 __attribute__((aligned(32))) colls[colls_SIZE];
 
 /**
  * Splits the collision mesh into 32x32 sections. This allows the game to check only

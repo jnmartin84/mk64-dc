@@ -1543,7 +1543,8 @@ void func_80295D6C(void) {
     D_8015F6F6 = -3000;
 }
 
-extern CollisionTriangle allColTris[2800];//2048+1024];//2800];//2798];//2048+1024];
+#include "buffer_sizes.h"
+extern CollisionTriangle allColTris[allColTris_SIZE];
 #include <stdio.h>
 
 /**

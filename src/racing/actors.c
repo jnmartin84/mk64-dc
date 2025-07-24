@@ -1189,8 +1189,9 @@ void spawn_course_actors(void) {
     gNumPermanentActors = gNumActors;
 }
 
+#include "buffer_sizes.h"
 extern u8 *ROVING_SEG3_BUF;
-extern u8 __attribute__((aligned(32))) SEG3_BUF[/*98304*/100352];
+extern u8 __attribute__((aligned(32))) SEG3_BUF[SEG3_BUF_SIZE];
 
 /**
  * @brief Loads actor textures, course specific actor textures.

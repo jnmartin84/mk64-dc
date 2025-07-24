@@ -130,8 +130,10 @@ void credits_loop(void) {
 extern void load_ceremony_data(void);
 
 extern char *fnpre;
-//extern uint8_t __attribute__((aligned(32))) CEREMONY_BUF[36232];
-extern CollisionTriangle __attribute__((aligned(32))) allColTris[2800];//2048+1024];//2800];//2798];//2048+1024];
+
+#include "buffer_sizes.h"
+extern CollisionTriangle __attribute__((aligned(32))) allColTris[allColTris_SIZE];
+
 void load_credits(void) {
     Camera* camera = &cameras[0];
 

@@ -299,7 +299,8 @@ void clear_nmi_buffer(void) {
     }
 }
 
-extern u8 __attribute__((aligned(32))) SEG3_BUF[/*98304*/100352];
+#include "buffer_sizes.h"
+extern u8 __attribute__((aligned(32))) SEG3_BUF[SEG3_BUF_SIZE];
 u8 *ROVING_SEG3_BUF;
 
 void func_80003040(void) {
