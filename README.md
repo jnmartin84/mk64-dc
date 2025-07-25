@@ -1,87 +1,127 @@
 # Mario Kart 64   
-This decompilation of Mario Kart 64 pursues historical and educational elements within the game found via taking it apart and putting it back together. Inspiration to do so not only emanates from the game's hardware and technology but also its immensely positive effects on the cultures and families of nearly every nationality.
+This is a Sega Dreamcast port of the Mario Kart 64 decompilation (https://github.com/n64decomp/mk64)
 
-This repository does not contain assets. Compiling requires asset extraction from a prior copy of the game.
+If you ask for a CDI or ISO, I will tell you to go fuck yourself, and I probably won't be polite about it.
 
-It supports and builds the following versions:
+Here's how to build it yourself. 
 
-| ROM Output      | Revision| SHA-1 Checksum                           |
-|-----------------|---------|------------------------------------------|
-| mk64.us.z64     | USA     | 579c48e211ae952530ffc8738709f078d5dd215e |
-| mk64.eu.v10.z64 | EUR 1.0 | a729039453210b84f17019dda3f248d5888f7690 |
-| mk64.eu.v11.z64 | EUR 1.1 | f6b5f519dd57ea59e9f013cc64816e9d273b2329 |
+# build guide #
 
-## Progress
+**Pre-requisites**
 
-[![Linux Compile](https://github.com/n64decomp/mk64/actions/workflows/linux-compile.yml/badge.svg)](https://github.com/n64decomp/mk64/actions/workflows/linux-compile.yml)
+Whatever the directory you cloned this github repo to is named and wherever it is located, it will be referred to in this document as
 
-![Build Status](https://n64decomp.github.io/mk64/total_progress.svg)
+`mario-kart-64-dc`
 
-## Quick Start
+This guide will assume that you cloned it into your home directory. 
 
-```
-git submodule update --init --recursive
-```
-Extract assets
-```
-make assets -j
-make -j
-```
+If you need to get to the top level of the repo, it will say
 
-## Building
+    cd ~/mario-kart-64-dc
 
-Build instructions located in the [API docs](https://n64decomp.github.io/mk64/compiling.html)  
-See also, the comprehensive API and documentation which includes an overview of the code-base while also discussing significant concepts, features, and modding.
 
-## Current State
+The build is known to work on the following platforms as of the current commit:
 
-The code-base may change significanty overtime as naming and documentation continues.
-Adjustments to the game require compiling with AVOID_UB=1 to enable shiftability. Use DEBUG=1 to enable the games debug mode.
+    Ubuntu 22.04
+    macOS 15.5
 
-Some menu textures are compressed using a format called tkmk00. A byte-matching compressor/decompressor does not yet exist.   
+It should work on most other Linux environments.
 
-## Project Structure
-	
-	mk64
-	├── asm: Handwritten assembly code, rom header and boot
-	│   ├── non_matchings: Assembly for non-matching sections
-	│   └── os: Libultra handwritten assembly code
-	├── assets: Textures
-	├── courses: Course data, geography, display lists and staff ghosts
-	├── build: Output directory
-	├── data: Misc data, text, audio banks, and instrument sets
-	├── docs: Build guides
-	├── include: Header files
-	├── music: Sequences
-	├── src: C source code for the game
-	|   ├── actors: Individual actors split out from other files
-	│   ├── audio: Sample tables and audio code
-	│   ├── data: Misc data referenced in other C files
-	|   ├── debug: Custom debug code
-	|   ├── ending: Podium ceremony and credits code
-	│   ├── os: Libultra C code
-	|   └── racing: Race and game engine code
-	├── textures: Texture data, bitmaps
-	|   ├── common: Textures common to many courses
-	|   ├── courses: Course specific textures
-	|   ├── crash screen: Crash screen font image
-	│   ├── raw: Raw textures
-    │   ├── standalone: Whole textures
-	|   ├── startup_logo: Reflection map
-	|   └── trophy: Ceremony cutscene podium and trophy textures
-	└── tools: build tools
+You will need a host/native GCC install and a full working Dreamcast/KallistiOS compiler toolchain install.
 
-## Documentation
+See [ https://dreamcast.wiki/Getting_Started_with_Dreamcast_development ] for instructions.
 
-Documentation available online at [https://n64decomp.github.io/mk64/](https://n64decomp.github.io/mk64/).
+*NOTE: FOR BEST RESULTS, PLEASE USE THE `environ.sh` FILE PROVIDED IN THE `mario-kart-64-dc` REPO.*
 
-Documentation generated using [Doxygen](https://www.doxygen.nl/index.html). Run `make doc` to test locally. Documentation resides in `docs/html`. Open index.html to view the site.
+Mario Kart 64 can be built using an unmodified copy of KOS cloned directly from the official repo. I have tested it with `master` as of 2025/05/30 (commit `680d1862`). I suggest using that specific commit id. I will not guarantee that it even *builds* against any other KOS commit, nevermind that it runs.
 
-## Contributing
+If you are going to file a Github issue, make sure you are using that version to test your problem.
 
-Pull requests are welcome. For major changes, please discuss in the Discord.
+Please follow the instructions for building KOS found in the wiki: [ https://dreamcast.wiki/Getting_Started_with_Dreamcast_development#Configuring_and_compiling_KOS_and_kos-ports ].
 
-Run `make format` to ensure it meets the project's coding standards.
-If code needs to avoid formatting place `// clang-format off` before the code and `// clang-format on` after.
+*AGAIN: BE SURE TO USE THE `environ.sh` FILE PROVIDED IN THE `mario-kart-64-dc` FOR YOUR KOS BUILD.*
 
-Official Discord: [discord.gg/DuYH3Fh](https://discord.gg/DuYH3Fh)
+**Compiling Mario Kart 64 for Dreamcast**
+
+Somehow acquire a Mario Kart 64 ROM in Z64 format and *name it all lowercase `baserom.us.z64` .*
+
+Copy `baserom.us.z64` into `~/mario-kart-64-dc`.
+
+Check that your Mario Kart 64 ROM is a supported version.
+
+The below is the expected md5sum output:
+
+    md5sum baserom.us.z64
+    3a67d9986f54eb282924fca4cd5f6dff  baserom.us.z64
+
+Go to the repo directory and compile it like any other KallistiOS project. Make sure you source your KOS environment first (third reminder, use the `environ.sh` provided with in mario-kart-64-dc repo).
+
+To build the source into an ELF file, run the following commands (exactly as written, except for the path to the mario-kart-64-dc repo, do not change, if it doesn't build, it is your fault not mine):
+
+    source /opt/toolchains/dc/kos/environ.sh
+    cd ~/mario-kart-64-dc
+    git submodule update --init
+    cd tools/torch
+    make
+    cd ..
+    make
+    cd ..
+    make assets
+    make
+
+**How to generate Mario Kart 64 disc image**
+
+Make sure that you have `mkdcdisc` built and the executable available on your path.
+
+Once that is taken care of, run the following commands 
+
+    cd ~/mario-kart-64-dc
+    make cdi
+
+Moments later, you will have a `mariokart64.cdi` ready to burn to disc.
+
+If you are trying to use the disc image on anything OTHER than a CDR, I cannot help you and will not even pretend to try to help. You're on your own.
+
+# Playing Mario Kart 64 on the Sega Dreamcast #
+
+The following is the mapping of N64 controls/actions to Dreamcast controls.
+
+Dreamcast DPAD - N64 DPAD (move in menus)
+Dreamcast Analog Stick - N64 Analog Stick (move in game)
+Dreamcast Start - N64 Start (... start)
+Dreamcast A button - N64 A button (accelerate, menu select)
+Dreamcast B button - N64 B button (brake, menu back?)
+Dreamcast X button - N64 right C button (HUD change)
+Dreamcast Y button - N64 up C button (camera)
+Dreamcast L trigger - N64 Z trigger (use item)
+Dreamcast R trigger - N64 R trigger (jump/drift)
+
+These controls are fixed, they are not configurable. If you don't like it, submit a Pull Request.
+
+Options/race records (EEPROM) and time trial ghosts (Controller Pak) saving are both supported when a VMU is
+inserted in controller 1 and has enough free blocks to write the files.
+
+The EEPROM save requires 3 blocks. The time trial ghost save requires 67 blocks.
+
+The game will still function normally without a VMU present.
+
+# Acknowledgments
+
+On the Dreamcast side:
+Falco Girgis (@gyrovorbis) - the game doesn't have sound without him. Extreme optimizations to the audio mixer made full speed gameplay and pristine sound possible.
+Other optimizations to matrix math across the entire code base kept it fast and made it faster.
+
+Paul Cercueil (@pcercuei) - "HEY THAT'S A FIPR" and now we have FPU matrix-accelerated audio.
+
+Luke Benstead (@kazade) - Without GLdc, this project would have taken 6 more months for me to go and write a new Fast3d backend instead of being able to start with an existing GL one. And for quickly reviewing and accepting my PRs to GLdc to add mirrored repeat :-D
+
+
+On the N64 side:
+
+The entire MK64 decomp team.
+
+Everyone on the N64 Decompilation Discord that answered my questions and pointed me to code.
+
+The Spaghetti Kart project and team. Without being able to reference that code, there are things that would not be working and would never be working.
+
+SonicDreamcaster - we're going to bring you over to the Dreamcast dark side.
