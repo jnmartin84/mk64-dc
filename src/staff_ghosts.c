@@ -72,6 +72,8 @@ extern StaffGhost d_mario_raceway_staff_ghost[];
 extern StaffGhost d_royal_raceway_staff_ghost[];
 extern StaffGhost d_luigi_raceway_staff_ghost[];
 
+void n64_memcpy(void *dst, const void *src, size_t size);
+
 #define REPLAY_FRAME_COUNTER 0xff0000
 void load_course_ghost(void) {
     // jnmartin84 - wtf
@@ -83,7 +85,11 @@ void load_course_ghost(void) {
     osRecvMesg(&gDmaMesgQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
 #else
     D_80162DA4 = (u32*) &D_802BFB80.arraySize8[0][2][3];
-    dma_copy(D_80162DA4, (uintptr_t)D_80162DC4, 0x4000);
+
+    n64_memcpy(segmented_to_virtual(D_80162DA4),
+                segmented_to_virtual(D_80162DC4),
+                0x4000);
+
     for (int i=0;i<0x1000;i++) {
         D_80162DA4[i] = __builtin_bswap32(D_80162DA4[i]);
     }

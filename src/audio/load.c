@@ -1,21 +1,6 @@
 #include <kos.h>
-#undef CONT_C
-#undef CONT_B
-#undef CONT_A
-#undef CONT_START
-#undef CONT_DPAD_UP
-#undef CONT_DPAD_DOWN
-#undef CONT_DPAD_LEFT
-#undef CONT_DPAD_RIGHT
-#undef CONT_Z
-#undef CONT_Y
-#undef CONT_X
-#undef CONT_D
-#undef CONT_DPAD2_UP
-#undef CONT_DPAD2_DOWN
-#undef CONT_DPAD2_LEFT
-#undef CONT_DPAD2_RIGHT
-#undef bool
+#include "kos_undef.h"
+
 #include <ultra64.h>
 #include <macros.h>
 
@@ -300,12 +285,10 @@ void* dma_sample_data(uintptr_t devAddr, u32 size, s32 arg2, u8* dmaIndexRef) {
     dma->ttl = 2;
     dma->source = dmaDevAddr;
     dma->sizeUnused = transfer;
-#if 1
-//    osPiStartDma(&gCurrAudioFrameDmaIoMesgBufs[gCurrAudioFrameDmaCount++], OS_MESG_PRI_NORMAL, OS_READ, dmaDevAddr,
-  //               dma->buffer, transfer, &gCurrAudioFrameDmaQueue);
+
+    // no more copying, pointer assignment trick
     dma->buffer = dmaDevAddr;
-  #endif
-//    dma_copy(dma->buffer, devAddr, transfer);
+
     *dmaIndexRef = dmaIndex;
     return (devAddr - dmaDevAddr) + dma->buffer;
 }
@@ -313,16 +296,13 @@ void* dma_sample_data(uintptr_t devAddr, u32 size, s32 arg2, u8* dmaIndexRef) {
 // init_sample_dma_buffers
 void func_800BB030(UNUSED s32 arg0) {
     s32 i = 0;
-//printf("%s(%d)\n",__func__,arg0);
 #define j i
 
     D_803B70A8 = 0x5A0;
 
     for (i = 0; i < gMaxSimultaneousNotes * 3 * gAudioBufferParameters.presetUnk4; i++) {
-        sSampleDmas[gSampleDmaNumListItems].buffer = NULL;//soundAlloc(&gNotesAndBuffersPool, D_803B70A8);
-//        if (sSampleDmas[gSampleDmaNumListItems].buffer == NULL) {
-//            break;
-//        }
+        // no allocations, pointer assignment trick
+        sSampleDmas[gSampleDmaNumListItems].buffer = NULL;
         sSampleDmas[gSampleDmaNumListItems].bufSize = D_803B70A8;
         sSampleDmas[gSampleDmaNumListItems].source = 0;
         sSampleDmas[gSampleDmaNumListItems].sizeUnused = 0;
@@ -346,10 +326,8 @@ void func_800BB030(UNUSED s32 arg0) {
 
     D_803B70A8 = 0x180;
     for (i = 0; i < gMaxSimultaneousNotes; i++) {
-        sSampleDmas[gSampleDmaNumListItems].buffer = NULL;//soundAlloc(&gNotesAndBuffersPool, D_803B70A8);
-//        if (sSampleDmas[gSampleDmaNumListItems].buffer == NULL) {
-  //          break;
-    //    }
+        // no allocations, pointer assignment trick
+        sSampleDmas[gSampleDmaNumListItems].buffer = NULL;
         sSampleDmas[gSampleDmaNumListItems].bufSize = D_803B70A8;
         sSampleDmas[gSampleDmaNumListItems].source = 0;
         sSampleDmas[gSampleDmaNumListItems].sizeUnused = 0;
@@ -376,17 +354,18 @@ void func_800BB030(UNUSED s32 arg0) {
 
 // Similar to patch_sound, but not really
 void func_800BB304(struct AudioBankSample* sample) {
-    u8* mem = NULL;
     if (sample == (void*) NULL) {
         return;
     }
 
     if (sample->loaded == 1) {
         uint32_t sampleCopySize = sample->sampleSize;
-        // this is why DK and Toad were broken once sound is active
+
+        // this is why DK and Toad were broken once sound was implemented
         if (sampleCopySize > 0xffff) {
             sampleCopySize = __builtin_bswap32(sampleCopySize);
         }
+
         sample->loaded = 0x81;
         sample->sampleSize = sampleCopySize;
         sample->sampleAddr = sample->sampleAddr;
@@ -428,7 +407,6 @@ s32 func_800BB388(s32 bankId, s32 instId, s32 arg2) {
 void func_800BB43C(ALSeqFile* f, u8* base, u8 swap) {
 #define PATCH(SRC, BASE, TYPE) SRC = (TYPE) ((u32) SRC + (u32) BASE)
     int i = 0;
-    u8* wut = base;
     for (i = 0; i < f->seqCount; i++) {
         if (swap)
             f->seqArray[i].len = __builtin_bswap32(f->seqArray[i].len);
@@ -436,7 +414,7 @@ void func_800BB43C(ALSeqFile* f, u8* base, u8 swap) {
             f->seqArray[i].offset = __builtin_bswap32(f->seqArray[i].offset);
 
         if (f->seqArray[i].len != 0) {
-            PATCH(f->seqArray[i].offset, wut, u8*);
+            PATCH(f->seqArray[i].offset, base, u8*);
         }
     }
 #undef PATCH

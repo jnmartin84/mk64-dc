@@ -161,7 +161,7 @@ static void cb_clear(void) {
 #define TEMP_BUF_SIZE ((SND_STREAM_BUFFER_MAX/*  / 2 */) * NUM_BUFFER_BLOCKS)
 static uint8_t __attribute__((aligned(32))) temp_buf[TEMP_BUF_SIZE];
 static unsigned int temp_buf_sel = 0;
-void n64_memset(void *dst, uint8_t val, size_t size);
+
 void mute_stream(void) {
     snd_stream_volume(shnd, 0); // Set maximum volume
 }
@@ -172,15 +172,14 @@ void unmute_stream(void) {
 
 void *audio_callback(UNUSED snd_stream_hnd_t hnd, int samples_requested_bytes, int *samples_returned_bytes) {
     size_t samples_requested = samples_requested_bytes / 4;
-    size_t samples_avail_bytes = cb_read_data(temp_buf + ((SND_STREAM_BUFFER_MAX/*  / 2 */) * temp_buf_sel) , samples_requested_bytes);
+    size_t samples_avail_bytes = cb_read_data(temp_buf + ((SND_STREAM_BUFFER_MAX) * temp_buf_sel) , samples_requested_bytes);
     
     *samples_returned_bytes = samples_requested_bytes;
     size_t samples_returned = samples_avail_bytes / 4;
     
     /*@Note: This is more correct, fill with empty audio */
     if (samples_avail_bytes < (unsigned)samples_requested_bytes) {
-        n64_memset(temp_buf + ((SND_STREAM_BUFFER_MAX/*  / 2 */) * temp_buf_sel) + samples_avail_bytes, 0, (samples_requested_bytes - samples_avail_bytes));
-        // printf("U\n");
+        memset(temp_buf + ((SND_STREAM_BUFFER_MAX) * temp_buf_sel) + samples_avail_bytes, 0, (samples_requested_bytes - samples_avail_bytes));
     }
     
     temp_buf_sel += 1;
@@ -188,7 +187,7 @@ void *audio_callback(UNUSED snd_stream_hnd_t hnd, int samples_requested_bytes, i
         temp_buf_sel = 0;
     }
     
-    return (void*)(temp_buf + ((SND_STREAM_BUFFER_MAX/*  / 2 */) * temp_buf_sel));
+    return (void*)(temp_buf + ((SND_STREAM_BUFFER_MAX) * temp_buf_sel));
 }
 mutex_t reset_mutex;
 
@@ -214,7 +213,7 @@ static bool audio_dc_init(void) {
            (unsigned int)RING_BUFFER_MAX_BYTES);
     
     // Allocate the sound stream with KOS
-    shnd = snd_stream_alloc(audio_callback, (SND_STREAM_BUFFER_MAX / 8) /* / 2 */);
+    shnd = snd_stream_alloc(audio_callback, (SND_STREAM_BUFFER_MAX / 8));
     if (shnd == SND_STREAM_INVALID) {
         printf("SND: Stream allocation failure!\n");
         snd_stream_destroy(shnd);
@@ -250,7 +249,8 @@ static int audio_dc_get_desired_buffered(void) {
 
 void runtime_reset(void) {
     mutex_lock(&reset_mutex);
-    snd_stream_volume(shnd,0);
+
+    snd_stream_volume(shnd, 0);
     audio_started = false;
     // --- Initial Pre-fill of Ring Buffer with Silence ---
     sq_clr(cb_buf_internal, sizeof(cb_buf_internal));
@@ -258,25 +258,21 @@ void runtime_reset(void) {
     if (!cb_init(RING_BUFFER_MAX_BYTES)) {
         printf("CB INIT FAILURE!\n");
     }
-    snd_stream_volume(shnd,160);
+    snd_stream_volume(shnd, 160);
+
     mutex_unlock(&reset_mutex);
 }
 
 static void audio_dc_play(const uint8_t *buf, size_t len) {
     mutex_lock(&reset_mutex);
+ 
     size_t ring_data_available = cb_get_used();
     size_t written = cb_write_data(buf, len);
 
-
-    if (!audio_started && ring_data_available >/* = */ ((SND_STREAM_BUFFER_MAX  / 3 ))) {
+    if ((!audio_started) && (ring_data_available > (SND_STREAM_BUFFER_MAX / 3))) {
         audio_started = true;
         snd_stream_start(shnd, DC_AUDIO_FREQUENCY, DC_STEREO_AUDIO);
     }
-    
-//    if (written == 0) {
-        // printf("O\n");
-//        cb_clear();
-//    }
 
     if (audio_started) {
         snd_stream_poll(shnd);

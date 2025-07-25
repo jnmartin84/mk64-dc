@@ -15,7 +15,6 @@
 #include <GL/glext.h>
 #include <GL/glkos.h>
 
-#define TARGET_DC
 #define FOR_WINDOWS 0
 
 #include "gfx_cc.h"
@@ -51,9 +50,12 @@ struct SamplerState {
     GLuint tex;
 };
 
+int in_intro;
+
 uint32_t shaderlist[64];
 uint8_t shaderidx;
-int first_2d = 1;
+
+extern int blend_fuck;
 
 static struct ShaderProgram shader_program_pool[64];
 static uint8_t shader_program_pool_size;
@@ -64,15 +66,6 @@ static struct SamplerState tmu_state[2];
 static const dc_fast_t* cur_buf = NULL;
 static uint8_t gl_blend = 0;
 static uint8_t gl_depth = 0;
-
-
-#if !defined(TARGET_DC)
-static uint8_t gl_multitexture = 0;
-static void* scale_buf = NULL;
-static int scale_buf_size = 0;
-#endif
-
-int in_intro;
 
 static void resample_16bit(const unsigned short* in, int inwidth, int inheight, unsigned short* out, int outwidth,
                            int outheight) {
@@ -100,14 +93,10 @@ static void resample_16bit(const unsigned short* in, int inwidth, int inheight, 
 #if 1
             asm volatile("": : : "memory");
 #endif
-            out[j] = p1; /* inrow[frac >> 16];
-            frac += fracstep; */
-            out[j + 1] = p2; /* inrow[frac >> 16];
-            frac += fracstep; */
-            out[j + 2] = p3; /* inrow[frac >> 16];
-            frac += fracstep; */
-            out[j + 3] = p4; /* inrow[frac >> 16];
-            frac += fracstep; */
+            out[j] = p1;
+            out[j + 1] = p2;
+            out[j + 2] = p3;
+            out[j + 3] = p4;
         }
     }
 }
@@ -141,27 +130,15 @@ static inline GLenum texenv_set_texture(UNUSED struct ShaderProgram* prg) {
 
 static inline GLenum texenv_set_texture_color(struct ShaderProgram* prg) {
     GLenum mode = GL_MODULATE;
-//    if (in_intro) {
-//        return mode;
-//    }
-#if 1
-    // HACK: lord forgive me for this, but this is easier
-    switch (prg->shader_id) {
-        case 0x0000038D: // mario's eyes
-        case 0x01045A00: // peach letter
-        case 0x01200A00: // intro copyright fade in
+
+    // only set DECAL for the player animations in menu
+//    if (blend_fuck) {
+        if (prg->shader_id == 0x01200A00) {
             mode = GL_DECAL;
-            break;
-        case 0x00000551: // goddard
-                         /*@Note: Issues! */
-            mode = GL_REPLACE;
-            // GL_BLEND;
-            break;
-        default:
-            mode = GL_MODULATE;
-            break;
-    }
-#endif
+            if (!blend_fuck) blend_fuck = 2;
+        }
+//    }
+
     return mode;
 }
 
@@ -174,31 +151,18 @@ extern int16_t fog_ofs;
 extern s16 gCurrentCourseId;
 
 static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
-#if 0
-    // printf("applied shader %08x\n", prg->shader_id);
-    int found = 0;
-    for (uint8_t i = 0; i < shaderidx; i++) {
-        if (shaderlist[i] == prg->shader_id) {
-            found = 1;
-            break;
-        }
-    }
-
-    if (!found) {
-        shaderlist[shaderidx++] = prg->shader_id;
-    }
-#endif
-
     // vertices are always there
     glVertexPointer(3, GL_FLOAT, sizeof(dc_fast_t), &cur_buf[0].vert);
+
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glTexCoordPointer(2, GL_FLOAT, sizeof(dc_fast_t), &cur_buf[0].texture);
+    glEnableClientState(GL_COLOR_ARRAY);
+    glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(dc_fast_t), &cur_buf[0].color);
 
     // have texture(s), specify same texcoords for every active texture
     if (prg->texture_used[0] || prg->texture_used[1]) {
         glEnable(GL_TEXTURE_2D);
-        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-        glTexCoordPointer(2, GL_FLOAT, sizeof(dc_fast_t), &cur_buf[0].texture);
     } else {
-        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
         glDisable(GL_TEXTURE_2D);
     }
 
@@ -226,21 +190,14 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
         glDisable(GL_FOG);
     }
 
-    if (prg->num_inputs) {
-        // otherwise use vertex colors as normal
-        glEnableClientState(GL_COLOR_ARRAY);
-        glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(dc_fast_t), &cur_buf[0].color);
-    } else {
-        glDisableClientState(GL_COLOR_ARRAY);
-    }
-
-    if (!prg->enabled) {
+//    if (!prg->enabled) {
         // we only need to do this once
-        prg->enabled = 1;
-#if 1
+        // ^-- uhhh yeah no I think that's wrong and a bug
+        //        prg->enabled = 1;
+#if 0
         if (prg->shader_id & SHADER_OPT_TEXTURE_EDGE) {
             glEnable(GL_ALPHA_TEST);
-            glAlphaFunc(GL_GREATER, /*1.0f / 3.0f*/ 0.8f);
+            glAlphaFunc(GL_GREATER, 0.8f);
         } else {
             glDisable(GL_ALPHA_TEST);
         }
@@ -262,7 +219,7 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
                 break;
         }
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, mode);
-    }
+//    }
 }
 
 static void gfx_opengl_unload_shader(struct ShaderProgram* old_prg) {
@@ -336,7 +293,7 @@ GLuint newest_texture;
 static void gfx_clear_all_textures(void) {
     GLuint index = 0;
     if (newest_texture != 0) {
-        for (index = 2; index <= newest_texture; index++) {
+        for (index = 1; index <= newest_texture; index++) {
             glDeleteTextures(0, &index);
         }
         tmu_state[0].tex = 0;
@@ -352,6 +309,8 @@ void gfx_clear_texidx(GLuint texidx) {
     if (tmu_state[1].tex == texidx)
         tmu_state[1].tex = 0;
 }
+
+#if 0
 static uint16_t bg_staging[512*256];
 void setup_the_bg_texture(void) {
     GLuint ret;
@@ -363,6 +322,7 @@ void setup_the_bg_texture(void) {
     glBindTexture(GL_TEXTURE_2D, ret);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_ARGB1555_KOS, 512, 256, 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, bg_staging);
 }
+#endif
 
 static uint32_t gfx_opengl_new_texture(void) {
     GLuint ret;
@@ -406,13 +366,6 @@ static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int 
     if ((!is_pot(width) || !is_pot(height)) || (width < 8) || (height < 8)) {
         int pwidth = next_pot(width);
         int pheight = next_pot(height);
-        /*@Note: Might not need texture max sizes */
-        /*             if (pwidth > 256) {
-                        pwidth = 256;
-                    }
-                    if (pheight > 256) {
-                        pheight = 256;
-                    } */
 
         /* Need texture min sizes */
         if (pwidth < 8) {
@@ -469,8 +422,7 @@ static void gfx_opengl_set_depth_test(uint8_t depth_test) {
 
 static void gfx_opengl_set_depth_mask(uint8_t z_upd) {
     gl_depth = z_upd;
-    //    glDepthMask(z_upd);
-    glDepthMask(z_upd != 0 ? GL_TRUE : GL_FALSE);
+    glDepthMask(z_upd ? GL_TRUE : GL_FALSE);
 }
 
 static uint8_t is_zmode_decal = false;
@@ -484,18 +436,6 @@ static void gfx_opengl_set_zmode_decal(uint8_t zmode_decal) {
     }
 }
 
-#if 0
-static void gfx_opengl_set_zmode_decal(uint8_t zmode_decal) {
-    if (zmode_decal != 0) {
-        glPolygonOffset(-2, -2);
-        glEnable(GL_POLYGON_OFFSET_FILL);
-    } else {
-        glPolygonOffset(0, 0);
-        glDisable(GL_POLYGON_OFFSET_FILL);
-    }
-}
-#endif
-
 static void gfx_opengl_set_viewport(int x, int y, int width, int height) {
     glViewport(x, y, width, height);
 }
@@ -506,7 +446,7 @@ static void gfx_opengl_set_scissor(int x, int y, int width, int height) {
 
 static void gfx_opengl_set_use_alpha(uint8_t use_alpha) {
     gl_blend = use_alpha;
-    if (use_alpha != 0)
+    if (use_alpha)
         glEnable(GL_BLEND);
     else
         glDisable(GL_BLEND);
@@ -525,26 +465,25 @@ static inline void gfx_opengl_pass_mix_texture(int buf_vbo_num_tris) {
     ;
 }
 
-
-    // toads turnpike used shaders
-    // 01200200, 01045200, 07a00a00, 03200045, 05141548, 01045551, 05a00a00
-    // lakitu sprites
-    // if (cur_shader->shader_id != 0x05a00a00)
-    // ????
-    // if (cur_shader->shader_id != 0x01045551)
-    // the kart
-    // if (cur_shader->shader_id != 0x05141548)
-    // the entire world basically except guardrails
-    // if (cur_shader->shader_id != 0x03200045)
-    // the guardrails
-    // if (cur_shader->shader_id != 0x07a00a00)
-    // 4 bit font AND the stars, goddamnit
-    // if (cur_shader->shader_id != 0x01045200)
+// toads turnpike used shaders
+// 01200200, 01045200, 07a00a00, 03200045, 05141548, 01045551, 05a00a00
+// lakitu sprites
+// if (cur_shader->shader_id != 0x05a00a00)
+// ????
+// if (cur_shader->shader_id != 0x01045551)
+// the kart
+// if (cur_shader->shader_id != 0x05141548)
+// the entire world basically except guardrails
+// if (cur_shader->shader_id != 0x03200045)
+// the guardrails
+// if (cur_shader->shader_id != 0x07a00a00)
+// 4 bit font AND the stars, goddamnit
+// if (cur_shader->shader_id != 0x01045200)
 
 // prim color
-extern int pr,pg,pb,pa;
+extern int pr, pg, pb, pa;
 // env color
-extern int er,eg,eb,ea;
+extern int er, eg, eb, ea;
 // "stars" over Toad's Turnpike/Wario Stadium skybox
 extern u8 D_0D0293D8[];
 extern void* segmented_to_virtual(void* addr);
@@ -562,14 +501,12 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len
     }
 
     // skybox
-    if (/* !in_intro &&  */cur_shader->shader_id == 0x01200200) {
+    if (cur_shader->shader_id == 0x01200200) {
         glDepthMask(GL_FALSE);
         glDepthFunc(GL_LEQUAL);
         glDisable(GL_BLEND);
         glDisable(GL_FOG);
-    }/*  else if (cur_shader->shader_id == 0x01200200) {
-        glEnable(GL_BLEND);
-    } */
+    }
 
     // clouds over skybox
     if (cur_shader->shader_id == 0x01a00200) { 
@@ -649,10 +586,6 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len
         glPushMatrix();
         glTranslatef(0.0f, 0.0f, -3500.0f);
     }
-    /* 
-    if (in_intro) {
-        glEnable(GL_BLEND);        
-    } */
 
     glDrawArrays(GL_TRIANGLES, 0, 3 * buf_vbo_num_tris);
 
@@ -711,7 +644,6 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len
 }
 
 #if 1
-extern int blend_fuck;
 extern u8 gTextureMarioFace00[];
 extern u8 gTextureBowserFace16_end[];
 extern void gfx_opengl_2d_projection(void);
@@ -741,9 +673,6 @@ glDisable(GL_DEPTH_TEST);
     glDisable(GL_TEXTURE_2D);
         glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     }
-//if(first_2d) {
-  //  glDisable(GL_BLEND);
-//}
 //    if (!in_intro) {
        
         //        glDisable(GL_BLEND);
@@ -812,20 +741,15 @@ someTexture 8c9560e0
     }
 #endif
 #endif
-  if (blend_fuck) {
-//
-    for(int i=0;i<6;i++) {
-        tris[i].color.packed = 0xff000000;
-    }
-  }
 
+    if (blend_fuck) {
+        for (int i = 0; i < 6; i++) {
+            tris[i].color.packed = 0xff000000;
+        }
+        if (blend_fuck == 2) blend_fuck = 0;
+    }
 
     glDrawArrays(GL_TRIANGLES, 0, 3 * 2 /* 2 tri quad */);
-
-//if(first_2d) {
-  //  glEnable(GL_BLEND);
-    //first_2d = 0;
-// }
 
     #if 0
     if (!in_intro) {
@@ -886,7 +810,6 @@ static inline uint8_t gl_get_version(int* major, int* minor, uint8_t* is_es) {
 }
 
 #define sys_fatal printf
-void n64_memset(void *dst, uint8_t val, size_t size);
 
 extern void getRamStatus(void);
 static void gfx_opengl_init(void) {
@@ -897,7 +820,7 @@ static void gfx_opengl_init(void) {
 #endif
     newest_texture = 0;
     shaderidx = 0;
-    n64_memset(shaderlist, 0, sizeof(shaderlist));
+    memset(shaderlist, 0, sizeof(shaderlist));
     GLdcConfig config;
     glKosInitConfig(&config);
     config.autosort_enabled = GL_TRUE;
@@ -965,43 +888,29 @@ void nuke_everything(void) {
     reset_texcache();
 }
 
-void gfx_opengl_reset_frame(int r, int g, int b) {
-    first_2d = 1;
-    screen_2d_z = -1.0f;
-    glDisable(GL_SCISSOR_TEST);
-    glDepthMask(GL_TRUE); // Must be set to clear Z-buffer
-    glClearColor((float)r/255.0f, (float)g/255.0f, (float)b/255.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_SCISSOR_TEST);
-    newest_texture = 0;
-}
+extern s32 D_800DC5D0;
+extern s32 D_800DC5D4;
+extern s32 D_800DC5D8;
 
 static void gfx_opengl_start_frame(void) {
-#if 0
-    shaderidx = 0;
-    n64_memset(shaderlist, 0, sizeof(shaderlist));
-#endif
-    first_2d = 1;
     screen_2d_z = -1.0f;
     glDisable(GL_SCISSOR_TEST);
     glDepthMask(GL_TRUE); // Must be set to clear Z-buffer
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+    glClearColor((float)D_800DC5D0/255.0f, (float)D_800DC5D4/255.0f,
+    (float)D_800DC5D8/255.0f,1.0f);
+//    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_SCISSOR_TEST);
     newest_texture = 0;
 }
 
 static void gfx_opengl_end_frame(void) {
-#if 0
-    printf("\nframe used shaders:\n\t");
-    for (uint8_t i = 0; i < shaderidx; i++) {
-        printf("%08x, ", shaderlist[i]);
-    }
-    printf("\n");
-#endif
+    return;
 }
 
 static void gfx_opengl_finish_render(void) {
+    return;
 }
 
 struct GfxRenderingAPI gfx_opengl_api = { gfx_opengl_z_is_from_0_to_1, gfx_opengl_unload_shader,

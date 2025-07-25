@@ -1242,13 +1242,19 @@ void load_kart_texture_non_blocking(Player* player, s8 arg1, s8 arg2, s8 arg3, s
     }
 }
 
+//void dma_copy(u8* dest, u8* romAddr, size_t size) {
+//    n64_memcpy(segmented_to_virtual(dest), segmented_to_virtual(romAddr), size);
+//}
+extern void* segmented_to_virtual(void* addr);
+extern void n64_memcpy(const void *dest, const void* src, size_t size);
+
 void load_kart_palette(Player* player, s8 playerId, s8 screenId, s8 index) {
     struct_D_802F1F80* temp_s0 = &gPlayerPalettesList[index][screenId][playerId];
-    dma_copy(temp_s0, gKartPalettes[player->characterId],sizeof(struct_D_802F1F80));
+    n64_memcpy(temp_s0, segmented_to_virtual(gKartPalettes[player->characterId]), sizeof(struct_D_802F1F80));
 }
 
 void load_player_data(UNUSED Player* player, s32 arg1, void* vAddr, u16 size) {
-    dma_copy(vAddr, arg1, size);
+    n64_memcpy(vAddr, segmented_to_virtual(arg1), size);
 }
 
 /**
@@ -1260,5 +1266,5 @@ void load_player_data(UNUSED Player* player, s32 arg1, void* vAddr, u16 size) {
  * @param size Size of data to read
  */
 void load_player_data_non_blocking(UNUSED Player* player, s32 arg1, void* vAddr, u16 size) {
-    dma_copy(vAddr, arg1, size);
+    n64_memcpy(vAddr, segmented_to_virtual(arg1), size);
 }

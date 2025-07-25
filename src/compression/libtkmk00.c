@@ -40,7 +40,6 @@ static int32_t SRL(int32_t val, int amount)
    vU >>= amount;
    return (int32_t)vU;
 }
-void n64_memset(void *dst, uint8_t val, size_t size);
 
 // a0[in]: pointer to TKMK00 data
 // a1[out]: pointer to output (1 byte per pixel)
@@ -67,10 +66,10 @@ void tkmk00decode(uint32_t *_tkmk, uint8_t *tmp_buf, uint16_t *_rgba16, uint32_t
    alpha = alpha_color;
    header6 = tkmk[0x6];
    pixels = width * height;
-//   printf("format byte is %02x\n", tkmk[0xc]);
-   n64_memset(rgba_buf, 0xFF, sizeof(rgba_buf));
-   n64_memset(rgba16, 0xFF, 2 * pixels);
-   n64_memset(tmp_buf, 0xFF, pixels);
+
+   memset(rgba_buf, 0, sizeof(rgba_buf));
+   memset(rgba16, 0, 2 * pixels);
+   memset(tmp_buf, 0, pixels);
    for (i = 0; i < 8; i++) {
        offset = read_u32_be(&tkmk[0xC + i*4]);
        if (0 == (header6 & (0x1 << i))) {
@@ -79,7 +78,7 @@ void tkmk00decode(uint32_t *_tkmk, uint8_t *tmp_buf, uint16_t *_rgba16, uint32_t
        some_ptrs[i] = tkmk + offset;
    }
 
-   n64_memset(some_u16s, 0, sizeof(some_u16s));
+   memset(some_u16s, 0, sizeof(some_u16s));
 
    some_offset = 0x0; // no idea, used in proc_80040A60
    some_flags = read_u32_be(&tkmk[0x2C]); // used in proc_80040A60

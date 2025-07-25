@@ -1,21 +1,6 @@
 #include <kos.h>
-#undef CONT_C
-#undef CONT_B
-#undef CONT_A
-#undef CONT_START
-#undef CONT_DPAD_UP
-#undef CONT_DPAD_DOWN
-#undef CONT_DPAD_LEFT
-#undef CONT_DPAD_RIGHT
-#undef CONT_Z
-#undef CONT_Y
-#undef CONT_X
-#undef CONT_D
-#undef CONT_DPAD2_UP
-#undef CONT_DPAD2_DOWN
-#undef CONT_DPAD2_LEFT
-#undef CONT_DPAD2_RIGHT
-#undef bool
+#include "kos_undef.h"
+
 #include <ultra64.h>
 #include <macros.h>
 

@@ -51,8 +51,10 @@ void* allocate_memory(size_t);
 //void* load_data(uintptr_t, uintptr_t, uintptr_t);
 void func_802A7D54(s32, s32);
 void n64_memcpy(void *dst, const void *src, size_t size);
+#if 0
 void n64_memset(void *dst, uint8_t val, size_t size);
-
+#endif
+#if 0
 void main_pool_init(uintptr_t, uintptr_t);
 void* main_pool_alloc(uintptr_t, uintptr_t);
 uintptr_t main_pool_free(void*);
@@ -60,6 +62,7 @@ void* main_pool_realloc(void*, uintptr_t);
 uintptr_t main_pool_available(void);
 uintptr_t main_pool_push_state(void);
 uintptr_t main_pool_pop_state(void);
+#endif
 void* func_802A80B0(u8*, u8*, u8*);
 void func_802A81EC(void);
 struct AllocOnlyPool* alloc_only_pool_init(uintptr_t, uintptr_t);

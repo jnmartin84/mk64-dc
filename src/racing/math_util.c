@@ -201,7 +201,7 @@ void mtxf_copy_n_element(s32* dest, s32* src, s32 n) {
     }
 }
 #include <string.h>
-void n64_memset(void *dst, uint8_t val, size_t size);
+
 #include "sh4zam.h"
 // Transform a matrix to a matrix identity
 void mtxf_identity(Mat4 mtx) {
@@ -209,19 +209,20 @@ void mtxf_identity(Mat4 mtx) {
     s32 i;
     s32 k;
 
-    for (i = 0; i < 4; i++) {
-        for (k = 0; k < 4; k++) {
-            mtx[i][k] = (i == k) ? 1.0f : 0.0f;
-        }
-    }
-//    n64_memset(mtx, 0, sizeof(float)*16);
-//    mtx[0][0] = mtx[1][1] = mtx[2][2] = mtx[3][3] = 1.0f;
+//    for (i = 0; i < 4; i++) {
+//        for (k = 0; k < 4; k++) {
+//            mtx[i][k] = (i == k) ? 1.0f : 0.0f;
+//        }
+//    }
+
+    memset(mtx, 0, sizeof(float)*16);
+    mtx[0][0] = mtx[1][1] = mtx[2][2] = mtx[3][3] = 1.0f;
 #else
     if ((uintptr_t)mtx & 15 == 0) {
         shz_xmtrx_set_identity();
         shz_xmtrx_store_4x4(mtx);
     } else {
-        /* n64_ */memset(mtx, 0, 64);
+        memset(mtx, 0, 64);
         mtx[0][0] = mtx[1][1] = mtx[2][2] = mtx[3][3] = 1.0f;
     }
 #endif

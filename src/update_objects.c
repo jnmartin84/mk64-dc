@@ -1218,6 +1218,10 @@ void func_800744CC(void) {
     }
 }
 
+static inline void dma_copy(u8* dest, u8* romAddr, size_t size) {
+    n64_memcpy(segmented_to_virtual(dest), segmented_to_virtual(romAddr), size);
+}
+
 void func_80074510(uintptr_t devAddr, void* vaddr, size_t nbytes) {
     func_800744CC();
     dma_copy(vaddr, devAddr, nbytes);

@@ -27,7 +27,7 @@ extern int in_intro;
 uint32_t last_set_texture_image_width;
 int draw_rect;
 uint32_t oops_texture_id;
-//#define SUPPORT_CHECK(x) assert(x)
+
 void* segmented_to_virtual(void* addr);
 
 // SCALE_M_N: upscale/downscale M-bit integer to N-bit
@@ -92,6 +92,7 @@ struct __attribute__((aligned(32))) LoadedVertex {
 	uint8_t	wlt0;
 };
 
+// exactly one cache-line in size
 struct TextureHashmapNode {
 	// 0
 	struct TextureHashmapNode* next;
@@ -197,14 +198,21 @@ static struct RDP {
 } rdp;
 
 struct RenderingState {
-	struct XYWidthHeight viewport;
-	struct XYWidthHeight scissor;
+	// 0
 	struct ShaderProgram* shader_program;
+	// 4
 	struct TextureHashmapNode* textures[2];
+	// 8
 	uint8_t depth_test;
 	uint8_t depth_mask;
 	uint8_t decal_mode;
 	uint8_t alpha_blend;
+	// 12
+	struct XYWidthHeight viewport;
+	// 20
+	struct XYWidthHeight scissor;
+	// 28
+	uint32_t pad;
 };
 
 struct RenderingState rendering_state;
@@ -228,31 +236,12 @@ int do_fill_rect = 0;
 
 extern s16 gCurrentCourseId;
 
-#if 0
-int max_tris = 0;
-int frame_tris = 0;
-int frame_verts = 0;
-int frame_quads = 0;
-#endif
-
 static  __attribute__((noinline)) void gfx_flush(void) {
-	if (buf_vbo_len > 0) {
-#if 0
-		if (buf_vbo_num_tris > max_tris) {
-			max_tris = buf_vbo_num_tris;
-			printf("max tris %d\n", max_tris);
-		}
-#endif
-		// int num = buf_vbo_num_tris;
-		// unsigned long t0 = get_time();
+	if (buf_vbo_len) {
 		gfx_rapi->draw_triangles((void*) buf_vbo, buf_vbo_len, buf_vbo_num_tris);
 		buf_vbo_len = 0;
 		buf_num_vert = 0;
 		buf_vbo_num_tris = 0;
-		// unsigned long t1 = get_time();
-		/*if (t1 - t0 > 1000) {
-			//////////printf("f: %d %d\n", num, (int)(t1 - t0));
-		}*/
 	}
 }
 
@@ -265,6 +254,7 @@ static  __attribute__((noinline)) struct ShaderProgram* gfx_lookup_or_create_sha
 	}
 	return prg;
 }
+
 void n64_memcpy(void *dst, const void *src, size_t size);
 
 static  __attribute__((noinline)) void gfx_generate_cc(struct ColorCombiner* comb, uint32_t cc_id) {
@@ -427,7 +417,8 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 	return 0;
 }
 
-uint16_t __attribute__((aligned(32))) rgba16_buf[4096 * 4];
+// enough for a 256 * 64 16-bit image, no overflow should happen at this point
+uint16_t __attribute__((aligned(32))) rgba16_buf[4096 * 16];//4];
 
 int last_cl_rv;
 
@@ -516,9 +507,6 @@ static void import_texture_rgba32(int tile) {
 	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_1_5_5_5_REV);
 }
 
-void n64_memset(void *dst, uint8_t val, size_t size);
-
-
 static void import_texture_ia4(int tile) {
 	uint32_t width = rdp.texture_tile.line_size_bytes << 1;
 	uint32_t height = rdp.loaded_texture[tile].size_bytes / rdp.texture_tile.line_size_bytes;
@@ -538,7 +526,7 @@ static void import_texture_ia4(int tile) {
 		}
 	} else {
 		uint8_t ia4_xform_buf[8192];
-		n64_memset(ia4_xform_buf, 0, 8192);//(last_set_texture_image_width + 1)*height);
+		memset(ia4_xform_buf, 0, 8192);//(last_set_texture_image_width + 1)*height);
 		uint8_t* start =
 			(uint8_t*) &rdp.loaded_texture[tile]
 				.addr[(((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) >> 1) * (last_set_texture_image_width + 1)) +
@@ -577,7 +565,7 @@ static void import_texture_ia4(int tile) {
 static void import_texture_ia8(int tile) {
 	uint32_t width = rdp.texture_tile.line_size_bytes;
 	uint32_t height = rdp.loaded_texture[tile].size_bytes / rdp.texture_tile.line_size_bytes;
-	n64_memset(rgba16_buf, 0, width*height*2);//8192*2);
+	memset(rgba16_buf, 0, width*height*2);//8192*2);
 
 	uint8_t* start = (uint8_t*) &rdp.loaded_texture[tile]
 						 .addr[((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) * (last_set_texture_image_width + 1)) +
@@ -630,7 +618,7 @@ static void import_texture_ia16(int tile) {
 		src_width = width;
 	}
 
-//	n64_memset(rgba16_buf,0,src_width*height);
+//	memset(rgba16_buf,0,src_width*height);
 
 	uint16_t* start = rdp.loaded_texture[tile].addr;
 	if (last_set_texture_image_width) {
@@ -675,7 +663,7 @@ static void import_texture_i4(int tile) {
 		}
 	} else {
 //		uint8_t xform_buf[8192];
-		n64_memset(rgba16_buf,0,8192);
+		memset(rgba16_buf,0,8192);
 		uint8_t* start =
 			(uint8_t*) &rdp.loaded_texture[tile]
 				.addr[(((((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC)-1)/2) * (width)/2)) +
@@ -709,7 +697,7 @@ static void import_texture_i8(int tile) {
 	uint32_t height = rdp.loaded_texture[tile].size_bytes / rdp.texture_tile.line_size_bytes;
 
 	uint8_t xform_buf[8192];
-    n64_memset(xform_buf, 0, width*height*2);
+    memset(xform_buf, 0, width*height*2);
 
 	uint8_t* start = (uint8_t*) &rdp.loaded_texture[tile]
 						 .addr[((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) * (last_set_texture_image_width + 1)) +
@@ -754,7 +742,7 @@ static void import_texture_ci4(int tile) {
 		}
 	} else {
 		uint8_t xform_buf[8192];
-		n64_memset(xform_buf, 0, width*height*2);
+		memset(xform_buf, 0, width*height*2);
 		uint8_t* start =
 			(uint8_t*) &rdp.loaded_texture[tile]
 				.addr[(((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) / 2) * (last_set_texture_image_width + 1)) +
@@ -2705,7 +2693,7 @@ void gfx_init(struct GfxWindowManagerAPI* wapi, struct GfxRenderingAPI* rapi, co
 	gfx_rapi->select_texture(0, oops_texture_id);
 	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, 64, 64, GL_UNSIGNED_SHORT_4_4_4_4_REV);
 
-	n64_memset(&oops_node, 0, sizeof(oops_node));
+	memset(&oops_node, 0, sizeof(oops_node));
 	oops_node.texture_id = oops_texture_id;
 }
 

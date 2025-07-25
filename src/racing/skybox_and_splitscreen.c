@@ -337,6 +337,8 @@ void select_framebuffer(void) {
     gDPPipeSync(gDisplayListHead++);
     gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
 #else
+    gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH,
+                     VIRTUAL_TO_PHYSICAL(gPhysicalFramebuffers[sRenderingFramebuffer]));
     gDPPipeSync(gDisplayListHead++);
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     gDPPipeSync(gDisplayListHead++);
@@ -345,7 +347,6 @@ void select_framebuffer(void) {
 }
 
 void draw_splitscreen_separators(void) {
-
     if (gActiveScreenMode == SCREEN_MODE_1P) {
         return;
     }

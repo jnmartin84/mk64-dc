@@ -49,7 +49,6 @@ void guMtxF2L(float mf[4][4], Mtx* m) {
 #endif
 
 #include "sh4zam.h"
-void n64_memset(void *dst, uint8_t val, size_t size);
 
 void guMtxIdentF(float mf[4][4]) {
 #if 0

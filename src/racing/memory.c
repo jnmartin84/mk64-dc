@@ -208,9 +208,7 @@ void n64_memcpy(void* dst, const void* src, size_t size) {
             case 7:
                 goto n64copy7;
         }
-
-        return;
-    } else if ((!(((uintptr_t)bdst | (uintptr_t)bsrc) & 1))) {
+    }/*  else if ((!(((uintptr_t)bdst | (uintptr_t)bsrc) & 1))) {
         while (shorts_to_copy--) {
             *sdst++ = *ssrc++;
         }
@@ -236,8 +234,7 @@ void n64_memcpy(void* dst, const void* src, size_t size) {
             case 7:
                 goto n64copy7;
         }
-        return;
-    } else {
+    } */ else {
         while (words_to_copy > 0) {
             uint8_t b1, b2, b3, b4;
             b1 = *bsrc++;
@@ -273,7 +270,6 @@ void n64_memcpy(void* dst, const void* src, size_t size) {
             case 7:
                 goto n64copy7;
         }
-        return;
     }
 
 n64copy7:
@@ -292,7 +288,7 @@ n64copy1:
     *bdst++ = *bsrc++;
     return;
 }
-
+#if 0
 void n64_memset(void *dst, uint8_t val, size_t size)
 {
     uint8_t *bdst = (uint8_t *)dst;
@@ -339,6 +335,7 @@ void n64_memset(void *dst, uint8_t val, size_t size)
         }
     }
 }
+#endif
 
 #if 0
 /**
@@ -548,10 +545,10 @@ u8* load_course(s32 courseId) {
 
     vertexCount = gCourseTable[courseId].vertexCount;
 
-    n64_memset(COURSE_BUF, 0, sizeof(COURSE_BUF));
-    n64_memset(COMP_VERT_BUF, 0, sizeof(COMP_VERT_BUF));
-    n64_memset(DECOMP_VERT_BUF, 0, sizeof(DECOMP_VERT_BUF));
-    n64_memset(UNPACK_BUF, 0, sizeof(UNPACK_BUF));
+    memset(COURSE_BUF, 0, sizeof(COURSE_BUF));
+    memset(COMP_VERT_BUF, 0, sizeof(COMP_VERT_BUF));
+    memset(DECOMP_VERT_BUF, 0, sizeof(DECOMP_VERT_BUF));
+    memset(UNPACK_BUF, 0, sizeof(UNPACK_BUF));
 
     char *courseName = get_course_name(gCurrentCourseId);
 	// open course data

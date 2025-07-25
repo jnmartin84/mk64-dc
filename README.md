@@ -62,6 +62,11 @@ To build the source into an ELF file, run the following commands (exactly as wri
     cd ~/mario-kart-64-dc
     git submodule update --init
     cd tools/torch
+
+Under `~/mario-kart-64-dc/tools/torch` you will find a `README.md` with instructions on installing dependencies for `torch`.
+
+Follow those instructions or nothing else will work. Then continue with the following commands:
+
     make
     cd ..
     make

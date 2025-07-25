@@ -1,21 +1,6 @@
 #include <kos.h>
-#undef CONT_C
-#undef CONT_B
-#undef CONT_A
-#undef CONT_START
-#undef CONT_DPAD_UP
-#undef CONT_DPAD_DOWN
-#undef CONT_DPAD_LEFT
-#undef CONT_DPAD_RIGHT
-#undef CONT_Z
-#undef CONT_Y
-#undef CONT_X
-#undef CONT_D
-#undef CONT_DPAD2_UP
-#undef CONT_DPAD2_DOWN
-#undef CONT_DPAD2_LEFT
-#undef CONT_DPAD2_RIGHT
-#undef bool
+#include "kos_undef.h"
+
 #include <stdio.h>
 #include <ultra64.h>
 #include <PR/ultratypes.h>
@@ -3462,14 +3447,6 @@ Gfx* func_80098FC8(Gfx* displayListHead, s32 ulx, s32 uly, s32 lrx, s32 lry) {
     return draw_box_fill(displayListHead, ulx, uly, lrx, lry, 0, 0, 0, 0xFF);
 }
 
-void dma_copy_mio0_segment(u64* data, size_t nbytes, void* vaddr) {
-    dma_copy(vaddr, data, nbytes);
-}
-
-void dma_tkmk00_textures(u64* data, size_t nbytes, void* vaddr) {
-    dma_copy(vaddr, data, nbytes);
-}
-
 void clear_menu_textures(void) {
     sMenuTextureBufferIndex = 0;
     sMenuTextureEntries = 0;
@@ -3515,10 +3492,12 @@ void load_menu_img(MenuTexture* addr) {
                 }
 
                 size = ((size+ 7)) & ~7;
-                mio0decode((u8*) texAddr->textureData , (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
+                mio0decode((u8*) texAddr->textureData ,
+                            (u8*) &gMenuTextureBuffer[sMenuTextureBufferIndex]);
             } else {
-                dma_copy_mio0_segment(texAddr->textureData, (texAddr->height * texAddr->width) * 2,
-                                      &gMenuTextureBuffer[sMenuTextureBufferIndex]);
+                n64_memcpy(&gMenuTextureBuffer[sMenuTextureBufferIndex],
+                            segmented_to_virtual_dupe(texAddr->textureData),
+                            (texAddr->height * texAddr->width) * 2);
             }
             texMap[sMenuTextureEntries].textureData = texAddr->textureData;
             texMap[sMenuTextureEntries].offset = sMenuTextureBufferIndex;
@@ -3548,8 +3527,9 @@ void func_80099394(MenuTexture* addr) {
 
         if (imgLoaded == 0) {
             if (texAddr->type == 5) {
-                dma_copy_mio0_segment(texAddr->textureData, (u32) (((s32) (texAddr->height * texAddr->width)) / 2),
-                                      &gMenuTextureBuffer[sMenuTextureBufferIndex]);
+                n64_memcpy(&gMenuTextureBuffer[sMenuTextureBufferIndex],
+                            segmented_to_virtual_dupe(texAddr->textureData),
+                            (u32) (((s32) (texAddr->height * texAddr->width)) / 2));
             }
             texMap[sMenuTextureEntries].textureData = texAddr->textureData;
             texMap[sMenuTextureEntries].offset = sMenuTextureBufferIndex;
@@ -3682,6 +3662,10 @@ void func_80099A94(MenuTexture* arg0, s32 arg1) {
     }
     var_v1->texture = segmented_to_virtual_dupe(arg0);
     var_v1->texNum = arg1;
+}
+
+static inline void dma_copy(u8* dest, u8* romAddr, size_t size) {
+    n64_memcpy(segmented_to_virtual(dest), segmented_to_virtual(romAddr), size);
 }
 
 void func_80099AEC(void) {
@@ -4480,9 +4464,11 @@ Gfx* func_8009C204(Gfx* arg0, MenuTexture* arg1, s32 arg2, s32 arg3, s32 arg4) {
         switch (var_s1->type) {
             case 0:
                 gSPDisplayList(arg0++, D_02007708);
+                gDPSetCombineMode(arg0++, G_CC_DECALRGB, G_CC_DECALRGB);
                 break;
             case 1:
                 gSPDisplayList(arg0++, D_02007728);
+                gDPSetCombineMode(arg0++, G_CC_DECALRGB, G_CC_DECALRGB);
                 break;
             case 3:
                 gSPDisplayList(arg0++, D_02007768);
@@ -4490,6 +4476,7 @@ Gfx* func_8009C204(Gfx* arg0, MenuTexture* arg1, s32 arg2, s32 arg3, s32 arg4) {
                 break;
             default:
                 gSPDisplayList(arg0++, D_02007728);
+                gDPSetCombineMode(arg0++, G_CC_DECALRGB, G_CC_DECALRGB);
                 break;
         }
         temp_t0 = (u8*) func_8009B8C4(var_s1->textureData);
@@ -5190,7 +5177,7 @@ void func_8009DB8C(void) {
     if ((u32) var_v1 >= D_8018E7B8[4]) {
         if ((u32) var_v1 == D_8018E7B8[4]) {
             for (var_s0 = 0; var_s0 < 0x4B0; var_s0++) {
-                sTKMK00_LowResBuffer[var_s0] = 0xff;//1;
+                sTKMK00_LowResBuffer[var_s0] = 1;
             }
         } else {
             func_8009CE64(4);
@@ -5209,11 +5196,12 @@ void func_8009DB8C(void) {
             }
         }
     }
+
+#if 0
     gDPPipeSync(gDisplayListHead++);
     gDPSetRenderMode(gDisplayListHead++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
     gDPSetPrimColor(gDisplayListHead++, 0, 0, 0x00, 0x00, 0x00, 0xFF);
     gDPSetCombineMode(gDisplayListHead++, G_CC_PRIMITIVE, G_CC_PRIMITIVE);
-#if 0
     for (var_s0 = 0; var_s0 < 0x4B0; var_s0++) {
         if (sTKMK00_LowResBuffer[var_s0] != 0) {
             temp_t4 = (var_s0 % 40) * 8;
@@ -5221,8 +5209,9 @@ void func_8009DB8C(void) {
             gDPFillRectangle(gDisplayListHead++, temp_t4, temp_t5, temp_t4 + 8, temp_t5 + 8);
         }
     }
-#endif
     gDPPipeSync(gDisplayListHead++);
+#endif
+
     var_v1 = (D_8018E7D0[4] * 255) / D_8018E7B8[4];
     if (var_v1 >= 0x100) {
         var_v1 = 0x000000FF;
@@ -6784,26 +6773,21 @@ void func_800A1500(MenuItem* arg0) {
 // data menu shit
 void func_800A15EC(MenuItem* arg0) {
     s16 courseId = gCupCourseOrder[(arg0->type - 0x7C) / 4][(arg0->type - 0x7C) % 4];
-//doing_previews = 1;
+
     gDisplayListHead =
         func_8009C204(gDisplayListHead, segmented_to_virtual_dupe(gMenuTexturesCoursePreview[courseId]), arg0->column, arg0->row, 2);
-//doing_previews = 0;
-        gDisplayListHead = draw_box(gDisplayListHead, arg0->column, arg0->row + 0x27, arg0->column + 0x40, arg0->row + 0x30,
+
+    gDisplayListHead = draw_box(gDisplayListHead, arg0->column, arg0->row + 0x27, arg0->column + 0x40, arg0->row + 0x30,
                                 0, 0, 0, 0xFF);
     gDisplayListHead = func_8009C204(gDisplayListHead, segmented_to_virtual_dupe(gMenuTexturesCourseTitle[courseId]), arg0->column,
                                      arg0->row + 0x27, 3);
     if (func_800B639C(arg0->type - 0x7C) >= 0) {
-        // The "^ 0" is required to force the use of v1 instead of a 4th s* register
-        gDisplayListHead = draw_flash_select_case_slow(gDisplayListHead, arg0->column + 0x20, arg0->row /* ^ 0 */,
+        gDisplayListHead = draw_flash_select_case_slow(gDisplayListHead, arg0->column + 0x20, arg0->row,
                                                        arg0->column + 0x3F, arg0->row + 9);
-//doing_previews = 1;
-                                                       gDisplayListHead =
+        gDisplayListHead =
             func_8009C204(gDisplayListHead, segmented_to_virtual_dupe(&D_02004A0C), arg0->column + 0x20, arg0->row, 2);
-//doing_previews = 0;
-        }
-//doing_previews = 0;
-
     }
+}
 
 void func_800A1780(MenuItem* arg0) {
     RGBA16* temp_a1;
@@ -6817,10 +6801,10 @@ void func_800A1780(MenuItem* arg0) {
     temp_v1 = &D_800E74D0[arg0->param2];
     temp_a1 = &D_800E74D0[(arg0->param2 + 1) % 3];
     temp_a2 = 256 - arg0->param1;
-    red = ((temp_v1->red * temp_a2) + (temp_a1->red * arg0->param1)) / 256;
-    green = ((temp_v1->green * temp_a2) + (temp_a1->green * arg0->param1)) / 256;
-    blue = ((temp_v1->blue * temp_a2) + (temp_a1->blue * arg0->param1)) / 256;
-    alpha = ((temp_v1->alpha * temp_a2) + (temp_a1->alpha * arg0->param1)) / 256;
+    red = ((temp_v1->red * temp_a2) + (temp_a1->red * arg0->param1)) >> 8; // / 256;
+    green = ((temp_v1->green * temp_a2) + (temp_a1->green * arg0->param1)) >> 8; // / 256;
+    blue = ((temp_v1->blue * temp_a2) + (temp_a1->blue * arg0->param1)) >> 8; // / 256;
+    alpha = ((temp_v1->alpha * temp_a2) + (temp_a1->alpha * arg0->param1)) >> 8; // / 256;
     gDPSetPrimColor(gDisplayListHead++, 0, 0, red, green, blue, alpha);
     gDisplayListHead =
         render_menu_textures(gDisplayListHead, segmented_to_virtual_dupe(D_02001FA4), arg0->column, arg0->row);

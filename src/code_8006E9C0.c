@@ -115,10 +115,8 @@ void clear_object_list() {
  * Dma's mario kart 64 logo and course outline textures.
  */
 void mio0decode_noinval(const unsigned char *in, unsigned char *out);
-u8* dma_copy_base_misc_textures(u8* devAddr, u8* baseAddress, u32 size, u32 offset) {
-//    u8* address = baseAddress + offset;
+u8* dma_copy_base_misc_textures(u8* devAddr, u8* baseAddress, u32 size, UNUSED u32 offset) {
     size = ALIGN16(size);
-//    dma_copy(address, devAddr, size);
     mio0decode_noinval(segmented_to_virtual(devAddr), (u8*) baseAddress);
     return baseAddress;
 }

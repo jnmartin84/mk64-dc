@@ -2,23 +2,7 @@
 #define D_800DC510_AS_U16
 #endif
 #include <kos.h>
-#undef CONT_C
-#undef CONT_B
-#undef CONT_A
-#undef CONT_START
-#undef CONT_DPAD_UP
-#undef CONT_DPAD_DOWN
-#undef CONT_DPAD_LEFT
-#undef CONT_DPAD_RIGHT
-#undef CONT_Z
-#undef CONT_Y
-#undef CONT_X
-#undef CONT_D
-#undef CONT_DPAD2_UP
-#undef CONT_DPAD2_DOWN
-#undef CONT_DPAD2_LEFT
-#undef CONT_DPAD2_RIGHT
-#undef bool
+#include "kos_undef.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -539,16 +523,8 @@ void setup_mesg_queues(void) {
 //    osSetEventMesg(OS_EVENT_DP, &gIntrMesgQueue, (OSMesg) MESG_DP_COMPLETE);
 }
 
-void start_sptask(s32 taskType) {
-/*     if (taskType == M_AUDTASK) {
-        gActiveSPTask = sCurrentAudioSPTask;
-    } else {
-        gActiveSPTask = sCurrentDisplaySPTask;
-    }
-    osSpTaskLoad(&gActiveSPTask->task);
-    osSpTaskStartGo(&gActiveSPTask->task);
-    gActiveSPTask->state = SPTASK_STATE_RUNNING;
- */
+void start_sptask(UNUSED s32 taskType) {
+    return;
 }
 
 /**
@@ -556,59 +532,76 @@ void start_sptask(s32 taskType) {
  * Loads F3DEX or F3DLX based on the number of players
  **/
 void create_gfx_task_structure(void) {
-	//printf(__func__);
-	//printf("\n");
-	
-#if 1
-    gGfxSPTask->msgqueue = NULL;//&gGfxVblankQueue;
+    gGfxSPTask->msgqueue = NULL;
+    // = &gGfxVblankQueue;
     gGfxSPTask->msg = (OSMesg) 2;
     gGfxSPTask->task.t.type = M_GFXTASK;
     gGfxSPTask->task.t.flags = OS_TASK_DP_WAIT;
-    gGfxSPTask->task.t.ucode_boot = NULL;//rspF3DBootStart;
-    gGfxSPTask->task.t.ucode_boot_size = 0;//((u8*) rspF3DBootEnd - (u8*) rspF3DBootStart);
+
+    gGfxSPTask->task.t.ucode_boot = NULL;
+    // = rspF3DBootStart;
+
+    gGfxSPTask->task.t.ucode_boot_size = 0;
+    // = ((u8*) rspF3DBootEnd - (u8*) rspF3DBootStart);
+
     // The split-screen multiplayer racing state uses F3DLX which has a simple subpixel calculation.
     // Singleplayer race mode and all other game states use F3DEX.
     // http://n64devkit.square7.ch/n64man/ucode/gspF3DEX.htm
-    //if (gGamestate != RACING || gPlayerCountSelection1 == 1) {
-        gGfxSPTask->task.t.ucode = NULL;//gspF3DEXTextStart;
-        gGfxSPTask->task.t.ucode_data = NULL;//gspF3DEXDataStart;
-    //} else {
-    //    gGfxSPTask->task.t.ucode = NULL;//gspF3DLXTextStart;
-    //    gGfxSPTask->task.t.ucode_data = NULL;//gspF3DLXDataStart;
-    //}
+    if (gGamestate != RACING || gPlayerCountSelection1 == 1) {
+        gGfxSPTask->task.t.ucode = NULL;
+        // = gspF3DEXTextStart;
+        gGfxSPTask->task.t.ucode_data = NULL;
+        // = gspF3DEXDataStart;
+    } else {
+        gGfxSPTask->task.t.ucode = NULL;
+        // = gspF3DLXTextStart;
+        gGfxSPTask->task.t.ucode_data = NULL;
+        // = gspF3DLXDataStart;
+    }
     gGfxSPTask->task.t.flags = 0;
     gGfxSPTask->task.t.flags = OS_TASK_DP_WAIT;
     gGfxSPTask->task.t.ucode_size = SP_UCODE_SIZE;
     gGfxSPTask->task.t.ucode_data_size = SP_UCODE_DATA_SIZE;
-    gGfxSPTask->task.t.dram_stack = NULL;//(u64*) &gGfxSPTaskStack;
+    gGfxSPTask->task.t.dram_stack = NULL;
+    // = (u64*) &gGfxSPTaskStack;
     gGfxSPTask->task.t.dram_stack_size = SP_DRAM_STACK_SIZE8;
-//    gGfxSPTask->task.t.output_buff = (u64*) &gGfxSPTaskOutputBuffer;
-//    gGfxSPTask->task.t.output_buff_size = (u64*) ((u8*) gGfxSPTaskOutputBuffer + sizeof(gGfxSPTaskOutputBuffer));
+    gGfxSPTask->task.t.output_buff = NULL;
+    // = (u64*) &gGfxSPTaskOutputBuffer;
+    gGfxSPTask->task.t.output_buff_size = NULL;
+    // = (u64*) ((u8*) gGfxSPTaskOutputBuffer + sizeof(gGfxSPTaskOutputBuffer));
     gGfxSPTask->task.t.data_ptr = (u64*) gGfxPool->gfxPool;
     gGfxSPTask->task.t.data_size = (gDisplayListHead - gGfxPool->gfxPool) * sizeof(Gfx);
-    //func_8008C214();
-    gGfxSPTask->task.t.yield_data_ptr = NULL;//(u64*) &gGfxSPTaskYieldBuffer;
+    gGfxSPTask->task.t.yield_data_ptr = NULL;
+    // = (u64*) &gGfxSPTaskYieldBuffer;
     gGfxSPTask->task.t.yield_data_size = OS_YIELD_DATA_SIZE;
-#endif
-// ???
-//func_8008C214();
 }
+
 int held;
 int sd_x,sd_y;
 
 void init_controllers(void) {
-	//printf(__func__);
-	//printf("\n");
-	held = 0;	
     osCreateMesgQueue(&gSIEventMesgQueue, &gSIEventMesgBuf[0], ARRAY_COUNT(gSIEventMesgBuf));
     osSetEventMesg(OS_EVENT_SI, &gSIEventMesgQueue, (OSMesg) 0x33333333);
-//    osContInit(&gSIEventMesgQueue, &gControllerBits, gControllerStatuses);
-gControllerBits = 1;
-    //if ((gControllerBits & 1) == 0) {
-      //  sIsController1Unplugged = 1;
-    //} else {
+
+    //osContInit(&gSIEventMesgQueue, &gControllerBits, gControllerStatuses);
+    ////gControllerBits = 1;
+    gControllerBits = 0;
+
+    maple_device_t *cont;
+    for (int i=0;i<4;i++) {
+        cont = NULL;
+        cont = maple_enum_type(i, MAPLE_FUNC_CONTROLLER);
+        if (cont)
+            gControllerBits |= (1 << i);
+    }
+    if ((gControllerBits & 1) == 0) {
+        sIsController1Unplugged = 1;
+    } else {
         sIsController1Unplugged = 0;
-    //}
+    }
+
+    // jnmartin84 - my new vars
+    sd_x = sd_y = held = 0;
 }
 
 #if 1
@@ -861,24 +854,11 @@ void func_80000BEC(void) {
     gPhysicalZBuffer = VIRTUAL_TO_PHYSICAL(&gZBuffer);
 }
 
-void dispatch_audio_sptask(struct SPTask* spTask) {
-    osWritebackDCacheAll();
-    osSendMesg(&gSPTaskMesgQueue, spTask, OS_MESG_NOBLOCK);
+void dispatch_audio_sptask(UNUSED struct SPTask* spTask) {
 }
 
 static void exec_display_list(struct SPTask* spTask) {
 	send_display_list(&gGfxPool->spTask);
-#if 0
-    osWritebackDCacheAll();
-    spTask->state = SPTASK_STATE_NOT_STARTED;
-    if (sCurrentDisplaySPTask == NULL) {
-        sCurrentDisplaySPTask = spTask;
-        sNextDisplaySPTask = NULL;
-        osSendMesg(&gIntrMesgQueue, (OSMesg) MESG_START_GFX_SPTASK, OS_MESG_NOBLOCK);
-    } else {
-        sNextDisplaySPTask = spTask;
-    }
-#endif        
 }
 
 /**
@@ -924,7 +904,8 @@ void rendering_init(void) {
     init_rcp();
     clear_framebuffer(0);
     end_master_display_list();
-//    exec_display_list(&gGfxPool->spTask);
+    // don't do this yet
+    // exec_display_list(&gGfxPool->spTask);
     sRenderingFramebuffer++;
     gGlobalTimer++;
 }
@@ -943,29 +924,25 @@ void config_gfx_pool(void) {
  * Selects the next framebuffer to be rendered and displayed.
  */
 void display_and_vsync(void) {
-    //profiler_log_thread5_time(BEFORE_DISPLAY_LISTS);
-//    osRecvMesg(&gGfxVblankQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
     exec_display_list(&gGfxPool->spTask);
-    //profiler_log_thread5_time(AFTER_DISPLAY_LISTS);
-//    osRecvMesg(&gGameVblankQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
-//    osViSwapBuffer((void*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[sRenderedFramebuffer]));
-    //profiler_log_thread5_time(THREAD5_END);
-//    osRecvMesg(&gGameVblankQueue, &gMainReceivedMesg, OS_MESG_BLOCK);
-//    crash_screen_set_framebuffer(gPhysicalFramebuffers[sRenderedFramebuffer]);
 
     if (++sRenderedFramebuffer == 3) {
         sRenderedFramebuffer = 0;
     }
+
     if (++sRenderingFramebuffer == 3) {
         sRenderingFramebuffer = 0;
     }
+
     gGlobalTimer++;
 }
 
-void dma_copy(u8* dest, u8* romAddr, size_t size) {
-    n64_memcpy(segmented_to_virtual(dest), segmented_to_virtual(romAddr), size);
-}
+//void dma_copy(u8* dest, u8* romAddr, size_t size) {
+//    n64_memcpy(segmented_to_virtual(dest), segmented_to_virtual(romAddr), size);
+//}
+
 #include "buffer_sizes.h"
+
 extern u8 __attribute__((aligned(32))) COMMON_BUF[COMMON_BUF_SIZE];
 extern u16 common_texture_minimap_kart_toad[];
 extern u16 common_texture_minimap_kart_luigi[];
@@ -1056,15 +1033,14 @@ extern void load_ceremony_data(void);
 /**
  * Setup main segments and framebuffers.
  */
-void n64_memset(void *dst, uint8_t val, size_t size);
 static char texfn[256];
 
 void setup_game_memory(void) {
-    set_segment_base_addr(0, 0x8C010000);//0xDEADBEEF);
+    set_segment_base_addr(0, 0x8C010000);
     func_80000BEC();
-//    memset(SEG2_BUF, 0, sizeof(SEG2_BUF));
-    n64_memset(COMMON_BUF, 0, sizeof(COMMON_BUF));
-    set_segment_base_addr(2, SEG_DATA_START);//(void*) load_data(SEG_DATA_START, SEG_DATA_END, SEG2_BUF));
+
+    memset(COMMON_BUF, 0, sizeof(COMMON_BUF));
+    set_segment_base_addr(2, SEG_DATA_START);
 
     sprintf(texfn, "%s/dc_data/common_data.bin", fnpre);
 
