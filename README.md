@@ -86,15 +86,15 @@ If you are trying to use the disc image on anything OTHER than a CDR, I cannot h
 
 The following is the mapping of N64 controls/actions to Dreamcast controls.
 
-Dreamcast DPAD - N64 DPAD (move in menus)
-Dreamcast Analog Stick - N64 Analog Stick (move in game)
-Dreamcast Start - N64 Start (... start)
-Dreamcast A button - N64 A button (accelerate, menu select)
-Dreamcast B button - N64 B button (brake, menu back?)
-Dreamcast X button - N64 right C button (HUD change)
-Dreamcast Y button - N64 up C button (camera)
-Dreamcast L trigger - N64 Z trigger (use item)
-Dreamcast R trigger - N64 R trigger (jump/drift)
+    Dreamcast DPAD - N64 DPAD (move in menus)
+    Dreamcast Analog Stick - N64 Analog Stick (move in game)
+    Dreamcast Start - N64 Start (... start)
+    Dreamcast A button - N64 A button (accelerate, menu select)
+    Dreamcast B button - N64 B button (brake, menu back?)
+    Dreamcast X button - N64 right C button (HUD change)
+    Dreamcast Y button - N64 up C button (camera)
+    Dreamcast L trigger - N64 Z trigger (use item)
+    Dreamcast R trigger - N64 R trigger (jump/drift)
 
 These controls are fixed, they are not configurable. If you don't like it, submit a Pull Request.
 
