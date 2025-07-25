@@ -115,6 +115,7 @@ Paul Cercueil (@pcercuei) - "HEY THAT'S A FIPR" and now we have FPU matrix-accel
 
 Luke Benstead (@kazade) - Without GLdc, this project would have taken 6 more months for me to go and write a new Fast3d backend instead of being able to start with an existing GL one. And for quickly reviewing and accepting my PRs to GLdc to add mirrored repeat :-D
 
+@stiffpeaks - VMU assets and case artwork
 
 On the N64 side:
 

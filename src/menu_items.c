@@ -2896,9 +2896,6 @@ Gfx* func_80095E10(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, s32 arg4, 
             } else {
                 var_s2 = var_t0;
             }
-//            if (doing_previews) {
-  //              gSPSignaling(displayListHead++);
-    //        }
             gDPLoadTextureTile(displayListHead++, argA, arg1, G_IM_SIZ_16b, argB, 0, var_a1_2, var_s3,
                                var_a1_2 + var_s2, var_s3 + var_s4, 0, G_TX_NOMIRROR | G_TX_WRAP,
                                G_TX_NOMIRROR | G_TX_WRAP, sp68, sp64, G_TX_NOLOD, G_TX_NOLOD);
@@ -2906,9 +2903,6 @@ Gfx* func_80095E10(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, s32 arg4, 
        //                         G_TX_NOMIRROR | G_TX_WRAP, 0, 0, G_TX_NOLOD, G_TX_NOLOD);
             gSPTextureRectangle(displayListHead++, arg8 * 4, arg9 * 4, (arg8 + var_s2) * 4, (arg9 + var_s4) * 4, 0,
                                 (var_a1_2 * 32) & 0xFFFF, (var_s3 * 32) & 0xFFFF, arg2, arg3);
-         //               if (doing_previews) {
-           //     gSPSignaling(displayListHead++);
-            //}
 
             arg8 += var_t0;
         }
@@ -3004,18 +2998,12 @@ Gfx* func_800963F0(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, f32 arg4, 
                 var_s2 = var_t0;
             }
             a = var_s2 * arg4;
-//if(doing_previews) {
-  //  gSPSignaling(displayListHead++);
-//}
 
             gDPLoadTextureTile(displayListHead++, argC, arg1, G_IM_SIZ_16b, argD, argE, var_a1_2, var_s3,
                                var_a1_2 + var_s2, var_s3 + var_s4, 0, G_TX_NOMIRROR | G_TX_WRAP,
                                G_TX_NOMIRROR | G_TX_WRAP, sp68, sp64, G_TX_NOLOD, G_TX_NOLOD);
             gSPTextureRectangle(displayListHead++, argA * 4, argB * 4, (argA + a) * 4, (argB + b) * 4, 0,
                                 (var_a1_2 * 32) & 0xFFFF, (var_s3 * 32) & 0xFFFF, arg2, arg3);
-//if(doing_previews) {
-  //  gSPSignaling(displayListHead++);
-//}
 
             argA += var_t0 * arg4;
         }
@@ -3307,11 +3295,6 @@ return displayListHead;
         }
         temp_v1 = ((32 * lrs) << 10) / (lrs * (32 - width));
 
-       // if (stupid_fucking_faces_hack) {//} || doing_previews) {
-          //  gSPSignaling(displayListHead++);
-//            gDPSetRenderMode(displayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
-  //          gDPSetCombineMode(displayListHead++, G_CC_MODULATERGB_PRIM, G_CC_MODULATERGB_PRIM2);//G_CC_DECALRGBA, G_CC_DECALRGBA);
-        //}
         gDPLoadTextureTile(displayListHead++, someTexture, fmt, G_IM_SIZ_16b, arg9, argA, temp, ult, temp + lrs,
                            ult + var_s2, 0,0/*  G_TX_NOMIRROR | G_TX_WRAP */, 0/* G_TX_NOMIRROR | G_TX_WRAP */, 5, 5, G_TX_NOLOD,
                            G_TX_NOLOD);
@@ -3319,18 +3302,15 @@ return displayListHead;
                             (arg7 + var_s2) << 2, 0, 0, (ult << 5) & 0xFFFF, temp_v1, 1024);
         arg6 += lrs;
         temp_v1 = ((32 * spDC) << 10) / (spDC * (32 - width));
-#if 1
+
         gDPLoadTextureTile(displayListHead++, someTexture, fmt, G_IM_SIZ_16b, arg9, argA, temp + lrs, ult, temp + arg9,
                            ult + var_s2, 0, 0/* G_TX_NOMIRROR | G_TX_WRAP */,0/*  G_TX_NOMIRROR | G_TX_WRAP */, 5, 5, G_TX_NOLOD,
                            G_TX_NOLOD);
         gSPTextureRectangle(displayListHead++, arg6 << 2, arg7 << 2, (arg6 + spDC * (32 - width) / 32) << 2,
                             (arg7 + var_s2) << 2, 0, (lrs << 5) & 0xFFFF, (ult << 5) & 0xFFFF, temp_v1, 1024);
-#endif
-                            arg6 = arg6Copy;
+
+        arg6 = arg6Copy;
         arg7 += temp2;
-        //if (stupid_fucking_faces_hack) {//} || doing_previews) {
-            //gSPSignaling(displayListHead++);
-        //}
     }
     return displayListHead;
 }
@@ -3384,9 +3364,6 @@ Gfx* func_800987D0(Gfx* displayListHead, u32 arg1, u32 arg2, u32 width, u32 heig
     columnCopy = column;
     for (var_v0_2 = arg2; (u32) var_v0_2 < height; var_v0_2 += 0x20) {
         for (var_a2 = arg1; (u32) var_a2 < width; var_a2 += 0x20) {
-//            if (doing_previews) {
-  //              gSPSignaling(displayListHead++);
-    //        }
             gDPLoadTextureTile(displayListHead++, gMenuTextureBuffer, G_IM_FMT_RGBA, G_IM_SIZ_16b, textureWidth, 0,
                                var_a2, var_v0_2, var_a2 + 0x20, var_v0_2 + 0x20, 0, G_TX_NOMIRROR | G_TX_WRAP,
                                G_TX_NOMIRROR | G_TX_WRAP, 5, 5, G_TX_NOLOD, G_TX_NOLOD);
@@ -3395,10 +3372,6 @@ Gfx* func_800987D0(Gfx* displayListHead, u32 arg1, u32 arg2, u32 width, u32 heig
             gSPTextureRectangle(displayListHead++, temp_f6 * 4, temp_f4_2 * 4, ((temp_f6 + 0x20) ^ 0) * 4,
                                 ((temp_f4_2 + 0x20)/*  ^ 0 */) * 4, 0, 0, 0, 1024, 1024);
             column += 0x20;
-            //            if (doing_previews) {
-              //  gSPSignaling(displayListHead++);
-            //}
-
         }
         column = columnCopy;
         row += 0x20;
@@ -4439,7 +4412,16 @@ Gfx* print_letter(Gfx* arg0, MenuTexture* glyphTexture, f32 arg2, f32 arg3, s32 
     f32 thing0;
     f32 thing1;
     MenuTexture* var_s0;
-
+#if 0
+    static int ever_printed = 0;
+    if (!ever_printed) {
+    Gfx testgfx1 = gsDPSetCombineLERP(0, 0, 0, SHADE, TEXEL0, 0, SHADE, 0, 0, 0, 0, SHADE, TEXEL0, 0, SHADE, 0);
+    Gfx testgfx2 = gsDPSetCombineLERP(0, 0, 0, SHADE, TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, SHADE, TEXEL0, 0, PRIMITIVE, 0);
+    printf("testgfx1 = %08x %08x\n", testgfx1.words.w0, testgfx1.words.w1);
+    printf("testgfx2 = %08x %08x\n", testgfx2.words.w0, testgfx2.words.w1);
+    ever_printed = 1;
+    }
+#endif    
     var_s0 = segmented_to_virtual_dupe(glyphTexture);
     while (var_s0->textureData != NULL) {
         var_v0 = 0;
@@ -4539,36 +4521,36 @@ Gfx* func_8009C434(Gfx* arg0, struct_8018DEE0_entry* arg1, s32 arg2, s32 arg3, s
 
     var_s0 = segmented_to_virtual_dupe(arg1->textureSequence[arg1->sequenceIndex].mk64Texture);
     temp = D_02007728;
-        if (stupid_fucking_faces_hack) {
-//    gSPSignaling(arg0++);
-        }
     while (var_s0->textureData != NULL) {
         var_t1 = 0;
-        if (stupid_fucking_faces_hack) {
-//            printf("FUCK");
-    //        var_t1 = 3;
+//        if (stupid_fucking_faces_hack) {
 
-                gDPSetRenderMode(arg0++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
-                gDPSetCombineMode(arg0++, G_CC_DECALRGB, G_CC_DECALRGB);//G_CC_DECALRGBA, G_CC_DECALRGBA);
+  //              gDPSetRenderMode(arg0++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
+    //            gDPSetCombineMode(arg0++, G_CC_DECALRGB, G_CC_DECALRGB);//G_CC_DECALRGBA, G_CC_DECALRGBA);
     //        gDPSetCombineMode(arg0++, G_CC_DECALRGB, G_CC_DECALRGB);
     //        gDPSetRenderMode(arg0++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
-        } else {
+      //  } else {
             switch (var_s0->type) { /* irregular */
-                default:
-                    gSPDisplayList(arg0++, temp);
-                    break;
                 case 0:
                     gSPDisplayList(arg0++, D_02007708);
+                    gDPSetCombineMode(arg0++, G_CC_DECALRGB, G_CC_DECALRGB);
                     break;
                 case 1:
                     gSPDisplayList(arg0++, temp);
+                    gDPSetCombineMode(arg0++, G_CC_DECALRGB, G_CC_DECALRGB);
                     break;
                 case 3:
                     gSPDisplayList(arg0++, D_02007768);
+//?????
+                    gDPSetCombineMode(arg0++, G_CC_DECALRGB, G_CC_DECALRGB);
                     var_t1 = 3;
                     break;
+                default:
+                    gSPDisplayList(arg0++, temp);
+                    gDPSetCombineMode(arg0++, G_CC_DECALRGB, G_CC_DECALRGB);
+                    break;
             }
-        }
+       // }
         if (arg1->unk14 != 0) {
             var_t0 = sMenuTextureMap[arg1->menuTextureIndex + 1].offset;
         } else {
@@ -4594,9 +4576,6 @@ Gfx* func_8009C434(Gfx* arg0, struct_8018DEE0_entry* arg1, s32 arg2, s32 arg3, s
         }
         var_s0++;
     }
-            if (stupid_fucking_faces_hack) {
-  //  gSPSignaling(arg0++);
-        }
 
     return arg0;
 }

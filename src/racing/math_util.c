@@ -205,7 +205,7 @@ void n64_memset(void *dst, uint8_t val, size_t size);
 #include "sh4zam.h"
 // Transform a matrix to a matrix identity
 void mtxf_identity(Mat4 mtx) {
-#if 1
+#if 0
     s32 i;
     s32 k;
 
@@ -270,18 +270,23 @@ UNUSED void add_translate_mat4_vec3f_lite(Mat4 mat, Mat4 dest, Vec3f pos) {
 // create a translation matrix
 void mtxf_translate(Mat4 dest, Vec3f b) {
     mtxf_identity(dest);
+
     dest[3][0] = b[0];
     dest[3][1] = b[1];
     dest[3][2] = b[2];
 }
-
+#define pi_over_180 0.017453292222222222f
+#define halfpi_over_180 0.00872665f
+#include <stdlib.h>
 // Note the use of `2` which generates diff asm than just using floats (2.0f).
 void func_802B5564(Mat4 arg0, u16* arg1, f32 arg2, f32 arg3, f32 arg4, f32 arg5, f32 arg6) {
     f32 temp;
     s32 i, j;
     mtxf_identity(arg0);
-    arg2 *= 0.017453292222222222;
-    temp = cosf(arg2 / 2) / sinf(arg2 / 2);
+    arg2 *= halfpi_over_180;
+    if (arg2 == 0.0f)
+        exit(-1);
+    temp = cosf(arg2) / sinf(arg2);
     arg0[0][0] = temp / arg3;
     arg0[1][1] = temp;
     arg0[2][2] = (arg4 + arg5) / (arg4 - arg5);
@@ -978,6 +983,7 @@ inline static void mat_load_apply(const matrix_t* matrix1, const matrix_t* matri
 				 : "fr0", "fr1", "fr2", "fr3", "fr4", "fr5", "fr6", "fr7", "fr8", "fr9", "fr10", "fr11", "fr12", "fr13",
 				   "fr14", "fr15");
 }
+
 void mtxf_multiplication(Mat4 dest, Mat4 mat1, Mat4 mat2) {
     mat_load_apply(mat2, mat1);
     fast_mat_store(dest);
@@ -1230,86 +1236,21 @@ u16 atan2s(f32 x, f32 y) {
     return ret;
 }
 
-f32 atan2f(f32 arg0, f32 arg1) {
+f32 mk64_atan2f(f32 arg0, f32 arg1) {
     return atan2s(arg0, arg1);
 }
-
-#if 0
-#ifndef NON_MATCHING // The decomp does not support fabs
-UNUSED f32 func_802B79F0(f32 arg0, f32 arg1) {
-    f64 halfpi;
-    f32 temp_f0;
-    UNUSED f32 pad;
-    f32 temp_f2;
-    f32 var_f16;
-    f32 var_f2;
-    s32 var_v0;
-
-    var_f16 = arg0 / arg1;
-    var_v0 = 0;
-    if (fabs(arg1) < fabs(arg0)) {
-        var_v0 = 1;
-    }
-    if (var_v0 != 0) {
-        var_f16 = arg1 / arg0;
-    }
-    temp_f0 = var_f16 * var_f16;
-    temp_f2 = temp_f0 * temp_f0;
-    var_f16 +=
-        ((((((((temp_f2 * ((-0.01600503f) + (temp_f0 * 0.00283406f))) + (-0.07495445f)) + (temp_f0 * 0.04258761f)) *
-             (temp_f2 * temp_f2)) +
-            (((-0.14202571f) + (temp_f0 * 0.10636754f)) * temp_f2)) +
-           (-0.33333066f)) +
-          (temp_f0 * 0.19992484f)) *
-         (var_f16 * temp_f0));
-
-    if (var_v0 != 0) {
-        halfpi = 1.5707963267948966;
-        return (arg0 < 0.0f ? -halfpi : halfpi) - var_f16;
-    }
-    if (arg1 >= 0.0f) {
-        return var_f16;
-    }
-    var_f2 = var_f16 + 3.1415927f;
-    if (arg0 < 0.0f) {
-        var_f2 = var_f16 - 3.1415927f;
-    }
-    return var_f2;
-}
-#endif
-
-UNUSED u16 func_802B7B50(f32 arg0, f32 arg1) {
-    return ((atan2f(arg0, arg1) * 32768.0f) / M_PI);
-}
-
-UNUSED void func_802B7C18(f32 arg0) {
-    atan2f(arg0, 1.0f);
-}
-#endif
 
 s16 func_802B7C40(f32 arg0) {
     return atan2s(arg0, 1.0f);
 }
-
-#if 0
-UNUSED void func_802B7C6C(f32 arg0) {
-    atan2f(arg0, sqrtf(1.0 - (arg0 * arg0)));
-}
-#endif
 
 s16 func_802B7CA8(f32 arg0) {
     return atan2s(arg0, sqrtf(1.0 - (arg0 * arg0)));
 }
 
 f32 calculate_vector_angle_xy(f32 vectorX) {
-    return atan2f(sqrtf(1.0 - (vectorX * vectorX)), vectorX);
+    return mk64_atan2f(sqrtf(1.0 - (vectorX * vectorX)), vectorX);
 }
-
-#if 0
-UNUSED s16 func_802B7D28(f32 arg0) {
-    return atan2f(sqrtf(1.0 - (f64) (arg0 * arg0)), arg0) * 32768.0f / M_PI;
-}
-#endif
 
 u16 random_u16(void) {
     u16 temp1, temp2;

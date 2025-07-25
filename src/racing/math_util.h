@@ -54,7 +54,7 @@ void mtxf_multiplication(Mat4, Mat4, Mat4);
 void mtxf_to_mtx(Mtx*, Mat4);
 u16 atan2_lookup(f32, f32);
 u16 atan2s(f32, f32);
-f32 atan2f(f32, f32);
+f32 mk64_atan2f(f32, f32);
 s16 func_802B7C40(f32);
 s16 func_802B7CA8(f32);
 f32 calculate_vector_angle_xy(f32);

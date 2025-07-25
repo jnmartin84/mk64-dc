@@ -74,11 +74,6 @@ static int scale_buf_size = 0;
 
 int in_intro;
 
-
-static float c_mix[] = { 0.f, 0.f, 0.f, 1.f };
-static float c_invmix[] = { 1.f, 1.f, 1.f, 1.f };
-static const float c_white[] = { 1.f, 1.f, 1.f, 1.f };
-
 static void resample_16bit(const unsigned short* in, int inwidth, int inheight, unsigned short* out, int outwidth,
                            int outheight) {
     int i, j;
@@ -92,7 +87,7 @@ static void resample_16bit(const unsigned short* in, int inwidth, int inheight, 
         frac = fracstep >> 1;
         for (j = 0; j < outwidth; j += 4) {
             uint16_t p1,p2,p3,p4;
-            if (j & 7 == 0)
+            if ((j & 7) == 0)
                 __builtin_prefetch(inrow + 16);
             p1 = inrow[frac >> 16];
             frac += fracstep;
@@ -736,7 +731,7 @@ void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size
     glTexCoordPointer(2, GL_FLOAT, sizeof(dc_fast_t), &tris[0].texture);
     glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(dc_fast_t), &tris[0].color);
     glEnable(GL_BLEND);
-
+glDisable(GL_DEPTH_TEST);
     if (buf_vbo_num_tris) {
         glEnableClientState(GL_TEXTURE_COORD_ARRAY);
         // if there's two textures, set primary texture first
