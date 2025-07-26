@@ -2294,7 +2294,6 @@ void SPINNING_THREAD(UNUSED void *arg) {
             while (vblticker <= last_vbltick + 1)
                 genwait_wait(&vblticker, NULL, 15, NULL);
         }
-
         last_vbltick = vblticker;
 
         create_next_audio_buffer(audio_buffer, SAMPLES_HIGH);

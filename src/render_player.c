@@ -23,6 +23,8 @@
 #include <assets/common_data.h>
 #include "skybox_and_splitscreen.h"
 #include "spawn_players.h"
+#include "sh4zam.h"
+
 void sincoss(u16 arg0, f32 *s, f32 *c);
 static inline void scaled_sincoss(u16 arg0, f32* s, f32* c, f32 scale) {
     register float __s __asm__("fr2");
@@ -1056,6 +1058,7 @@ void func_80021DA8(void) {
 }
 
 void mtxf_translate_rotate(Mat4 dest, Vec3f pos, Vec3s orientation) {
+#if 0
     f32 sinX;// = sins(orientation[0]);
     f32 cosX;// = coss(orientation[0]);
     f32 sinY;// = sins(orientation[1]);
@@ -1084,6 +1087,11 @@ void mtxf_translate_rotate(Mat4 dest, Vec3f pos, Vec3s orientation) {
     dest[1][2] = (sinY * sinZ) + ((sinX * cosY) * cosZ);
     dest[2][2] = cosX * cosY;
     dest[3][2] = pos[2];
+#else
+    shz_xmtrx_init_rotation(SHZ_ANGLE(orientation[0]), SHZ_ANGLE(orientation[1]), SHZ_ANGLE(orientation[2]));
+    shz_xmtrx_set_translation(pos[0], pos[1], pos[2]);
+    shz_xmtrx_store_4x4(dest);
+#endif
 }
 
 UNUSED void func_80021F50(Mat4 arg0, Vec3f arg1) {
@@ -1093,6 +1101,7 @@ UNUSED void func_80021F50(Mat4 arg0, Vec3f arg1) {
 }
 
 void mtxf_scale2(Mat4 arg0, f32 scale) {
+#if 0
     arg0[0][0] *= scale;
     arg0[1][0] *= scale;
     arg0[2][0] *= scale;
@@ -1102,6 +1111,11 @@ void mtxf_scale2(Mat4 arg0, f32 scale) {
     arg0[0][2] *= scale;
     arg0[1][2] *= scale;
     arg0[2][2] *= scale;
+#else
+    shz_xmtrx_load_4x4(arg0);
+    shz_xmtrx_apply_scale(scale, scale, scale);
+    shz_xmtrx_store_4x4(arg0);
+#endif
 }
 
 /**

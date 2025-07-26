@@ -433,16 +433,24 @@ endef
 
 # Override commmands for GCC Safe Files
 ifeq ($(GCC),1)
-  $(BUILD_DIR)/src/racing/math_util.o: TARGET_CFLAGS += -O3 
-  $(BUILD_DIR)/src/player_controller.o: TARGET_CFLAGS += -O3 
-  $(BUILD_DIR)/src/render_player.o: TARGET_CFLAGS += -O3 
-  $(BUILD_DIR)/src/math_util2.o: TARGET_CFLAGS += -O3 
   $(BUILD_DIR)/src/gfx/gfx_retro_dc.o: TARGET_CFLAGS += -O3 
   $(BUILD_DIR)/src/audio/mixer.o: TARGET_CFLAGS += -O3 
   $(BUILD_DIR)/src/audio/synthesis.o: TARGET_CFLAGS += -O3 
+  $(BUILD_DIR)/src/racing/math_util.o: TARGET_CFLAGS += -O3
+  $(BUILD_DIR)/src//math_util_2.o: TARGET_CFLAGS += -O3
+  $(BUILD_DIR)/src/racing/collision.o: TARGET_CFLAGS += -O3
   $(BUILD_DIR)/src/main.o:                          OPT_FLAGS := -g
   $(BUILD_DIR)/src/racing/skybox_and_splitscreen.o: OPT_FLAGS := -g
   $(BUILD_DIR)/src/racing/render_courses.o:         OPT_FLAGS := -g
+  $(BUILD_DIR)/courses/%/course_textures.linkonly.o: TARGET_CFLAGS += -fno-lto
+  $(BUILD_DIR)/courses/%/course_displaylists.inc.o: TARGET_CFLAGS += -fno-lto
+  $(BUILD_DIR)/courses/%/course_vertices.inc.o: TARGET_CFLAGS += -fno-lto
+  $(BUILD_DIR)/courses/%/course_data.o: TARGET_CFLAGS += -fno-lto
+  $(BUILD_DIR)/assets/code/startup_logo/startup_logo.o: TARGET_CFLAGS += -fno-lto
+  $(BUILD_DIR)/assets/code/ceremony_data/ceremony_data.o: TARGET_CFLAGS += -fno-lto
+  $(BUILD_DIR)/src/data/data_segment2.o: TARGET_CFLAGS += -fno-lto
+  $(BUILD_DIR)/src/data/textures.o: TARGET_CFLAGS += -fno-lto
+  $(BUILD_DIR)/courses/staff_ghost_data.o: TARGET_CFLAGS += -fno-lto
   $(SAFE_C_FILES): OPT_FLAGS := 
   $(SAFE_C_FILES): CC        := kos-cc
 #  $(SAFE_C_FILES): MIPSISET  := -mips3
@@ -542,7 +550,7 @@ $(BUILD_DIR)/src/crash_screen.o: src/crash_screen.c
 	@$(PRINT) "$(GREEN)Compiling Crash Screen:  $(BLUE)$@ $(NO_COL)\n"
 	$(V)$(N64GRAPHICS) -i $(BUILD_DIR)/textures/crash_screen/crash_screen_font.ia1.inc.c -g textures/crash_screen/crash_screen_font.ia1.png -f ia1 -s u8
 #	@$(CC_CHECK) $(CC_CHECK_CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/$*.d $<
-	$(V)$(CC) -c $(CFLAGS) -o $@ $<
+	$(V)$(CC) -fno-lto -c $(CFLAGS) -o $@ $<
 #	$(V)$(PYTHON) $(TOOLS_DIR)/set_o32abi_bit.py $@
 
 #==============================================================================#
@@ -567,7 +575,7 @@ $(TEXTURE_FILES_TLUT):
 $(BUILD_DIR)/assets/code/common_data/common_data.o: assets/code/common_data/common_data.c $(TEXTURE_FILES) $(TEXTURE_FILES_TLUT)
 	@$(PRINT) "$(GREEN)Compiling Common Textures:  $(BLUE)$@ $(NO_COL)\n"
 #	@$(CC_CHECK) $(CC_CHECK_CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/$*.d $<
-	$(V)$(CC) -c $(CFLAGS) -o $@ $<
+	$(V)$(CC) -fno-lto -c $(CFLAGS) -o $@ $<
 #	$(V)$(PYTHON) $(TOOLS_DIR)/set_o32abi_bit.py $@
 
 
@@ -767,18 +775,18 @@ LDFLAGS += -R $(BUILD_DIR)/assets/code/common_data/common_data.elf
 # Finalize and Link                                                            #
 #==============================================================================#
 
-#test.o: $(O_FILES)
-#	sh-elf-ld -EL --relocatable build/us/data/zkarts/all_kart.o build/us/courses/staff_ghost_data.o -o test.o
-#	sh-elf-objcopy --add-symbol __kart_texturesSegmentRomEnd=.data:0x004fcac4 test.o
+test.o: $(O_FILES)
+	sh-elf-ld -EL --relocatable build/us/data/zkarts/all_kart.o build/us/courses/staff_ghost_data.o -o test.o
+	sh-elf-objcopy --add-symbol __kart_texturesSegmentRomEnd=.data:0x004fcac4 test.o
 
-#data_segment2.o: $(O_FILES)
-#	sh-elf-ld -EL --relocatable build/us/src/data/textures.o build/us/src/data/data_segment2.o -o data_segment2.o
-#	sh-elf-objcopy --add-symbol __data_segment2SegmentRomStart=.data:0x0 data_segment2.o
-#	sh-elf-objcopy --add-symbol __data_segment2SegmentRomEnd=.data:0x00007d90 data_segment2.o
+data_segment2.o: $(O_FILES)
+	sh-elf-ld -EL --relocatable build/us/src/data/textures.o build/us/src/data/data_segment2.o -o data_segment2.o
+	sh-elf-objcopy --add-symbol __data_segment2SegmentRomStart=.data:0x0 data_segment2.o
+	sh-elf-objcopy --add-symbol __data_segment2SegmentRomEnd=.data:0x00007d90 data_segment2.o
 
 # Link MK64 ELF file
-REAL_OBJFILES := build/us/src/dcaudio/driver.o build/us/src/buffers/audio_heap.o build/us/src/audio/audio_session_presets.o build/us/src/audio/effects.o build/us/src/audio/mixer.o build/us/src/audio/heap.o build/us/src/audio/playback.o build/us/src/audio/seqplayer.o build/us/src/audio/data.o build/us/src/audio/load.o build/us/src/audio/port_eu.o build/us/src/audio/synthesis.o build/us/src/audio/external.o build/us/src/buffers/all_kinds_of_buffers.o build/us/src/gfx/gfx_cc.o build/us/src/gfx/gfx_dc.o build/us/src/gfx/gfx_gldc.o build/us/src/gfx/gfx_retro_dc.o memcpy32.o build/us/src/dcprofiler.o test.o build/us/src/compression/libmio0.o build/us/src/compression/libtkmk00.o build/us/courses/mario_raceway/course_offsets.o build/us/courses/choco_mountain/course_offsets.o build/us/courses/bowsers_castle/course_offsets.o build/us/courses/banshee_boardwalk/course_offsets.o build/us/courses/yoshi_valley/course_offsets.o build/us/courses/frappe_snowland/course_offsets.o build/us/courses/koopa_troopa_beach/course_offsets.o build/us/courses/royal_raceway/course_offsets.o build/us/courses/luigi_raceway/course_offsets.o build/us/courses/moo_moo_farm/course_offsets.o build/us/courses/toads_turnpike/course_offsets.o build/us/courses/kalimari_desert/course_offsets.o build/us/courses/sherbet_land/course_offsets.o build/us/courses/rainbow_road/course_offsets.o build/us/courses/wario_stadium/course_offsets.o build/us/courses/block_fort/course_offsets.o build/us/courses/skyscraper/course_offsets.o build/us/courses/double_deck/course_offsets.o build/us/courses/dks_jungle_parkway/course_offsets.o build/us/courses/big_donut/course_offsets.o build/us/assets/code/startup_logo/startup_logo.mio0.o build/us/assets/code/ceremony_data/ceremony_data.mio0.o data_segment2.o build/us/data/textures_0a.o build/us/data/other_textures.o build/us/data/texture_tkmk00.o build/us/src/code_800029B0.o build/us/src/profiler.o build/us/src/crash_screen.o build/us/src/animation.o build/us/src/staff_ghosts.o build/us/src/cpu_vehicles_camera_path.o build/us/src/vmu.o build/us/src/camera.o build/us/src/render_player.o build/us/src/kart_dma.o build/us/src/player_controller.o build/us/src/spawn_players.o build/us/src/code_8003DC40.o build/us/src/gbiMacro.o build/us/src/math_util_2.o build/us/src/render_objects.o build/us/src/code_80057C60.o build/us/src/code_80086E70.o build/us/src/effects.o build/us/src/code_80091440.o build/us/src/menu_items.o build/us/src/code_800AF9B0.o build/us/src/menus.o build/us/src/save.o build/us/src/ending/credits.o build/us/src/racing/race_logic.o build/us/src/racing/render_courses.o build/us/src/racing/actors.o build/us/src/racing/skybox_and_splitscreen.o build/us/src/racing/memory.o build/us/src/racing/collision.o build/us/src/racing/actors_extended.o build/us/src/racing/math_util.o build/us/courses/courseTable.o build/us/src/buffers/random.o build/us/src/buffers/buffers.o build/us/src/update_objects.o build/us/src/buffers/gfx_output_buffer.o build/us/src/ending/code_80280000.o build/us/src/ending/podium_ceremony_actors.o build/us/src/ending/camera_junk.o build/us/src/ending/code_80281780.o build/us/src/ending/code_80281C40.o build/us/src/ending/ceremony_and_credits.o build/us/src/ending/dl_unk_80284EE0.o build/us/src/data/path_spawn_metadata.o build/us/src/code_80057C60_var.o build/us/src/data/some_data.o build/us/src/data/kart_attributes.o build/us/assets/code/data_800E8700/data_800E8700.o build/us/assets/code/data_800E45C0/data_800E45C0.o build/us/src/code_8006E9C0.o build/us/src/os/gu*.o build/us/src/os/ultra_reimpl.o build/us/src/buffers/trig_tables.o build/us/src/main.o
-$(ELF):	$(O_FILES) memcpy32.o $(COURSE_DATA_TARGETS) $(BUILD_DIR)/assets/code/startup_logo/startup_logo.mio0.o $(BUILD_DIR)/assets/code/ceremony_data/ceremony_data.mio0.o $(BUILD_DIR)/assets/code/common_data/common_data.mio0.o $(COURSE_GEOGRAPHY_TARGETS) undefined_syms.txt
+REAL_OBJFILES := build/us/src/vmu.o build/us/src/dcaudio/driver.o build/us/src/buffers/audio_heap.o build/us/src/audio/audio_session_presets.o build/us/src/audio/effects.o build/us/src/audio/mixer.o build/us/src/audio/heap.o build/us/src/audio/playback.o build/us/src/audio/seqplayer.o build/us/src/audio/data.o build/us/src/audio/load.o build/us/src/audio/port_eu.o build/us/src/audio/synthesis.o build/us/src/audio/external.o build/us/src/buffers/all_kinds_of_buffers.o build/us/src/gfx/gfx_cc.o build/us/src/gfx/gfx_dc.o build/us/src/gfx/gfx_gldc.o build/us/src/gfx/gfx_retro_dc.o memcpy32.o build/us/src/dcprofiler.o test.o build/us/src/compression/libmio0.o build/us/src/compression/libtkmk00.o build/us/courses/mario_raceway/course_offsets.o build/us/courses/choco_mountain/course_offsets.o build/us/courses/bowsers_castle/course_offsets.o build/us/courses/banshee_boardwalk/course_offsets.o build/us/courses/yoshi_valley/course_offsets.o build/us/courses/frappe_snowland/course_offsets.o build/us/courses/koopa_troopa_beach/course_offsets.o build/us/courses/royal_raceway/course_offsets.o build/us/courses/luigi_raceway/course_offsets.o build/us/courses/moo_moo_farm/course_offsets.o build/us/courses/toads_turnpike/course_offsets.o build/us/courses/kalimari_desert/course_offsets.o build/us/courses/sherbet_land/course_offsets.o build/us/courses/rainbow_road/course_offsets.o build/us/courses/wario_stadium/course_offsets.o build/us/courses/block_fort/course_offsets.o build/us/courses/skyscraper/course_offsets.o build/us/courses/double_deck/course_offsets.o build/us/courses/dks_jungle_parkway/course_offsets.o build/us/courses/big_donut/course_offsets.o build/us/assets/code/startup_logo/startup_logo.mio0.o build/us/assets/code/ceremony_data/ceremony_data.mio0.o data_segment2.o build/us/data/textures_0a.o build/us/data/other_textures.o build/us/data/texture_tkmk00.o build/us/src/code_800029B0.o build/us/src/profiler.o build/us/src/crash_screen.o build/us/src/animation.o build/us/src/staff_ghosts.o build/us/src/cpu_vehicles_camera_path.o build/us/src/camera.o build/us/src/render_player.o build/us/src/kart_dma.o build/us/src/player_controller.o build/us/src/spawn_players.o build/us/src/code_8003DC40.o build/us/src/gbiMacro.o build/us/src/math_util_2.o build/us/src/render_objects.o build/us/src/code_80057C60.o build/us/src/code_80086E70.o build/us/src/effects.o build/us/src/code_80091440.o build/us/src/menu_items.o build/us/src/code_800AF9B0.o build/us/src/menus.o build/us/src/save.o build/us/src/ending/credits.o build/us/src/racing/race_logic.o build/us/src/racing/render_courses.o build/us/src/racing/actors.o build/us/src/racing/skybox_and_splitscreen.o build/us/src/racing/memory.o build/us/src/racing/collision.o build/us/src/racing/actors_extended.o build/us/src/racing/math_util.o build/us/courses/courseTable.o build/us/src/buffers/random.o build/us/src/buffers/buffers.o build/us/src/update_objects.o build/us/src/buffers/gfx_output_buffer.o build/us/src/ending/code_80280000.o build/us/src/ending/podium_ceremony_actors.o build/us/src/ending/camera_junk.o build/us/src/ending/code_80281780.o build/us/src/ending/code_80281C40.o build/us/src/ending/ceremony_and_credits.o build/us/src/ending/dl_unk_80284EE0.o build/us/src/data/path_spawn_metadata.o build/us/src/code_80057C60_var.o build/us/src/data/some_data.o build/us/src/data/kart_attributes.o build/us/assets/code/data_800E8700/data_800E8700.o build/us/assets/code/data_800E45C0/data_800E45C0.o build/us/src/code_8006E9C0.o build/us/src/os/gu*.o build/us/src/os/ultra_reimpl.o build/us/src/buffers/trig_tables.o build/us/src/main.o
+$(ELF):	$(O_FILES) memcpy32.o test.o data_segment2.o $(COURSE_DATA_TARGETS) $(BUILD_DIR)/assets/code/startup_logo/startup_logo.mio0.o $(BUILD_DIR)/assets/code/ceremony_data/ceremony_data.mio0.o $(BUILD_DIR)/assets/code/common_data/common_data.mio0.o $(COURSE_GEOGRAPHY_TARGETS) undefined_syms.txt
 	@$(PRINT) "$(GREEN)Linking ELF file:  $(BLUE)$@ $(NO_COL)\n"
 	kos-cc -g3 -o ${BUILD_DIR_BASE}/$@ -Xlinker -Map=build/us/mario-kart.elf.map -Wl,--just-symbols=build/us/assets/code/common_data/common_data.elf -Wl,--just-symbols=build/us/courses/mario_raceway/course_data.elf -Wl,--just-symbols=build/us/courses/choco_mountain/course_data.elf -Wl,--just-symbols=build/us/courses/bowsers_castle/course_data.elf -Wl,--just-symbols=build/us/courses/banshee_boardwalk/course_data.elf -Wl,--just-symbols=build/us/courses/yoshi_valley/course_data.elf -Wl,--just-symbols=build/us/courses/frappe_snowland/course_data.elf -Wl,--just-symbols=build/us/courses/koopa_troopa_beach/course_data.elf -Wl,--just-symbols=build/us/courses/royal_raceway/course_data.elf -Wl,--just-symbols=build/us/courses/luigi_raceway/course_data.elf -Wl,--just-symbols=build/us/courses/moo_moo_farm/course_data.elf -Wl,--just-symbols=build/us/courses/toads_turnpike/course_data.elf -Wl,--just-symbols=build/us/courses/kalimari_desert/course_data.elf -Wl,--just-symbols=build/us/courses/sherbet_land/course_data.elf -Wl,--just-symbols=build/us/courses/rainbow_road/course_data.elf -Wl,--just-symbols=build/us/courses/wario_stadium/course_data.elf -Wl,--just-symbols=build/us/courses/block_fort/course_data.elf -Wl,--just-symbols=build/us/courses/skyscraper/course_data.elf -Wl,--just-symbols=build/us/courses/double_deck/course_data.elf -Wl,--just-symbols=build/us/courses/dks_jungle_parkway/course_data.elf -Wl,--just-symbols=build/us/courses/big_donut/course_data.elf -Wl,--just-symbols=build/us/assets/code/startup_logo/startup_logo.elf -Wl,--just-symbols=build/us/assets/code/ceremony_data/ceremony_data.elf -Wl,--just-symbols=build/us/courses/yoshi_valley/course_data.elf -Wl,--just-symbols=build/us/courses/skyscraper/course_data.elf -Wl,--just-symbols=build/us/courses/choco_mountain/course_data.elf -Wl,--just-symbols=build/us/courses/block_fort/course_data.elf -Wl,--just-symbols=build/us/courses/bowsers_castle/course_data.elf -Wl,--just-symbols=build/us/courses/toads_turnpike/course_data.elf -Wl,--just-symbols=build/us/courses/kalimari_desert/course_data.elf -Wl,--just-symbols=build/us/courses/luigi_raceway/course_data.elf -Wl,--just-symbols=build/us/courses/frappe_snowland/course_data.elf -Wl,--just-symbols=build/us/courses/rainbow_road/course_data.elf -Wl,--just-symbols=build/us/courses/double_deck/course_data.elf -Wl,--just-symbols=build/us/courses/mario_raceway/course_data.elf -Wl,--just-symbols=build/us/courses/big_donut/course_data.elf -Wl,--just-symbols=build/us/courses/wario_stadium/course_data.elf -Wl,--just-symbols=build/us/courses/koopa_troopa_beach/course_data.elf -Wl,--just-symbols=build/us/courses/sherbet_land/course_data.elf -Wl,--just-symbols=build/us/courses/dks_jungle_parkway/course_data.elf -Wl,--just-symbols=build/us/courses/banshee_boardwalk/course_data.elf -Wl,--just-symbols=build/us/courses/moo_moo_farm/course_data.elf -Wl,--just-symbols=build/us/courses/royal_raceway/course_data.elf $(REAL_OBJFILES) -Wl,libGL-1.1.0/libGL.a
 	./generate_dc_data.sh
@@ -786,10 +794,10 @@ $(ELF):	$(O_FILES) memcpy32.o $(COURSE_DATA_TARGETS) $(BUILD_DIR)/assets/code/st
 cdi:
 	@test -s ${BUILD_DIR_BASE}/mario-kart.elf || { echo "Please run make before running make cdi . Exiting"; exit 1; }
 	$(RM) mariokart64.cdi
-	mkdcdisc -f kart.ico -f ghost.ico -d dc_data -e $(BUILD_DIR_BASE)/mario-kart.elf -o mariokart64.cdi -n "Mario Kart 64" -N -v 3
+	mkdcdisc -d dc_data -e $(BUILD_DIR_BASE)/mario-kart.elf -o mariokart64.cdi -n "Mario Kart 64" -N -v 3
 
 dcload:
-	sudo ./dcload-ip/host-src/tool/dc-tool-ip -x ${BUILD_DIR_BASE}/mario-kart.elf -c ./
+	dc-tool ${BUILD_DIR_BASE}/mario-kart.elf
 
 .PHONY: all clean distclean distclean_assets default diff test load assets
 # with no prerequisites, .SECONDARY causes no intermediate target to be removed

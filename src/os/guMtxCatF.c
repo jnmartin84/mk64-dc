@@ -31,8 +31,10 @@
  */
 
 #include <PR/gu.h>
+#include "sh4zam.h"
 
 void guMtxCatF(float mf[4][4], float nf[4][4], float res[4][4]) {
+ #if 0
     int i, j, k;
     float temp[4][4];
 
@@ -51,10 +53,22 @@ void guMtxCatF(float mf[4][4], float nf[4][4], float res[4][4]) {
             res[i][j] = temp[i][j];
         }
     }
+#else
+    shz_xmtrx_load_4x4_unaligned(mf);
+    shz_xmtrx_apply_4x4_unaligned(nf);
+    shz_xmtrx_store_4x4_unaligned(res);
+#endif
 }
 
 void guMtxXFMF(float mf[4][4], float x, float y, float z, float* ox, float* oy, float* oz) {
+#if 0
     *ox = mf[0][0] * x + mf[1][0] * y + mf[2][0] * z + mf[3][0];
     *oy = mf[0][1] * x + mf[1][1] * y + mf[2][1] * z + mf[3][1];
     *oz = mf[0][2] * x + mf[1][2] * y + mf[2][2] * z + mf[3][2];
+#else
+    shz_vec3_t out = shz_matrix4x4_trans_vec3(mf, (shz_vec3_t) { .x = x, .y = y, .z = z });
+    *ox = out.x;
+    *oy = out.y;
+    *oz = out.z;
+#endif
 }
