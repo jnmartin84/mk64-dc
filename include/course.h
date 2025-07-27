@@ -92,11 +92,11 @@ extern s16 cpu_SteeringSensitivity[];
 extern f32 cpu_CourseMinimumSeparation[];
 #define GET_COURSE_AIMinimumSeparation cpu_CourseMinimumSeparation[gCurrentCourseId]
 extern TrackPathPoint* gCoursePathTable[][4];
-#define GET_COURSE_PathTable(p) segmented_to_virtual_dupe_2(gCoursePathTable[gCurrentCourseId][p])
+#define GET_COURSE_PathTable(p) segmented_to_virtual(gCoursePathTable[gCurrentCourseId][p])
 extern TrackPathPoint* gCoursePathTable2[][4];
-#define GET_COURSE_PathTable2(p) segmented_to_virtual_dupe_2(gCoursePathTable2[gCurrentCourseId][p])
+#define GET_COURSE_PathTable2(p) segmented_to_virtual(gCoursePathTable2[gCurrentCourseId][p])
 extern CPUBehaviour* cpu_BehaviourLUT[];
-#define GET_COURSE_AIBehaviour segmented_to_virtual_dupe_2(cpu_BehaviourLUT[i])
+#define GET_COURSE_AIBehaviour segmented_to_virtual(cpu_BehaviourLUT[i])
 extern char* gCourseNames[];
 #define GET_COURSE_Name gCourseNames[gCurrentCourseId]
 extern char* gCourseNamesDup[];
@@ -107,13 +107,13 @@ extern f32 gCourseFarPersp;
 #define gCourseFarPersp gCourseFarPersp
 extern f32 gCourseNearPersp;
 #define gCourseNearPersp gCourseNearPersp
-#define GET_COURSE_D_0D0096B8(cc) *(f32*) segmented_to_virtual_dupe_2(&D_0D0096B8[gCurrentCourseId][cc])
+#define GET_COURSE_D_0D0096B8(cc) *(f32*) segmented_to_virtual(&D_0D0096B8[gCurrentCourseId][cc])
 #define GET_COURSE_cpu_OffTrackTargetSpeed(cc) \
-    *(f32*) segmented_to_virtual_dupe_2(&cpu_OffTrackTargetSpeed[gCurrentCourseId][cc])
+    *(f32*) segmented_to_virtual(&cpu_OffTrackTargetSpeed[gCurrentCourseId][cc])
 #define GET_COURSE_cpu_CurveTargetSpeed(cc) \
-    *(f32*) segmented_to_virtual_dupe_2(&cpu_CurveTargetSpeed[gCurrentCourseId][cc])
+    *(f32*) segmented_to_virtual(&cpu_CurveTargetSpeed[gCurrentCourseId][cc])
 #define GET_COURSE_cpu_NormalTargetSpeed(cc) \
-    *(f32*) segmented_to_virtual_dupe_2(&cpu_NormalTargetSpeed[gCurrentCourseId][cc])
+    *(f32*) segmented_to_virtual(&cpu_NormalTargetSpeed[gCurrentCourseId][cc])
 #else
 #define gCurrentCourseId
 #define GET_COURSE_800DCBB4(n)

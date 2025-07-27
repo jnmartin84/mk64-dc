@@ -413,8 +413,6 @@ void dma_copy_base_729a30(u64*, size_t, void*);
 void dma_copy_base_7fa3c0(u64*, size_t, void*);
 void clear_menu_textures(void);
 void load_menu_img(MenuTexture*);
-void* segmented_to_virtual_dupe(const void*);
-void* segmented_to_virtual_dupe_2(const void*);
 void load_menu_img_mio0_forced(MenuTexture*);
 void load_menu_img_comp_type(MenuTexture*, s32);
 void func_80099958(MenuTexture*, s32, s32);

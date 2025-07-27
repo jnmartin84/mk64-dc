@@ -361,7 +361,7 @@ void draw_splitscreen_separators(void) {
     gDPSetCycleType(gDisplayListHead++,G_CYC_1CYCLE);
     gDPSetRenderMode(gDisplayListHead++,G_RM_ZB_OPA_SURF, G_RM_ZB_OPA_SURF2);
     gDPSetCombineMode(gDisplayListHead++,G_CC_SHADE, G_CC_SHADE);
-    gDPSetFillColor(gDisplayListHead++, 0xFFFFFFFF);//0x00010001);
+    gDPSetFillColor(gDisplayListHead++, 0x00010001);
     gSPViewport(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&D_802B8880));
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     gDPPipeSync(gDisplayListHead++);

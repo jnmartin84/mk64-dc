@@ -28,6 +28,8 @@ uint32_t last_set_texture_image_width;
 int draw_rect;
 uint32_t oops_texture_id;
 
+int player_combiner = 0;
+
 void* segmented_to_virtual(void* addr);
 
 // SCALE_M_N: upscale/downscale M-bit integer to N-bit
@@ -1140,7 +1142,7 @@ static void  __attribute__((noinline)) gfx_sp_pop_matrix(uint32_t count) {
 //static float gfx_adjust_x_for_aspect_ratio(float x) {
 //	return x * (4.0f / 3.0f) / ((float) gfx_current_dimensions.width / (float) gfx_current_dimensions.height);
 //}
-int max_lights = 0;
+//int max_lights = 0;
 typedef struct __attribute__((aligned(32))) u_pvr_vertex_s {
 	union WFlag {
 		float w;
@@ -1315,10 +1317,10 @@ static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t de
 
         if (rsp.geometry_mode & G_LIGHTING) {
             if (rsp.lights_changed) {
-                if (rsp.current_num_lights > max_lights) {
-                    max_lights = rsp.current_num_lights;
-                    printf("max lights %d\n", max_lights);
-                }
+//                if (rsp.current_num_lights > max_lights) {
+//                    max_lights = rsp.current_num_lights;
+//                    printf("max lights %d\n", max_lights);
+//                }
                 if (rsp.current_num_lights == 2) {
                     calculate_normal_dir(&rsp.current_lights[0], rsp.current_lights_coeffs[0]);
                 }
@@ -1653,6 +1655,16 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         uint32_t color_g = 0;
         uint32_t color_b = 0;
         uint32_t color_a = 0;
+		if (player_combiner) {
+//			final color = (1 - ENVCOLOR) * TEXELCOLOR + PRIMITIVECOLOR 
+//			final alpha = (PRIMALPHA - 0) * TEXELALPHA + 0
+			color_r = (255 - rdp.env_color.r) + rdp.prim_color.r;
+			color_g = (255 - rdp.env_color.g) + rdp.prim_color.g;
+			color_b = (255 - rdp.env_color.b) + rdp.prim_color.b;
+			color_a = rdp.prim_color.a;
+	buf_vbo[buf_num_vert].color.packed = PACK_ARGB8888(color_r, color_g, color_b, color_a);
+	}
+else {
 #if 0		
 		if (do_font_1) {
 			struct RGBA *color = (struct RGBA *)&v_arr[i]->color;
@@ -1808,6 +1820,7 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
             }
         }
 	}
+}
         buf_num_vert++;
         buf_vbo_len += sizeof(dc_fast_t);
     }
@@ -2600,6 +2613,12 @@ static void  __attribute__((noinline)) gfx_run_dl(Gfx* cmd) {
 
 //testgfx1 = fcff99ff ff327f3f
 //testgfx2 = fcff97ff ff2e7f3f
+
+		if (cmd->words.w0 == 0xfc60b2c1 && cmd->words.w1 == 0x5565feff) {
+			player_combiner = 1;
+		} else {
+			player_combiner = 0;
+		}
 		if (cmd->words.w0 == 0xfcff99ff && cmd->words.w1 == 0xff327f3f) {
 			do_font_1 = 1;
 			do_font_2 = 0;

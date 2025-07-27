@@ -72,14 +72,13 @@ __attribute__((noinline)) void stacktrace() {
 		: "+r" (sp), "+r" (pr)
 		:
 		: );
-	printf("%s\n", "MARIO KART 64");
-	printf("Stack trace: %08X ", (uintptr_t)pr);
+	printf("[ %08X ", (uintptr_t)pr);
 	int found = 0;
 	if(!(sp & 3) && sp > 0x8c000000 && sp < _arch_mem_top) {
 		char** sp_ptr = (char**)sp;
 		for (int so = 0; so < 16384; so++) {
 			if ((uintptr_t)(&sp_ptr[so]) >= _arch_mem_top) {
-				printf("(@@%08X) ", (uintptr_t)&sp_ptr[so]);
+				//printf("(@@%08X) ", (uintptr_t)&sp_ptr[so]);
 				break;
 			}
 			if (sp_ptr[so] > (char*)0x8c000000 && sp_ptr[so] < etext) {
@@ -97,7 +96,7 @@ __attribute__((noinline)) void stacktrace() {
 				if (((instr & 0xf000) == 0xB000) || ((instr & 0xf0ff) == 0x0003) || ((instr & 0xf0ff) == 0x400B)) {
 					printf("%08X ", (uintptr_t)instrp);
 					if (found++ > 24) {
-						printf("(@%08X) ", (uintptr_t)&sp_ptr[so]);
+						//printf("(@%08X) ", (uintptr_t)&sp_ptr[so]);
 						break;
 					}
 				} else {
@@ -107,9 +106,9 @@ __attribute__((noinline)) void stacktrace() {
 				// dbglog(DBG_CRITICAL, "Stack trace: %p (@%p): out of range\n", (void*)sp_ptr[so], &sp_ptr[so]);
 			}
 		}
-		printf("end\n");
+		printf("]\n");
 	} else {
-		printf("(@%08X)\n", (uintptr_t)sp);
+		printf("]\n", (uintptr_t)sp);
 	}
 }
 

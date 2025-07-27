@@ -513,7 +513,9 @@ void func_80046424(s32 arg0, s32 arg1, u16 arg2, f32 arg3, u8* texture, Vtx* arg
                    s32 arg9) {
     func_80042330(arg0, arg1, arg2, arg3);
     gSPDisplayList(gDisplayListHead++, D_0D007968);
-    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 128, 128, 128, 255);
+    // guessing this is probably a rainbow color cycle
+    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 0,0,0,255);
+        //128, 128, 128, 255);
     func_80045D0C(texture, arg5, arg6, arg7, arg9);
 }
 
@@ -1560,6 +1562,7 @@ void setup_tinted_transparent(s32 primRed, s32 primGreen, s32 primBlue, s32 envR
     gDPSetEnvColor(gDisplayListHead++, envRed, envGreen, envBlue, 0xFF);
     gDPSetCombineLERP(gDisplayListHead++, 1, ENVIRONMENT, TEXEL0, PRIMITIVE, PRIMITIVE, 0, TEXEL0, 0, 1, ENVIRONMENT,
                       TEXEL0, PRIMITIVE, PRIMITIVE, 0, TEXEL0, 0);
+   // printf("the tinted transparent CC words: %08x %08x", (gDisplayListHead - 1)->words.w0, (gDisplayListHead - 1)->words.w1);
 }
 
 void func_8004B6C4(s32 red, s32 green, s32 blue) {
@@ -1788,7 +1791,10 @@ void draw_hud_2d_texture(s32 x, s32 y, u32 width, u32 height, u8* texture) {
 void func_8004C450(s32 x, s32 y, u32 width, u32 height, u8* texture) {
 
     gSPDisplayList(gDisplayListHead++, D_0D007F38);
-    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 0x80, 0x80, 0x80, 0xFF);
+// probably rainbow
+    //    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 0x80, 0x80, 0x80, 0xFF);
+
+    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 0, 0, 0, 0xFF);
     load_texture_block_rgba16_mirror(texture, width, height);
     func_8004B97C(x - (width >> 1), y - (height >> 1), width, height, 1);
     gSPDisplayList(gDisplayListHead++, D_0D007EB8);
@@ -3006,7 +3012,7 @@ void func_80050E34(s32 playerId, s32 arg1) {
     s32 objectIndex;
     s32 spD0;
     s32 spCC;
-    Player *dummy = &gPlayers/* One */[playerId];
+//    Player *dummy = &gPlayers/* One */[playerId];
     s32 spC4;
     s32 lapCount;
     s32 characterId;
@@ -3618,7 +3624,6 @@ void render_object_snowmans_list_1(s32 cameraId) {
     s32 objectIndex;
     Camera* camera;
 
-    int slice = 0;
     int initialized_tex = 0;
     u8* img[2];// = gObjectList[objectIndex].activeTexture;
     u8* img2[2];// = gObjectList[objectIndex].activeTexture + (0x40 * 0x20);

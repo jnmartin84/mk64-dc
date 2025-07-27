@@ -187,7 +187,7 @@ void audio_reset_session_eu(OSMesg presetId) {
 //    gAudioResetStatus = 5;
 //    thd_sleep(100);
  //  while(gPresetSent) {}
-//printf("d")
+////printf("d")
     //  AosSendMesg(D_800EA3B0, presetId, 0);
     //gPresetId;
 //    AosRecvMesg(D_800EA3B4, &mesg, 1);
@@ -498,8 +498,6 @@ void func_800C1F8C(void) {
 Vec3f* func_800C21E8(Vec3f pos, u32 soundBits) {
     u8 it = 0; // iterator
     Vec3f* ret = NULL;
-    // Only here to force a match
-    UNUSED f32* thing = pos;
     struct Unk_8018EFD8* temp_a1;
 
     ret = 0;
@@ -923,30 +921,66 @@ void func_800C2A2C(u32 cmd) {
             break;
     }
 }
-
+//extern __attribute__((noinline)) void stacktrace();
 void func_800C3448(u32 arg0) {
-    D_80192CD0[D_800EA1E4] = arg0;
-    D_800EA1E4 += 1;
+    //printf("%s(%08x)\n", __func__, arg0);
+//    stacktrace();
+    D_80192CD0[D_800EA1E4++] = arg0;
+/*     if (D_800EA1E4 == 255) {
+        D_800EA1E4 = 0;
+    } else {
+        D_800EA1E4 += 1;
+    } */
 }
 
 void func_800C3478(void) {
-    for (D_800EA1E8; D_800EA1E4 != D_800EA1E8;) {
-    //while(D_800EA1E4 != D_800EA1E8) {
+    //for (D_800EA1E8; D_800EA1E4 != D_800EA1E8;) {
+    while(D_800EA1E4 != D_800EA1E8) {
         func_800C2A2C(D_80192CD0[D_800EA1E8++]);
     }
 }
 
 u16 func_800C3508(u8 player) {
-    if (!gSequencePlayers[player].enabled) {
-        return -1;
-    }
+    //if (!gSequencePlayers[player].enabled) {
+    //    return -1;
+    //}
     return D_801930D0[player].unk_248;
 }
 
 u8 func_800C357C(s32 arg0) {
     u8 var_v1 = 0;
-    u8 i = 0;
+    u16 i = 0;
 
+#if 0
+//    i = D_800EA1E8;
+    var_v1 = 1;
+    u16 u16_1E4 = (u16)D_800EA1E4;
+    u16 u16_1E8 = (u16)D_800EA1E8;
+
+    if (u16_1E4 < u16_1E8) {
+        for (i = u16_1E8; i < 256; i++) {
+            if ((u32) arg0 == D_80192CD0[i]) {
+                var_v1 = 0;
+                break;
+            }
+        }
+        if (var_v1) {
+            for (i = 0; i < u16_1E8; i++) {
+                if ((u32) arg0 == D_80192CD0[i]) {
+                    var_v1 = 0;
+                    break;
+                }
+            }            
+        }
+    } else {
+        for (i = u16_1E8; i < u16_1E4; i++) {
+            if ((u32) arg0 == D_80192CD0[i]) {
+                var_v1 = 0;
+                break;
+            }
+        }        
+    }
+#else
     i = D_800EA1E8;
     var_v1 = 1;
     for (i = D_800EA1E8; i < (s32) D_800EA1E4; i++) {
@@ -955,6 +989,7 @@ u8 func_800C357C(s32 arg0) {
             i = D_800EA1E4;
         }
     }
+#endif
     return var_v1;
 }
 
@@ -2435,7 +2470,7 @@ void func_800C70A8(u8 playerId) {
         }
     }
 }
-
+extern int came_from_battle;
 void func_800C76C0(u8 playerId) {
     if (D_800E9EA4[playerId] != 0) {
         if (D_800E9EA4[playerId] < 0x2BC) {
@@ -2617,6 +2652,7 @@ void func_800C76C0(u8 playerId) {
         if (D_800E9EA4[playerId] == 0x0000001E) {
             switch (gModeSelection) { /* switch 3; irregular */
                 case BATTLE:          /* switch 3 */
+//                //printf("HUH?\n");
                     break;
                 case GRAND_PRIX: /* switch 3 */
                     if (gPlayers[playerId].currentRank == 0) {
@@ -2680,6 +2716,7 @@ void func_800C76C0(u8 playerId) {
                 }
                 break;
             case VERSUS: /* switch 4 */
+            came_from_battle = 1;
                 if (D_800EA1C0 == (u8) 1) {
                     if (D_800E9EA4[playerId] >= 0x65) {
                         if (D_800E9EA4[playerId] == 0x00000065) {
@@ -2706,6 +2743,7 @@ void func_800C76C0(u8 playerId) {
                 }
                 break;
             case BATTLE: /* switch 4 */
+            came_from_battle = 1;
                 if (D_800E9EA4[playerId] >= 0x65) {
                     if (D_800E9EA4[playerId] == 0x00000065) {
                         func_800C97C4(playerId);
@@ -3251,6 +3289,7 @@ void func_800C9F90(u8 arg0) {
 }
 
 void func_800CA008(u8 arg0, u8 arg1) {
+    //printf("%s(%02x,%02x)\n", __func__,arg0,arg1);
     func_800C36C4(0, 0, 0x7F, 1);
     func_800C36C4(1, 0, 0x7F, 1);
 
@@ -3266,15 +3305,15 @@ void func_800CA008(u8 arg0, u8 arg1) {
 
 // With -framepointer active, you CANNOT put void
 // in the argument list, causes a minor stack difference
-void func_800CA0A0() {
+void func_800CA0A0(void) {
     D_800EA108 = 1;
 }
 
-void func_800CA0B8() {
+void func_800CA0B8(void) {
     D_800EA108 = 0;
 }
 
-void func_800CA0CC() {
+void func_800CA0CC(void) {
     D_800EA108 = 1;
 }
 
@@ -3340,6 +3379,7 @@ void func_800CA30C(u8 arg0) {
 void func_800CA330(u8 arg0) {
     func_800C3448(arg0 << 0x10 | 0x100000FF);
     func_800C3448(arg0 << 0x10 | 0x110000FF);
+    //printf("are we running this?\n");
 }
 
 void func_800CA388(u8 arg0) {
@@ -3352,6 +3392,7 @@ void func_800CA388(u8 arg0) {
 }
 
 void func_800CA414(u16 arg0, u16 arg1) {
+    //printf("%s(%04x,%04x)\n", __func__, arg0, arg1);
     if (D_800EA104 == 0) {
         func_800C3448(func_800C3508(0) | 0x30000000);
         func_800C35E8(0);
@@ -3362,6 +3403,7 @@ void func_800CA414(u16 arg0, u16 arg1) {
 }
 
 void func_800CA49C(u8 arg0) {
+    //printf("%s(%02x)\n", __func__, arg0);
     if (D_800EA108 == 0) {
         if (D_800EA1C0 >= 2) {
             func_800C9060(arg0, 0x1900FF3A);
@@ -3382,6 +3424,7 @@ void func_800CA49C(u8 arg0) {
 }
 
 void func_800CA59C(u8 playerId) {
+    //printf("%s(%02x)\n", __func__, playerId);
     if ((D_800EA0EC[playerId] == 0) && (D_800EA108 == 0)) {
 #if PLAYER_SOUND_DEBUGGING
         play_sound((gPlayers[playerId].characterId * 0x10) + 0x29008001, &D_800E9F7C[playerId].pos, playerId,
@@ -3411,6 +3454,7 @@ void func_800CA59C(u8 playerId) {
 }
 
 void func_800CA730(u8 arg0) {
+    //printf("%s(%02x)\n", __func__, arg0);
     if (D_800EA0EC[arg0] == 0) {
         if ((D_800EA108 == 0) && (D_800EA10C[arg0] != 0)) {
 #if PLAYER_SOUND_DEBUGGING

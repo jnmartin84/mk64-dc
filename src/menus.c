@@ -1821,6 +1821,8 @@ void course_select_menu_act(struct Controller* arg0, u16 controllerIdx) {
 /**
  * Loads menu states so they are preserved between menu changes
  */
+#include <stdio.h>
+int came_from_battle = 0;
 void load_menu_states(s32 menuSelection) {
     s32 i;
 
@@ -1871,6 +1873,11 @@ void load_menu_states(s32 menuSelection) {
                 gPlayerCount = 4;
             }
             gScreenModeListIndex = sScreenModeIdxFromPlayerMode[gPlayerCount - 1];
+            if (came_from_battle) {
+                func_800C3448(0x100100FF);
+                func_800C3448(0x110100FF);
+                came_from_battle = 0;
+            }
             func_800CA008(0, 0);
             func_800C8EAC(1);
             gCourseMapInit = 0;
@@ -1885,6 +1892,11 @@ void load_menu_states(s32 menuSelection) {
             func_8000F0E0();
 
             if (gGamestate != 0) {
+            if (came_from_battle) {
+                func_800C3448(0x100100FF);
+                func_800C3448(0x110100FF);
+                came_from_battle = 0;
+            }
                 func_800CA008(0, 0);
                 func_800CB2C4();
                 gGamestate = 0;
@@ -1943,6 +1955,11 @@ void load_menu_states(s32 menuSelection) {
                         }
                         play_sound2(SOUND_MENU_SELECT_PLAYER);
                     } else {
+            if (came_from_battle) {
+                func_800C3448(0x100100FF);
+                func_800C3448(0x110100FF);
+                came_from_battle = 0;
+            }
                         func_800CA008(0, 0);
                         func_800CB2C4();
                         gGamestate = 0;
@@ -1981,6 +1998,11 @@ void load_menu_states(s32 menuSelection) {
                 gSubMenuSelection = SUB_MENU_MAP_SELECT_CUP;
             }
             if (gGamestate != 0) {
+            if (came_from_battle) {
+                func_800C3448(0x100100FF);
+                func_800C3448(0x110100FF);
+                came_from_battle = 0;
+            }
                 func_800CA008(0, 0);
                 func_800CB2C4();
                 gGamestate = 0;

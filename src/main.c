@@ -327,7 +327,7 @@ void setup_audio_data(void) {
 
         fseek(file, 0, SEEK_END);
         long filesize = ftell(file);
-        printf("audiobanks is %ld @ %08x\n", filesize, (uintptr_t)AUDIOBANKS_BUF);
+        //printf("audiobanks is %ld @ %08x\n", filesize, (uintptr_t)AUDIOBANKS_BUF);
         rewind(file);
 
         long toread = filesize;
@@ -338,11 +338,11 @@ void setup_audio_data(void) {
 
             if (rv == -1) {
                 printf("FILE IS FUCKED\n");
-            printf("\n");
-            while(1){}
+                printf("\n");
+                while(1){}
                 exit(-1);
             }
-        printf("writing %08x size %ld\n", (uintptr_t)&AUDIOBANKS_BUF[didread], rv);
+            //printf("writing %08x size %ld\n", (uintptr_t)&AUDIOBANKS_BUF[didread], rv);
 
             toread -= rv;
             didread += rv;
@@ -365,7 +365,7 @@ void setup_audio_data(void) {
 
         fseek(file, 0, SEEK_END);
         long filesize = ftell(file);
-        printf("audiotables is %ld @ %08x\n", filesize, (uintptr_t)AUDIOTABLES_BUF);
+        //printf("audiotables is %ld @ %08x\n", filesize, (uintptr_t)AUDIOTABLES_BUF);
         rewind(file);
 
         long toread = filesize;
@@ -375,11 +375,11 @@ void setup_audio_data(void) {
             long rv = fread(&AUDIOTABLES_BUF[didread], 1, toread - didread, file);
             if (rv == -1) {
                 printf("FILE IS FUCKED\n");
-            printf("\n");
-            while(1){}
+                printf("\n");
+                while(1){}
                 exit(-1);
             }
-        printf("writing %08x size %ld\n", (uintptr_t)&AUDIOTABLES_BUF[didread], rv);
+            //printf("writing %08x size %ld\n", (uintptr_t)&AUDIOTABLES_BUF[didread], rv);
             toread -= rv;
             didread += rv;
         }
@@ -401,7 +401,7 @@ void setup_audio_data(void) {
 
         fseek(file, 0, SEEK_END);
         long filesize = ftell(file);
-        printf("instrument_sets is %ld @ %08x\n", filesize, (uintptr_t)INSTRUMENT_SETS_BUF);
+        //printf("instrument_sets is %ld @ %08x\n", filesize, (uintptr_t)INSTRUMENT_SETS_BUF);
         rewind(file);
 
         long toread = filesize;
@@ -411,12 +411,12 @@ void setup_audio_data(void) {
             long rv = fread(&INSTRUMENT_SETS_BUF[didread], 1, toread - didread, file);
             if (rv == -1) {
                 printf("FILE IS FUCKED\n");
-            printf("\n");
-            while(1){}
+                printf("\n");
+                while(1){}
                 exit(-1);
             }
-         printf("writing %08x size %ld\n", (uintptr_t)&INSTRUMENT_SETS_BUF[didread], rv);
-           toread -= rv;
+            //printf("writing %08x size %ld\n", (uintptr_t)&INSTRUMENT_SETS_BUF[didread], rv);
+            toread -= rv;
             didread += rv;
         }
 
@@ -435,7 +435,7 @@ void setup_audio_data(void) {
 
         fseek(file, 0, SEEK_END);
         long filesize = ftell(file);
-        printf("sequences is %ld @ %08x\n", filesize, (uintptr_t)SEQUENCES_BUF);
+        //printf("sequences is %ld @ %08x\n", filesize, (uintptr_t)SEQUENCES_BUF);
         rewind(file);
 
         long toread = filesize;
@@ -445,11 +445,12 @@ void setup_audio_data(void) {
             long rv = fread(&SEQUENCES_BUF[didread], 1, toread - didread, file);
             if (rv == -1) {
                 printf("FILE IS FUCKED\n");
-            printf("\n");
-            while(1){}
+                printf("\n");
+                while(1){}
                 exit(-1);
             }
-                    printf("writing %08x size %ld\n", (uintptr_t)&SEQUENCES_BUF[didread], rv);
+
+            //printf("writing %08x size %ld\n", (uintptr_t)&SEQUENCES_BUF[didread], rv);
 
             toread -= rv;
             didread += rv;
@@ -459,14 +460,9 @@ void setup_audio_data(void) {
         _sequencesSegmentRomStart = SEQUENCES_BUF;
     }
 
-#if 1
     _AudioInit();
     audio_init();
     sound_init();
-
-    //init_all_sounds();
-//    create_thread(&gAudioThread,4,&thread4_audio,NULL,&gAudioThreadStack,10);
-#endif
 }
 
 #include "dcprofiler.h"
@@ -515,6 +511,7 @@ int main(UNUSED int argc, UNUSED char **argv) {
 }
 
 void setup_mesg_queues(void) {
+    return;
 //    osCreateMesgQueue(&gDmaMesgQueue, gDmaMesgBuf, ARRAY_COUNT(gDmaMesgBuf));
 //    osCreateMesgQueue(&gSPTaskMesgQueue, gSPTaskMesgBuf, ARRAY_COUNT(gSPTaskMesgBuf));
 //    osCreateMesgQueue(&gIntrMesgQueue, gIntrMesgBuf, ARRAY_COUNT(gIntrMesgBuf));
@@ -696,8 +693,7 @@ void update_controller(s32 index) {
     maple_device_t *cont;
     cont_state_t *state;
 ucheld = 0; stick = 0;
-//printf("update_controller(%d)\n",index);
-    if (index > 3)//player_index)
+    if (index > 3)
         return;
     cont = maple_enum_type(index, MAPLE_FUNC_CONTROLLER);
     if (!cont)
@@ -708,58 +704,35 @@ ucheld = 0; stick = 0;
     //profiler_stop();
     //    profiler_clean_up();
         // give vmu a chance to write and close
- //       thd_sleep(1000);
         __osPfsCloseAllFiles();   
         exit(0);
     }
 
     const char stickH =state->joyx;
     const char stickV = 0xff-((uint8_t)(state->joyy));
-//    const uint32_t magnitude_sq = (uint32_t)(stickH * stickH) + (uint32_t)(stickV * stickV);
-  //  if (magnitude_sq > (uint32_t)(6*6)) { //configDeadzone * configDeadzone)) {
         controller->rawStickX = ((float)stickH/127)*80;
         controller->rawStickY = ((float)stickV/127)*80;
-    //}
 
-    if (state->buttons & CONT_START)
-       ucheld |= 0x1000;//START_BUTTON;
-       //ucheld |= 0x0020;// 
-
-       if (state->buttons & CONT_X)
-        ucheld |= 0x0001;//C_RIGHT
-    if (state->buttons & CONT_Y)
-        ucheld |= 0x0008;//C_UP
-    if (state->buttons & CONT_B)
-        ucheld |= 0x4000;//B_BUTTON;
-//    if (state->rtrig && state->buttons & CONT_A)
-//        ucheld |= 0x0020;//L_TRIG;
-//    else {
-    if (state->rtrig)
-        ucheld |= 0x0010;//R_TRIG;
     if (state->buttons & CONT_A)
         ucheld |= 0x8000;//A_BUTTON;
-//    }
+    if (state->buttons & CONT_B)
+        ucheld |= 0x4000;//B_BUTTON;
     if (state->ltrig)
         ucheld |= 0x2000;//Z_TRIG;
-    if (state->buttons & CONT_DPAD_UP)
-        ucheld |= 0x0800;//U_CBUTTONS;
-    if (state->buttons & CONT_DPAD_DOWN)
-        ucheld |= 0x0400;//D_CBUTTONS;
+    if (state->buttons & CONT_START)
+       ucheld |= 0x1000;//START_BUTTON;
     if (state->buttons & CONT_DPAD_LEFT)
-        ucheld |= 0x0200;//L_CBUTTONS;
-    if (state->buttons & CONT_DPAD_RIGHT)
-        ucheld |= 0x0100;//R_CBUTTONS;
-
-//    if ((ucheld & 4) != 0)
-  //      ucheld |= Z_TRIG;
+        ucheld |= 0x0020;//L_TRIG;
+    if (state->rtrig)
+        ucheld |= 0x0010;//R_TRIG;
+    if (state->buttons & CONT_Y)
+        ucheld |= 0x0008;//C_UP
+    if (state->buttons & CONT_X)
+        ucheld |= 0x0001;//C_RIGHT
 
     controller->buttonPressed = ucheld & (ucheld ^ controller->button);
     controller->buttonDepressed = controller->button & (ucheld ^ controller->button);
     controller->button = ucheld;
-
-//printf("PRESSED %08x\n", controller->buttonPressed);
-//printf("DEPRESSED %08x\n", controller->buttonDepressed);
-//printf("BUTTON %08x\n", controller->button);
 
     stick = 0;
     if (controller->rawStickX < -50) {
@@ -774,61 +747,19 @@ ucheld = 0; stick = 0;
     if (controller->rawStickY > 50) {
         stick |= U_JPAD;
     }
-//printf("STICK %08x\n", stick);
+
     controller->stickPressed = stick & (stick ^ controller->stickDirection);
     controller->stickDepressed = controller->stickDirection & (stick ^ controller->stickDirection);
     controller->stickDirection = stick;
-
-//    if (sIsController1Unplugged) {
-  //      return;
-    //}
-#if 0
-	int ucheld = (held >> 16) & 0x0000FFFF;
-////printf("GET SOME FUCKING BUTTONS %08x\n", held);
-    controller->rawStickX = sd_x;//gControllerPads[index].stick_x;
-    controller->rawStickY = sd_y;//gControllerPads[index].stick_y;
-
-    if ((ucheld & 4) != 0) {
-        ucheld |= Z_TRIG;
-    }
-    controller->buttonPressed = ucheld & (ucheld ^ controller->button);
-    controller->buttonDepressed = controller->button & (ucheld ^ controller->button);
-    controller->button = ucheld;
-
-//printf("PRESSED %08x\n", controller->buttonPressed);
-//printf("DEPRESSED %08x\n", controller->buttonDepressed);
-//printf("BUTTON %08x\n", controller->button);
-
-    stick = 0;
-    if (controller->rawStickX < -50) {
-        stick |= L_JPAD;
-    }
-    if (controller->rawStickX > 50) {
-        stick |= R_JPAD;
-    }
-    if (controller->rawStickY < -50) {
-        stick |= D_JPAD;
-    }
-    if (controller->rawStickY > 50) {
-        stick |= U_JPAD;
-    }
-	//printf("STICK %08x\n", stick);
-    controller->stickPressed = stick & (stick ^ controller->stickDirection);
-    controller->stickDepressed = controller->stickDirection & (stick ^ controller->stickDirection);
-    controller->stickDirection = stick;
-#endif
 }
 
 void read_controllers(void) {
     OSMesg msg;
 
-//	printf(__func__);
-//	printf("\n");
-
-//FIXME controller shit
 //    osContStartReadData(&gSIEventMesgQueue);
     osRecvMesg(&gSIEventMesgQueue, &msg, OS_MESG_BLOCK);
 //    osContGetReadData(gControllerPads);
+
     update_controller(0);
     update_controller(1);
     update_controller(2);
@@ -1741,13 +1672,13 @@ void race_logic_loop(void) {
                 select_framebuffer();
             }
             D_8015F788 = 0;
-//            if (gPlayerWinningIndex == 0) {
-//                render_player_two_2p_screen_horizontal();
-//                render_player_one_2p_screen_horizontal();
-//            } else {
+            if (gPlayerWinningIndex == 0) {
+                render_player_two_2p_screen_horizontal();
+                render_player_one_2p_screen_horizontal();
+            } else {
                 render_player_one_2p_screen_horizontal();
                 render_player_two_2p_screen_horizontal();
-//            }
+            }
 
             break;
 
@@ -2132,13 +2063,7 @@ void func_80002658(void) {
     gActiveScreenMode = SCREEN_MODE_1P;
     set_perspective_and_aspect_ratio();
 }
-void SPINNING_THREAD(UNUSED void *arg);
 
-/**
- * Sets courseId to NULL if
- *
- *
- */
 void update_gamestate(void) {
     switch (gGamestate) {
         case START_MENU_FROM_QUIT:
@@ -2162,10 +2087,6 @@ void update_gamestate(void) {
             gCurrentlyLoadedCourseId = COURSE_NULL;
             break;
         case RACING:
-            /**
-             * @bug Reloading this segment makes random_u16() deterministic for player spawn order.
-             * In laymens terms, random_u16() outputs the same value every time.
-             */
             runtime_reset();
             setup_race();
             break;
@@ -2182,7 +2103,10 @@ void update_gamestate(void) {
     }
 }
 
+void SPINNING_THREAD(UNUSED void *arg);
+
 static volatile uint64_t vblticker=0;
+
 void vblfunc(uint32_t c, void *d) {
 	(void)c;
 	(void)d;
@@ -2221,7 +2145,7 @@ void thread5_game_loop(UNUSED void* arg) {
     vblank_handler_add(&vblfunc, NULL);
     create_thread(NULL, 5, &SPINNING_THREAD, NULL, NULL, 12);
 
-#if 1
+#if defined(MEMTEST)
     for(int mi=0;mi<6*1048576;mi+=65536) {
         void *test_m = malloc(mi);
         if (test_m != NULL) {
@@ -2259,10 +2183,6 @@ void _AudioInit(void) {
     }
 }
 
-#if 0
-        while (!(vblticker > (last_vbltick+1)))
-            thd_sleep(5);
-#endif
 void SPINNING_THREAD(UNUSED void *arg) {
     uint64_t last_vbltick = vblticker;
 
@@ -2281,30 +2201,3 @@ void SPINNING_THREAD(UNUSED void *arg) {
         audio_api->play((u8 *)audio_buffer, (AUDIOBUF_SIZE * 2));
     }
 }
-
-#if 0
-/**
- * Sound processing thread. Runs at 50 or 60 FPS according to osTvType.
- */
-void thread4_audio(UNUSED void* arg) {
-    UNUSED u32 unused[3];
-    audio_init();
-    osCreateMesgQueue(&sSoundMesgQueue, sSoundMesgBuf, ARRAY_COUNT(sSoundMesgBuf));
-    set_vblank_handler(1, &sSoundVblankHandler, &sSoundMesgQueue, (OSMesg) 512);
-
-    while (true) {
-        OSMesg msg;
-        struct SPTask* spTask;
-
-        osRecvMesg(&sSoundMesgQueue, &msg, OS_MESG_BLOCK);
-
-        ////profiler_log_thread4_time();
-
-        spTask = create_next_audio_frame_task();
-        if (spTask != NULL) {
-            dispatch_audio_sptask(spTask);
-        }
-        ////profiler_log_thread4_time();
-    }
-}
-#endif

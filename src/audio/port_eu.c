@@ -280,6 +280,9 @@ void func_800CBCB0(u32 arg0) {
                     case 0x46:
                         seqPlayer->seqVariationEu[cmd->u.s.arg3] = cmd->u2.as_s8;
                         break;
+                    default:
+                        printf("unhandled op %02x\n", cmd->u.s.op);
+                        break;
                 }
             } else if (seqPlayer->enabled != 0 && cmd->u.s.arg2 < 0x10) {
                 chan = seqPlayer->channels[cmd->u.s.arg2];
