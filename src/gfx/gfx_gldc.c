@@ -67,6 +67,30 @@ static const dc_fast_t* cur_buf = NULL;
 static uint8_t gl_blend = 0;
 static uint8_t gl_depth = 0;
 
+static void resample_32bit(const uint16_t* in, int inwidth, int inheight, uint16_t* out, int outwidth, int outheight ) {
+    int i, j;
+    uint32_t* out32 = (uint32_t*)out;
+    int fracstep = (inwidth << 16) / outwidth;
+    int outwidth32 = outwidth >> 1; // two pixels per 32-bit write
+
+    for (i = 0; i < outheight; i++, out32 += outwidth32) {
+        const uint16_t* inrow = in + inwidth * (i * inheight / outheight);
+        int frac = fracstep >> 1;
+
+        for (j = 0; j < outwidth32; j++) {
+            if (((j << 1) & 7) == 0)
+                __builtin_prefetch(inrow + 16);
+
+            uint16_t p1 = inrow[frac >> 16];
+            frac += fracstep;
+            uint16_t p2 = inrow[frac >> 16];
+            frac += fracstep;
+
+            out32[j] = ((uint32_t)p2 << 16) | p1;
+        }
+    }
+}
+
 static void resample_16bit(const unsigned short* in, int inwidth, int inheight, unsigned short* out, int outwidth,
                            int outheight) {
     int i, j;
@@ -133,11 +157,25 @@ static inline GLenum texenv_set_texture_color(struct ShaderProgram* prg) {
 
     // only set DECAL for the player animations in menu
 //    if (blend_fuck) {
-        if (prg->shader_id == 0x01200A00) {
+switch(prg->shader_id) {
+case 0x0000038D: // mario's eyes
+        case 0x01045A00: // peach letter
+            mode = GL_DECAL;
+            break;
+        case 0x01200A00: // intro copyright fade in
             mode = GL_DECAL;
             if (!blend_fuck) blend_fuck = 2;
-        }
-//    }
+            break;
+        case 0x00000551: // goddard
+                         /*@Note: Issues! */
+            mode = GL_REPLACE;
+            // GL_BLEND;
+            break;
+
+//        if (prg->shader_id == 0x01200A00) {
+  //          mode = GL_DECAL;
+    //    }
+    }
 
     return mode;
 }
@@ -153,10 +191,7 @@ extern s16 gCurrentCourseId;
 static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
     // vertices are always there
     glVertexPointer(3, GL_FLOAT, sizeof(dc_fast_t), &cur_buf[0].vert);
-
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glTexCoordPointer(2, GL_FLOAT, sizeof(dc_fast_t), &cur_buf[0].texture);
-    glEnableClientState(GL_COLOR_ARRAY);
     glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(dc_fast_t), &cur_buf[0].color);
 
     // have texture(s), specify same texcoords for every active texture
@@ -190,10 +225,10 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
         glDisable(GL_FOG);
     }
 
-//    if (!prg->enabled) {
+    if (1) { //!prg->enabled) {
         // we only need to do this once
         // ^-- uhhh yeah no I think that's wrong and a bug
-        //        prg->enabled = 1;
+               // prg->enabled = 1;
 #if 0
         if (prg->shader_id & SHADER_OPT_TEXTURE_EDGE) {
             glEnable(GL_ALPHA_TEST);
@@ -219,7 +254,7 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
                 break;
         }
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, mode);
-//    }
+    }
 }
 
 static void gfx_opengl_unload_shader(struct ShaderProgram* old_prg) {
@@ -375,7 +410,8 @@ static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int 
             pheight = 8;
         }
 
-        resample_16bit((const uint16_t*) rgba32_buf, width, height, (uint16_t*) scaled, pwidth, pheight);
+        //resample_16bit
+        resample_32bit((const uint16_t*) rgba32_buf, width, height, (uint16_t*) scaled, pwidth, pheight);
         rgba32_buf = (uint8_t*) scaled;
         width = pwidth;
         height = pheight;
@@ -461,7 +497,7 @@ static inline void gfx_opengl_pass_fog(void) {
 
 // this assumes the two textures are combined like so:
 // result = mix(tex0.rgb, tex1.rgb, vertex.rgb)
-static inline void gfx_opengl_pass_mix_texture(int buf_vbo_num_tris) {
+static inline void gfx_opengl_pass_mix_texture(UNUSED int buf_vbo_num_tris) {
     ;
 }
 
@@ -656,22 +692,24 @@ void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size
 
     gfx_opengl_apply_shader(cur_shader);
 
-    glEnable(GL_TEXTURE_2D);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_COLOR_ARRAY);
+//    glEnableClientState(GL_VERTEX_ARRAY);
+//    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+//    glEnableClientState(GL_COLOR_ARRAY);
+
     glVertexPointer(3, GL_FLOAT, sizeof(dc_fast_t), &tris[0].vert);
     glTexCoordPointer(2, GL_FLOAT, sizeof(dc_fast_t), &tris[0].texture);
     glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(dc_fast_t), &tris[0].color);
+
     glEnable(GL_BLEND);
-glDisable(GL_DEPTH_TEST);
+    glDisable(GL_DEPTH_TEST);
     if (buf_vbo_num_tris) {
-        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+        glEnable(GL_TEXTURE_2D);
         // if there's two textures, set primary texture first
         if (cur_shader->texture_used[1])
             glBindTexture(GL_TEXTURE_2D, tmu_state[cur_shader->texture_ord[0]].tex);
     } else {
-    glDisable(GL_TEXTURE_2D);
-        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+        glDisable(GL_TEXTURE_2D);
+        //glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     }
 //    if (!in_intro) {
        
@@ -741,14 +779,14 @@ someTexture 8c9560e0
     }
 #endif
 #endif
-
+    if (!in_intro) {
     if (blend_fuck) {
         for (int i = 0; i < 6; i++) {
             tris[i].color.packed = 0xff000000;
         }
         if (blend_fuck == 2) blend_fuck = 0;
     }
-
+}
     glDrawArrays(GL_TRIANGLES, 0, 3 * 2 /* 2 tri quad */);
 
     #if 0
@@ -862,6 +900,8 @@ static void gfx_opengl_init(void) {
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
 
+
+    
     glViewport(0, 0, 640, 480);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();

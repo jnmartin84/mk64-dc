@@ -775,36 +775,65 @@ static __attribute__((noinline)) void import_texture_ci8(int tile) {
 	uint32_t width = rdp.texture_tile.line_size_bytes;
 	uint32_t height = rdp.loaded_texture[tile].size_bytes / rdp.texture_tile.line_size_bytes;
 
+	__builtin_prefetch(tlut);
 	if (last_set_texture_image_width == 0) {
 		uint8_t *tex8 = rdp.loaded_texture[tile].addr;
-		__builtin_prefetch(tex8);
-		uint32_t count = rdp.loaded_texture[tile].size_bytes;
-//		uint16_t *tex16 = rgba16_buf;
-		uint32_t *tex32 = (uint32_t)rgba16_buf;
-		for (uint32_t i = 0; i < count; i+=8) {
-			uint16_t t1,t2,t3,t4,t5,t6,t7,t8;
-			__builtin_prefetch(tex8+16);
-			t1 = tlut[*tex8++];
-			t2 = tlut[*tex8++];
-			t3 = tlut[*tex8++];
-			t4 = tlut[*tex8++];
-			t5 = tlut[*tex8++];
-			t6 = tlut[*tex8++];
-			t7 = tlut[*tex8++];
-			t8 = tlut[*tex8++];
-#if 1
-            asm volatile("": : : "memory");
-#endif
+		if (!((uintptr_t)tex8 & 3)) {
+			uint32_t *intex32 = (uint32_t *)tex8;
+			__builtin_prefetch(intex32);
+			uint32_t count = rdp.loaded_texture[tile].size_bytes;
+			uint32_t *tex32 = (uint32_t)rgba16_buf;
+			for (uint32_t i = 0; i < count; i+=8) {
+				__builtin_prefetch((void*)(((uintptr_t)intex32&0xffffffe0)+32));
 
-//			*tex16++ = tlut[*tex8++];
-/* 			*tex16++ = t1;
-			*tex16++ = t2;
-			*tex16++ = t3;
-			*tex16++ = t4; */
-			*tex32++ = t2 << 16 | t1;
-			*tex32++ = t4 << 16 | t3;
-			*tex32++ = t6 << 16 | t5;
-			*tex32++ = t8 << 16 | t7;
+				uint32_t fourpix1 = *intex32++;
+				uint32_t fourpix2 = *intex32++;
+
+				asm volatile("": : : "memory");
+
+				uint16_t t1,t2,t3,t4,t5,t6,t7,t8;
+
+				t4 = tlut[(fourpix1 >> 24) & 0xff];
+				t3 = tlut[(fourpix1 >> 16) & 0xff];
+				t2 = tlut[(fourpix1 >>  8) & 0xff];
+				t1 = tlut[(fourpix1      ) & 0xff];
+				t8 = tlut[(fourpix2 >> 24) & 0xff];
+				t7 = tlut[(fourpix2 >> 16) & 0xff];
+				t6 = tlut[(fourpix2 >>  8) & 0xff];
+				t5 = tlut[(fourpix2      ) & 0xff];
+
+				asm volatile("": : : "memory");
+
+				*tex32++ = (t2 << 16) | t1;
+				*tex32++ = (t4 << 16) | t3;
+				*tex32++ = (t6 << 16) | t5;
+				*tex32++ = (t8 << 16) | t7;
+
+			}
+		} else {
+			__builtin_prefetch(tex8);
+			uint32_t count = rdp.loaded_texture[tile].size_bytes;
+			uint32_t *tex32 = (uint32_t)rgba16_buf;
+			for (uint32_t i = 0; i < count; i+=8) {
+				uint16_t t1,t2,t3,t4,t5,t6,t7,t8;
+				__builtin_prefetch(tex8+16);
+				t1 = tlut[*tex8++];
+				t2 = tlut[*tex8++];
+				t3 = tlut[*tex8++];
+				t4 = tlut[*tex8++];
+				t5 = tlut[*tex8++];
+				t6 = tlut[*tex8++];
+				t7 = tlut[*tex8++];
+				t8 = tlut[*tex8++];
+	#if 1
+				asm volatile("": : : "memory");
+	#endif
+
+				*tex32++ = (t2 << 16) | t1;
+				*tex32++ = (t4 << 16) | t3;
+				*tex32++ = (t6 << 16) | t5;
+				*tex32++ = (t8 << 16) | t7;
+			}
 		}
 	} else {
 		u32 src_width;
@@ -817,9 +846,11 @@ static __attribute__((noinline)) void import_texture_ci8(int tile) {
 		uint8_t* start = (uint8_t *)(&rdp.loaded_texture[tile]
 							.addr[((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) * last_set_texture_image_width) +
 									(rdp.texture_tile.uls >> G_TEXTURE_IMAGE_FRAC)]);
+//		uint32_t *start32;
 		uint16_t *tex16 = rgba16_buf;
 		for (uint32_t h = 0; h < height; h ++) {
-			uint16_t *tx16 = tex16;
+			//uint16_t *tx16 = tex16;
+			uint16_t *tx32 = tex16;
 			for (uint32_t w = 0; w < src_width; w += 4) {
 				uint16_t t1,t2,t3,t4;
 				t1 = tlut[*start++];
@@ -827,10 +858,11 @@ static __attribute__((noinline)) void import_texture_ci8(int tile) {
 				t3 = tlut[*start++];
 				t4 = tlut[*start++];
 
-				*tx16++ = t1;
-				*tx16++ = t2;
-				*tx16++ = t3;
-				*tx16++ = t4;
+				*tx32++ = (t2 << 16) | t1;
+				*tx32++ = (t4 << 16) | t3;
+				//				*tx16++ = t2;
+//				*tx16++ = t3;
+//				*tx16++ = t4;
 			}
 			tex16 += width;
 		}
@@ -1109,23 +1141,81 @@ static void  __attribute__((noinline)) gfx_sp_pop_matrix(uint32_t count) {
 //	return x * (4.0f / 3.0f) / ((float) gfx_current_dimensions.width / (float) gfx_current_dimensions.height);
 //}
 int max_lights = 0;
-static void  __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
-	size_t i;
-	fast_mat_load(&rsp.MP_matrix);
+typedef struct __attribute__((aligned(32))) u_pvr_vertex_s {
+	union WFlag {
+		float w;
+		uint32_t flags;
+	};
+	float x;
+	float y;
+	float z;
+	float u;
+	float v;
+	uint32_t argb;
+	uint32_t oargb;
+} u_pvr_vertex_t;
 
-	for (i = 0; i < n_vertices; i++, dest_index++) {
+
+/*
+
+typedef struct __attribute__((aligned(32))) u_pvr_vertex_s {
+	union WFlag {
+		float w;
+		uint32_t flags;
+	};
+	float x;
+	float y;
+	float z;
+	float u;
+	float v;
+	uint32_t argb;
+	uint32_t oargb;
+} u_pvr_vertex_t;
+
+pvr_vertex_t loaded_vertices[64 + 4];
+float loaded_w[64 + 4];
+float x,y,z,w;
+size_t i;
+fast_mat_load(&rsp.MP_matrix);
+
+
+for (i = 0; i < n_vertices; i++, dest_index++) {
+
 		const Vtx_t* v = &vertices[i].v;
 		const Vtx_tn* vn = &vertices[i].n;
-		struct LoadedVertex* d = &rsp.loaded_vertices[dest_index];
 
-		float x,y,z,w;
+		struct pvr_vertex_t* d = &loaded_vertices[dest_index];
+
 		x = v->ob[0];
 		y = v->ob[1];
 		z = v->ob[2];
+
 		mat_trans_single3_nodivw(x,y,z,w);
 
-		short U = v->tc[0] * rsp.texture_scaling_factor.s >> 16;
-		short V = v->tc[1] * rsp.texture_scaling_factor.t >> 16;
+		d->x = x;
+		d->y = y;
+		d->z = z;
+		d->WFlag.w = w;
+
+		// trivial clip rejection
+        d->clip_rej = 0;
+        d->wlt0 = 0;
+        if (x < -w)
+            d->clip_rej |= 1;
+        if (x > w)
+            d->clip_rej |= 2;
+	    if (y < -w)
+            d->clip_rej |= 4;
+        if (y > w)
+            d->clip_rej |= 8;
+        if (z < -w)
+            d->clip_rej |= 16;
+        if (z > w)
+            d->clip_rej |= 32;
+        if (w < 0)
+            d->wlt0 = 1;
+
+		d->argb = (v->cn[3] << 24);
 
         if (rsp.geometry_mode & G_LIGHTING) {
         	if (rsp.lights_changed) {
@@ -1159,9 +1249,7 @@ static void  __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t d
                 }
             }
 
-            d->color.r = r > 255 ? 255 : r;
-            d->color.g = g > 255 ? 255 : g;
-            d->color.b = b > 255 ? 255 : b;
+			d->argb |= (r << 16) | (g << 8) | (b);
 
             if (rsp.geometry_mode & G_TEXTURE_GEN) {
                 float dotx; // = 0,
@@ -1198,6 +1286,100 @@ static void  __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t d
             	V = (int32_t) (doty * rsp.texture_scaling_factor.t);
             }
         } else {
+			d->argb |= (v->cn[0] << 16) | (v->cn[1] << 8) | (v->cn[2]);
+        }
+
+        d->u = U;
+        d->v = V;
+}
+
+
+ */
+static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
+    size_t i;
+    fast_mat_load(&rsp.MP_matrix);
+
+    for (i = 0; i < n_vertices; i++, dest_index++) {
+        const Vtx_t* v = &vertices[i].v;
+        const Vtx_tn* vn = &vertices[i].n;
+        struct LoadedVertex* d = &rsp.loaded_vertices[dest_index];
+
+        float x, y, z, w;
+        x = v->ob[0];
+        y = v->ob[1];
+        z = v->ob[2];
+        mat_trans_single3_nodivw(x, y, z, w);
+
+        short U = v->tc[0] * rsp.texture_scaling_factor.s >> 16;
+        short V = v->tc[1] * rsp.texture_scaling_factor.t >> 16;
+
+        if (rsp.geometry_mode & G_LIGHTING) {
+            if (rsp.lights_changed) {
+                if (rsp.current_num_lights > max_lights) {
+                    max_lights = rsp.current_num_lights;
+                    printf("max lights %d\n", max_lights);
+                }
+                if (rsp.current_num_lights == 2) {
+                    calculate_normal_dir(&rsp.current_lights[0], rsp.current_lights_coeffs[0]);
+                }
+                static const Light_t lookat_x = { { 0, 0, 0 }, 0, { 0, 0, 0 }, 0, { 127, 0, 0 }, 0 };
+                static const Light_t lookat_y = { { 0, 0, 0 }, 0, { 0, 0, 0 }, 0, { 0, 127, 0 }, 0 };
+                calculate_normal_dir(&lookat_x, rsp.current_lookat_coeffs[0]);
+                calculate_normal_dir(&lookat_y, rsp.current_lookat_coeffs[1]);
+                rsp.lights_changed = 0;
+            }
+
+            int r = rsp.current_lights[rsp.current_num_lights - 1].col[0];
+            int g = rsp.current_lights[rsp.current_num_lights - 1].col[1];
+            int b = rsp.current_lights[rsp.current_num_lights - 1].col[2];
+
+            if (rsp.current_num_lights == 2) {
+                float intensity;
+                intensity = recip127 * shz_dot8f(vn->n[0], vn->n[1], vn->n[2], 0, rsp.current_lights_coeffs[0][0],
+                                                 rsp.current_lights_coeffs[0][1], rsp.current_lights_coeffs[0][2], 0);
+
+                if (intensity > 0.0f) {
+                    r += intensity * rsp.current_lights[0].col[0];
+                    g += intensity * rsp.current_lights[0].col[1];
+                    b += intensity * rsp.current_lights[0].col[2];
+                }
+            }
+
+            d->color.r = r > 255 ? 255 : r;
+            d->color.g = g > 255 ? 255 : g;
+            d->color.b = b > 255 ? 255 : b;
+
+            if (rsp.geometry_mode & G_TEXTURE_GEN) {
+                float dotx; // = 0,
+                float doty; // = 0;
+                dotx = recip127 * shz_dot8f(vn->n[0], vn->n[1], vn->n[2], 0, rsp.current_lookat_coeffs[0][0],
+                                            rsp.current_lookat_coeffs[0][1], rsp.current_lookat_coeffs[0][2], 0);
+
+                doty = recip127 * shz_dot8f(vn->n[0], vn->n[1], vn->n[2], 0, rsp.current_lookat_coeffs[1][0],
+                                            rsp.current_lookat_coeffs[1][1], rsp.current_lookat_coeffs[1][2], 0);
+
+                if (dotx < -1.0f)
+                    dotx = -1.0f;
+                else if (dotx > 1.0f)
+                    dotx = 1.0f;
+
+                if (doty < -1.0f)
+                    doty = -1.0f;
+                else if (doty > 1.0f)
+                    doty = 1.0f;
+
+                if (rsp.geometry_mode & G_TEXTURE_GEN_LINEAR) {
+                    dotx = acosf(-dotx) * recip2pi;
+                    doty = acosf(-doty) * recip2pi;
+                } else {
+                    dotx = (dotx * 0.25f) + 0.25f; ////1.0f) / 4.0f;
+                    doty = (doty * 0.25f) + 0.25f; // 1.0f) / 4.0f;
+                }
+
+                U = (int32_t) (dotx * rsp.texture_scaling_factor.s);
+                V = (int32_t) (doty * rsp.texture_scaling_factor.t);
+            }
+        } else {
             d->color.r = v->cn[0];
             d->color.g = v->cn[1];
             d->color.b = v->cn[2];
@@ -1206,45 +1388,70 @@ static void  __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t d
         d->u = U;
         d->v = V;
 
-            // trivial clip rejection
-            d->clip_rej = 0;
-            d->wlt0 = 0;
-            if (x < -w)
-                d->clip_rej |= 1;
-            if (x > w)
-                d->clip_rej |= 2;
-            if (y < -w)
-                d->clip_rej |= 4;
-            if (y > w)
-                d->clip_rej |= 8;
-            if (z < -w)
-                d->clip_rej |= 16;
-            if (z > w)
-                d->clip_rej |= 32;
-            if (w < 0)
-                d->wlt0 = 1;
+        // trivial clip rejection
+        d->wlt0 = (w < 0);
+		uint8_t cr = 0;
+        cr = !(z > w);
+		cr = (cr << 1) | !(z < -w);
+		cr = (cr << 1) | !(y >  w);
+		cr = (cr << 1) | !(y < -w);
+		cr = (cr << 1) | !(x >  w);
+		cr = (cr << 1) | !(x < -w);
+		d->clip_rej = cr;
+#if 0
+		//            d->clip_rej |= 1;
+		cr <<= 1;
+		if (z < -w)
+			cr |= 1;
+		//            d->clip_rej |= 16;
+        if (y > w)
+            d->clip_rej |= 8;
+        if (y < -w)
+            d->clip_rej |= 4;
+        if (x > w)
+            d->clip_rej |= 2;
+        if (x < -w)
+            d->clip_rej |= 1;
+#endif
+        d->x = v->ob[0];
+        d->y = v->ob[1];
+        d->z = v->ob[2];
+        d->w = 1.0f;
 
-            d->x = v->ob[0];
-            d->y = v->ob[1];
-            d->z = v->ob[2];
-            d->w = 1.0f;
+        d->_x = x;
+        d->_y = y;
+        d->_z = z;
+        d->_w = w;
 
-            d->_x = x;
-            d->_y = y;
-            d->_z = z;
-            d->_w = w;
-
-		d->color.a = v->cn[3];
-	}
+        d->color.a = v->cn[3];
+    }
 }
 extern s32 gIsMirrorMode;
+
+
+/*
+
+    struct u_pvr_vertex_t* v1 = &loaded_vertices[vtx1_idx];
+    struct u_pvr_vertex_t* v2 = &loaded_vertices[vtx2_idx];
+    struct u_pvr_vertex_t* v3 = &loaded_vertices[vtx3_idx];
+    struct u_pvr_vertex_t* v_arr[3] = { v1, v2, v3 };
+
+    if (v1->clip_rej & v2->clip_rej & v3->clip_rej) {
+        // The whole triangle lies outside the visible area
+        return;
+    }
+
+	
+*/
+
+
 static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx) {
     struct LoadedVertex* v1 = &rsp.loaded_vertices[vtx1_idx];
     struct LoadedVertex* v2 = &rsp.loaded_vertices[vtx2_idx];
     struct LoadedVertex* v3 = &rsp.loaded_vertices[vtx3_idx];
     struct LoadedVertex* v_arr[3] = { v1, v2, v3 };
 
-    if (v1->clip_rej & v2->clip_rej & v3->clip_rej) {
+    if ((v1->clip_rej | v2->clip_rej | v3->clip_rej) != 0x3f) {
         // The whole triangle lies outside the visible area
         return;
     }

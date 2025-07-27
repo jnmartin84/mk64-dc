@@ -358,7 +358,10 @@ void draw_splitscreen_separators(void) {
     gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
     gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH,
                      VIRTUAL_TO_PHYSICAL(gPhysicalFramebuffers[sRenderingFramebuffer]));
-    gDPSetFillColor(gDisplayListHead++, 0x00010001);
+    gDPSetCycleType(gDisplayListHead++,G_CYC_1CYCLE);
+    gDPSetRenderMode(gDisplayListHead++,G_RM_ZB_OPA_SURF, G_RM_ZB_OPA_SURF2);
+    gDPSetCombineMode(gDisplayListHead++,G_CC_SHADE, G_CC_SHADE);
+    gDPSetFillColor(gDisplayListHead++, 0xFFFFFFFF);//0x00010001);
     gSPViewport(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&D_802B8880));
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     gDPPipeSync(gDisplayListHead++);
@@ -368,12 +371,12 @@ void draw_splitscreen_separators(void) {
             gDPFillRectangle(gDisplayListHead++, 157, 0, 159, 239);
             break;
         case SCREEN_MODE_2P_SPLITSCREEN_HORIZONTAL:
-            //gDPFillRectangle(gDisplayListHead++, 0, 119, 319, 121);
-            gDPFillRectangle(gDisplayListHead++, 0, 223, 319, 223+32);
+            gDPFillRectangle(gDisplayListHead++, 0, 127, 319, 129);
+            //gDPFillRectangle(gDisplayListHead++, 0, 223, 319, 223+32);
             break;
         case SCREEN_MODE_3P_4P_SPLITSCREEN:
-            gDPFillRectangle(gDisplayListHead++, 157, 0, 159, 239);
-            gDPFillRectangle(gDisplayListHead++, 0, 119, 319, 121);
+            gDPFillRectangle(gDisplayListHead++, 159, 0, 161, 239);
+            gDPFillRectangle(gDisplayListHead++, 0, 127, 319, 129);
             break;
     }
     gDPPipeSync(gDisplayListHead++);

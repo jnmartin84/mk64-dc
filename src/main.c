@@ -478,13 +478,13 @@ extern int stupid_fucking_faces_hack;
 
 int main(UNUSED int argc, UNUSED char **argv) {
     thd_set_hz(300);
-must_inval_bg = 0;
-stupid_fucking_faces_hack = 0;
+    must_inval_bg = 0;
+    stupid_fucking_faces_hack = 0;
     wasSoftReset = (s16)0;
-    gPhysicalFramebuffers[0] = fb[0];//(u16*) &gFramebuffer0;
-    gPhysicalFramebuffers[1] = fb[1];//(u16*) &gFramebuffer1;
-    gPhysicalFramebuffers[2] = fb[2];//(u16*) &gFramebuffer2;
-    //file_t *test = /pc/dc_data/common_data.bin
+    gPhysicalFramebuffers[0] = fb[0];
+    gPhysicalFramebuffers[1] = fb[1];
+    gPhysicalFramebuffers[2] = fb[2];
+
     FILE* fntest = fopen("/pc/dc_data/common_data.bin", "rb");
     if (NULL == fntest) {
         fntest = fopen("/cd/dc_data/common_data.bin", "rb");
@@ -688,7 +688,7 @@ void init_controllers(void) {
 #define CONT_DPAD2_DOWN     (1<<13)     /**< \brief Secondary Dpad Down button Mask. */
 #define CONT_DPAD2_LEFT     (1<<14)     /**< \brief Secondary Dpad Left button Mask. */
 #define CONT_DPAD2_RIGHT    (1<<15)     /**< \brief Secondary Dpad Right button Mask. */
-
+extern void __osPfsCloseAllFiles(void);
 u16 ucheld;
 u16 stick;
 void update_controller(s32 index) {
@@ -704,12 +704,14 @@ ucheld = 0; stick = 0;
         return;
     state = maple_dev_status(cont);
 
-if ((state->buttons & CONT_START) && state->ltrig && state->rtrig) {
-//profiler_stop();
-//    profiler_clean_up();
-
-    exit(0);
-}
+    if ((state->buttons & CONT_START) && state->ltrig && state->rtrig) {
+    //profiler_stop();
+    //    profiler_clean_up();
+        // give vmu a chance to write and close
+ //       thd_sleep(1000);
+        __osPfsCloseAllFiles();   
+        exit(0);
+    }
 
     const char stickH =state->joyx;
     const char stickV = 0xff-((uint8_t)(state->joyy));

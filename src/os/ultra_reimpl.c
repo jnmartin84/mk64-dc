@@ -209,7 +209,7 @@ s32 osEepromProbe(UNUSED OSMesgQueue* mq) {
 
     vmudev = maple_enum_type(0, MAPLE_FUNC_MEMCARD);
 	if (!vmudev) {
-		//dbgio_printf("eeprom probe: could not enum\n");
+		//printf("eeprom probe: could not enum\n");
         //vid_border_color(255,0,0);
 		return 0;
 	}
@@ -236,9 +236,6 @@ s32 osEepromProbe(UNUSED OSMesgQueue* mq) {
         pkg.icon_data = icondata;
         pkg.icon_anim_speed = 5;
         pkg.data_len = 512;
-// see menus.c : 443 for real initialization
-        func_800B46D0();
-        D_800DC5AC = 0;
 
         pkg.data = &gSaveData;//eeprom_block;
         vmu_pkg_load_icon(&pkg, texfn);
@@ -258,7 +255,9 @@ s32 osEepromProbe(UNUSED OSMesgQueue* mq) {
         //printf("\tcreated mk64.rec\n");
         oneshot_timer_reset(timer);
 
-
+// see menus.c : 443 for real initialization
+        func_800B46D0();
+        D_800DC5AC = 0;
     } else {
         //printf("\teeprom file existed on vmu a1\n");
         fs_close(eeprom_file);
@@ -273,8 +272,8 @@ s32 osEepromProbe(UNUSED OSMesgQueue* mq) {
         oneshot_timer_reset(timer);
     }
 
-    //vid_border_color(0,0,0);
-    //printf("successfully returning from EEPROM probe\n");
+    ////vid_border_color(0,0,0);
+    ////printf("successfully returning from EEPROM probe\n");
     return EEPROM_TYPE_4K;
 }
 uint8_t* vmu_load_data(int channel, const char* name, uint8_t* outbuf, uint32_t* bytes_read);
@@ -288,7 +287,7 @@ static int reopen_vmu_eeprom(void) {
     }
 
     eeprom_file = fs_open(get_vmu_fn(vmudev, "mk64.rec"), O_RDWR | O_META);
-    return 0;
+    return (eeprom_file == -1);
 }
 
 s32 osEepromLongRead(UNUSED OSMesgQueue* mq, unsigned char address, unsigned char* buffer, s32 length) {
@@ -382,7 +381,7 @@ s32 osEepromWrite(OSMesgQueue* mq, unsigned char address, unsigned char* buffer)
 
 s32 osPfsDeleteFile(OSPfs* pfs, UNUSED u16 company_code, UNUSED u32 game_code, UNUSED u8* game_name, UNUSED u8* ext_name) {
     maple_device_t* vmudev = NULL;
-    //printf("%s\n",__func__);
+    ////printf("%s\n",__func__);
 
     vmudev = maple_enum_type(pfs->channel, MAPLE_FUNC_MEMCARD);
     if (!vmudev)
@@ -398,8 +397,8 @@ s32 osPfsDeleteFile(OSPfs* pfs, UNUSED u16 company_code, UNUSED u32 game_code, U
 static uint8_t __attribute__((aligned(32))) tempblock[32768];//64 * 512];
 
 s32 osPfsReadWriteFile(UNUSED OSPfs* pfs, s32 file_no, u8 flag, int offset, int size_in_bytes, u8* data_buffer) {
-    //printf("%s(%s,%d,%d)\n",__func__, flag ? "WRITE" : "READ", offset, size_in_bytes);
-    //printf("openFile[%d].file == %d .filename == %s\n", file_no, openFile[file_no].file, openFile[file_no].filename);
+    ////printf("%s(%s,%d,%d)\n",__func__, flag ? "WRITE" : "READ", offset, size_in_bytes);
+    ////printf("openFile[%d].file == %d .filename == %s\n", file_no, openFile[file_no].file, openFile[file_no].filename);
     if (openFile[file_no].file == -1) {
         return PFS_ERR_INVALID;
     }
@@ -411,7 +410,7 @@ s32 osPfsReadWriteFile(UNUSED OSPfs* pfs, s32 file_no, u8 flag, int offset, int 
         ssize_t res = fs_read(openFile[file_no].file, data_buffer, size_in_bytes);
 
         if (res != size_in_bytes) {
-            //printf("could not read it right\n");
+            ////printf("could not read it right\n");
             fs_close(openFile[file_no].file);
             openFile[file_no].file = -1;
             return PFS_ERR_BAD_DATA;
@@ -423,7 +422,7 @@ s32 osPfsReadWriteFile(UNUSED OSPfs* pfs, s32 file_no, u8 flag, int offset, int 
         fs_seek(openFile[file_no].file, (512*3) + offset, SEEK_SET);
         ssize_t rv = fs_write(openFile[file_no].file, data_buffer, size_in_bytes);
         if (rv != size_in_bytes) {
-            //printf("could not write it right\n");
+            ////printf("could not write it right\n");
             fs_close(openFile[file_no].file);
             openFile[file_no].file = -1;
             return PFS_CORRUPTED;
@@ -432,7 +431,7 @@ s32 osPfsReadWriteFile(UNUSED OSPfs* pfs, s32 file_no, u8 flag, int offset, int 
         fs_close(openFile[file_no].file);
         openFile[file_no].file = fs_open(openFile[file_no].filename, O_RDWR | O_META); // fopen(filename, "w+");
         if (-1 == openFile[file_no].file) {
-            //printf("write was fucked upon reopen attempt\n");
+            ////printf("write was fucked upon reopen attempt\n");
             return PFS_CORRUPTED;
         }
     }
@@ -442,7 +441,7 @@ s32 osPfsReadWriteFile(UNUSED OSPfs* pfs, s32 file_no, u8 flag, int offset, int 
 s32 osPfsAllocateFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8* ext_name, UNUSED int file_size_in_bytes,
                       s32* file_no) {
     maple_device_t* vmudev = NULL;
-    //printf("%s(%s) %d\n", __func__, game_name, file_size_in_bytes);
+    ////printf("%s(%s) %d\n", __func__, game_name, file_size_in_bytes);
 
     vmudev = maple_enum_type(pfs->channel, MAPLE_FUNC_MEMCARD);
     if (!vmudev)
@@ -453,7 +452,7 @@ s32 osPfsAllocateFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name
     *file_no = fileIndex++;
     openFile[*file_no].file = fs_open(filename, O_RDWR | O_CREAT | O_META);
     if (-1 == openFile[*file_no].file) {
-        //printf("couldnt open file in allocate\n");
+        ////printf("couldnt open file in allocate\n");
         return PFS_INVALID_DATA;
     }
 
@@ -475,7 +474,7 @@ s32 osPfsAllocateFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name
     ssize_t pkg_size;
     u8* pkg_out;
     vmu_pkg_build(&newpkg, &pkg_out, &pkg_size);
-    //printf("built ghostdata package\n");
+    ////printf("built ghostdata package\n");
     ssize_t rv = fs_write(openFile[*file_no].file, pkg_out, pkg_size);
     if (rv != pkg_size) {
             fs_close(openFile[*file_no].file);
@@ -498,14 +497,14 @@ s32 osPfsAllocateFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name
 extern int vmu_status(int channel);
 
 s32 osPfsIsPlug(UNUSED OSMesgQueue* queue, u8* pattern) {
-    //printf("%s\n",__func__);
+    ////printf("%s\n",__func__);
     *pattern = 0;
     if (!vmu_status(0))
         *pattern = 1;
     return 1;
 }
 s32 osPfsInit(UNUSED OSMesgQueue* queue, OSPfs* pfs, int channel) {
-    //printf("%s(%d)\n",__func__,channel);
+    ////printf("%s(%d)\n",__func__,channel);
     int rv = vmu_status(channel);
     if (rv) {
         return PFS_NO_PAK_INSERTED;
@@ -521,33 +520,51 @@ s32 osPfsInit(UNUSED OSMesgQueue* queue, OSPfs* pfs, int channel) {
 }
 
 s32 osPfsNumFiles(UNUSED OSPfs* pfs, s32* max_files, s32* files_used) {
-    //printf("%s\n",__func__);
+    ////printf("%s\n",__func__);
     *max_files = 16;
     *files_used = fileIndex;
     return 0;
 }
 
 s32 osPfsFileState(UNUSED OSPfs* pfs, UNUSED s32 file_no, UNUSED OSPfsState* state) {
-    //printf("%s\n",__func__);
+    ////printf("%s\n",__func__);
     return PFS_NO_ERROR;
 }
 extern int32_t Pak_Memory;
 
 s32 osPfsFreeBlocks(OSPfs* pfs, s32* bytes_not_used) {
-    //printf("%s\n",__func__);
+    ////printf("%s\n",__func__);
     vmu_status(pfs->channel);
 
     *bytes_not_used = Pak_Memory * 512;//0x10000;
     return PFS_NO_ERROR;
 }
 
+void __osPfsCloseAllFiles(void) {
+    for (int channel = 0; channel < 4; channel++) {
+        maple_device_t* vmudev = NULL;
+
+        vmudev = maple_enum_type(channel, MAPLE_FUNC_MEMCARD);
+        if (!vmudev) {
+            continue;
+        }
+        char* filename = get_vmu_fn(vmudev, "mk64.gho");
+
+        for (size_t i = 0; i < 16; i++) {
+            if (openFile[i].file != -1) {
+                fs_close(openFile[i].file);
+            }
+        }
+    }
+}
+
 s32 osPfsFindFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8* ext_name, s32* file_no) {
     maple_device_t* vmudev = NULL;
-    //printf("%s(%d,%s)\n", __func__, pfs->channel, game_name);
+    ////printf("%s(%d,%s)\n", __func__, pfs->channel, game_name);
 
     vmudev = maple_enum_type(pfs->channel, MAPLE_FUNC_MEMCARD);
     if (!vmudev) {
-        //printf("couldn't get vmu for pfs->channel %d\n", pfs->channel);
+        ////printf("couldn't get vmu for pfs->channel %d\n", pfs->channel);
         return PFS_NO_PAK_INSERTED;
     }
     char* filename = get_vmu_fn(vmudev, "mk64.gho");
@@ -559,20 +576,20 @@ s32 osPfsFindFile(OSPfs* pfs, u16 company_code, u32 game_code, u8* game_name, u8
             return PFS_NO_ERROR;
         }
     }
-    //printf("\tdidn't find open file in cache\n");
+    ////printf("\tdidn't find open file in cache\n");
     *file_no = fileIndex++;
 
     openFile[*file_no].file = fs_open(filename, O_RDONLY | O_META);
     strcpy(openFile[*file_no].filename, filename);
     if (-1 == openFile[*file_no].file) {
-        //printf("\t\tcouldn't find it on vmu either\n");
+        ////printf("\t\tcouldn't find it on vmu either\n");
         return PFS_ERR_INVALID;
     } else {
         fs_close(openFile[*file_no].file);
         openFile[*file_no].file = -1;
         openFile[*file_no].file = fs_open(filename, O_RDWR | O_META);
         if (-1 == openFile[*file_no].file) {
-            //printf("\t\tcouldn't re-open read-write\n");
+            ////printf("\t\tcouldn't re-open read-write\n");
             return PFS_CORRUPTED;
         }
     }

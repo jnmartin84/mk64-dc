@@ -1286,9 +1286,6 @@ void setup_selected_game_mode(void) {
             gCCSelection = CC_100;
             gIsMirrorMode = 0;
             gPlaceItemBoxes = 0;
-
-            if ((subMenuMode && subMenuMode) && subMenuMode) {}
-
             break;
     }
 }
