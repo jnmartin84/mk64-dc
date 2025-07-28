@@ -67,8 +67,11 @@ Under `~/mario-kart-64-dc/tools/torch` you will find a `README.md` with instruct
 See: [ https://github.com/HarbourMasters/Torch/blob/6a2eb921482f2eb3b3cb5b675152d6d21d1a20ff/README.md ]
 
 
-Follow those instructions or nothing else will work. Then continue with the following commands:
+Follow those instructions or nothing else will work. Then continue with the following commands (we will start from the beginning so there is no confusion):
 
+    source /opt/toolchains/dc/kos/environ.sh
+    cd ~/mario-kart-64-dc
+    cd tools/torch
     make
     cd ..
     make
@@ -79,6 +82,7 @@ Follow those instructions or nothing else will work. Then continue with the foll
 **How to generate Mario Kart 64 disc image**
 
 Make sure that you have `mkdcdisc` built and the executable available on your path.
+See: [ https://gitlab.com/simulant/mkdcdisc ] for that.
 
 Once that is taken care of, run the following commands 
 
