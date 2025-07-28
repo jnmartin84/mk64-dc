@@ -1655,6 +1655,7 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         uint32_t color_g = 0;
         uint32_t color_b = 0;
         uint32_t color_a = 0;
+#if 0
 		if (player_combiner) {
 //			final color = (1 - ENVCOLOR) * TEXELCOLOR + PRIMITIVECOLOR 
 //			final alpha = (PRIMALPHA - 0) * TEXELALPHA + 0
@@ -1664,7 +1665,9 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
 			color_a = rdp.prim_color.a;
 	buf_vbo[buf_num_vert].color.packed = PACK_ARGB8888(color_r, color_g, color_b, color_a);
 	}
-else {
+else
+#endif
+{
 #if 0		
 		if (do_font_1) {
 			struct RGBA *color = (struct RGBA *)&v_arr[i]->color;
@@ -1694,11 +1697,11 @@ else {
                 color_r = 255 - rdp.env_color.r;
                 color_g = 255 - rdp.env_color.g;
                 color_b = 255 - rdp.env_color.b;
-                color_a = 255; // 255 - rdp.env_color.a;
+                //color_a = 255; // 255 - rdp.env_color.a;
 
-                color_r *= ((255 - rdp.prim_color.r /* + 255 */) /* /2 */);
-                color_g *= ((255 - rdp.prim_color.g /* + 255 */) /* /2 */);
-                color_b *= ((255 - rdp.prim_color.b /* + 255 */) /* /2 */);
+                color_r *= ((/* 255 - */ rdp.prim_color.r + 255) /* /2 */);
+                color_g *= ((/* 255 - */ rdp.prim_color.g + 255) /* /2 */);
+                color_b *= ((/* 255 - */ rdp.prim_color.b + 255) /* /2 */);
                 color_a = rdp.prim_color.a; //((rdp.prim_color.a + 255)/* /2 */);
 
                 color_r >>= 8;// /= 255;
@@ -2613,12 +2616,14 @@ static void  __attribute__((noinline)) gfx_run_dl(Gfx* cmd) {
 
 //testgfx1 = fcff99ff ff327f3f
 //testgfx2 = fcff97ff ff2e7f3f
-
+//		if (cmd->words.w0 & 0xff000000 == 0xfc000000 && player_combiner) {
+//			player_combiner = 0;
+//		}
 		if (cmd->words.w0 == 0xfc60b2c1 && cmd->words.w1 == 0x5565feff) {
+//			printf("player combiner\n");
 			player_combiner = 1;
-		} else {
-			player_combiner = 0;
 		}
+
 		if (cmd->words.w0 == 0xfcff99ff && cmd->words.w1 == 0xff327f3f) {
 			do_font_1 = 1;
 			do_font_2 = 0;
