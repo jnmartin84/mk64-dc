@@ -27,7 +27,7 @@ The build is known to work on the following platforms as of the current commit:
 
 It should work on most other Linux environments.
 
-You will need a host/native GCC install and a full working Dreamcast/KallistiOS compiler toolchain install.
+You will need a host/native GCC install and a full working Dreamcast/KallistiOS compiler toolchain install. You will also need to install the latest `kos-ports`.
 
 See [ https://dreamcast.wiki/Getting_Started_with_Dreamcast_development ] for instructions.
 
@@ -38,6 +38,8 @@ Mario Kart 64 can be built using an unmodified copy of KOS cloned directly from 
 If you are going to file a Github issue, make sure you are using that version to test your problem.
 
 Please follow the instructions for building KOS found in the wiki: [ https://dreamcast.wiki/Getting_Started_with_Dreamcast_development#Configuring_and_compiling_KOS_and_kos-ports ].
+
+And be sure to not skip `Building kos-ports`.
 
 *AGAIN: BE SURE TO USE THE `environ.sh` FILE PROVIDED IN THE `mario-kart-64-dc` FOR YOUR KOS BUILD.*
 
