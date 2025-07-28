@@ -721,8 +721,16 @@ ucheld = 0; stick = 0;
         ucheld |= 0x2000;//Z_TRIG;
     if (state->buttons & CONT_START)
        ucheld |= 0x1000;//START_BUTTON;
+
+    if (state->buttons & CONT_DPAD_UP)
+        ucheld |= 0x0800;//U_CBUTTONS;
+    if (state->buttons & CONT_DPAD_DOWN)
+        ucheld |= 0x0400;//D_CBUTTONS;
     if (state->buttons & CONT_DPAD_LEFT)
-        ucheld |= 0x0020;//L_TRIG;
+        ucheld |= 0x0200;//L_CBUTTONS;
+    if (state->buttons & CONT_DPAD_RIGHT)
+        ucheld |= 0x0100;//R_CBUTTONS;
+
     if (state->rtrig)
         ucheld |= 0x0010;//R_TRIG;
     if (state->buttons & CONT_Y)
