@@ -246,8 +246,11 @@ static int audio_dc_get_desired_buffered(void) {
     return 1100;
 }
 
-
+extern int credits_started;
 void runtime_reset(void) {
+    if (credits_started)
+        return;
+
     mutex_lock(&reset_mutex);
 
     snd_stream_volume(shnd, 0);

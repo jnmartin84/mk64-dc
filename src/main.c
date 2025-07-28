@@ -2072,6 +2072,8 @@ void func_80002658(void) {
     set_perspective_and_aspect_ratio();
 }
 
+int credits_started = 0;
+
 void update_gamestate(void) {
     switch (gGamestate) {
         case START_MENU_FROM_QUIT:
@@ -2104,6 +2106,7 @@ void update_gamestate(void) {
             load_ceremony_cutscene();
             break;
         case CREDITS_SEQUENCE:
+            credits_started = 1;
             gCurrentlyLoadedCourseId = COURSE_NULL;
             runtime_reset();
             load_credits();
