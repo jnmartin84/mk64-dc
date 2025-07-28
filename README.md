@@ -1,5 +1,5 @@
 # Mario Kart 64   
-This is a Sega Dreamcast port of the Mario Kart 64 decompilation (https://github.com/n64decomp/mk64)
+This is a Sega Dreamcast port of the Mario Kart 64 decompilation [ https://github.com/n64decomp/mk64 ] .
 
 If you ask for a CDI or ISO, I will tell you to go fuck yourself, and I probably won't be polite about it.
 
@@ -64,6 +64,8 @@ To build the source into an ELF file, run the following commands (exactly as wri
     cd tools/torch
 
 Under `~/mario-kart-64-dc/tools/torch` you will find a `README.md` with instructions on installing dependencies for `torch`.
+See: [ https://github.com/HarbourMasters/Torch/blob/6a2eb921482f2eb3b3cb5b675152d6d21d1a20ff/README.md ]
+
 
 Follow those instructions or nothing else will work. Then continue with the following commands:
 
