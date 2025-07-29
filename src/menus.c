@@ -1067,9 +1067,10 @@ void splash_menu_act(struct Controller* controller, u16 controllerIdx) {
                     func_8009E1C0();
                     func_800CA330(0x19);
                     play_sound2(SOUND_INTRO_ENTER_MENU);
-//   gDebugMenuSelection = DEBUG_MENU_OPTION_SELECTED;
-//                        gDebugGotoScene = DEBUG_GOTO_ENDING;// CREDITS_SEQUENCE_DEFAULT;
-//                    break;   
+                    //gDebugMenuSelection = DEBUG_MENU_OPTION_SELECTED;
+                    //gDebugGotoScene = DEBUG_GOTO_ENDING;
+                    //     DEBUG_GOTO_CREDITS_SEQUENCE_DEFAULT;
+                    //break;   
                 } else {
                     break;
                 }
@@ -1892,11 +1893,11 @@ void load_menu_states(s32 menuSelection) {
             func_8000F0E0();
 
             if (gGamestate != 0) {
-            if (came_from_battle) {
-                func_800C3448(0x100100FF);
-                func_800C3448(0x110100FF);
-                came_from_battle = 0;
-            }
+                if (came_from_battle) {
+                    func_800C3448(0x100100FF);
+                    func_800C3448(0x110100FF);
+                    came_from_battle = 0;
+                }
                 func_800CA008(0, 0);
                 func_800CB2C4();
                 gGamestate = 0;
@@ -1955,11 +1956,11 @@ void load_menu_states(s32 menuSelection) {
                         }
                         play_sound2(SOUND_MENU_SELECT_PLAYER);
                     } else {
-            if (came_from_battle) {
-                func_800C3448(0x100100FF);
-                func_800C3448(0x110100FF);
-                came_from_battle = 0;
-            }
+                        if (came_from_battle) {
+                            func_800C3448(0x100100FF);
+                            func_800C3448(0x110100FF);
+                            came_from_battle = 0;
+                        }
                         func_800CA008(0, 0);
                         func_800CB2C4();
                         gGamestate = 0;
@@ -1998,11 +1999,11 @@ void load_menu_states(s32 menuSelection) {
                 gSubMenuSelection = SUB_MENU_MAP_SELECT_CUP;
             }
             if (gGamestate != 0) {
-            if (came_from_battle) {
-                func_800C3448(0x100100FF);
-                func_800C3448(0x110100FF);
-                came_from_battle = 0;
-            }
+                if (came_from_battle) {
+                    func_800C3448(0x100100FF);
+                    func_800C3448(0x110100FF);
+                    came_from_battle = 0;
+                }
                 func_800CA008(0, 0);
                 func_800CB2C4();
                 gGamestate = 0;

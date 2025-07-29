@@ -53,7 +53,9 @@ void* segmented_to_virtual(void* addr);
 #define RATIO_Y (gfx_current_dimensions.height / (2.0f * HALF_SCREEN_HEIGHT))
 
 // enough to submit the nintendo logo in one go
-#define MAX_BUFFERED (384)
+//#define MAX_BUFFERED (384)
+// need to save some memory
+#define MAX_BUFFERED 128
 #define MAX_LIGHTS 2
 #define MAX_VERTICES 64
 
@@ -419,8 +421,9 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 	return 0;
 }
 
-// enough for a 256 * 64 16-bit image, no overflow should happen at this point
-uint16_t __attribute__((aligned(32))) rgba16_buf[4096 * 16];//4];
+// enough for a 64 * 64 16-bit image, no overflow should happen at this point
+uint16_t __attribute__((aligned(32))) rgba16_buf[4096 * 8];
+uint8_t __attribute__((aligned(32))) xform_buf[8192];
 
 int last_cl_rv;
 
@@ -455,32 +458,9 @@ static void import_texture_rgba16(int tile) {
 
 		uint16_t *tex16 = rgba16_buf;
 		for (i = 0; i < height; i++) {
-			for (uint32_t x = 0; x < somewidth; x++) { //}=4) {
-			uint16_t col16 = __builtin_bswap16(start[x]);
-			*tex16++ = ((col16 & 1) << 15) | (col16 >> 1);
-#if 0
-				uint16_t np = start[x];
-//				uint16_t np1 = start[x+1];
-//				uint16_t np2 = start[x+2];
-//				uint16_t np3 = start[x+3];
-
-				np = ((np << 8)) | ((np >> 8) & 0xff);
-//				np1 = ((np1 << 8)) | ((np1 >> 8) & 0xff);
-//				np2 = ((np2 << 8)) | ((np2 >> 8) & 0xff);
-//				np3 = ((np3 << 8)) | ((np3 >> 8) & 0xff);
-
-				uint8_t a = np & 1;
-				*tex16++ = (a << 15) | (np >> 1);
-
-/*				a = np1 & 1;
-				*tex16++ = (a << 15) | (r << 10) | (g << 5) | (b);
-
-				a = np2 & 1;
-				*tex16++ = (a << 15) | (r << 10) | (g << 5) | (b);
-
-				a = np3 & 1;
-				*tex16++ = (a << 15) | (r << 10) | (g << 5) | (b);*/
-#endif			
+			for (uint32_t x = 0; x < somewidth; x++) {
+				uint16_t col16 = __builtin_bswap16(start[x]);
+				*tex16++ = ((col16 & 1) << 15) | (col16 >> 1);
 			}
 			start += src_width;
 		}
@@ -527,13 +507,12 @@ static void import_texture_ia4(int tile) {
 			rgba16_buf[i] = col16;
 		}
 	} else {
-		uint8_t ia4_xform_buf[8192];
-		memset(ia4_xform_buf, 0, 8192);//(last_set_texture_image_width + 1)*height);
+		memset(xform_buf, 0, 8192);
 		uint8_t* start =
 			(uint8_t*) &rdp.loaded_texture[tile]
 				.addr[(((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) >> 1) * (last_set_texture_image_width + 1)) +
 					  ((rdp.texture_tile.uls >> G_TEXTURE_IMAGE_FRAC) >> 1)];
-		uint8_t *tex8 = ia4_xform_buf;
+		uint8_t *tex8 = xform_buf;
 		for (uint32_t i = 0; i < height; i++) {
 			for (uint32_t x = 0; x < (last_set_texture_image_width + 1) * 2; x += 2) {
 				uint32_t sidx = x>>1;
@@ -550,7 +529,7 @@ static void import_texture_ia4(int tile) {
 			tex8 += (last_set_texture_image_width + 1);
 		}
 		for (uint32_t i = 0; i < rdp.loaded_texture[tile].size_bytes * 2; i++) {
-			uint8_t byte = ia4_xform_buf[i];
+			uint8_t byte = xform_buf[i];
 			uint8_t intensity = (SCALE_3_8(byte >> 1) >> 3) & 0x1f;
 			uint8_t alpha = byte & 1;
 			uint8_t r = intensity;
@@ -664,8 +643,7 @@ static void import_texture_i4(int tile) {
 			rgba16_buf[idx+1] = (part2 << 12) | (part2 << 8) | (part2 << 4) | part2;
 		}
 	} else {
-//		uint8_t xform_buf[8192];
-		memset(rgba16_buf,0,8192);
+		memset(rgba16_buf, 0, 8192);
 		uint8_t* start =
 			(uint8_t*) &rdp.loaded_texture[tile]
 				.addr[(((((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC)-1)/2) * (width)/2)) +
@@ -673,22 +651,14 @@ static void import_texture_i4(int tile) {
 		for (uint32_t i = 0; i < height; i++) {
 			uint32_t iw = i * width;
 			for (uint32_t x = 0; x < (last_set_texture_image_width + 1)*2; x += 2) {
-				//xform_buf[iw + x] = (start[(x / 2)] >> 4) & 0xf;
 				uint8_t startin = start[(x >> 1)];
 				uint8_t in = (startin >> 4) & 0xf;
-				rgba16_buf[/* i */iw + x] = (in << 12) | (in << 8) | (in << 4) | in;
-				//xform_buf[iw + x + 1] = (start[(x / 2)] & 0xf);
+				rgba16_buf[iw + x] = (in << 12) | (in << 8) | (in << 4) | in;
 				in = startin & 0xf;
-				rgba16_buf[/* i */iw + x + 1] = (in << 12) | (in << 8) | (in << 4) | in;
+				rgba16_buf[iw + x + 1] = (in << 12) | (in << 8) | (in << 4) | in;
 			}
 			start += (last_set_texture_image_width + 1);
 		}
-#if 0
-		for (uint32_t i = 0; i < rdp.loaded_texture[tile].size_bytes * 2; i++) {
-			uint8_t in = (xform_buf[i] & 0x0f);
-			rgba16_buf[i] = (in << 12) | (in << 8) | (in << 4) | in;
-		}
-#endif
 	}
 
 	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_4_4_4_4_REV);
@@ -698,7 +668,6 @@ static void import_texture_i8(int tile) {
 	uint32_t width = rdp.texture_tile.line_size_bytes;
 	uint32_t height = rdp.loaded_texture[tile].size_bytes / rdp.texture_tile.line_size_bytes;
 
-	uint8_t xform_buf[8192];
     memset(xform_buf, 0, width*height*2);
 
 	uint8_t* start = (uint8_t*) &rdp.loaded_texture[tile]
@@ -743,8 +712,8 @@ static void import_texture_ci4(int tile) {
 			rgba16_buf[i] = tlut[part];
 		}
 	} else {
-		uint8_t xform_buf[8192];
-		memset(xform_buf, 0, width*height*2);
+//		uint8_t xform_buf[8192];
+		memset(xform_buf, 0, width * height * 2);
 		uint8_t* start =
 			(uint8_t*) &rdp.loaded_texture[tile]
 				.addr[(((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) / 2) * (last_set_texture_image_width + 1)) +
@@ -952,6 +921,8 @@ static void gfx_transposed_matrix_mul(float res[3], const float a[3], const floa
 	res[2] = a[0] * b[2][0] + a[1] * b[2][1] + a[2] * b[2][2];
 #endif
 }
+
+#define recip255 0.00392157f
 #define recip127 0.00787402f
 #define recip2pi 0.159155f
 static void calculate_normal_dir(const Light_t* light, float coeffs[3]) {
@@ -1297,9 +1268,15 @@ for (i = 0; i < n_vertices; i++, dest_index++) {
 
 
  */
+
+int nearz_clip_verts = 0;
+int total_verts = 0;
+
 static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
     size_t i;
     fast_mat_load(&rsp.MP_matrix);
+
+	total_verts += n_vertices;
 
     for (i = 0; i < n_vertices; i++, dest_index++) {
         const Vtx_t* v = &vertices[i].v;
@@ -1350,6 +1327,7 @@ static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t de
             d->color.r = r > 255 ? 255 : r;
             d->color.g = g > 255 ? 255 : g;
             d->color.b = b > 255 ? 255 : b;
+	        d->color.a = v->cn[3];
 
             if (rsp.geometry_mode & G_TEXTURE_GEN) {
                 float dotx; // = 0,
@@ -1385,6 +1363,7 @@ static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t de
             d->color.r = v->cn[0];
             d->color.g = v->cn[1];
             d->color.b = v->cn[2];
+	        d->color.a = v->cn[3];
         }
 
         d->u = U;
@@ -1399,8 +1378,10 @@ static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t de
 		cr = (cr << 1) | !(y < -w);
 		cr = (cr << 1) | !(x >  w);
 		cr = (cr << 1) | !(x < -w);
+		//.         [z>w][z<-w][y>w][y<-w][x>w][x<-w]
 		d->clip_rej = cr;
-#if 0
+if(z < -w) nearz_clip_verts++;
+		#if 0
 		//            d->clip_rej |= 1;
 		cr <<= 1;
 		if (z < -w)
@@ -1424,8 +1405,6 @@ static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t de
         d->_y = y;
         d->_z = z;
         d->_w = w;
-
-        d->color.a = v->cn[3];
     }
 }
 extern s32 gIsMirrorMode;
@@ -1446,23 +1425,41 @@ extern s32 gIsMirrorMode;
 	
 */
 
+static inline float approx_recip_sign(float v) {
+	float _v = 1.0f / sqrtf(v * v);
+	return copysignf(_v, v);
+}
 
+int total_tri=0;
+int rej_tri=0;
+int nearz_tri = 0;
 static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx) {
     struct LoadedVertex* v1 = &rsp.loaded_vertices[vtx1_idx];
     struct LoadedVertex* v2 = &rsp.loaded_vertices[vtx2_idx];
     struct LoadedVertex* v3 = &rsp.loaded_vertices[vtx3_idx];
     struct LoadedVertex* v_arr[3] = { v1, v2, v3 };
-
+//	total_tri++;
     if ((v1->clip_rej | v2->clip_rej | v3->clip_rej) != 0x3f) {
         // The whole triangle lies outside the visible area
-        return;
+//		rej_tri++;
+		return;
     }
+
+//if((!((v1->clip_rej>>4)&1)) || (!((v2->clip_rej>>4)&1)) || 
+//(!((v3->clip_rej>>4)&1))) {
+//	nearz_tri++;
+//	return;
+//}
+	float rw1 = approx_recip_sign(v1->_w);
+	float rw2 = approx_recip_sign(v2->_w);
+	float rw3 = approx_recip_sign(v3->_w);
+
 #if 1
     if ((rsp.geometry_mode & G_CULL_BOTH) != 0) {
-        float dx1 = (v1->_x / v1->_w) - (v2->_x / v2->_w);
-        float dy1 = (v1->_y / v1->_w) - (v2->_y / v2->_w);
-        float dx2 = (v3->_x / v3->_w) - (v2->_x / v2->_w);
-        float dy2 = (v3->_y / v3->_w) - (v2->_y / v2->_w);
+        float dx1 = (v1->_x * rw1) - (v2->_x * rw2);
+        float dy1 = (v1->_y * rw1) - (v2->_y * rw2);
+        float dx2 = (v3->_x * rw3) - (v2->_x * rw2);
+        float dy2 = (v3->_y * rw3) - (v2->_y * rw2);
         float cross = dx1 * dy2 - dy1 * dx2;
 
         if ((v1->wlt0) ^ (v2->wlt0) ^ (v3->wlt0)) {
@@ -1475,17 +1472,23 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
             case 0:
                 switch (rsp.geometry_mode & G_CULL_BOTH) {
                     case G_CULL_FRONT:
-                        if (cross <= 0)
-                            return;
-                        break;
+                        if (cross <= 0){
+//		rej_tri++;
+
+							return;
+                        }break;
                     case G_CULL_BACK:
-                        if (cross >= 0)
-                            return;
-                        break;
+                        if (cross >= 0){
+//		rej_tri++;
+
+							return;
+                        }break;
                     case G_CULL_BOTH:
-                        // Why is this even an option?
+{                        // Why is this even an option?
+//			rej_tri++;
+
                         return;
-                }
+}                }
                 break;
             case 1:
                 /* switch (rsp.geometry_mode & G_CULL_BOTH) {
@@ -1505,7 +1508,8 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         }
     }
 #endif
-	//frame_tris++;
+
+//frame_tris++;
     // gfx_flush();
     if (matrix_dirty) {
         glMatrixMode(GL_PROJECTION);
@@ -1620,8 +1624,8 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     /* Will be enabled when pvr fog is working, something isn't quite right current */
 #if 1
     if (use_fog) {
-        float fog_color[4] = { rdp.fog_color.r / (float) 255, rdp.fog_color.g / (float) 255,
-                               rdp.fog_color.b / (float) 255, (float) (rdp.fog_color.a / (float) 255) * 0.75f };
+        float fog_color[4] = { rdp.fog_color.r * recip255, rdp.fog_color.g * recip255,
+                               rdp.fog_color.b * recip255, (float) (rdp.fog_color.a * recip255) * 0.75f };
         glFogfv(GL_FOG_COLOR, fog_color);
     }
 #endif
@@ -2955,6 +2959,9 @@ void gfx_run(Gfx* commands) {
 }
 
 void gfx_end_frame(void) {
+	//printf("total vert %d nearz %d\n", total_verts, nearz_clip_verts);
+//	printf("total tri %d rej %d nearz %d\n", total_tri, rej_tri, nearz_tri);
+	total_verts = nearz_clip_verts = total_tri = rej_tri = nearz_tri = 0;
 	//printf("verts %d tris %d quads %d\n", frame_verts, frame_tris, frame_quads);
 	if (!dropped_frame) {
 		gfx_rapi->finish_render();

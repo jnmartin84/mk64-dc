@@ -2155,7 +2155,7 @@ void thread5_game_loop(UNUSED void* arg) {
 	inited = 1;
     vblank_handler_add(&vblfunc, NULL);
     create_thread(NULL, 5, &SPINNING_THREAD, NULL, NULL, 12);
-
+#define MEMTEST
 #if defined(MEMTEST)
     for(int mi=0;mi<6*1048576;mi+=65536) {
         void *test_m = malloc(mi);

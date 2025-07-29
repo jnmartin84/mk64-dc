@@ -153,46 +153,6 @@ void load_credits(void) {
     load_course(gCurrentCourseId);
     load_ceremony_data();
 
-#if 0
-    {
-#if 1
-        sprintf(texfn, "%s/dc_data/ceremony_data.bin", fnpre);
-#else
-        sprintf(texfn, "/cd/dc_data/ceremony_data.bin");
-#endif
-        printf("opening %s\n", texfn);
-        FILE* file = fopen(texfn, "rb");
-        if (!file) {
-            perror("fopen");
-            printf("\n");
-//            while(1){}
-            exit(-1);
-        }
-
-        fseek(file, 0, SEEK_END);
-        long filesize = ftell(file);
-        printf("Filesize %ld\n", filesize);
-        fseek(file, 0, SEEK_SET);
-
-        long toread = filesize;
-        long didread = 0;
-
-        while (didread < toread) {
-            long rv = fread(&CEREMONY_BUF[didread], 1, toread - didread, file);
-            if (rv == -1) {
-            perror("fread");
-            printf("couldnt read into ceremony buf\n");
-//            while(1){}
-                exit(-1);
-            }
-            toread -= rv;
-            didread += rv;
-        }
-        fclose(file);
-        file = NULL;
-        set_segment_base_addr(0xB, (void*) CEREMONY_BUF);
-    }
-#endif
     gCourseMinX = -0x15A1;
     gCourseMinY = -0x15A1;
     gCourseMinZ = -0x15A1;

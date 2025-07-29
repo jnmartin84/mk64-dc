@@ -350,6 +350,7 @@ void* load_data(uintptr_t startAddr, uintptr_t endAddr, uintptr_t target) {
 
 void gfx_texture_cache_invalidate(void* arg);
 extern u8 *ROVING_SEG3_BUF;
+extern uint8_t __attribute__((aligned(32))) OTHER_BUF[OTHER_BUF_SIZE];
 
 // starting address for this texture COMPRESSED is gNextFree+arg2
 // starting address for this texture DECOMPRESSED is gNextFree

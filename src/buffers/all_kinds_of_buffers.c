@@ -4,7 +4,8 @@
 #include "buffer_sizes.h"
 // uncompressed common data segment size
 uint8_t __attribute__((aligned(32))) COMMON_BUF[COMMON_BUF_SIZE];
-uint8_t __attribute__((aligned(32))) SEG3_BUF[SEG3_BUF_SIZE];//0x18000];
+// wiggle room for ghost textures in Banshee Boardwalk
+uint8_t __attribute__((aligned(32))) SEG3_BUF[SEG3_BUF_SIZE];
 // largest observed value -- Bowser's Castle
 uint8_t __attribute__((aligned(32))) SEG4_BUF[SEG4_BUF_SIZE];
 // largest *tex.bin -- Luigi's Raceway
@@ -14,8 +15,9 @@ uint8_t __attribute__((aligned(32))) SEG5_BUF[SEG5_BUF_SIZE];
 // THERE IS A BUFFER OVERWRITE ISSUE AND IT CORRUPTS SEG5_BUF
 uint8_t __attribute__((aligned(32))) CEREMONY_ACTOR_BUF[CEREMONY_ACTOR_BUF_SIZE]; 
 
+// SAVE SPACE BY REUSING THIS FOR STARTUP
 uint8_t __attribute__((aligned(32))) OTHER_BUF[OTHER_BUF_SIZE];
-uint8_t __attribute__((aligned(32))) STARTUP_BUF[STARTUP_BUF_SIZE];
+
 uint8_t __attribute__((aligned(32))) COURSE_BUF[COURSE_BUF_SIZE];
 uint8_t __attribute__((aligned(32))) UNPACK_BUF[UNPACK_BUF_SIZE];
 uint8_t __attribute__((aligned(32))) CEREMONY_BUF[CEREMONY_BUF_SIZE];////36232];

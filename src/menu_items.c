@@ -1240,7 +1240,7 @@ extern s8 D_800E852C;
 
 #include "buffer_sizes.h"
 // save space by reusing this for startup
-extern uint8_t __attribute__((aligned(32))) STARTUP_BUF[STARTUP_BUF_SIZE];
+extern uint8_t __attribute__((aligned(32))) OTHER_BUF[OTHER_BUF_SIZE];
 
 extern u16 reflection_map_brass[];
 
@@ -1263,7 +1263,7 @@ void func_80091B78(void) {
         }
     }
     if (gMenuSelection == LOGO_INTRO_MENU) {
-        void *startup_decomp = decompress_segments((u8*) STARTUP_LOGO_ROM_START, STARTUP_BUF);
+        void *startup_decomp = decompress_segments((u8*) STARTUP_LOGO_ROM_START, OTHER_BUF);
         set_segment_base_addr(6, startup_decomp);
 
         uint16_t *reflp = (uint16_t *)segmented_to_virtual(reflection_map_gold);
@@ -1272,20 +1272,6 @@ void func_80091B78(void) {
 			nextrp = (nextrp << 8) | ((nextrp >> 8)&0xff);
 			reflp[i] = nextrp;
 		}
-#if 0
-        reflp = (uint16_t *)segmented_to_virtual(reflection_map_silver);
-		for (int i=0;i<32*32;i++) {
-			uint16_t nextrp = reflp[i];
-			nextrp = (nextrp << 8) | ((nextrp >> 8)&0xff);
-			reflp[i] = nextrp;
-		}
-        reflp = (uint16_t *)segmented_to_virtual(reflection_map_brass);
-		for (int i=0;i<32*32;i++) {
-			uint16_t nextrp = reflp[i];
-			nextrp = (nextrp << 8) | ((nextrp >> 8)&0xff);
-			reflp[i] = nextrp;
-		}
-#endif
     }
 
     // Hypothetically, this should be a ptr... But only hypothetically.
@@ -1293,7 +1279,6 @@ void func_80091B78(void) {
     gMenuCompressedBuffer = &backing_gMenuCompressedBuffer;
     sTKMK00_LowResBuffer = (u8*) &backing_sTKMK00_LowResBuffer;
     gSomeDLBuffer = (struct_8018EE10_entry*) &backing_gSomeDLBuffer;
-    //func_800AF9B0();
     unref_8018EE0C = 0;
 
     for (i = 0; i < 5; i++) {

@@ -229,7 +229,7 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
         // we only need to do this once
         // ^-- uhhh yeah no I think that's wrong and a bug
                // prg->enabled = 1;
-#if 0
+#if 1
         if (prg->shader_id & SHADER_OPT_TEXTURE_EDGE) {
             glEnable(GL_ALPHA_TEST);
             glAlphaFunc(GL_GREATER, 0.8f);
@@ -376,7 +376,7 @@ static void gfx_opengl_select_texture(int tile, uint32_t texture_id) {
 }
 
 /* Used for rescaling textures ROUGHLY into pow2 dims */
-static unsigned int __attribute__((aligned(32))) scaled[64 * 64 * 4];//sizeof(unsigned int)]; /* 16kb */
+static uint8_t __attribute__((aligned(32))) scaled[64 * 64 * 8];
 
 #define LET_GLDC_TWIDDLE 0
 
