@@ -24,6 +24,23 @@ Gfx l_itemBoxQuestionMarkModel[] = {
     gsSPEndDisplayList(),
 };
 
+
+extern Vtx common_vtx_itembox[];
+Gfx l_D_0D002EE8[] = {
+    gsDPPipeSync(),
+    gsSPTexture(0xFFFF, 0xFFFF, 1, 1, G_OFF),
+    gsSPClearGeometryMode(G_LIGHTING),
+   gsDPSetRenderMode(G_RM_AA_ZB_XLU_SURF, G_RM_AA_ZB_XLU_SURF2),
+    gsDPSetPrimColor(0, 0, 0x08, 0x08, 0x08, 0x7F),
+    gsDPSetCombineLERP(0, 0, SHADE, PRIMITIVE, 1, 0, PRIMITIVE, 0, 0, 0, SHADE, PRIMITIVE, 1, 0, PRIMITIVE, 0),
+    gsSPVertex(common_vtx_itembox, 4, 0),
+    gsSP1Triangle(0, 1, 2, 0),
+    gsSP1Triangle(0, 2, 3, 0),
+    gsDPSetAlphaCompare(G_AC_NONE),
+    gsSPEndDisplayList(),
+};
+
+
 /**
  * @brief Renders the item box actor.
  *
@@ -64,7 +81,10 @@ void render_actor_item_box(Camera* camera, struct ItemBox* item_box) {
                 return;
             }
 
-            gSPDisplayList(gDisplayListHead++, D_0D002EE8);
+            //gSPDisplayList(gDisplayListHead++, D_0D002EE8);
+
+            // item box shadows
+            gSPDisplayList(gDisplayListHead++, l_D_0D002EE8);
             someRot[1] = item_box->rot[1] * 2;
             someVec2[1] = item_box->pos[1];
             mtxf_pos_rotation_xyz(someMatrix1, someVec2, someRot);

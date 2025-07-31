@@ -16,6 +16,7 @@
 #include "cpu_vehicles_camera_path.h"
 #include "code_80281C40.h"
 #include "math_util.h"
+#include <string.h>
 
 s32 fireworkConeColour[] = {
     0x00FF4080, // pink
@@ -71,7 +72,6 @@ struct_D_802874D8 D_802874D8; // 31 bytes
 // u8 D_802874F6;
 CeremonyActor* sPodiumActorList;
 s32 D_802874FC;
-
 void func_80280650(void) {
 }
 
@@ -91,7 +91,6 @@ void set_initial_position(CeremonyActor* actor) {
 }
 
 CeremonyActor* find_available_entry(void) {
-    UNUSED s32 pad[2];
     CeremonyActor* actor = sPodiumActorList;
     s32 i;
 
@@ -99,7 +98,7 @@ CeremonyActor* find_available_entry(void) {
 
         // Find an inactive actor.
         if ((actor->isActive & 1) == 0) {
-            bzero(actor, sizeof(CeremonyActor));
+            memset(actor, 0, sizeof(CeremonyActor));
             actor->isActive = 1;
             actor->unk24 = 1.0f;
             return actor;
@@ -295,8 +294,8 @@ void unused_80280FA8(UNUSED CeremonyActor* actor) {
 extern u8 __attribute__((aligned(32))) CEREMONY_ACTOR_BUF[CEREMONY_ACTOR_BUF_SIZE];
 void balloons_and_fireworks_init(void) {
     D_802874D8.actorTimer = 0;
-    sPodiumActorList = (CeremonyActor*)CEREMONY_ACTOR_BUF; 
-    bzero(sPodiumActorList, CEREMONY_ACTOR_BUF_SIZE);//(sizeof(CeremonyActor) * 200));
+    sPodiumActorList = (CeremonyActor*)CEREMONY_ACTOR_BUF;
+    memset(sPodiumActorList, 0, CEREMONY_ACTOR_BUF_SIZE);//(sizeof(CeremonyActor) * 200));
     new_actor(&initDummy);
 }
 

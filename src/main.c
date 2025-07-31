@@ -43,7 +43,6 @@
 #include "staff_ghosts.h"
 #include <debug.h>
 #include "crash_screen.h"
-#include "buffers/gfx_output_buffer.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -481,6 +480,10 @@ int main(UNUSED int argc, UNUSED char **argv) {
     gPhysicalFramebuffers[1] = fb[1];
     gPhysicalFramebuffers[2] = fb[2];
 
+//    dbgio_dev_select("fb");
+    dbgio_printf("Loading...\n");
+//    dbgio_dev_select("fs_dclsocket");
+
     FILE* fntest = fopen("/pc/dc_data/common_data.bin", "rb");
     if (NULL == fntest) {
         fntest = fopen("/cd/dc_data/common_data.bin", "rb");
@@ -829,7 +832,7 @@ void clear_framebuffer(s32 color) {
     gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
     gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
 
-    //gDPSetFillColor(gDisplayListHead++, color);
+    gDPSetFillColor(gDisplayListHead++, color);
     //gDPFillRectangle(gDisplayListHead++, 0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
 
     gDPPipeSync(gDisplayListHead++);

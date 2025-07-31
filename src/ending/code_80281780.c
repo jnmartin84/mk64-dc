@@ -149,6 +149,9 @@ void load_ceremony_data(void) {
 
 void load_ceremony_cutscene(void) {
     Camera* camera = &cameras[0];
+    memset(&D_802874D8, 0, sizeof(D_802874D8));
+    memset(sPodiumActorList, 0, (sizeof(CeremonyActor) * 200));
+    sPodiumActorList = NULL;
 
     gCurrentCourseId = COURSE_ROYAL_RACEWAY;
     D_800DC5B4 = (u16) 1;

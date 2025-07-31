@@ -579,8 +579,8 @@ void func_802A4A0C(Vtx* vtx, struct UnkStruct_800DC5EC* arg1, UNUSED s32 arg2, U
     sp5C[0] *= temp_f0;
     sp5C[1] *= temp_f0;
 
-    sp5C[0] *= 160.0f;
-    sp5C[1] *= 120.0f;
+    sp5C[0] *= (160.0f);
+    sp5C[1] *= (120.0f);
 
     temp_t5 = 120 - (s16) sp5C[1];
     arg1->cameraHeight = temp_t5;

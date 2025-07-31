@@ -32,8 +32,8 @@ typedef volatile s32 vs32;
 typedef volatile s64 vs64;
 
 typedef float f32;
-//typedef double f64;
-typedef float f64;
+typedef double f64;
+//typedef float f64;
 
 #ifdef TARGET_N64
 typedef u32 size_t;

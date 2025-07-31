@@ -104,7 +104,6 @@ void render_limb_or_add_mtx(Armature* arg0, s16* arg1, AnimationLimbVector arg2,
 }
 
 void render_armature(Armature* animation, Animation* arg1, s16 timeCycle) {
-    UNUSED u32* temp;
     s16* angle_array;
     s32 some_offset;
     AnimationLimbVector* animation_cycle_list;

@@ -36,6 +36,15 @@
 #include <vehicles.h>
 #include "data/some_data.h"
 #include <stdio.h>
+
+#define gSPBlendOneInv(pkt)                                       \
+    {                                                                                   \
+        Gfx* _g = (Gfx*) (pkt);                                                         \
+                                                                                        \
+        _g->words.w0 = 0x424C4E44; \
+        _g->words.w1 = 0x4655434C;                                           \
+    }
+
 void gfx_texture_cache_invalidate(void *orig_addr);
 
 void func_800431B0(Vec3f pos, Vec3su orientation, f32 scale, Vtx* vtx) {
@@ -513,9 +522,7 @@ void func_80046424(s32 arg0, s32 arg1, u16 arg2, f32 arg3, u8* texture, Vtx* arg
                    s32 arg9) {
     func_80042330(arg0, arg1, arg2, arg3);
     gSPDisplayList(gDisplayListHead++, D_0D007968);
-    // guessing this is probably a rainbow color cycle
-    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 0,0,0,255);
-        //128, 128, 128, 255);
+    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 0,0,0,255);//128, 128, 128, 255);
     func_80045D0C(texture, arg5, arg6, arg7, arg9);
 }
 
@@ -873,17 +880,33 @@ void draw_2d_texture_at_no_inval(Vec3f arg0, Vec3su arg1, f32 arg2, u8* tlut, u8
     draw_rectangle_texture_overlap_no_inval(tlut, texture, arg5, arg6, arg7, arg8, arg9);
 }
 
+Gfx l_D_0D007C88[] = {
+    gsDPSetTexturePersp(G_TP_PERSP),
+    gsDPSetAlphaCompare(G_AC_NONE),
+    gsDPSetTextureLUT(G_TT_RGBA16),
+    gsDPSetCombineMode(G_CC_MODULATEIA, G_CC_MODULATEIA2),//G_CC_DECALRGBA, G_CC_DECALRGBA),
+    gsSPTexture(0x8000, 0x8000, 0, G_TX_RENDERTILE, G_ON),
+    gsSPEndDisplayList(),
+};
+
+Gfx l_D_0D007D78[] = {
+    gsSPDisplayList(l_D_0D007C88),
+    gsDPSetTextureFilter(G_TF_BILERP),
+    gsDPSetRenderMode(G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2),
+    gsSPEndDisplayList(),
+};
+
 void draw_2d_texture_at(Vec3f arg0, Vec3su arg1, f32 arg2, u8* tlut, u8* texture, Vtx* arg5, s32 arg6, s32 arg7,
                         s32 arg8, s32 arg9) {
     rsp_set_matrix_transformation(arg0, arg1, arg2);
-    gSPDisplayList(gDisplayListHead++, D_0D007D78);
+    gSPDisplayList(gDisplayListHead++, l_D_0D007D78);
     draw_rectangle_texture_overlap(tlut, texture, arg5, arg6, arg7, arg8, arg9);
 }
 
 void func_80048130(Vec3f arg0, Vec3su arg1, f32 arg2, u8* tlut, u8* texture, Vtx* arg5, s32 arg6, s32 arg7, s32 arg8,
                    s32 arg9, s32 argA) {
     rsp_set_matrix_transformation(arg0, arg1, arg2);
-    gSPDisplayList(gDisplayListHead++, D_0D007D78);
+    gSPDisplayList(gDisplayListHead++, l_D_0D007D78);
     func_8004747C(tlut, texture, arg5, arg6, arg7, arg8, arg9, argA);
 }
 
@@ -1344,7 +1367,7 @@ UNUSED void func_8004A5E4(Vec3f arg0, Vec3su arg1, f32 arg2, u8* texture, Vtx* a
     func_8004A414(arg0, arg1, arg2, texture, arg4, 16, 16, 16, 16);
 }
 
-void func_8004A630(Collision* arg0, Vec3f arg1, f32 arg2) {
+void draw_object_shadow(Collision* arg0, Vec3f arg1, f32 arg2) {
     if (func_80041924(arg0, arg1) != 0) {
         D_80183E50[0] = arg1[0];
         D_80183E50[1] = calculate_surface_height(arg1[0], 0.0f, arg1[2], arg0->meshIndexZX) + 0.8;
@@ -1515,34 +1538,34 @@ void set_transparency(s32 alpha) {
 void func_8004B310(s32 alpha) {
     gDPSetCombineLERP(gDisplayListHead++, 0, 0, 0, TEXEL0, TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, TEXEL0, TEXEL0, 0,
                       PRIMITIVE, 0);
-    gDPSetPrimColor(gDisplayListHead++, 0, 0, 0x00, 0x00, 0x00, alpha);
+    gDPSetPrimColor(gDisplayListHead++, 0, 0, 0x00, 0x00, 0x00, (u8)alpha);
 }
 
 void func_8004B35C(u32 red, u32 green, u32 blue, u32 alpha) {
     gDPSetCombineMode(gDisplayListHead++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
-    gDPSetPrimColor(gDisplayListHead++, 0, 0, red, green, blue, alpha);
+    gDPSetPrimColor(gDisplayListHead++, 0, 0, (u8)red, (u8)green, (u8)blue, (u8)alpha);
 }
 
 void func_8004B3C8(s32 alpha) {
     gDPSetCombineLERP(gDisplayListHead++, 0, 0, 0, 1, TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, 1, TEXEL0, 0, PRIMITIVE, 0);
-    gDPSetPrimColor(gDisplayListHead++, 0, 0, 0x00, 0x00, 0x00, alpha);
+    gDPSetPrimColor(gDisplayListHead++, 0, 0, 0x00, 0x00, 0x00, (u8)alpha);
 }
 
-void set_shadow_color(s32 red, s32 green, s32 blue, s32 alpha) {
+void set_shadow_color(u32 red, u32 green, u32 blue, u32 alpha) {
     gDPSetCombineLERP(gDisplayListHead++, 0, 0, 0, PRIMITIVE, TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, PRIMITIVE, TEXEL0, 0,
                       PRIMITIVE, 0);
-    gDPSetPrimColor(gDisplayListHead++, 0, 0, red, green, blue, alpha);
+    gDPSetPrimColor(gDisplayListHead++, 0, 0, (u8)red, (u8)green, (u8)blue, (u8)alpha);
 }
 
-void set_trans_masked_color(s32 red, s32 green, s32 blue) {
+void set_trans_masked_color(u32 red, u32 green, u32 blue) {
     gDPSetCombineLERP(gDisplayListHead++, 0, 0, 0, PRIMITIVE, 0, 0, 0, TEXEL0, 0, 0, 0, PRIMITIVE, 0, 0, 0, TEXEL0);
-    gDPSetPrimColor(gDisplayListHead++, 0, 0, red, green, blue, 0xFF);
+    gDPSetPrimColor(gDisplayListHead++, 0, 0, (u8)red, (u8)green, (u8)blue, 0xFF);
 }
 
 UNUSED void func_8004B4E8(s32 red, s32 green, s32 blue, s32 alpha) {
     gDPSetCombineLERP(gDisplayListHead++, 1, 0, SHADE, PRIMITIVE, 0, 0, 0, TEXEL0, 1, 0, SHADE, PRIMITIVE, 0, 0, 0,
                       TEXEL0);
-    gDPSetPrimColor(gDisplayListHead++, 0, 0, red, green, blue, alpha);
+    gDPSetPrimColor(gDisplayListHead++, 0, 0, (u8)red, (u8)green, (u8)blue, (u8)alpha);
 }
 
 UNUSED void func_8004B554(s32 alpha) {
@@ -1552,14 +1575,14 @@ UNUSED void func_8004B554(s32 alpha) {
 }
 
 UNUSED void func_8004B5A8(s32 red, s32 green, s32 blue, s32 alpha) {
-    gDPSetPrimColor(gDisplayListHead++, 0, 0, red, green, blue, alpha);
+    gDPSetPrimColor(gDisplayListHead++, 0, 0, (u8)red, (u8)green, (u8)blue, (u8)alpha);
     gDPSetCombineLERP(gDisplayListHead++, 1, PRIMITIVE_ALPHA, TEXEL0, PRIMITIVE, 0, 0, 0, TEXEL0, 1, PRIMITIVE_ALPHA,
                       TEXEL0, PRIMITIVE, 0, 0, 0, TEXEL0);
 }
 
-void setup_tinted_transparent(s32 primRed, s32 primGreen, s32 primBlue, s32 envRed, s32 envGreen, s32 envBlue, s32 primAlpha) {
-    gDPSetPrimColor(gDisplayListHead++, 0, 0, primRed, primGreen, primBlue, primAlpha);
-    gDPSetEnvColor(gDisplayListHead++, envRed, envGreen, envBlue, 0xFF);
+void setup_tinted_transparent(u32 primRed, u32 primGreen, u32 primBlue, u32 envRed, u32 envGreen, u32 envBlue, u32 primAlpha) {
+    gDPSetPrimColor(gDisplayListHead++, 0, 0, (u8)primRed, (u8)primGreen, (u8)primBlue, (u8)primAlpha);
+    gDPSetEnvColor(gDisplayListHead++, (u8)envRed, (u8)envGreen, (u8)envBlue, 0xFF);
     gDPSetCombineLERP(gDisplayListHead++, 1, ENVIRONMENT, TEXEL0, PRIMITIVE, PRIMITIVE, 0, TEXEL0, 0, 1, ENVIRONMENT,
                       TEXEL0, PRIMITIVE, PRIMITIVE, 0, TEXEL0, 0);
    // printf("the tinted transparent CC words: %08x %08x", (gDisplayListHead - 1)->words.w0, (gDisplayListHead - 1)->words.w1);
@@ -1567,7 +1590,7 @@ void setup_tinted_transparent(s32 primRed, s32 primGreen, s32 primBlue, s32 envR
 
 void func_8004B6C4(s32 red, s32 green, s32 blue) {
     gDPSetCombineLERP(gDisplayListHead++, 0, 0, 0, PRIMITIVE, 0, 0, 0, TEXEL0, 0, 0, 0, PRIMITIVE, 0, 0, 0, TEXEL0);
-    gDPSetPrimColor(gDisplayListHead++, 0, 0, red, green, blue, 0xFF);
+    gDPSetPrimColor(gDisplayListHead++, 0, 0, (u8)red, (u8)green, (u8)blue, 0xFF);
 }
 
 void func_8004B72C(u32 primRed, u32 primGreen, u32 primBlue, u32 envRed, u32 envGreen, u32 envBlue, u32 primAlpha) {
@@ -1791,10 +1814,7 @@ void draw_hud_2d_texture(s32 x, s32 y, u32 width, u32 height, u8* texture) {
 void func_8004C450(s32 x, s32 y, u32 width, u32 height, u8* texture) {
 
     gSPDisplayList(gDisplayListHead++, D_0D007F38);
-// probably rainbow
-    //    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 0x80, 0x80, 0x80, 0xFF);
-
-    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 0, 0, 0, 0xFF);
+    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 0x80, 0x80, 0x80, 0xFF);
     load_texture_block_rgba16_mirror(texture, width, height);
     func_8004B97C(x - (width >> 1), y - (height >> 1), width, height, 1);
     gSPDisplayList(gDisplayListHead++, D_0D007EB8);
@@ -2470,11 +2490,23 @@ void func_8004EB38(s32 playerId) {
     }
 }
 
+#define gSPBlendOneInv(pkt)                                       \
+    {                                                                                   \
+        Gfx* _g = (Gfx*) (pkt);                                                         \
+                                                                                        \
+        _g->words.w0 = 0x424C4E44; \
+        _g->words.w1 = 0x4655434C;                                           \
+    }
+
 void func_8004ED40(s32 arg0) {
+    gSPBlendOneInv(gDisplayListHead++);
     func_8004A2F4(playerHUD[arg0].speedometerX, playerHUD[arg0].speedometerY, 0U, 1.0f, D_8018D300, D_8018D308,
                   D_8018D310, 0xFF, common_texture_speedometer, D_0D0064B0, 64, 96, 64, 48);
+    gSPBlendOneInv(gDisplayListHead++);
+    gSPBlendOneInv(gDisplayListHead++);
     func_8004A258(D_8018CFEC, D_8018CFF4, D_8016579E, 1.0f, common_texture_speedometer_needle, D_0D005FF0, 0x40, 0x20,
                   0x40, 0x20);
+    gSPBlendOneInv(gDisplayListHead++);
 }
 
 void func_8004EE54(s32 arg0) {
@@ -2489,14 +2521,18 @@ void func_8004EE54(s32 arg0) {
     }
 }
 
+// draw the minimap course outline
 void func_8004EF9C(s32 arg0) {
     s16 temp_t0;
     s16 temp_v0;
+    gSPBlendOneInv(gDisplayListHead++);
 
     temp_v0 = D_800E5548[arg0 * 2];
     temp_t0 = D_800E5548[arg0 * 2 + 1];
     func_8004D37C(0x00000104, 0x0000003C, D_8018D248[arg0], 0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF, temp_v0,
                   temp_t0, temp_v0, temp_t0);
+    gSPBlendOneInv(gDisplayListHead++);
+
 }
 
 void render_mini_map_finish_line(s32 arg0) {
@@ -2676,12 +2712,7 @@ void func_8004F950(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
 
 void print_timer_rainbow(s32 arg0, s32 arg1, s32 arg2) {
     gSPDisplayList(gDisplayListHead++, D_0D007F38);
-#if 0
-    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 128, 128, 128, 255);
-#else
-    // jnmartin84 - use 0 instead of 128 until I fix color combining
-    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 0, 0, 0, 255);
-#endif
+    setup_tinted_transparent(D_801656C0, D_801656D0, D_801656E0, 0,0,0,255);//128, 128, 128, 255);
     load_texture_block_rgba16_mirror((u8*) common_texture_hud_normal_digit, 104, 16);
     func_8004F6D0(arg2);
     func_8004F8CC(arg0, arg1);
@@ -3052,6 +3083,7 @@ void func_80050E34(s32 playerId, s32 arg1) {
         gDPLoadTLUT_pal256(gDisplayListHead++, gPortraitTLUTs[characterId]);
         gSPDisplayList(gDisplayListHead++, D_0D007DB8);
         if (player->effects & STAR_EFFECT) {
+            gDPSetCombineMode(gDisplayListHead++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
             setup_tinted_transparent((s32) D_801656C0, (s32) D_801656D0, (s32) D_801656E0, 0x00000080, 0x00000080, 0x00000080,
                           (s32) gObjectList[objectIndex].primAlpha);
         } else {
@@ -3181,6 +3213,16 @@ void func_800519D4(s32 objectIndex, s16 arg1, s16 arg2) {
         gSPDisplayList(gDisplayListHead++, common_rectangle_display);
     }
 }
+
+Gfx l_D_0D007A60[] = {
+    gsSPDisplayList(D_0D007A08),
+    gsDPSetTextureFilter(G_TF_BILERP),
+    gsDPSetAlphaCompare(G_AC_THRESHOLD),
+    gsDPSetRenderMode(G_RM_XLU_SURF | CVG_X_ALPHA, G_RM_XLU_SURF2 | CVG_X_ALPHA),
+    gsDPSetCombineMode(G_CC_MODULATEIA, G_CC_MODULATEIA),
+    gsSPEndDisplayList(),
+};
+
 
 void func_80051ABC(s16 arg0, s32 arg1) {
     s32 var_s0;
@@ -3346,7 +3388,7 @@ void func_800523B8(s32 objectIndex, s32 arg1, u32 arg2) {
     func_800484BC(object->pos, object->orientation, object->sizeScaling, object->primAlpha, (u8*) object->activeTLUT,
                   object->activeTexture, object->vertex, 0x00000030, 0x00000028, 0x00000030, 0x00000028);
     if ((is_obj_flag_status_active(objectIndex, 0x00000020) != 0) && (arg2 < 0x15F91U)) {
-        func_8004A630(&D_8018C830, object->pos, 0.4f);
+        draw_object_shadow(&D_8018C830, object->pos, 0.4f);
     }
 }
 
@@ -3734,7 +3776,7 @@ void render_lakitu(s32 cameraId) {
                 var_f2 = -var_f2;
             }
             if ((var_f0 + var_f2) <= 200.0) {
-                func_8004A630(&D_8018C0B0[cameraId], object->pos, 0.35f);
+                draw_object_shadow(&D_8018C0B0[cameraId], object->pos, 0.35f);
             }
         }
     }

@@ -71,7 +71,7 @@ Under `~/mario-kart-64-dc/tools/torch` you will find a `README.md` with instruct
 See: [ https://github.com/HarbourMasters/Torch/blob/6a2eb921482f2eb3b3cb5b675152d6d21d1a20ff/README.md ]
 
 
-Follow those instructions or nothing else will work. Then continue with the following commands (we will start from the beginning so there is no confusion):
+For Linux and other Linux-like environments, follow those instructions or nothing else will work. Then continue with the following commands (we will start from the beginning so there is no confusion):
 
     source /opt/toolchains/dc/kos/environ.sh
     cd ~/mario-kart-64-dc
@@ -82,6 +82,18 @@ Follow those instructions or nothing else will work. Then continue with the foll
     cd ..
     make assets
     make
+
+For macOS, make sure you have `gmake` installed (you may need to install it with `brew`) and try the following (this is how I build it):
+
+    source /opt/toolchains/dc/kos/environ.sh
+    cd ~/mario-kart-64-dc
+    cd tools/torch
+    CMAKE_POLICY_VERSION_MINIMUM=3.5 gmake
+    cd ..
+    CMAKE_POLICY_VERSION_MINIMUM=3.5 gmake
+    cd ..
+    CMAKE_POLICY_VERSION_MINIMUM=3.5 gmake assets
+    CMAKE_POLICY_VERSION_MINIMUM=3.5 gmake
 
 **How to generate Mario Kart 64 disc image**
 
@@ -134,10 +146,12 @@ Luke Benstead (@kazade) - Without GLdc, this project would have taken 6 more mon
 
 On the N64 side:
 
-The entire MK64 decomp team.
+MK64 decomp team.
 
-Everyone on the N64 Decompilation Discord that answered my questions and pointed me to code.
+MegaMech for taking time to personally answer questions and show me many bug-fixes. Game wouldn't be right without them.
 
-The Spaghetti Kart project and team. Without being able to reference that code, there are things that would not be working and would never be working.
+N64 Decompilation Discord/#mk64-decomp.
+
+Spaghetti Kart project/team. Without being able to reference that code, there are things that would not be working and would never be working.
 
 SonicDreamcaster - we're going to bring you over to the Dreamcast dark side.

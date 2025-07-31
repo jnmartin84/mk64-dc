@@ -29,7 +29,6 @@ SAFE_C_FILES :=    \
     build/us/src/audio/playback.o    \
     build/us/src/audio/audio_session_presets.o    \
     build/us/src/audio/port_eu.o    \
-    build/us/src/buffers/gfx_output_buffer.o    \
     build/us/src/buffers/trig_tables.o    \
     build/us/src/buffers/buffers.o    \
     build/us/src/buffers/random.o    \

@@ -32,8 +32,19 @@
 #include "data/path_spawn_metadata.h"
 #include "math_util_2.h"
 
-void sincoss(u16 arg, f32 *s, f32 *c);
+static inline void sincoss(u16 arg0, f32* s, f32* c) {
+    register float __s __asm__("fr2");
+    register float __c __asm__("fr3");
 
+    asm("lds    %2,fpul\n\t"
+        "fsca    fpul,dr2\n\t"
+        : "=f"(__s), "=f"(__c)
+        : "r"(arg0)
+        : "fpul");
+
+    *s = __s;
+    *c = __c;
+}
 s32 unk_cpu_vehicles_camera_path_pad[24];
 Collision D_80162E70;
 s16 D_80162EB0; // Possibly a float.
@@ -586,6 +597,21 @@ s32 is_collide_with_vehicle(f32 vehicleX, f32 vehicleY, f32 vehicleVelocityX, f3
     }
     return 0;
 }
+/* 
+static inline void sincoss(u16 arg0, f32* s, f32* c) {
+    register float __s __asm__("fr2");
+    register float __c __asm__("fr3");
+
+    asm("lds    %2,fpul\n\t"
+        "fsca    fpul,dr2\n\t"
+        : "=f"(__s), "=f"(__c)
+        : "r"(arg0)
+        : "fpul");
+
+    *s = __s;
+    *c = __c;
+}
+*/
 
 void adjust_position_by_angle(Vec3f newPos, Vec3f oldPos, s16 orientationY) {
     f32 x_dist;

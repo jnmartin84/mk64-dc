@@ -2455,6 +2455,37 @@ void render_item_boxes(struct UnkStruct_800DC5EC* arg0) {
         }
     }
 }
+
+
+static inline void sincoss(u16 arg0, f32* s, f32* c) {
+    register float __s __asm__("fr2");
+    register float __c __asm__("fr3");
+
+    asm("lds    %2,fpul\n\t"
+        "fsca    fpul,dr2\n\t"
+        : "=f"(__s), "=f"(__c)
+        : "r"(arg0)
+        : "fpul");
+
+    *s = __s;
+    *c = __c;
+}
+
+static inline void scaled_sincoss(u16 arg0, f32* s, f32* c, f32 scale) {
+    register float __s __asm__("fr2");
+    register float __c __asm__("fr3");
+
+    asm("lds    %2,fpul\n\t"
+        "fsca    fpul,dr2\n\t"
+        : "=f"(__s), "=f"(__c)
+        : "r"(arg0)
+        : "fpul");
+
+    *s = __s * scale;
+    *c = __c * scale;
+}
+
+
 extern void setup_actor_tree_mario_raceway();
 extern void finish_actor_tree_mario_raceway();
 extern void setup_actor_banana();
@@ -2469,8 +2500,10 @@ void render_course_actors(struct UnkStruct_800DC5EC* arg0) {
     s16 last_actor_type = -1;
     struct Actor* actor;
     UNUSED Vec3f sp4C = { 0.0f, 5.0f, 10.0f };
-    f32 sp48 = sins(camera->rot[1] - 0x8000); // unk26;
-    f32 temp_f0 = coss(camera->rot[1] - 0x8000);
+    f32 sp48;// = sins(camera->rot[1] - 0x8000); // unk26;
+    f32 temp_f0;// = coss(camera->rot[1] - 0x8000);
+
+    sincoss(camera->rot[1] - 0x8000, &sp48, &temp_f0);
 
     D_801502C0[0][0] = temp_f0;
     D_801502C0[0][2] = -sp48;

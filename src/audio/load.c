@@ -12,7 +12,6 @@
 #include "audio/synthesis.h"
 #include "audio/seqplayer.h"
 #include "audio/port_eu.h"
-#include "buffers/gfx_output_buffer.h"
 #include <stdio.h>
 #define ALIGN16(val) (((val) + 0xF) & ~0xF)
 
@@ -39,7 +38,6 @@ struct SharedDma sSampleDmas[0x70] = {0};
 u32 gSampleDmaNumListItems = 0;
 u32 sSampleDmaListSize1 = 0;
 s32 D_803B6E60 = 0;
-s32 load_bss_pad = 0;
 
 u8 sSampleDmaReuseQueue1[256] = {0}; // sSampleDmaReuseQueue1
 u8 sSampleDmaReuseQueue2[256] = {0}; // sSampleDmaReuseQueue2
@@ -185,7 +183,7 @@ void audio_dma_copy_immediate(u8* devAddr, void* vAddr, size_t nbytes) {
 
 void decrease_sample_dma_ttls() {
     u32 i = 0;
-    //printf("%s()\n",__func__);
+
     for (i = 0; i < sSampleDmaListSize1; i++) {
         struct SharedDma* temp = &sSampleDmas[i];
         if (temp->ttl != 0) {
@@ -219,10 +217,7 @@ void* dma_sample_data(uintptr_t devAddr, u32 size, s32 arg2, u8* dmaIndexRef) {
     u32 i = 0;
     u32 dmaIndex = 0;
     ssize_t bufferPos = 0;
-    UNUSED u32 pad = 0;
-////printf("%s(%08x,%u,%d,%08x)\n",__func__,devAddr,size,arg2,dmaIndexRef);
 
-////printf("dma_sample_data\n");
     if (arg2 != 0 || *dmaIndexRef >= sSampleDmaListSize1) {
         for (i = sSampleDmaListSize1; i < gSampleDmaNumListItems; i++) {
             dma = &sSampleDmas[i];
@@ -558,7 +553,6 @@ void patch_audio_bank(struct AudioBank* mem, u8* offset, u32 numInstruments, u32
 
 struct AudioBank* bank_load_immediate(s32 bankId, s32 arg1) {
     s32 alloc = 0;
-    UNUSED s32 stackPadding0[9] = {0};
     struct AudioBank* ret = NULL;
     u8* ctlData = NULL;
 
@@ -707,8 +701,6 @@ void load_sequence(u32 player, u32 seqId) {
 void load_sequence_internal(u32 player, u32 seqId) {
     void* sequenceData = NULL;
     struct SequencePlayer* seqPlayer = &gSequencePlayers[player];
-    UNUSED u32 padding[2] = {0};
-    //printf("%s(%u,%u)\n", __func__, player, seqId);
 
     if (seqId >= gSequenceCount) {
         return;
@@ -751,34 +743,17 @@ void load_sequence_internal(u32 player, u32 seqId) {
 
 void audio_init(void) {
     s32 i = 0;
-//    UNUSED s32 pad[6] = {0};
     s32 j = 0, k = 0;
     s32 ctlSeqCount = 0;
-//    UNUSED s32 lim4 = 0, lim5 = 0;
     u32 buf[16] = {0};
-//    UNUSED s32 lim2 = 0, lim3 = 0;
     s32 size = 0;
-//    u64* ptr64;
-//    UNUSED s32 pad2 = 0;
-//    UNUSED s32 one = 1;
     void* data = NULL;
-
-//    gdb_init();
-    //printf("%s()\n");
 
     gAudioLoadLock = 0;
 
     for (i = 0; i < gAudioHeapSize / 8; i++) {
         ((u64*) gAudioHeap)[i] = 0;
     }
-
-#ifdef TARGET_N64
-    // It seems boot.s doesn't clear the .bss area for audio, so do it here.
-    ptr64 = (u64*) ((u8*) gGfxSPTaskOutputBuffer + sizeof(gGfxSPTaskOutputBuffer));
-    for (k = ((uintptr_t) &gAudioGlobalsEndMarker - (uintptr_t) ((u64 *)((u8 *) gGfxSPTaskOutputBuffer + sizeof(gGfxSPTaskOutputBuffer))) ) / 8; k >= 0; k--) {
-        *ptr64++ = 0;
-    }
-#endif
 
 #if 0
 #ifdef VERSION_EU

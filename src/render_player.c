@@ -23,7 +23,21 @@
 #include <assets/common_data.h>
 #include "skybox_and_splitscreen.h"
 #include "spawn_players.h"
-void sincoss(u16 arg0, f32 *s, f32 *c);
+
+static inline void sincoss(u16 arg0, f32* s, f32* c) {
+    register float __s __asm__("fr2");
+    register float __c __asm__("fr3");
+
+    asm("lds    %2,fpul\n\t"
+        "fsca    fpul,dr2\n\t"
+        : "=f"(__s), "=f"(__c)
+        : "r"(arg0)
+        : "fpul");
+
+    *s = __s;
+    *c = __c;
+}
+
 static inline void scaled_sincoss(u16 arg0, f32* s, f32* c, f32 scale) {
     register float __s __asm__("fr2");
     register float __c __asm__("fr3");
@@ -1716,7 +1730,7 @@ void render_player_shadow(Player* player, s8 playerId, s8 screenId) {
 
 
         spCC[0] = player->pos[0] + ((spB0 * ts1) + (spAC * tc1));
-        spCC[1] = player->unk_074 + 1.0f;
+        spCC[1] = player->unk_074 + 0.5f;//1.0f;
         spCC[2] = player->pos[2] + ((spB0 * tc1) - (spAC * ts1));
         set_transform_matrix(sp118, spB4, spCC, (spC0 + player->unk_042),
                              gCharacterSize[player->characterId] * player->size * var_f2);
@@ -1726,7 +1740,7 @@ void render_player_shadow(Player* player, s8 playerId, s8 screenId) {
         spC4[2] = player->unk_206 * 2;
 
         spCC[0] = player->pos[0] + ((spB0 * ts1) + (spAC * tc1));
-        spCC[1] = player->unk_074 + 1.0f;
+        spCC[1] = player->unk_074 + 0.5f;
         spCC[2] = player->pos[2] + ((spB0 * tc1) - (spAC * ts1));
         mtxf_translate_rotate(sp118, spCC, spC4);
         mtxf_scale2(sp118, gCharacterSize[player->characterId] * player->size);
@@ -1775,11 +1789,7 @@ void render_player_shadow_credits(Player* player, s8 playerId, s8 arg2) {
 
 //    spB0 = -coss(temp_t9 << 7) * 3;
 //    spAC = -sins(temp_t9 << 7) * 3;
-    sincoss((temp_t9 << 7), &spAC, &spB0);
-    spB0 = -spB0 * 2.0f;
-    spAC = -spAC * 2.0f;
-
-    sincoss(spC0, &ts1, &tc1);
+    scaled_sincoss((temp_t9 << 7), &spAC, &spB0, -3.0f);
 
     spC4[0] = 0;
     spC4[1] = spC0;

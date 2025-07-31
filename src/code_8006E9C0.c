@@ -588,7 +588,6 @@ void init_clouds(CloudData* cloudList) {
     s32 var_s0 = 0;
     CloudData* test = &cloudList[0];
     do {
-        if (1) {}
         init_cloud_object(find_unused_obj_index(&D_8018CC80[D_8018D1F8 + var_s0]), 1, test);
         var_s0++;
         test++;

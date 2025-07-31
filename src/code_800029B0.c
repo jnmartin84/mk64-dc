@@ -143,7 +143,10 @@ s16 gPlayerPositionLUT[8]; // Player index at each position
 u16 gNumPermanentActors;
 s32 code_800029B0_bss_pad2[44];
 
-struct Actor gActorList[ACTOR_LIST_SIZE];
+struct Actor gActorListBacking[1+ACTOR_LIST_SIZE];
+
+
+struct Actor *gActorList = &gActorListBacking[1];//[ACTOR_LIST_SIZE];
 //! @warning todo: Is this apart of the actor array?
 UNUSED u8 D_80162578[sizeof(struct Actor)];
 

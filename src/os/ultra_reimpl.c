@@ -236,8 +236,7 @@ s32 osEepromProbe(UNUSED OSMesgQueue* mq) {
         pkg.icon_data = icondata;
         pkg.icon_anim_speed = 5;
         pkg.data_len = 512;
-
-        pkg.data = &gSaveData;//eeprom_block;
+        pkg.data = &gSaveData;
         vmu_pkg_load_icon(&pkg, texfn);
         uint8_t *pkg_out;
         ssize_t pkg_size;
@@ -541,19 +540,9 @@ s32 osPfsFreeBlocks(OSPfs* pfs, s32* bytes_not_used) {
 }
 
 void __osPfsCloseAllFiles(void) {
-    for (int channel = 0; channel < 4; channel++) {
-        maple_device_t* vmudev = NULL;
-
-        vmudev = maple_enum_type(channel, MAPLE_FUNC_MEMCARD);
-        if (!vmudev) {
-            continue;
-        }
-        char* filename = get_vmu_fn(vmudev, "mk64.gho");
-
-        for (size_t i = 0; i < 16; i++) {
-            if (openFile[i].file != -1) {
-                fs_close(openFile[i].file);
-            }
+    for (size_t i = 0; i < 16; i++) {
+        if (openFile[i].file != -1) {
+            fs_close(openFile[i].file);
         }
     }
 }

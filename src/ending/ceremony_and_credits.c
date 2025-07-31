@@ -25,7 +25,7 @@
 f32 D_802856B0 = 98.0f;
 f32 D_802856B4 = 12.0f;
 f32 gOrderedSizeSlidingBorders = 52.0f;
-f32 D_802856BC = 52.0f;
+static const f32 D_802856BC = 52.0f;
 f32 gSizeSlidingBorders = 0.0f;
 s32 D_802856C4 = 0;
 
@@ -573,6 +573,35 @@ void init_cinematic_camera(void) {
     }
 }
 
+
+static inline void sincoss(u16 arg0, f32* s, f32* c) {
+    register float __s __asm__("fr2");
+    register float __c __asm__("fr3");
+
+    asm("lds    %2,fpul\n\t"
+        "fsca    fpul,dr2\n\t"
+        : "=f"(__s), "=f"(__c)
+        : "r"(arg0)
+        : "fpul");
+
+    *s = __s;
+    *c = __c;
+}
+
+static inline void scaled_sincoss(u16 arg0, f32* s, f32* c, f32 scale) {
+    register float __s __asm__("fr2");
+    register float __c __asm__("fr3");
+
+    asm("lds    %2,fpul\n\t"
+        "fsca    fpul,dr2\n\t"
+        : "=f"(__s), "=f"(__c)
+        : "r"(arg0)
+        : "fpul");
+
+    *s = __s * scale;
+    *c = __c * scale;
+}
+
 // weird link between camera and cinematic camera where pos and lookAt are swapped
 s32 func_80283648(Camera* camera) {
     s16 angleYToXZ;
@@ -618,9 +647,14 @@ s32 func_80283648(Camera* camera) {
         if (var_f2 < 0.0f) {
             var_f2 = 65536.0f + var_f2;
         }
-        camera->up[0] = sins(var_f2) * coss(angleY);
-        camera->up[1] = coss(var_f2);
-        camera->up[2] = -sins(var_f2) * sins(angleY);
+        float f2s,f2c;
+        float ays,ayc;
+        sincoss(var_f2,&f2s,&f2c);
+        sincoss(angleY,&ays,&ayc); 
+
+        camera->up[0] = f2s * ayc;//sins(var_f2) * coss(angleY);
+        camera->up[1] = f2c;//coss(var_f2);
+        camera->up[2] = -f2s * ays;//-sins(var_f2) * sins(angleY);
         vec3f_copy_return_dupe(camera->pos, cinematicCamera->lookAt);
         vec3f_copy_return_dupe(camera->lookAt, cinematicCamera->pos);
         if ((gGamestate == CREDITS_SEQUENCE) && (gIsMirrorMode != 0)) {
@@ -1572,11 +1606,16 @@ void ceremony_transition_sliding_borders(void) {
     // clang-format on
 
     // jnmartin84 -- transition issues
-#if 0
+#if 1
     gDPPipeSync(gDisplayListHead++);
-    gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
+    //gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
     gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
+    //gDPSetFillColor(gDisplayListHead++, (GPACK_RGBA5551(0, 0, 0, 1) << 16 | GPACK_RGBA5551(0, 0, 0, 1)));
+    //gDPSetCycleType(gDisplayListHead++,G_CYC_1CYCLE);
+    gDPSetRenderMode(gDisplayListHead++,G_RM_ZB_OPA_SURF, G_RM_ZB_OPA_SURF2);
+    gDPSetCombineMode(gDisplayListHead++,G_CC_SHADE, G_CC_SHADE);
     gDPSetFillColor(gDisplayListHead++, (GPACK_RGBA5551(0, 0, 0, 1) << 16 | GPACK_RGBA5551(0, 0, 0, 1)));
+
     gDPFillRectangle(gDisplayListHead++, 0, 0, 319, (s32) temp_f14);
     gDPFillRectangle(gDisplayListHead++, 0, (s32) temp_f0, 319, 239);
     gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);

@@ -2750,7 +2750,6 @@ Gfx* func_80095BD0(Gfx* displayListHead, u8* arg1, f32 arg2, f32 arg3, u32 arg4,
         _g->words.w0 = 0x424C4E44; \
         _g->words.w1 = 0x4655434B;                                           \
     }
-int doing_previews = 0;
 
 Gfx* func_80095E10(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, s32 arg8,
                    s32 arg9, u8* argA, u32 argB, u32 argC) {
@@ -3280,8 +3279,19 @@ Gfx* func_80098558(Gfx* displayListHead, u32 arg1, u32 arg2, u32 arg3, u32 arg4,
     }
     return displayListHead;
 }
-void sincoss(u16 arg0, f32 *s, f32 *c);
+static inline void sincoss(u16 arg0, f32* s, f32* c) {
+    register float __s __asm__("fr2");
+    register float __c __asm__("fr3");
 
+    asm("lds    %2,fpul\n\t"
+        "fsca    fpul,dr2\n\t"
+        : "=f"(__s), "=f"(__c)
+        : "r"(arg0)
+        : "fpul");
+
+    *s = __s;
+    *c = __c;
+}
 Gfx* func_800987D0(Gfx* displayListHead, u32 arg1, u32 arg2, u32 width, u32 height, s32 column, s32 row,
                    UNUSED u8* arg7, u32 textureWidth, UNUSED s32 textureHeight) {
     s32 var_a2;
@@ -6144,6 +6154,7 @@ glEnable(GL_DEPTH_TEST);
                 /* fallthrough */
             case MENU_ITEM_TYPE_0A0: /* switch 6 */
             case MENU_ITEM_TYPE_0A1: /* switch 6 */
+            // animate face
                     stupid_fucking_faces_hack = 1;
                 func_8009A76C(arg0->D_8018DEE0_index, arg0->column, arg0->row, arg0->param1);
                     stupid_fucking_faces_hack = 0;
@@ -6154,22 +6165,17 @@ glEnable(GL_DEPTH_TEST);
             case MENU_ITEM_TYPE_05B:         /* switch 6 */
             case COURSE_SELECT_BATTLE_NAMES: /* switch 6 */
                 func_800A8A98(arg0);
-//                doing_previews = 1;
                 gDisplayListHead = render_menu_textures(
                     gDisplayListHead,
                     segmented_to_virtual(gMenuTexturesTrackSelection[arg0->type - COURSE_SELECT_MAP_SELECT]),
                     arg0->column, arg0->row);
                 func_800A8CA4(arg0);
-  //              doing_previews = 0;
                 break;
             case COURSE_SELECT_MAP_SELECT: /* switch 6 */
-//            doing_previews = 1;
                 gDisplayListHead = render_menu_textures(
                     gDisplayListHead,
                     segmented_to_virtual(gMenuTexturesTrackSelection[arg0->type - COURSE_SELECT_MAP_SELECT]),
                     arg0->column, arg0->row);
-  //          doing_previews = 0;
-
                     break;
             case MENU_ITEM_TYPE_05F: /* switch 6 */
             case MENU_ITEM_TYPE_060: /* switch 6 */
@@ -6309,9 +6315,9 @@ glEnable(GL_DEPTH_TEST);
                     // render player name boxes
                     gDisplayListHead = render_menu_textures(
                         gDisplayListHead, segmented_to_virtual(D_800E7D54[one]), arg0->column, arg0->row);
-                    stupid_fucking_faces_hack = 1;
+                    //stupid_fucking_faces_hack = 1;
                     func_8009A7EC(arg0->D_8018DEE0_index, arg0->column, arg0->row, var_v1, arg0->param1);
-                    stupid_fucking_faces_hack = 0;
+                    //stupid_fucking_faces_hack = 0;
                     render_cursor_player(arg0, var_v1, 0x000000FF);
                 }
                 break;
@@ -6767,9 +6773,7 @@ void func_800A1780(MenuItem* arg0) {
 
 void render_menu_item_data_course_image(MenuItem* arg0) {
     // render course preview
-    //doing_previews = 1;
     func_8009A76C(arg0->D_8018DEE0_index, 0x17, 0x84, -1);
-    //doing_previews = 0;
 
     if (func_800B639C(gTimeTrialDataCourseIndex) >= TIME_TRIAL_DATA_LUIGI_RACEWAY) {
         gDisplayListHead = draw_flash_select_case_slow(gDisplayListHead, 0x57, 0x84, 0x96, 0x95);
@@ -9235,12 +9239,10 @@ void func_800A8F48(UNUSED MenuItem* arg0) {
             break;
         case SUB_MENU_MAP_SELECT_COURSE:
         default:
-//            doing_previews = 1;
             if (func_800B639C((gCupSelection * 4) + gCourseIndexInCup) >= 0) {
                 gDisplayListHead = func_80098FC8(gDisplayListHead, 0x00000057, 0x00000070, 0x00000096, 0x00000081);
                 gDisplayListHead = render_menu_textures(gDisplayListHead, D_02004A0C, 0x00000057, 0x00000070);
             }
-  //          doing_previews = 0;
             break;
     }
 }
