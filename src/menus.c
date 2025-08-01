@@ -198,7 +198,7 @@ void update_menus(void) {
                         func_8009E1C0();
                 }
             }
-            osViSetSpecialFeatures(sVIGammaOffDitherOn);
+
             switch (gMenuSelection) {
                 case OPTIONS_MENU:
                     in_intro = 0;

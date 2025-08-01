@@ -1305,7 +1305,6 @@ void func_80091B78(void) {
     }
 
     set_sound_mode();
-    osViSetSpecialFeatures(OS_VI_DITHER_FILTER_ON);
 }
 
 s32 func_80091D74(void) {

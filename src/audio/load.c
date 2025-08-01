@@ -176,7 +176,6 @@ void fixupALBankFile(void) {
  */
 void audio_dma_copy_immediate(u8* devAddr, void* vAddr, size_t nbytes) {
     //printf("Romcopy %x -> %x ,size %x\n", devAddr, vAddr, nbytes);
-//    osPiStartDma(&D_803B6740, OS_MESG_PRI_HIGH, OS_READ, (uintptr_t) devAddr, vAddr, nbytes, &D_803B6720);
 	void *vdevAddr = segmented_to_virtual((void *)devAddr);
     n64_memcpy(vAddr, (const void *) vdevAddr, nbytes);
 }

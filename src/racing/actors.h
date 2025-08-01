@@ -37,7 +37,7 @@ void evaluate_collision_player_palm_trees(Player*);
 void evaluate_collision_players_palm_trees(void);
 void func_80298D10(void);
 void render_palm_trees(Camera*, Mat4, struct Actor*);
-void render_actor_tree_mario_raceway(Camera*, Mat4, struct Actor*, int pass);
+void render_actor_tree_mario_raceway(Camera*, Mat4, struct Actor*/* , int pass */);
 void render_actor_tree_yoshi_valley(Camera*, Mat4, struct Actor*);
 void render_actor_tree_royal_raceway(Camera*, Mat4, struct Actor*);
 void render_actor_tree_moo_moo_farm(Camera*, Mat4, struct Actor*);

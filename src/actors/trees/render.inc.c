@@ -11,7 +11,8 @@
  * @param arg1
  * @param arg2
  */
-Gfx l_d_course_mario_raceway_dl_tree_setup[] = {
+#if 0
+ Gfx l_d_course_mario_raceway_dl_tree_setup[] = {
     gsSPClearGeometryMode(G_LIGHTING),
     gsDPSetCombineMode(G_CC_MODULATEIA, G_CC_MODULATEIA),
     gsDPSetRenderMode(G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2),
@@ -43,8 +44,8 @@ void setup_actor_tree_mario_raceway(void) {
 void finish_actor_tree_mario_raceway(void) {
     gDPSetTextureLUT(gDisplayListHead++, G_TT_NONE);
 }
-
-void render_actor_tree_mario_raceway(Camera* camera, Mat4 arg1, struct Actor* arg2, int pass) {
+#endif
+void render_actor_tree_mario_raceway(Camera* camera, Mat4 arg1, struct Actor* arg2/* , int pass */) {
     f32 temp_f0;
     s16 temp_v0 = arg2->flags;
 
@@ -59,18 +60,18 @@ void render_actor_tree_mario_raceway(Camera* camera, Mat4 arg1, struct Actor* ar
         return;
     }
 
-    if (pass == 1) {
+//    if (pass == 1) {
     if (((temp_v0 & 0x400) == 0) && (temp_f0 < 250000.0f)) {
         render_shadow_for_tree(arg2->pos, arg2->rot, 3.0f);
     }
-    return;
-    } else if (pass == 0) {
+//    return;
+//    } else if (pass == 0) {
     arg1[3][0] = arg2->pos[0];
     arg1[3][1] = arg2->pos[1];
     arg1[3][2] = arg2->pos[2];
 
     if (render_set_position(arg1, 0) != 0) {
-#if 0
+#if 1
         gDPLoadTLUT_pal256(gDisplayListHead++, common_tlut_trees_import);
         gSPDisplayList(gDisplayListHead++, d_course_mario_raceway_dl_tree);
 #else
@@ -79,7 +80,7 @@ void render_actor_tree_mario_raceway(Camera* camera, Mat4 arg1, struct Actor* ar
         gSP1Triangle(gDisplayListHead++, 0, 2, 3, 0);
 //        gSPDisplayList(gDisplayListHead++, l_d_course_mario_raceway_dl_tree);
 #endif
-    }
+//    }
     }
 }
 
@@ -189,14 +190,14 @@ void render_actor_tree_moo_moo_farm(Camera* camera, Mat4 arg1, struct Actor* arg
 }
 
 Vtx l_d_course_moo_moo_farm_tree_model[] = {
-    { { { 0, 95*3/7, 0 }, 0, { 1024, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { -50*3/7, 95*3/7, 0 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { -50*3/7, -5*3/7, 0 }, 0, { 0, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 0, -5*3/7, 0 }, 0, { 1024, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 50*3/7, 95*3/7, 0 }, 0, { 1023, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 0, 95*3/7, 0 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 0, -5*3/7, 0 }, 0, { 0, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
-    { { { 50*3/7, -5*3/7, 0 }, 0, { 1023, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 0, 95*9/16, 0 }, 0, { 1024, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -50*17/32, 95*9/16, 0 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { -50*17/32, -5*9/16, 0 }, 0, { 0, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 0, -5*9/16, 0 }, 0, { 1024, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 50*17/32, 95*9/16, 0 }, 0, { 1023, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 0, 95*9/16, 0 }, 0, { 0, 0 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 0, -5*9/16, 0 }, 0, { 0, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
+    { { { 50*17/32, -5*9/16, 0 }, 0, { 1023, 2048 }, { 0xFF, 0xFF, 0xFF, 0xFF } } },
 };
 
 Gfx l_d_course_moo_moo_farm_dl_tree[] = {

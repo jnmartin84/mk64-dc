@@ -471,6 +471,42 @@ void isPrintfInit(void);
 extern int must_inval_bg;
 extern int stupid_fucking_faces_hack;
 
+const uint32_t rainbow[] = {
+    0xF800F800, // Red     (255,   0,   0)
+    0xFD20FD20, // Orange  (255, 165,   0)
+    0xFFE0FFE0, // Yellow  (255, 255,   0)
+    0x07E007E0, // Green   (  0, 255,   0)
+    0x001F001F, // Blue    (  0,   0, 255)
+    0x48104810, // Indigo  ( 75,   0, 130)
+    0x801F801F  // Violet  (148,   0, 211)
+};
+
+void rainbow_print(char *text) {
+    int ci = 0;
+    void *ptr = (void*)((uintptr_t)vram_s + ((128*640*2) + (240*2)));
+    for (int i=0;i<strlen(text);i++) {
+        bfont_draw_ex(ptr, 640, rainbow[ci%7], 0x00000000, 16, 1, text[i], 0, 0);
+        if (text[i] != ' ') ci++;
+        ptr = (void*)((uintptr_t)ptr + (12*2));
+    }
+    ptr = (void*)((uintptr_t)vram_s + ((129*640*2) + (241*2)));
+    ci = 0;
+    for (int i=0;i<strlen(text);i++) {
+        bfont_draw_ex(ptr, 640, rainbow[ci%7], 0x00000000, 16, 0, text[i], 0, 0);
+        if (text[i] != ' ') ci++;
+        ptr = (void*)((uintptr_t)ptr + (12*2));
+    }
+    ptr = (void*)((uintptr_t)vram_s + ((127*640*2) + (239*2)));
+    ci = 0;
+    for (int i=0;i<strlen(text);i++) {
+        bfont_draw_ex(ptr, 640, rainbow[ci%7], 0x00000000, 16, 0, text[i], 0, 0);
+        if (text[i] != ' ') ci++;
+        ptr = (void*)((uintptr_t)ptr + (12*2));
+    }
+
+}
+
+
 int main(UNUSED int argc, UNUSED char **argv) {
     thd_set_hz(300);
     must_inval_bg = 0;
@@ -479,35 +515,41 @@ int main(UNUSED int argc, UNUSED char **argv) {
     gPhysicalFramebuffers[0] = fb[0];
     gPhysicalFramebuffers[1] = fb[1];
     gPhysicalFramebuffers[2] = fb[2];
-
-//    dbgio_dev_select("fb");
-    dbgio_printf("Loading...\n");
-//    dbgio_dev_select("fs_dclsocket");
+    dbgio_enable();
+    dbgio_dev_select("fb");
+    dbgio_printf("\n\n\n\n\n\n\n             Loading...\n");
 
     FILE* fntest = fopen("/pc/dc_data/common_data.bin", "rb");
     if (NULL == fntest) {
         fntest = fopen("/cd/dc_data/common_data.bin", "rb");
         if (NULL == fntest) {
             printf("Cant load from /pc or /cd");
-             printf("\n");
+            printf("\n");
             while(1){}
            exit(-1);
         } else {
-            dbgio_printf("using /cd for assets\n");
+            dbgio_printf("             using /cd for assets\n");
             fnpre = "/cd";
         }
     } else {
-        dbgio_printf("using /pc for assets\n");
+        dbgio_printf("             using /pc for assets\n");
         fnpre = "/pc";
     }
 
     fclose(fntest);
-
+    dbgio_disable();
     setup_audio_data();
+    dbgio_enable();
+    dbgio_dev_select("fb");
+    dbgio_printf("\n\n\n\n\n\n\n\n\n             Ready.\n");
+    dbgio_disable();
 
-//    profiler_init("/pc/gmon.out");
+    //    profiler_init("/pc/gmon.out");
   //  profiler_start();
 
+    rainbow_print("Welcome to Mario Kart :-)");
+
+    thd_sleep(2000);
     thread5_game_loop(NULL);
 
     return 0;
@@ -515,12 +557,6 @@ int main(UNUSED int argc, UNUSED char **argv) {
 
 void setup_mesg_queues(void) {
     return;
-//    osCreateMesgQueue(&gDmaMesgQueue, gDmaMesgBuf, ARRAY_COUNT(gDmaMesgBuf));
-//    osCreateMesgQueue(&gSPTaskMesgQueue, gSPTaskMesgBuf, ARRAY_COUNT(gSPTaskMesgBuf));
-//    osCreateMesgQueue(&gIntrMesgQueue, gIntrMesgBuf, ARRAY_COUNT(gIntrMesgBuf));
-//    osViSetEvent(&gIntrMesgQueue, (OSMesg) MESG_VI_VBLANK, 1);
-//    osSetEventMesg(OS_EVENT_SP, &gIntrMesgQueue, (OSMesg) MESG_SP_COMPLETE);
-//    osSetEventMesg(OS_EVENT_DP, &gIntrMesgQueue, (OSMesg) MESG_DP_COMPLETE);
 }
 
 void start_sptask(UNUSED s32 taskType) {
@@ -580,11 +616,6 @@ int held;
 int sd_x,sd_y;
 
 void init_controllers(void) {
-    osCreateMesgQueue(&gSIEventMesgQueue, &gSIEventMesgBuf[0], ARRAY_COUNT(gSIEventMesgBuf));
-    osSetEventMesg(OS_EVENT_SI, &gSIEventMesgQueue, (OSMesg) 0x33333333);
-
-    //osContInit(&gSIEventMesgQueue, &gControllerBits, gControllerStatuses);
-    ////gControllerBits = 1;
     gControllerBits = 0;
 
     maple_device_t *cont;
@@ -767,9 +798,7 @@ ucheld = 0; stick = 0;
 void read_controllers(void) {
     OSMesg msg;
 
-//    osContStartReadData(&gSIEventMesgQueue);
     osRecvMesg(&gSIEventMesgQueue, &msg, OS_MESG_BLOCK);
-//    osContGetReadData(gControllerPads);
 
     update_controller(0);
     update_controller(1);
@@ -1838,7 +1867,7 @@ void game_state_handler(void) {
         case PLAYER_SELECT_MENU_FROM_QUIT:
         case COURSE_SELECT_MENU_FROM_QUIT:
             // Display black
-            osViBlack(0);
+            // 
             update_menus();
             init_rcp();
             func_80094A64(gGfxPool);

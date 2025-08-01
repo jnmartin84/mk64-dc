@@ -1442,7 +1442,6 @@ void render_course(struct UnkStruct_800DC5EC* arg0) {
         return;
     }
 
-#if !ENABLE_CUSTOM_COURSE_ENGINE
     switch (gCurrentCourseId) {
         case COURSE_MARIO_RACEWAY:
             render_mario_raceway(arg0);
@@ -1505,9 +1504,6 @@ void render_course(struct UnkStruct_800DC5EC* arg0) {
             render_big_donut(arg0);
             break;
     }
-#else
-
-#endif
 }
 
 void func_80295BF8(s32 playerIndex) {

@@ -911,6 +911,8 @@ void func_800C2A2C(u32 cmd) {
             seqId = cmd & 0xFF;
             subArgs = (cmd & 0xFF00) >> 8;
             D_800EA1C0 = subArgs;
+            // this is *probably* why the music doesn't reset for battle mode
+            // but that's just a guess
 //            audio_reset_session_eu((void*)(u32)seqId);
             D_800EA1F4[0] = seqId;
             func_800CBBE8(0x46020000, subArgs);
@@ -921,16 +923,9 @@ void func_800C2A2C(u32 cmd) {
             break;
     }
 }
-//extern __attribute__((noinline)) void stacktrace();
+
 void func_800C3448(u32 arg0) {
-    //printf("%s(%08x)\n", __func__, arg0);
-//    stacktrace();
     D_80192CD0[D_800EA1E4++] = arg0;
-/*     if (D_800EA1E4 == 255) {
-        D_800EA1E4 = 0;
-    } else {
-        D_800EA1E4 += 1;
-    } */
 }
 
 void func_800C3478(void) {
@@ -941,46 +936,12 @@ void func_800C3478(void) {
 }
 
 u16 func_800C3508(u8 player) {
-    //if (!gSequencePlayers[player].enabled) {
-    //    return -1;
-    //}
     return D_801930D0[player].unk_248;
 }
 
 u8 func_800C357C(s32 arg0) {
     u8 var_v1 = 0;
     u16 i = 0;
-
-#if 0
-//    i = D_800EA1E8;
-    var_v1 = 1;
-    u16 u16_1E4 = (u16)D_800EA1E4;
-    u16 u16_1E8 = (u16)D_800EA1E8;
-
-    if (u16_1E4 < u16_1E8) {
-        for (i = u16_1E8; i < 256; i++) {
-            if ((u32) arg0 == D_80192CD0[i]) {
-                var_v1 = 0;
-                break;
-            }
-        }
-        if (var_v1) {
-            for (i = 0; i < u16_1E8; i++) {
-                if ((u32) arg0 == D_80192CD0[i]) {
-                    var_v1 = 0;
-                    break;
-                }
-            }            
-        }
-    } else {
-        for (i = u16_1E8; i < u16_1E4; i++) {
-            if ((u32) arg0 == D_80192CD0[i]) {
-                var_v1 = 0;
-                break;
-            }
-        }        
-    }
-#else
     i = D_800EA1E8;
     var_v1 = 1;
     for (i = D_800EA1E8; i < (s32) D_800EA1E4; i++) {
@@ -989,7 +950,7 @@ u8 func_800C357C(s32 arg0) {
             i = D_800EA1E4;
         }
     }
-#endif
+
     return var_v1;
 }
 

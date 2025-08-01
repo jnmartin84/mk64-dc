@@ -2777,6 +2777,15 @@ void draw_lap_count(s16 lapX, s16 lapY, s8 lap) {
     gSPDisplayList(gDisplayListHead++, D_0D007EB8);
 }
 
+#define gSPForceDepthOff(pkt)                                       \
+    {                                                                                   \
+        Gfx* _g = (Gfx*) (pkt);                                                         \
+                                                                                        \
+        _g->words.w0 = 0x424C4E44; \
+        _g->words.w1 = 0x4655434D;                                           \
+    }
+
+
 void func_8004FDB4(f32 arg0, f32 arg1, s16 arg2, s16 arg3, s16 characterId, s32 arg5, s32 arg6, s32 arg7, s32 arg8) {
     if ((gCurrentCourseId == COURSE_YOSHI_VALLEY) && (arg3 < 3) && (arg8 == 0)) {
         func_80042330((s32) arg0, (s32) arg1, 0U, 1.0f);
@@ -3068,6 +3077,7 @@ void func_80050E34(s32 playerId, s32 arg1) {
     } else {
         spB8 = 0;
     }
+        gSPForceDepthOff(gDisplayListHead++);
 
     if ((gCurrentCourseId == COURSE_YOSHI_VALLEY) && (lapCount < 3)) {
         gSPDisplayList(gDisplayListHead++, D_0D007DB8);
@@ -3116,6 +3126,8 @@ void func_80050E34(s32 playerId, s32 arg1) {
             gSPDisplayList(gDisplayListHead++, D_0D0069E0);
         }
     }
+            gSPForceDepthOff(gDisplayListHead++);
+
 }
 
 void func_800514BC(void) {
@@ -3897,7 +3909,9 @@ void render_object_thwomps(s32 cameraId) {
                 set_prim_only(0x000000FF, 0x000000FF, 0x000000FF, (s32) object->primAlpha);
                 D_80183E80[1] = get_angle_between_xz(object->pos[0], object->pos[2], camera->pos);
                 func_800431B0(object->pos, D_80183E80, object->sizeScaling, D_0D005AE0);
-                // jnmartin84 -- ???
+                // jnmartin84 -- this was trying to make the dk jungle cave wall flames brighter
+                // and/or to reproduce the darker fringe
+                // it didn't work anyway
                 func_800431B0(object->pos, D_80183E80, object->sizeScaling*0.85, D_0D005AE0);
                 func_800431B0(object->pos, D_80183E80, object->sizeScaling*0.7, D_0D005AE0);
             }
