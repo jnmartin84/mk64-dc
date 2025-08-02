@@ -791,8 +791,8 @@ $(ELF):	$(O_FILES) memcpy32.o test.o data_segment2.o $(COURSE_DATA_TARGETS) $(BU
 cdi:
 	@test -s ${BUILD_DIR_BASE}/mario-kart.elf || { echo "Please run make before running make cdi . Exiting"; exit 1; }
 	$(RM) mariokart64.cdi
-        $(RM) mk64.bin
-        sh-elf-objcopy -O binary $(BUILD_DIR_BASE)/mario-kart.elf mk64.bin
+	$(RM) mk64.bin
+	sh-elf-objcopy -O binary $(BUILD_DIR_BASE)/mario-kart.elf mk64.bin
 	mkdcdisc -f ghost.ico -f kart.ico -f mk64.bin -d dc_data -e loader.elf -o mariokart64.cdi -n "Mario Kart 64" -v 3
 
 dcload:
