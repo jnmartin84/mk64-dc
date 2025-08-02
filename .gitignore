@@ -5,7 +5,7 @@ src/gfx/gfx_pvr.h
 # Object files
 *.o
 *.obj
-*.elf
+mario-kart.elf
 
 # Linker output
 *.ilk
