@@ -135,7 +135,7 @@ void draw_vmu_icon(int controller, int charid) {
 		fixup_vmu_icons();
 		ever_fixup++;
 	}
-	vmudev = maple_enum_type(controller, MAPLE_FUNC_MEMCARD);
+	vmudev = maple_enum_type(controller, MAPLE_FUNC_LCD);
 	if (!vmudev)
 		return;
 
