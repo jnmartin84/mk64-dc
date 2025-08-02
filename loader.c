@@ -170,7 +170,6 @@ int main(int argc, char **argv) {
         vmu_draw_lcd(vmudev, progbuf);
     }
 
-
     dbgio_enable();
     dbglog_set_level(0);
     dbgio_dev_select("fb");
@@ -253,10 +252,10 @@ int main(int argc, char **argv) {
 //    dbgio_printf("             ...\n");
     dbgio_disable();
     /* Tell exec to replace us */
-//    arch_exec(progbuf, full_bin_size);
+    arch_exec(progbuf, full_bin_size);
 
     /* Shouldn't get here */
-  //  assert_msg(false, "exec call failed");
+    assert_msg(false, "exec call failed");
 
     return 0;
 }
