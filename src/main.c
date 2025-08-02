@@ -312,7 +312,7 @@ void setup_audio_data(void) {
     if (!INSTRUMENT_SETS_BUF) printf("can't malloc instruments\n");
     u8 *SEQUENCES_BUF = memalign(32,143728);
     if (!SEQUENCES_BUF) printf("can't malloc sequences\n");
-
+    vid_border_color(64, 64, 64);
     // load sound data
     {
         sprintf(texfn, "%s/dc_data/audiobanks.bin", fnpre);
@@ -351,7 +351,7 @@ void setup_audio_data(void) {
         _audio_banksSegmentRomStart = AUDIOBANKS_BUF;
     }
 
-
+    vid_border_color(128, 128, 128);
     {
         sprintf(texfn, "%s/dc_data/audiotables.bin", fnpre);
         FILE* file = fopen(texfn, "rb");
@@ -387,7 +387,7 @@ void setup_audio_data(void) {
         _audio_tablesSegmentRomStart = AUDIOTABLES_BUF;
     }
 
-
+    vid_border_color(192, 192, 192);
     {
         sprintf(texfn, "%s/dc_data/instrument_sets.bin", fnpre);
         FILE* file = fopen(texfn, "rb");
@@ -422,6 +422,7 @@ void setup_audio_data(void) {
         fclose(file);
         _instrument_setsSegmentRomStart = INSTRUMENT_SETS_BUF;
     }
+    vid_border_color(255, 255, 255);
     {
         sprintf(texfn, "%s/dc_data/sequences.bin", fnpre);
         FILE* file = fopen(texfn, "rb");
@@ -462,6 +463,7 @@ void setup_audio_data(void) {
     _AudioInit();
     audio_init();
     sound_init();
+    vid_border_color(0, 0, 0);
 }
 
 #include "dcprofiler.h"
@@ -477,28 +479,31 @@ const uint32_t rainbow[] = {
     0xFFE0FFE0, // Yellow  (255, 255,   0)
     0x07E007E0, // Green   (  0, 255,   0)
     0x001F001F, // Blue    (  0,   0, 255)
-    0x48104810, // Indigo  ( 75,   0, 130)
+    0x72157215, // Indigo  ( 90,  30, 180)
     0x801F801F  // Violet  (148,   0, 211)
 };
 
-void rainbow_print(char *text) {
+void rainbow_print(int x, int y, char *text) {
     int ci = 0;
-    void *ptr = (void*)((uintptr_t)vram_s + ((128*640*2) + (240*2)));
+    void *ptr = (void*)((uintptr_t)vram_s + ((y*640*2) + (x*2)));
     for (int i=0;i<strlen(text);i++) {
+        if (ci == 18) ci = 0;
         bfont_draw_ex(ptr, 640, rainbow[ci%7], 0x00000000, 16, 1, text[i], 0, 0);
         if (text[i] != ' ') ci++;
         ptr = (void*)((uintptr_t)ptr + (12*2));
     }
-    ptr = (void*)((uintptr_t)vram_s + ((129*640*2) + (241*2)));
+    ptr = (void*)((uintptr_t)vram_s + (((y+1)*640*2) + ((x+1)*2)));
     ci = 0;
     for (int i=0;i<strlen(text);i++) {
+        if (ci == 18) ci = 0;
         bfont_draw_ex(ptr, 640, rainbow[ci%7], 0x00000000, 16, 0, text[i], 0, 0);
         if (text[i] != ' ') ci++;
         ptr = (void*)((uintptr_t)ptr + (12*2));
     }
-    ptr = (void*)((uintptr_t)vram_s + ((127*640*2) + (239*2)));
+    ptr = (void*)((uintptr_t)vram_s + (((y-1)*640*2) + ((x-1)*2)));
     ci = 0;
     for (int i=0;i<strlen(text);i++) {
+        if (ci == 18) ci = 0;
         bfont_draw_ex(ptr, 640, rainbow[ci%7], 0x00000000, 16, 0, text[i], 0, 0);
         if (text[i] != ' ') ci++;
         ptr = (void*)((uintptr_t)ptr + (12*2));
@@ -516,9 +521,10 @@ int main(UNUSED int argc, UNUSED char **argv) {
     gPhysicalFramebuffers[1] = fb[1];
     gPhysicalFramebuffers[2] = fb[2];
     dbgio_enable();
+    dbglog_set_level(0);
     dbgio_dev_select("fb");
-    dbgio_printf("\n\n\n\n\n\n\n             Loading...\n");
-
+    dbgio_printf("\n\n\n\n\n\n\n                Loading game data...\n");
+    thd_sleep(375);
     FILE* fntest = fopen("/pc/dc_data/common_data.bin", "rb");
     if (NULL == fntest) {
         fntest = fopen("/cd/dc_data/common_data.bin", "rb");
@@ -528,26 +534,27 @@ int main(UNUSED int argc, UNUSED char **argv) {
             while(1){}
            exit(-1);
         } else {
-            dbgio_printf("             using /cd for assets\n");
+//            dbgio_printf("             using /cd for assets\n");
             fnpre = "/cd";
         }
     } else {
-        dbgio_printf("             using /pc for assets\n");
+//        dbgio_printf("             using /pc for assets\n");
         fnpre = "/pc";
     }
 
     fclose(fntest);
+    thd_sleep(375);
     dbgio_disable();
     setup_audio_data();
-    dbgio_enable();
-    dbgio_dev_select("fb");
-    dbgio_printf("\n\n\n\n\n\n\n\n\n             Ready.\n");
-    dbgio_disable();
+//    dbgio_enable();
+//    dbgio_dev_select("fb");
+//    dbgio_printf("\n\n\n\n\n\n\n\n\n             Ready.\n");
+//    dbgio_disable();
 
     //    profiler_init("/pc/gmon.out");
   //  profiler_start();
 
-    rainbow_print("Welcome to Mario Kart :-)");
+    rainbow_print(180+18, 260-24, "Welcome to Mario Kart :)");
 
     thd_sleep(2000);
     thread5_game_loop(NULL);
@@ -726,7 +733,8 @@ void update_controller(s32 index) {
 	struct Controller* controller = &gControllers[index];
     maple_device_t *cont;
     cont_state_t *state;
-ucheld = 0; stick = 0;
+    ucheld = 0;
+    stick = 0;
     if (index > 3)
         return;
     cont = maple_enum_type(index, MAPLE_FUNC_CONTROLLER);
@@ -734,14 +742,15 @@ ucheld = 0; stick = 0;
         return;
     state = maple_dev_status(cont);
 
-    if ((state->buttons & CONT_START) && state->ltrig && state->rtrig) {
-    //profiler_stop();
-    //    profiler_clean_up();
-        // give vmu a chance to write and close
-        __osPfsCloseAllFiles();   
-        exit(0);
+    if (strcmp("/pc", fnpre) == 0) {
+        if ((state->buttons & CONT_START) && state->ltrig && state->rtrig) {
+            //profiler_stop();
+            //profiler_clean_up();
+            // give vmu a chance to write and close
+            __osPfsCloseAllFiles();   
+            exit(0);
+        }
     }
-
     const char stickH =state->joyx;
     const char stickV = 0xff-((uint8_t)(state->joyy));
         controller->rawStickX = ((float)stickH/127)*80;
@@ -777,18 +786,14 @@ ucheld = 0; stick = 0;
     controller->button = ucheld;
 
     stick = 0;
-    if (controller->rawStickX < -50) {
+    if (controller->rawStickX < -50)
         stick |= L_JPAD;
-    }
-    if (controller->rawStickX > 50) {
+    if (controller->rawStickX > 50)
         stick |= R_JPAD;
-    }
-    if (controller->rawStickY < -50) {
+    if (controller->rawStickY < -50)
         stick |= D_JPAD;
-    }
-    if (controller->rawStickY > 50) {
+    if (controller->rawStickY > 50)
         stick |= U_JPAD;
-    }
 
     controller->stickPressed = stick & (stick ^ controller->stickDirection);
     controller->stickDepressed = controller->stickDirection & (stick ^ controller->stickDirection);
@@ -2154,7 +2159,7 @@ void vblfunc(uint32_t c, void *d) {
 	(void)c;
 	(void)d;
     vblticker++;
-    genwait_wake_one(&vblticker);
+    genwait_wake_one((void *)&vblticker);
 }    
 
 void thread5_game_loop(UNUSED void* arg) {
@@ -2230,11 +2235,11 @@ void SPINNING_THREAD(UNUSED void *arg) {
     uint64_t last_vbltick = vblticker;
 
     while (1) {
-        {
-            irq_disable_scoped();
+//        {
+//            irq_disable_scoped();
             while (vblticker <= last_vbltick + 1)
-                genwait_wait(&vblticker, NULL, 15, NULL);
-        }
+                genwait_wait((void*)&vblticker, NULL, 15, NULL);
+//        }
 
         last_vbltick = vblticker;
 

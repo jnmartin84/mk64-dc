@@ -2,20 +2,20 @@
 #include "common_structs.h"
 #include "main.h"
 #include "buffer_sizes.h"
-// uncompressed common data segment size
+
+// uncompressed common data segment
 uint8_t __attribute__((aligned(32))) COMMON_BUF[COMMON_BUF_SIZE];
-// wiggle room for ghost textures in Banshee Boardwalk
+// segment 3 textures with wiggle room for ghost textures in Banshee Boardwalk
 uint8_t __attribute__((aligned(32))) SEG3_BUF[SEG3_BUF_SIZE];
-// largest observed value -- Bowser's Castle
+// largest observed segment 4 data -- Bowser's Castle
 uint8_t __attribute__((aligned(32))) SEG4_BUF[SEG4_BUF_SIZE];
 // largest *tex.bin -- Luigi's Raceway
 uint8_t __attribute__((aligned(32))) SEG5_BUF[SEG5_BUF_SIZE];
 
-// DO NOT MAKE THIS SMALLER
-// THERE IS A BUFFER OVERWRITE ISSUE AND IT CORRUPTS SEG5_BUF
+
 uint8_t __attribute__((aligned(32))) CEREMONY_ACTOR_BUF[CEREMONY_ACTOR_BUF_SIZE]; 
 
-// SAVE SPACE BY REUSING THIS FOR STARTUP
+// the other area of memory that seg3 points at sometimes
 uint8_t __attribute__((aligned(32))) OTHER_BUF[OTHER_BUF_SIZE];
 
 uint8_t __attribute__((aligned(32))) COURSE_BUF[COURSE_BUF_SIZE];

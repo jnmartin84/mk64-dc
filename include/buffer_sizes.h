@@ -1,24 +1,21 @@
 #ifndef  __BUFFER_SIZES_H
 #define  __BUFFER_SIZES_H
 
-// uncompressed common data segment size
+// uncompressed common data
 #define COMMON_BUF_SIZE 184664
 
-// 73728
+// segment 3 textures with wiggle room for ghost textures in Banshee Boardwalk
 #define SEG3_BUF_SIZE 100352
-// largest observed value -- Bowser's Castle
+// largest observed segment 4 data -- Bowser's Castle
 #define SEG4_BUF_SIZE 228656
 // largest *tex.bin -- Luigi's Raceway
 #define SEG5_BUF_SIZE 133120
 
-// DO NOT MAKE THIS SMALLER
-// THERE IS A BUFFER OVERWRITE ISSUE AND IT CORRUPTS SEG5_BUF
+// the other area of memory that seg3 points at sometimes
 #define OTHER_BUF_SIZE 0x1EE80
-//0x21000
 
-// actual size 15200 (76 * 200), was 65536
-#define CEREMONY_ACTOR_BUF_SIZE 65536
-//15200
+// sizeof(CeremonyActor) * 200
+#define CEREMONY_ACTOR_BUF_SIZE 15200
 
 #define COURSE_BUF_SIZE 146464
 #define UNPACK_BUF_SIZE 51008
