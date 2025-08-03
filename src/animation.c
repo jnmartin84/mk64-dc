@@ -35,7 +35,7 @@ void convert_to_fixed_point_matrix_animation(Mtx* dest, Mat4 src) {
 }
 
 void mtxf_translate_rotate2(Mat4 dest, Vec3f pos, Vec3s angle) {
-#if 0
+#if 1
     
     register f32 sx = sins(angle[0]);
     register f32 cx = coss(angle[0]);

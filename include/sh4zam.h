@@ -791,6 +791,45 @@ SHZ_INLINE void shz_xmtrx_apply_3x3(const shz_matrix_3x3_t *matrix) {
       "fr8", "fr9", "fr10", "fr11", "fr12", "fr13", "fr14", "fr15");
 }
 
+SHZ_INLINE void shz_xmtrx_apply_3x3_transpose(const shz_matrix_3x3_t *matrix) {
+    asm volatile(R"(
+        fmov.s  @%[mtx]+, fr0
+        add     #32, %[mtx]
+        pref    @%[mtx]
+        add     #-32, %[mtx]
+        fmov.s  @%[mtx]+, fr4
+        fmov.s  @%[mtx]+, fr8
+        fldi0   fr12
+
+        fmov.s  @%[mtx]+, fr1
+        fmov.s  @%[mtx]+, fr5
+        fmov.s  @%[mtx]+, fr9
+        fldi0   fr13
+
+        ftrv    xmtrx, fv0
+
+        fmov.s  @%[mtx]+, fr2
+        fmov.s  @%[mtx]+, fr6
+        fmov.s  @%[mtx]+, fr10
+        fldi1   fr15
+
+        ftrv    xmtrx, fv4
+
+        fschg
+        fmov    xd12, dr12
+        fmov    xd14, dr14
+        fschg
+
+        ftrv    xmtrx, fv8
+
+        frchg
+    )"
+    : [mtx] "+r" (matrix)
+    : "m" (*matrix)
+    : "fr0", "fr1", "fr2", "fr3", "fr4", "fr5", "fr6", "fr7",
+      "fr8", "fr9", "fr10", "fr11", "fr12", "fr13", "fr14", "fr15");
+}
+
 SHZ_INLINE void shz_xmtrx_apply_4x4_unaligned(const float matrix[16]) {
     asm volatile(R"(
         mov     r15, r0
@@ -1185,9 +1224,9 @@ SHZ_INLINE void shz_xmtrx_apply_scale(float x, float y, float z) {
 
 
 SHZ_INLINE void shz_xmtrx_init_rotation(float roll, float pitch, float yaw) {
-    shz_xmtrx_init_rotation_x(roll);
+    shz_xmtrx_init_rotation_z(yaw);
     shz_xmtrx_apply_rotation_y(pitch);
-    shz_xmtrx_apply_rotation_z(yaw);
+    shz_xmtrx_apply_rotation_x(roll);
 }
 
 SHZ_INLINE void shz_xmtrx_transpose(void) {

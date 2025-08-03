@@ -173,7 +173,7 @@ void mtxf_copy_n_element(s32* dest, s32* src, s32 n) {
 }
 #include <string.h>
 void n64_memset(void *dst, uint8_t val, size_t size);
-#include "sh4zam.h"
+
 // Transform a matrix to a matrix identity
 void mtxf_identity(Mat4 mtx) {
     shz_xmtrx_init_identity();
@@ -441,7 +441,10 @@ void func_802B5B14(Vec3f b, Vec3s rotate) {
     b[2] = copy[0] * mtx[2][0] + copy[1] * mtx[2][1] + copy[1] * mtx[2][2];
 #else
     shz_xmtrx_init_rotation(SHZ_ANGLE(rotate[0]), SHZ_ANGLE(rotate[1]), SHZ_ANGLE(rotate[2]));
-    (*(SHZ_ALIASING shz_vec3_t *)b) = shz_xmtrx_trans_vec3((shz_vec3_t) { .x = b[0], .y = b[1], .z = b[2] });
+    shz_vec3_t result = shz_xmtrx_trans_vec3((shz_vec3_t) { .x = b[0], .y = b[1], .z = b[2] });
+    b[0] = result.x;
+    b[1] = result.y;
+    b[2] = result.z;
 #endif
 }
 
@@ -695,6 +698,70 @@ void func_802B64C4(Vec3f arg0, s16 arg1) {
 }
 
 void calculate_orientation_matrix(Mat3 dest, f32 arg1, f32 arg2, f32 arg3, s16 rotationAngle) {
+#if 0
+    Mat3 mtx_rot_y;
+    Mat3 matrix;
+    s32 i, j;
+    f32 a;
+    f32 b;
+    f32 c;
+    f32 d;
+    UNUSED s32 pad[3];
+    f32 sinValue;
+    f32 cossValue;
+
+    sinValue = sins(rotationAngle);
+    cossValue = coss(rotationAngle);
+    mtx_rot_y[0][0] = cossValue;
+    mtx_rot_y[2][1] = 0;
+    mtx_rot_y[1][2] = 0;
+
+    mtx_rot_y[1][1] = 1;
+    mtx_rot_y[2][0] = sinValue;
+    mtx_rot_y[0][2] = -sinValue;
+
+    mtx_rot_y[2][2] = cossValue;
+    mtx_rot_y[1][0] = 0;
+    mtx_rot_y[0][1] = 0;
+
+    if (arg2 == 1) { // set matrix to identity
+
+        for (i = 0; i < 3; i++) {
+            for (j = 0; j < 3; j++) {
+                matrix[i][j] = (i == j) ? 1.0f : 0.0f;
+            }
+        }
+
+    } else if (arg2 == -1) { // set matrix to identity with the second column negative
+
+        for (i = 0; i < 3; i++) {
+            for (j = 0; j < 3; j++) {
+                matrix[i][j] = (i == j) ? 1.0f : 0.0f;
+            }
+        }
+
+        matrix[1][1] = -1;
+
+    } else {
+        a = (f32) - (360.0 - ((f64) (calculate_vector_angle_xy(arg2) * 180.0f) / M_PI));
+        b = -arg3 / sqrtf((arg1 * arg1) + (arg3 * arg3));
+        c = 0;
+        d = arg1 / sqrtf((arg1 * arg1) + (arg3 * arg3));
+        calculate_rotation_matrix(matrix, a, b, c, d);
+    }
+    dest[0][0] = (mtx_rot_y[0][0] * matrix[0][0]) + (mtx_rot_y[0][1] * matrix[1][0]) + (mtx_rot_y[0][2] * matrix[2][0]);
+    dest[1][0] = (mtx_rot_y[1][0] * matrix[0][0]) + (mtx_rot_y[1][1] * matrix[1][0]) + (mtx_rot_y[1][2] * matrix[2][0]);
+    dest[2][0] = (mtx_rot_y[2][0] * matrix[0][0]) + (mtx_rot_y[2][1] * matrix[1][0]) + (mtx_rot_y[2][2] * matrix[2][0]);
+
+    dest[0][1] = (mtx_rot_y[0][0] * matrix[0][1]) + (mtx_rot_y[0][1] * matrix[1][1]) + (mtx_rot_y[0][2] * matrix[2][1]);
+    dest[1][1] = (mtx_rot_y[1][0] * matrix[0][1]) + (mtx_rot_y[1][1] * matrix[1][1]) + (mtx_rot_y[1][2] * matrix[2][1]);
+    dest[2][1] = (mtx_rot_y[2][0] * matrix[0][1]) + (mtx_rot_y[2][1] * matrix[1][1]) + (mtx_rot_y[2][2] * matrix[2][1]);
+
+    dest[0][2] = (mtx_rot_y[0][0] * matrix[0][2]) + (mtx_rot_y[0][1] * matrix[1][2]) + (mtx_rot_y[0][2] * matrix[2][2]);
+    dest[1][2] = (mtx_rot_y[1][0] * matrix[0][2]) + (mtx_rot_y[1][1] * matrix[1][2]) + (mtx_rot_y[1][2] * matrix[2][2]);
+    dest[2][2] = (mtx_rot_y[2][0] * matrix[0][2]) + (mtx_rot_y[2][1] * matrix[1][2]) + (mtx_rot_y[2][2] * matrix[2][2]);
+
+#else
     Mat3 mtx_rot_y;
     Mat3 matrix;
     s32 i, j;
@@ -716,10 +783,11 @@ void calculate_orientation_matrix(Mat3 dest, f32 arg1, f32 arg2, f32 arg3, s16 r
         c = 0;
         d = arg1 / sqrtf((arg1 * arg1) + (arg3 * arg3));
         calculate_rotation_matrix(matrix, a, b, c, d);
-        shz_xmtrx_apply_3x3(matrix);
+        shz_xmtrx_apply_3x3_transpose(matrix);
     }
 
     shz_xmtrx_store_3x3((shz_matrix_3x3_t *)dest);
+#endif
 }
 
 void calculate_rotation_matrix(Mat3 destMatrix, s16 rotationAngle, f32 rotationX, f32 rotationY, f32 rotationZ) {

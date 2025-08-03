@@ -160,6 +160,7 @@ u16 check_player_camera_collision(Player* player, Camera* camera, f32 arg2, f32 
     sp50 += camera->pos[0];// = (arg2 * sp50) + camera->pos[0];
 
 
+    // TODO: GAINZ
     sp64 = ((sp4C - player->pos[2]) * (sp54 - player->pos[0])) - ((sp48 - player->pos[2]) * (sp58 - player->pos[0]));
     sp60 = ((sp48 - player->pos[2]) * (sp50 - player->pos[0])) - ((sp44 - player->pos[2]) * (sp54 - player->pos[0]));
     sp5C = ((sp44 - player->pos[2]) * (sp58 - player->pos[0])) - ((sp4C - player->pos[2]) * (sp50 - player->pos[0]));
@@ -199,6 +200,7 @@ u16 xz_in_triangle(Player* player, f32 posX, UNUSED f32 arg2, f32 posZ) {
     sp50 += player->pos[2];// = (10.0f * sp50) + player->pos[2];
     sp5c += player->pos[0];// = (10.0f * sp5c) + player->pos[0];
 
+    // TODO GAINZ
     temp_f14 = ((sp58 - posZ) * (sp60 - posX)) - ((sp54 - posZ) * (sp64 - posX));
     thing0 = ((sp54 - posZ) * (sp5c - posX)) - ((sp50 - posZ) * (sp60 - posX));
     thing1 = ((sp50 - posZ) * (sp64 - posX)) - ((sp58 - posZ) * (sp5c - posX));
