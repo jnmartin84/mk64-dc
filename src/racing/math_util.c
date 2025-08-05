@@ -932,7 +932,7 @@ void func_802B6BC0(Mat4 arg0, s16 arg1, f32 arg2, f32 arg3, f32 arg4) {
 // look like create a translation and rotation matrix with arg1 position and arg2 rotation
 void func_802B6D58(Mat4 arg0, Vec3f arg1, Vec3f arg2) {
     shz_dcache_alloc_line(arg0);
-    shz_xmtrx_init_rotation(SHZ_ANGLE(arg2[0]), SHZ_ANGLE(arg2[1]), SHZ_ANGLE(arg2[2]));
+    shz_xmtrx_init_rotation(arg2[0], arg2[1], arg2[2]);
     shz_xmtrx_set_translation(arg1[0], arg1[1], arg1[2]);
     shz_xmtrx_store_4x4(arg0);
 }
