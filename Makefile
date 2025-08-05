@@ -436,6 +436,9 @@ ifeq ($(GCC),1)
   $(BUILD_DIR)/src/gfx/gfx_retro_dc.o: TARGET_CFLAGS += -O3 
   $(BUILD_DIR)/src/audio/mixer.o: TARGET_CFLAGS += -O3 
   $(BUILD_DIR)/src/audio/synthesis.o: TARGET_CFLAGS += -O3 
+  $(BUILD_DIR)/src/racing/math_util.o: TARGET_CFLAGS += -O3
+  $(BUILD_DIR)/src//math_util_2.o: TARGET_CFLAGS += -O3
+  $(BUILD_DIR)/src/racing/collision.o: TARGET_CFLAGS += -O3
   $(BUILD_DIR)/src/main.o:                          OPT_FLAGS := -g
   $(BUILD_DIR)/src/racing/skybox_and_splitscreen.o: OPT_FLAGS := -g
   $(BUILD_DIR)/src/racing/render_courses.o:         OPT_FLAGS := -g
@@ -796,7 +799,7 @@ cdi:
 	mkdcdisc -f ghost.ico -f kart.ico -f mk64.bin -d dc_data -e loader.elf -o mariokart64.cdi -n "Mario Kart 64" -v 3
 
 dcload:
-	sudo ./dcload-ip/host-src/tool/dc-tool-ip -x ${BUILD_DIR_BASE}/mario-kart.elf -c ./
+	dc-tool ${BUILD_DIR_BASE}/mario-kart.elf
 
 .PHONY: all clean distclean distclean_assets default diff test load assets
 # with no prerequisites, .SECONDARY causes no intermediate target to be removed

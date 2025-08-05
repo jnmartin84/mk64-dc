@@ -2,6 +2,7 @@
 //#ifdef GBI_FLOATS
 #include <string.h>
 //#endif
+#include "sh4zam.h"
 
 #ifndef GBI_FLOATS
 void guMtxF2L(float mf[4][4], Mtx* m) {
@@ -41,14 +42,15 @@ void guMtxL2F(float mf[4][4], Mtx* m) {
     }
 }
 #else
-void n64_memcpy(void *dst, const void *src, size_t size);
 
 void guMtxF2L(float mf[4][4], Mtx* m) {
-    n64_memcpy(m, mf, sizeof(Mtx));
+    //n64_memcpy(m, mf, sizeof(Mtx));
+    //shz_xmtrx_load_4x4_unaligned(mf);
+    //shz_xmtrx_store_4x4_unaligned(m);
+    //*m = *(Mtx*)mf;
+    shz_memcpy4_16(m, mf);
 }
 #endif
-
-#include "sh4zam.h"
 
 void guMtxIdentF(float mf[4][4]) {
 #if 0
@@ -63,13 +65,8 @@ void guMtxIdentF(float mf[4][4]) {
         }
     }
 #endif
-    if ((uintptr_t)mf & 15 == 0) {
-        shz_xmtrx_set_identity();
-        shz_xmtrx_store_4x4(mf);
-    } else {
-        /* n64_ */memset(mf, 0, 64);
-        mf[0][0] = mf[1][1] = mf[2][2] = mf[3][3] = 1.0f;
-    }
+        shz_xmtrx_init_identity();
+        shz_xmtrx_store_4x4_unaligned(mf);
 }
 
 void guMtxIdent(Mtx* m) {

@@ -8,6 +8,8 @@
 #include "buffers/trig_tables.h"
 #include "math.h"
 #include "memory.h"
+#include "sh4zam.h"
+#include "assert.h"
 
 s32 D_802B91C0[2] = { 13, 13 };
 Vec3f D_802B91C8 = { 0.0f, 0.0f, 0.0f };
@@ -44,6 +46,7 @@ static inline void scaled_sincoss(u16 arg0, f32* s, f32* c, f32 scale) {
 
 // This functions looks similar to a segment of code from func_802A4A0C in skybox_and_splitscreen.c
 UNUSED s32 func_802B4F60(UNUSED s32 arg0, Vec3f arg1, UNUSED s32 arg2, UNUSED f32 arg3, UNUSED f32 arg4) {
+    assert(false);
     Mat4 sp30;
     f32 sp2C;
     f32 sp28;
@@ -53,7 +56,9 @@ UNUSED s32 func_802B4F60(UNUSED s32 arg0, Vec3f arg1, UNUSED s32 arg2, UNUSED f3
     sp2C = sp1C[1];
     // wut?
     if (sp2C && sp2C) {};
-    sp2C = ((sp30[0][3] * sp28) + (sp30[1][3] * sp2C) + (sp30[2][3] * sp1C[2])) + sp30[3][3];
+    //sp2C = ((sp30[0][3] * sp28) + (sp30[1][3] * sp2C) + (sp30[2][3] * sp1C[2])) + sp30[3][3];
+    sp2C = shz_dot8f(sp30[0][3], sp30[1][3], sp30[2][3], sp30[3][3],
+                     sp28,       sp2C,       sp1C[2],    1.0f);
     // double wut?
     if (sp28 && sp28) {};
     mtxf_translate_vec3f_mat4(sp1C, sp30);
@@ -173,46 +178,10 @@ UNUSED void* vec3f_set_return(Vec3f dest, f32 x, f32 y, f32 z) {
     dest[2] = z;
     return &dest;
 }
-#if 0
-void mtxf_copy(Mat4 mat1, Mat4 mat2) {
-    asm volatile(R"(
-        fschg
 
-        pref    @%[dst]
-        fmov.d  @%[src]+, xd0
-        fmov.d  @%[src]+, xd2
-        fmov.d  @%[src]+, xd4
-        fmov.d  @%[src]+, xd6
-
-        pref    @%[src]
-        add     #32, %[dst]
-
-        fmov.d  xd6, @-%[dst]
-        fmov.d  xd4, @-%[dst]
-        fmov.d  xd2, @-%[dst]
-        fmov.d  xd0, @-%[dst]
-
-        add     #32, %[dst]
-        pref    @%[dst]
-
-        fmov.d  @%[src]+, xd0
-        fmov.d  @%[src]+, xd2
-        fmov.d  @%[src]+, xd4
-        fmov.d  @%[src]+, xd6
-
-        add     #32, %[dst]
-        fmov.d  xd6, @-%[dst]
-        fmov.d  xd4, @-%[dst]
-        fmov.d  xd2, @-%[dst]
-        fmov.d  xd0, @-%[dst]
-
-        fschg
-    )"
-    : [dst] "+&r" (mat2), [src] "+&r" (mat1), "=m" (mat2));
-}
-#else
 // Copy mat1 to mat2
 void mtxf_copy(Mat4 mat1, Mat4 mat2) {
+#if 0
     s32 row;
     s32 column;
 
@@ -221,8 +190,10 @@ void mtxf_copy(Mat4 mat1, Mat4 mat2) {
             mat2[row][column] = mat1[row][column];
         }
     }
-}
+#else
+    shz_matrix_4x4_copy(mat2, mat1);
 #endif
+}
 
 // mtxf_copy
 void mtxf_copy_n_element(s32* dest, s32* src, s32 n) {
@@ -235,27 +206,13 @@ void mtxf_copy_n_element(s32* dest, s32* src, s32 n) {
 #include "sh4zam.h"
 // Transform a matrix to a matrix identity
 void mtxf_identity(Mat4 mtx) {
-#if 0
-    s32 i;
-    s32 k;
-
-//    for (i = 0; i < 4; i++) {
-//        for (k = 0; k < 4; k++) {
-//            mtx[i][k] = (i == k) ? 1.0f : 0.0f;
-//        }
-//    }
-
-    memset(mtx, 0, sizeof(float)*16);
-    mtx[0][0] = mtx[1][1] = mtx[2][2] = mtx[3][3] = 1.0f;
-#else
     if ((uintptr_t)mtx & 15 == 0) {
-        shz_xmtrx_set_identity();
+        shz_xmtrx_init_identity();
         shz_xmtrx_store_4x4(mtx);
     } else {
-        memset(mtx, 0, 64);
-        mtx[0][0] = mtx[1][1] = mtx[2][2] = mtx[3][3] = 1.0f;
+        shz_xmtrx_init_identity();
+        shz_xmtrx_store_4x4_unaligned(mtx);
     }
-#endif
 }
 
 // Add a translation vector to a matrix, mat is the matrix to add, dest is the destination matrix, pos is the
@@ -279,10 +236,15 @@ void add_translate_mat4_vec3f(Mat4 mat, Mat4 dest, Vec3f pos) {
     dest[2][2] = mat[2][2];
     dest[2][3] = mat[2][3];
 #endif
-    mtxf_copy(mat, dest);
-    dest[3][0] += pos[0];
-    dest[3][1] += pos[1];
-    dest[3][2] += pos[2];
+    //mtxf_copy(mat, dest);
+    //dest[3][0] += pos[0];
+    //dest[3][1] += pos[1];
+    //dest[3][2] += pos[2];
+    
+    shz_xmtrx_load_4x4(mat);
+    shz_xmtrx_apply_translation(pos[0], pos[1], pos[2]);
+    shz_xmtrx_store_4x4(dest);
+    
     /*
      * mat(0,0)        mat(0,1)        mat(0,2)        mat(0,3)
      * mat(1,0)        mat(1,1)        mat(1,2)        mat(1,3)
@@ -300,11 +262,12 @@ UNUSED void add_translate_mat4_vec3f_lite(Mat4 mat, Mat4 dest, Vec3f pos) {
 
 // create a translation matrix
 void mtxf_translate(Mat4 dest, Vec3f b) {
-    mtxf_identity(dest);
-
-    dest[3][0] = b[0];
-    dest[3][1] = b[1];
-    dest[3][2] = b[2];
+    shz_xmtrx_init_translation(b[0], b[1], b[2]);
+    shz_xmtrx_store_4x4(dest);
+    //mtxf_identity(dest);
+    //dest[3][0] = b[0];
+    //dest[3][1] = b[1];
+    //dest[3][2] = b[2];
 }
 #define pi_over_180 0.017453292222222222f
 #define halfpi_over_180 0.00872665f
@@ -365,7 +328,7 @@ void func_802B5794(Mat4 mtx, Vec3f from, Vec3f to) {
     yColZ = to[1] - from[1];
     zColZ = to[2] - from[2];
 
-    invLength = -1.0 / sqrtf(xColZ * xColZ + yColZ * yColZ + zColZ * zColZ);
+    invLength = -1.0 / sqrtf(shz_mag_sqr4f(xColZ, yColZ, zColZ, 0.0f));
     xColZ *= invLength;
     yColZ *= invLength;
     zColZ *= invLength;
@@ -374,7 +337,7 @@ void func_802B5794(Mat4 mtx, Vec3f from, Vec3f to) {
     yColX = zColY * xColZ - xColY * zColZ;
     zColX = xColY * yColZ - yColY * xColZ;
 
-    invLength = 1.0 / sqrtf(xColX * xColX + yColX * yColX + zColX * zColX);
+    invLength = 1.0 / sqrtf(shz_mag_sqr4f(xColX, yColX, zColX, 0.0f));
 
     xColX *= invLength;
     yColX *= invLength;
@@ -384,7 +347,7 @@ void func_802B5794(Mat4 mtx, Vec3f from, Vec3f to) {
     yColY = zColZ * xColX - xColZ * zColX;
     zColY = xColZ * yColX - yColZ * xColX;
 
-    invLength = 1.0 / sqrtf(xColY * xColY + yColY * yColY + zColY * zColY);
+    invLength = 1.0 / sqrtf(shz_mag_sqr4f(xColY, yColY, zColY, 0.0f));
     xColY *= invLength;
     yColY *= invLength;
     zColY *= invLength;
@@ -392,35 +355,43 @@ void func_802B5794(Mat4 mtx, Vec3f from, Vec3f to) {
     mtx[0][0] = xColX;
     mtx[1][0] = yColX;
     mtx[2][0] = zColX;
-    mtx[3][0] = -(from[0] * xColX + from[1] * yColX + from[2] * zColX);
+    //mtx[3][0] = -(from[0] * xColX + from[1] * yColX + from[2] * zColX);
 
     mtx[0][1] = xColY;
     mtx[1][1] = yColY;
     mtx[2][1] = zColY;
-    mtx[3][1] = -(from[0] * xColY + from[1] * yColY + from[2] * zColY);
+    //mtx[3][1] = -(from[0] * xColY + from[1] * yColY + from[2] * zColY);
 
     mtx[0][2] = xColZ;
     mtx[1][2] = yColZ;
     mtx[2][2] = zColZ;
-    mtx[3][2] = -(from[0] * xColZ + from[1] * yColZ + from[2] * zColZ);
+    //mtx[3][2] = -(from[0] * xColZ + from[1] * yColZ + from[2] * zColZ);
 
     mtx[0][3] = 0.0f;
     mtx[1][3] = 0.0f;
     mtx[2][3] = 0.0f;
     mtx[3][3] = 1.0f;
+
+    *((SHZ_ALIASING shz_vec3_t *)mtx[3]) = shz_matrix4x4_trans_vec3(mtx, (shz_vec3_t) { .x = from[0], .y = from[1], .z = from[2] });
+    for(unsigned r = 0; r < 3; ++r)
+        mtx[3][r] *= -1.0f;     
 }
 
 // create a rotation matrix around the x axis
 void mtxf_rotate_x(Mat4 mat, s16 angle) {
-    f32 sin_theta;// = sins(angle);
-    f32 cos_theta;// = coss(angle);
-    sincoss(angle, &sin_theta, &cos_theta);
+#if 0
+    f32 sin_theta = sins(angle);
+    f32 cos_theta = coss(angle);
+
     mtxf_identity(mat);
     mat[1][1] = cos_theta;
     mat[1][2] = sin_theta;
     mat[2][1] = -sin_theta;
     mat[2][2] = cos_theta;
-
+#else
+    shz_xmtrx_init_rotation_x(SHZ_ANGLE(angle));
+    shz_xmtrx_store_4x4(mat);
+#endif
     /*
      * 1, 0, 0, 0,
      * 0, cos_theta, sin_theta, 0,
@@ -431,16 +402,19 @@ void mtxf_rotate_x(Mat4 mat, s16 angle) {
 
 // create a rotation matrix around the y axis
 void mtxf_rotate_y(Mat4 mat, s16 angle) {
-    f32 sin_theta;// = sins(angle);
-    f32 cos_theta;// = coss(angle);
-    sincoss(angle, &sin_theta, &cos_theta);
+#if 0
+    f32 sin_theta = sins(angle);
+    f32 cos_theta = coss(angle);
 
     mtxf_identity(mat);
     mat[0][0] = cos_theta;
     mat[0][2] = -sin_theta;
     mat[2][0] = sin_theta;
     mat[2][2] = cos_theta;
-
+#else
+    shz_xmtrx_init_rotation_y(SHZ_ANGLE(angle));
+    shz_xmtrx_store_4x4(mat);
+#endif
     /*
      * cos_theta, 0, -sin_theta, 0,
      * 0, 1, 0, 0,
@@ -451,15 +425,19 @@ void mtxf_rotate_y(Mat4 mat, s16 angle) {
 
 // create a rotation matrix around the z axis
 void mtxf_s16_rotate_z(Mat4 mat, s16 angle) {
-    f32 sin_theta;// = sins(angle);
-    f32 cos_theta;// = coss(angle);
-    sincoss(angle,&sin_theta,&cos_theta);
+#if 0
+    f32 sin_theta = sins(angle);
+    f32 cos_theta = coss(angle);
+
     mtxf_identity(mat);
     mat[0][0] = cos_theta;
     mat[0][1] = sin_theta;
     mat[1][0] = -sin_theta;
     mat[1][1] = cos_theta;
-
+#else
+    shz_xmtrx_init_rotation_z(SHZ_ANGLE(angle));
+    shz_xmtrx_store_4x4(mat);
+#endif
     /*
      * cos_theta, sin_theta, 0, 0,
      * -sin_theta, cos_theta, 0, 0,
@@ -469,6 +447,7 @@ void mtxf_s16_rotate_z(Mat4 mat, s16 angle) {
 }
 
 void func_802B5B14(Vec3f b, Vec3s rotate) {
+#if 0
     Mat4 mtx;
     Vec3f copy;
 
@@ -502,6 +481,13 @@ void func_802B5B14(Vec3f b, Vec3s rotate) {
     b[0] = copy[0] * mtx[0][0] + copy[1] * mtx[0][1] + copy[1] * mtx[0][2];
     b[1] = copy[0] * mtx[1][0] + copy[1] * mtx[1][1] + copy[1] * mtx[1][2];
     b[2] = copy[0] * mtx[2][0] + copy[1] * mtx[2][1] + copy[1] * mtx[2][2];
+#else
+    shz_xmtrx_init_rotation(SHZ_ANGLE(rotate[0]), SHZ_ANGLE(rotate[1]), SHZ_ANGLE(rotate[2]));
+    shz_vec3_t result = shz_xmtrx_trans_vec3((shz_vec3_t) { .x = b[0], .y = b[1], .z = b[2] });
+    b[0] = result.x;
+    b[1] = result.y;
+    b[2] = result.z;
+#endif
 }
 
 void func_802B5CAC(s16 arg0, s16 arg1, Vec3f arg2) {
@@ -564,6 +550,7 @@ void set_course_lighting(Lights1* addr, s16 arg1, s16 arg2, s32 arg3) {
 
 // multiply a matrix with a number
 void mtxf_scale(Mat4 mat, f32 coef) {
+#if 0
     mat[0][0] *= coef;
     mat[1][0] *= coef;
     mat[2][0] *= coef;
@@ -573,10 +560,16 @@ void mtxf_scale(Mat4 mat, f32 coef) {
     mat[0][2] *= coef;
     mat[1][2] *= coef;
     mat[2][2] *= coef;
+#else
+    shz_xmtrx_load_4x4(mat);
+    shz_xmtrx_apply_scale(coef, coef, coef);
+    shz_xmtrx_store_4x4(mat);
+#endif
 }
 
 // look like create a translation and rotation matrix with arg1 position and arg2 rotation
 void mtxf_pos_rotation_xyz(Mat4 out, Vec3f pos, Vec3s orientation) {
+#if 0
     f32 sine1;
     f32 cosine1;
     f32 sine2;
@@ -608,9 +601,15 @@ void mtxf_pos_rotation_xyz(Mat4 out, Vec3f pos, Vec3s orientation) {
     out[1][3] = 0.0f;
     out[2][3] = 0.0f;
     out[3][3] = 1.0f;
+#else
+    shz_xmtrx_init_rotation(SHZ_ANGLE(orientation[0]), SHZ_ANGLE(orientation[1]), SHZ_ANGLE(orientation[2]));
+    shz_xmtrx_set_translation(pos[0], pos[1], pos[2]);
+    shz_xmtrx_store_4x4(out);
+#endif
 }
 
 UNUSED void func_802B60B4(Mat4 arg0, Vec3s arg1, Vec3s arg2) {
+    assert(false);
     f32 sine1;
     f32 cosine1;
     f32 sine2;
@@ -647,6 +646,7 @@ UNUSED void func_802B60B4(Mat4 arg0, Vec3s arg1, Vec3s arg2) {
 }
 
 UNUSED void func_802B6214(Mat4 arg0, Vec3s arg1, Vec3s arg2) {
+    assert(false);
     f32 sine1;
     f32 cosine1;
     f32 sine2;
@@ -684,6 +684,7 @@ UNUSED void func_802B6214(Mat4 arg0, Vec3s arg1, Vec3s arg2) {
 
 // look like to normalise vector
 UNUSED void func_802B6374(Vec3f arg0) {
+    assert(false);
     f32 temp_f0;
     temp_f0 = sqrtf((arg0[0] * arg0[0]) + (arg0[1] * arg0[1]) + (arg0[2] * arg0[2]));
     arg0[0] /= temp_f0;
@@ -693,6 +694,7 @@ UNUSED void func_802B6374(Vec3f arg0) {
 
 // translate the vector with a matrix
 void mtxf_translate_vec3f_mat3(Vec3f pos, Mat3 mat) {
+#if 0
     f32 new_x;
     f32 new_y;
     f32 new_z;
@@ -704,10 +706,17 @@ void mtxf_translate_vec3f_mat3(Vec3f pos, Mat3 mat) {
     pos[0] = new_x;
     pos[1] = new_y;
     pos[2] = new_z;
+#else
+    shz_vec3_t out = shz_matrix3x3_trans_vec3(mat, (shz_vec3_t) { .x = pos[0], .y = pos[1], .z = pos[2] });
+    pos[0] = out.x;
+    pos[1] = out.y;
+    pos[2] = out.z;
+#endif
 }
-#include <kos.h>
+
 // translate the vector with a matrix (with a matrix 4x4)
 void mtxf_translate_vec3f_mat4(Vec3f pos, Mat4 mat) {
+#if 0
 #if 0
     f32 new_x;
     f32 new_y;
@@ -724,6 +733,12 @@ void mtxf_translate_vec3f_mat4(Vec3f pos, Mat4 mat) {
     pos[0] = fipr(mat[0][0],mat[0][1],mat[0][2],0,pos[0],pos[1],pos[2],0);
     pos[1] = fipr(mat[1][0],mat[1][1],mat[1][2],0,pos[0],pos[1],pos[2],0);
     pos[2] = fipr(mat[2][0],mat[2][1],mat[2][2],0,pos[0],pos[1],pos[2],0);
+#endif
+#else
+    shz_vec3_t out = shz_matrix4x4_trans_vec3(mat, (shz_vec3_t) { .x = pos[0], .y = pos[1], .z = pos[2] });
+    pos[0] = out.x;
+    pos[1] = out.y;
+    pos[2] = out.z;
 #endif
 }
 
@@ -747,6 +762,7 @@ void func_802B64C4(Vec3f arg0, s16 arg1) {
 }
 
 void calculate_orientation_matrix(Mat3 dest, f32 arg1, f32 arg2, f32 arg3, s16 rotationAngle) {
+#if 0
     Mat3 mtx_rot_y;
     Mat3 matrix;
     s32 i, j;
@@ -809,40 +825,35 @@ void calculate_orientation_matrix(Mat3 dest, f32 arg1, f32 arg2, f32 arg3, s16 r
     dest[0][2] = (mtx_rot_y[0][0] * matrix[0][2]) + (mtx_rot_y[0][1] * matrix[1][2]) + (mtx_rot_y[0][2] * matrix[2][2]);
     dest[1][2] = (mtx_rot_y[1][0] * matrix[0][2]) + (mtx_rot_y[1][1] * matrix[1][2]) + (mtx_rot_y[1][2] * matrix[2][2]);
     dest[2][2] = (mtx_rot_y[2][0] * matrix[0][2]) + (mtx_rot_y[2][1] * matrix[1][2]) + (mtx_rot_y[2][2] * matrix[2][2]);
-}
 
-#if 0
-// include in calculate_orientation_matrix
-UNUSED void func_802B68F8(Mat3 matrix, f32 arg1, f32 arg2, f32 arg3) {
+#else
+    Mat3 mtx_rot_y;
+    Mat3 matrix;
     s32 i, j;
     f32 a;
     f32 b;
     f32 c;
     f32 d;
-    UNUSED f32 pad;
+    UNUSED s32 pad[3];
+    f32 sinValue;
+    f32 cossValue;
 
-    if (arg2 == 1) {
-        for (i = 0; i < 3; i++) {
-            for (j = 0; j < 3; j++) {
-                matrix[i][j] = (i == j) ? 1.0f : 0.0f;
-            }
-        }
-    } else if (arg2 == -1) {
-        for (i = 0; i < 3; i++) {
-            for (j = 0; j < 3; j++) {
-                matrix[i][j] = (i == j) ? 1.0f : 0.0f;
-            }
-        }
-        matrix[1][1] = -1.0f;
-    } else {
+    shz_xmtrx_init_rotation_y(SHZ_ANGLE(rotationAngle));
+
+    if (arg2 == -1) { // set matrix to identity with the second column negative;
+        shz_xmtrx_apply_scale(1.0f, -1.0f, 1.0f);
+    } else if(arg2 != 1) {
         a = (f32) - (360.0 - ((f64) (calculate_vector_angle_xy(arg2) * 180.0f) / M_PI));
         b = -arg3 / sqrtf((arg1 * arg1) + (arg3 * arg3));
         c = 0;
         d = arg1 / sqrtf((arg1 * arg1) + (arg3 * arg3));
         calculate_rotation_matrix(matrix, a, b, c, d);
+        shz_xmtrx_apply_3x3_transpose(matrix);
     }
-}
+
+    shz_xmtrx_store_3x3((shz_matrix_3x3_t *)dest);
 #endif
+}
 
 void calculate_rotation_matrix(Mat3 destMatrix, s16 rotationAngle, f32 rotationX, f32 rotationY, f32 rotationZ) {
     f32 sinValue;
@@ -917,258 +928,20 @@ void func_802B6BC0(Mat4 arg0, s16 arg1, f32 arg2, f32 arg3, f32 arg4) {
     }
 }
 
+
 // look like create a translation and rotation matrix with arg1 position and arg2 rotation
 void func_802B6D58(Mat4 arg0, Vec3f arg1, Vec3f arg2) {
-    f32 sine1;
-    f32 cosine1;
-    f32 sine2;
-    f32 cosine2;
-    f32 sine3;
-    f32 cosine3;
-
-    sincoss(arg2[0], &sine1,&cosine1);
-    sincoss(arg2[1], &sine2,&cosine2);
-    sincoss(arg2[2], &sine3,&cosine3);
-
-/*     sine1 = sins(arg2[0]);
-    cosine1 = coss(arg2[0]);
-    sine2 = sins(arg2[1]);
-    cosine2 = coss(arg2[1]);
-    sine3 = sins(arg2[2]);
-    cosine3 = coss(arg2[2]);
- */
-    arg0[0][0] = (cosine2 * cosine3) + ((sine1 * sine2) * sine3);
-    arg0[1][0] = (-cosine2 * sine3) + (sine1 * sine2) * cosine3;
-    arg0[2][0] = cosine1 * sine2;
-    arg0[3][0] = arg1[0];
-    arg0[0][1] = cosine1 * sine3;
-    arg0[1][1] = cosine1 * cosine3;
-    arg0[2][1] = -sine1;
-    arg0[3][1] = arg1[1];
-    arg0[0][2] = (-sine2 * cosine3) + ((sine1 * cosine2) * sine3);
-    arg0[1][2] = (sine2 * sine3) + ((sine1 * cosine2) * cosine3);
-    arg0[2][2] = cosine1 * cosine2;
-    arg0[3][2] = arg1[2];
-    arg0[0][3] = 0.0f;
-    arg0[1][3] = 0.0f;
-    arg0[2][3] = 0.0f;
-    arg0[3][3] = 1.0f;
+    shz_dcache_alloc_line(arg0);
+    shz_xmtrx_init_rotation(SHZ_ANGLE(arg2[0]), SHZ_ANGLE(arg2[1]), SHZ_ANGLE(arg2[2]));
+    shz_xmtrx_set_translation(arg1[0], arg1[1], arg1[2]);
+    shz_xmtrx_store_4x4(arg0);
 }
 
 // thanks @FalcoGirgis
-inline static void fast_mat_store(matrix_t* mtx) {
-	asm volatile(
-		R"(
-			fschg
-			add            #64-8,%[mtx]
-			fmov.d    xd14,@%[mtx]
-			add            #-32,%[mtx]
-			pref    @%[mtx]
-			add         #32,%[mtx]
-			fmov.d    xd12,@-%[mtx]
-			fmov.d    xd10,@-%[mtx]
-			fmov.d    xd8,@-%[mtx]
-			fmov.d    xd6,@-%[mtx]
-			fmov.d    xd4,@-%[mtx]
-			fmov.d    xd2,@-%[mtx]
-			fmov.d    xd0,@-%[mtx]
-			fschg
-		)"
-		: [mtx] "+&r"(mtx), "=m"(*mtx)
-		:
-		:);
-}
-
-// thanks @FalcoGirgis
-inline static void fast_mat_load(const matrix_t* mtx) {
-	asm volatile(
-		R"(
-			fschg
-			fmov.d    @%[mtx],xd0
-			add        #32,%[mtx]
-			pref    @%[mtx]
-			add        #-(32-8),%[mtx]
-			fmov.d    @%[mtx]+,xd2
-			fmov.d    @%[mtx]+,xd4
-			fmov.d    @%[mtx]+,xd6
-			fmov.d    @%[mtx]+,xd8
-			fmov.d    @%[mtx]+,xd10
-			fmov.d    @%[mtx]+,xd12
-			fmov.d    @%[mtx]+,xd14
-			fschg
-		)"
-		: [mtx] "+r"(mtx)
-		:
-		:);
-}
-
-// thanks @FalcoGirgis
-inline static void mat_load_apply(const matrix_t* matrix1, const matrix_t* matrix2) {
-	unsigned int prefetch_scratch;
-
-	asm volatile("mov %[bmtrx], %[pref_scratch]\n\t"
-				 "add #32, %[pref_scratch]\n\t"
-				 "fschg\n\t"
-				 "pref @%[pref_scratch]\n\t"
-				 // back matrix
-				 "fmov.d @%[bmtrx]+, XD0\n\t"
-				 "fmov.d @%[bmtrx]+, XD2\n\t"
-				 "fmov.d @%[bmtrx]+, XD4\n\t"
-				 "fmov.d @%[bmtrx]+, XD6\n\t"
-				 "pref @%[fmtrx]\n\t"
-				 "fmov.d @%[bmtrx]+, XD8\n\t"
-				 "fmov.d @%[bmtrx]+, XD10\n\t"
-				 "fmov.d @%[bmtrx]+, XD12\n\t"
-				 "mov %[fmtrx], %[pref_scratch]\n\t"
-				 "add #32, %[pref_scratch]\n\t"
-				 "fmov.d @%[bmtrx], XD14\n\t"
-				 "pref @%[pref_scratch]\n\t"
-				 // front matrix
-				 // interleave loads and matrix multiply 4x4
-				 "fmov.d @%[fmtrx]+, DR0\n\t"
-				 "fmov.d @%[fmtrx]+, DR2\n\t"
-				 "fmov.d @%[fmtrx]+, DR4\n\t"
-				 "ftrv XMTRX, FV0\n\t"
-
-				 "fmov.d @%[fmtrx]+, DR6\n\t"
-				 "fmov.d @%[fmtrx]+, DR8\n\t"
-				 "ftrv XMTRX, FV4\n\t"
-
-				 "fmov.d @%[fmtrx]+, DR10\n\t"
-				 "fmov.d @%[fmtrx]+, DR12\n\t"
-				 "ftrv XMTRX, FV8\n\t"
-
-				 "fmov.d @%[fmtrx], DR14\n\t"
-				 "fschg\n\t"
-				 "ftrv XMTRX, FV12\n\t"
-				 "frchg\n"
-				 : [bmtrx] "+&r"((unsigned int) matrix1), [fmtrx] "+r"((unsigned int) matrix2),
-				   [pref_scratch] "=&r"(prefetch_scratch)
-				 : // no inputs
-				 : "fr0", "fr1", "fr2", "fr3", "fr4", "fr5", "fr6", "fr7", "fr8", "fr9", "fr10", "fr11", "fr12", "fr13",
-				   "fr14", "fr15");
-}
 
 void mtxf_multiplication(Mat4 dest, Mat4 mat1, Mat4 mat2) {
-    mat_load_apply(mat2, mat1);
-    fast_mat_store(dest);
-#if 0
-    Mat4 product;
-    product[0][0] =
-        (mat1[0][0] * mat2[0][0]) + (mat1[0][1] * mat2[1][0]) + (mat1[0][2] * mat2[2][0]) + (mat1[0][3] * mat2[3][0]);
-    product[0][1] =
-        (mat1[0][0] * mat2[0][1]) + (mat1[0][1] * mat2[1][1]) + (mat1[0][2] * mat2[2][1]) + (mat1[0][3] * mat2[3][1]);
-    product[0][2] =
-        (mat1[0][0] * mat2[0][2]) + (mat1[0][1] * mat2[1][2]) + (mat1[0][2] * mat2[2][2]) + (mat1[0][3] * mat2[3][2]);
-    product[0][3] =
-        (mat1[0][0] * mat2[0][3]) + (mat1[0][1] * mat2[1][3]) + (mat1[0][2] * mat2[2][3]) + (mat1[0][3] * mat2[3][3]);
-    product[1][0] =
-        (mat1[1][0] * mat2[0][0]) + (mat1[1][1] * mat2[1][0]) + (mat1[1][2] * mat2[2][0]) + (mat1[1][3] * mat2[3][0]);
-    product[1][1] =
-        (mat1[1][0] * mat2[0][1]) + (mat1[1][1] * mat2[1][1]) + (mat1[1][2] * mat2[2][1]) + (mat1[1][3] * mat2[3][1]);
-    product[1][2] =
-        (mat1[1][0] * mat2[0][2]) + (mat1[1][1] * mat2[1][2]) + (mat1[1][2] * mat2[2][2]) + (mat1[1][3] * mat2[3][2]);
-    product[1][3] =
-        (mat1[1][0] * mat2[0][3]) + (mat1[1][1] * mat2[1][3]) + (mat1[1][2] * mat2[2][3]) + (mat1[1][3] * mat2[3][3]);
-    product[2][0] =
-        (mat1[2][0] * mat2[0][0]) + (mat1[2][1] * mat2[1][0]) + (mat1[2][2] * mat2[2][0]) + (mat1[2][3] * mat2[3][0]);
-    product[2][1] =
-        (mat1[2][0] * mat2[0][1]) + (mat1[2][1] * mat2[1][1]) + (mat1[2][2] * mat2[2][1]) + (mat1[2][3] * mat2[3][1]);
-    product[2][2] =
-        (mat1[2][0] * mat2[0][2]) + (mat1[2][1] * mat2[1][2]) + (mat1[2][2] * mat2[2][2]) + (mat1[2][3] * mat2[3][2]);
-    product[2][3] =
-        (mat1[2][0] * mat2[0][3]) + (mat1[2][1] * mat2[1][3]) + (mat1[2][2] * mat2[2][3]) + (mat1[2][3] * mat2[3][3]);
-    product[3][0] =
-        (mat1[3][0] * mat2[0][0]) + (mat1[3][1] * mat2[1][0]) + (mat1[3][2] * mat2[2][0]) + (mat1[3][3] * mat2[3][0]);
-    product[3][1] =
-        (mat1[3][0] * mat2[0][1]) + (mat1[3][1] * mat2[1][1]) + (mat1[3][2] * mat2[2][1]) + (mat1[3][3] * mat2[3][1]);
-    product[3][2] =
-        (mat1[3][0] * mat2[0][2]) + (mat1[3][1] * mat2[1][2]) + (mat1[3][2] * mat2[2][2]) + (mat1[3][3] * mat2[3][2]);
-    product[3][3] =
-        (mat1[3][0] * mat2[0][3]) + (mat1[3][1] * mat2[1][3]) + (mat1[3][2] * mat2[2][3]) + (mat1[3][3] * mat2[3][3]);
-    mtxf_copy_n_element((s32*) dest, (s32*) product, 16);
-#endif
-/*     dest[0][0] = fipr(mat1[0][0], mat1[0][1], mat1[0][2], mat1[0][3],
-        mat2[0][0], mat2[1][0], mat2[2][0], mat1[3][0]); 
-
-    dest[0][1] = fipr(mat1[0][0], mat1[0][1], mat1[0][2], mat1[0][3],
-        mat2[0][1], mat2[1][1], mat2[2][1], mat1[3][1]); 
-
-    dest[0][2] = fipr(mat1[0][0], mat1[0][1], mat1[0][2], mat1[0][3],
-        mat2[0][2], mat2[1][2], mat2[2][2], mat1[3][2]); 
-
-    dest[0][3] = fipr(mat1[0][0], mat1[0][1], mat1[0][2], mat1[0][3],
-        mat2[0][3], mat2[1][3], mat2[2][3], mat1[3][3]); 
-
-    dest[1][0] = fipr(mat1[1][0], mat1[1][1], mat1[1][2], mat1[1][3],
-        mat2[0][0], mat2[1][0], mat2[2][0], mat1[3][0]); 
-
-    dest[1][1] = fipr(mat1[1][0], mat1[1][1], mat1[1][2], mat1[1][3],
-        mat2[0][1], mat2[1][1], mat2[2][1], mat1[3][1]); 
-
-    dest[1][2] = fipr(mat1[1][0], mat1[1][1], mat1[1][2], mat1[1][3],
-        mat2[0][2], mat2[1][2], mat2[2][2], mat1[3][2]); 
-
-    dest[1][3] = fipr(mat1[1][0], mat1[1][1], mat1[1][2], mat1[1][3],
-        mat2[0][3], mat2[1][3], mat2[2][3], mat1[3][3]); 
-
-    dest[2][0] = fipr(mat1[2][0], mat1[2][1], mat1[2][2], mat1[2][3],
-        mat2[0][0], mat2[1][0], mat2[2][0], mat1[3][0]); 
-
-    dest[2][1] = fipr(mat1[2][0], mat1[2][1], mat1[2][2], mat1[2][3],
-        mat2[0][1], mat2[1][1], mat2[2][1], mat1[3][1]); 
-
-    dest[2][2] = fipr(mat1[2][0], mat1[2][1], mat1[2][2], mat1[2][3],
-        mat2[0][2], mat2[1][2], mat2[2][2], mat1[3][2]); 
-
-    dest[2][3] = fipr(mat1[2][0], mat1[2][1], mat1[2][2], mat1[2][3],
-        mat2[0][3], mat2[1][3], mat2[2][3], mat1[3][3]); 
-
-    dest[3][0] = fipr(mat1[3][0], mat1[3][1], mat1[3][2], mat1[3][3],
-        mat2[0][0], mat2[1][0], mat2[2][0], mat1[3][0]); 
-
-    dest[3][1] = fipr(mat1[3][0], mat1[3][1], mat1[3][2], mat1[3][3],
-        mat2[0][1], mat2[1][1], mat2[2][1], mat1[3][1]); 
-
-    dest[3][2] = fipr(mat1[3][0], mat1[3][1], mat1[3][2], mat1[3][3],
-        mat2[0][2], mat2[1][2], mat2[2][2], mat1[3][2]); 
-
-    dest[3][3] = fipr(mat1[3][0], mat1[3][1], mat1[3][2], mat1[3][3],
-        mat2[0][3], mat2[1][3], mat2[2][3], mat1[3][3]);  */
-#if 0
-    dest[0][0] =
-        (mat1[0][0] * mat2[0][0]) + (mat1[0][1] * mat2[1][0]) + (mat1[0][2] * mat2[2][0]) + (mat1[0][3] * mat2[3][0]);
-    dest[0][1] =
-        (mat1[0][0] * mat2[0][1]) + (mat1[0][1] * mat2[1][1]) + (mat1[0][2] * mat2[2][1]) + (mat1[0][3] * mat2[3][1]);
-    dest[0][2] =
-        (mat1[0][0] * mat2[0][2]) + (mat1[0][1] * mat2[1][2]) + (mat1[0][2] * mat2[2][2]) + (mat1[0][3] * mat2[3][2]);
-    dest[0][3] =
-        (mat1[0][0] * mat2[0][3]) + (mat1[0][1] * mat2[1][3]) + (mat1[0][2] * mat2[2][3]) + (mat1[0][3] * mat2[3][3]);
-    dest[1][0] =
-        (mat1[1][0] * mat2[0][0]) + (mat1[1][1] * mat2[1][0]) + (mat1[1][2] * mat2[2][0]) + (mat1[1][3] * mat2[3][0]);
-    dest[1][1] =
-        (mat1[1][0] * mat2[0][1]) + (mat1[1][1] * mat2[1][1]) + (mat1[1][2] * mat2[2][1]) + (mat1[1][3] * mat2[3][1]);
-    dest[1][2] =
-        (mat1[1][0] * mat2[0][2]) + (mat1[1][1] * mat2[1][2]) + (mat1[1][2] * mat2[2][2]) + (mat1[1][3] * mat2[3][2]);
-    dest[1][3] =
-        (mat1[1][0] * mat2[0][3]) + (mat1[1][1] * mat2[1][3]) + (mat1[1][2] * mat2[2][3]) + (mat1[1][3] * mat2[3][3]);
-    dest[2][0] =
-        (mat1[2][0] * mat2[0][0]) + (mat1[2][1] * mat2[1][0]) + (mat1[2][2] * mat2[2][0]) + (mat1[2][3] * mat2[3][0]);
-    dest[2][1] =
-        (mat1[2][0] * mat2[0][1]) + (mat1[2][1] * mat2[1][1]) + (mat1[2][2] * mat2[2][1]) + (mat1[2][3] * mat2[3][1]);
-    dest[2][2] =
-        (mat1[2][0] * mat2[0][2]) + (mat1[2][1] * mat2[1][2]) + (mat1[2][2] * mat2[2][2]) + (mat1[2][3] * mat2[3][2]);
-    dest[2][3] =
-        (mat1[2][0] * mat2[0][3]) + (mat1[2][1] * mat2[1][3]) + (mat1[2][2] * mat2[2][3]) + (mat1[2][3] * mat2[3][3]);
-    dest[3][0] =
-        (mat1[3][0] * mat2[0][0]) + (mat1[3][1] * mat2[1][0]) + (mat1[3][2] * mat2[2][0]) + (mat1[3][3] * mat2[3][0]);
-    dest[3][1] =
-        (mat1[3][0] * mat2[0][1]) + (mat1[3][1] * mat2[1][1]) + (mat1[3][2] * mat2[2][1]) + (mat1[3][3] * mat2[3][1]);
-    dest[3][2] =
-        (mat1[3][0] * mat2[0][2]) + (mat1[3][1] * mat2[1][2]) + (mat1[3][2] * mat2[2][2]) + (mat1[3][3] * mat2[3][2]);
-    dest[3][3] =
-        (mat1[3][0] * mat2[0][3]) + (mat1[3][1] * mat2[1][3]) + (mat1[3][2] * mat2[2][3]) + (mat1[3][3] * mat2[3][3]);
-#endif
+    shz_dcache_alloc_line(dest);
+    shz_xmtrx_load_4x4_apply_store(dest, mat2, mat1);
 }
 
 /**
@@ -1184,7 +957,10 @@ void n64_memcpy(void *dst, const void *src, size_t size);
 
 void mtxf_to_mtx(Mtx* dest, Mat4 src) {
 #ifdef GBI_FLOATS
-    n64_memcpy(dest, src, sizeof(Mtx));
+    __builtin_prefetch(dest);
+    shz_xmtrx_load_4x4(src);
+    shz_xmtrx_store_4x4_unaligned(dest);
+
 #else
 #ifdef AVOID_UB
     // Avoid type-casting which is technically UB by calling the equivalent
@@ -1378,7 +1154,6 @@ void func_802B7F7C(Vec3f arg0, Vec3f arg1, Vec3s dest) {
 //    return cosf(farg0);
 
 //#define gCosineTable (gSineTable + 0x400)
-#define TRIG_ARG_SCALE 0.00009587f
 
 f32 sins(u16 arg0) {
 #if 0
