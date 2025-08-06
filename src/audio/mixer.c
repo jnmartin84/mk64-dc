@@ -744,16 +744,18 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
     MEM_BARRIER_PREF(out);
     uint8_t* in = BUF_U8(rspa.in);
     int nbytes = ROUND_UP_32(rspa.nbytes);
-    if (flags & A_INIT)
+    if (flags & A_INIT) {
         shz_zero_16_shorts(out);
-    else if (flags & A_LOOP)
+    } else if (flags & A_LOOP) {
         shz_copy_16_shorts(out, rspa.adpcm_loop_state);
-    else
+    } else {
         shz_copy_16_shorts(out, state);
+    }
     MEM_BARRIER_PREF(in);
     out += 16;
     float prev1 = out[-1];
     float prev2 = out[-2];
+
     while (nbytes > 0) {
         const uint8_t si_in = *in++;
         const uint8_t next = *in++;
@@ -790,6 +792,7 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
             }
         }
         MEM_BARRIER_PREF(in);
+
         for (int i = 0; i < 2; i++) {
             const float *ins = instr[i];
             shz_vec4_t acc_vec[2];
@@ -823,6 +826,7 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
                 accf[5] += (tbl[1][1] * ins3) + (tbl[1][0] * ins4);
                 accf[4] += (tbl[1][0] * ins3);
             }
+
             for (int j = 0; j < 6; ++j)
                 *out++ = clamp16f(accf[j]);
 
@@ -834,6 +838,7 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
         MEM_BARRIER_PREF(out);
         nbytes -= 16 * sizeof(int16_t);
     }
+
     shz_copy_16_shorts(state, (out - 16));
 }
 
@@ -948,9 +953,9 @@ void aEnvMixerImpl(uint16_t in_addr, uint16_t n_samples, UNUSED int swap_reverb,
 
             int32_t dsampl1 = *dry[0] + (sample * vols[0] >> 16);
             int32_t dsampl2 = *dry[1] + (sample * vols[1] >> 16);
-
-            MEM_BARRIER();
-
+#if 1
+            asm volatile("" : : : "memory");
+#endif
             *dry[0]++ = clamp16(dsampl1);
             *dry[1]++ = clamp16(dsampl2);
         }

@@ -1113,7 +1113,7 @@ typedef union {
     long long int force_structure_alignment;
 } Mtx;
 #else
-typedef struct {
+typedef struct /* __attribute__((aligned(32))) */ {
     float m[4][4];
     long long int force_structure_alignment;
 } Mtx;

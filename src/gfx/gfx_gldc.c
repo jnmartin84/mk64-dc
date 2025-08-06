@@ -17,10 +17,6 @@
 
 #define FOR_WINDOWS 0
 
-#ifndef GL_MIRRORED_REPEAT
-#define GL_MIRRORED_REPEAT      0x2902
-#endif
-
 #include "gfx_cc.h"
 #include "gfx_rendering_api.h"
 #include "macros.h"
