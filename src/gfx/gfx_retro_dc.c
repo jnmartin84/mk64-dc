@@ -92,32 +92,52 @@ struct __attribute__((aligned(32))) LoadedVertex {
 	uint8_t	wlt0;
 };
 
+
+static inline uint64_t pack_key(uint32_t a, uint16_t b, uint16_t c, uint8_t d, uint8_t e) {
+    uint64_t key = 0;
+    key |= ((uint64_t)((a >> 5) & 0x7FFFF)) << 42; // 19 bits
+    key |= ((uint64_t)b & 0xFFFF) << 26;           // 16 bits
+    key |= ((uint64_t)c & 0xFFFF) << 10;           // 16 bits
+    key |= ((uint64_t)d & 0xFF)   << 2;            // 8 bits
+    key |= ((uint64_t)(e & 0x3));                  // 2 bits
+    return key;
+}
+
+
 // exactly one cache-line in size
 struct TextureHashmapNode {
 	// 0
 	struct TextureHashmapNode* next;
 	// 4
 	uint32_t texture_id;
+#if 0
 	// 8
 	const uint8_t* texture_addr;
-	// 12
-	uint32_t tmem;
 	// 16
 	uint16_t uls;
 	// 18
 	uint16_t ult;
 	// 20
 	uint8_t fmt, siz;
-	// 22
+#endif
+	// 8
+	uint64_t key;
+	// 16
+	uint32_t tmem;
+	// 20
 	uint8_t dirty;
-	// 23
+	// 21
 	uint8_t linear_filter;
-	// 24
+	// 22
 	uint8_t cms, cmt;
-	// 26
-	uint32_t pad4;
-	// 30
-	uint16_t pad2;
+	// 23
+	uint8_t pad1;
+	// 24
+	uint32_t pad2;
+	// 28
+	uint32_t pad3;
+	// 28
+//	uint32_t pad3;
 };
 
 struct TextureHashmapNode oops_node;
@@ -328,6 +348,27 @@ void gfx_clear_texidx(GLuint texidx);
 
 void reset_texcache(void) {
 	gfx_texture_cache.pool_pos = 0;
+//	memset(&gfx_texture_cache, 0, sizeof(gfx_texture_cache));
+}
+
+static inline uint32_t unpack_A(uint64_t key) {
+    // Extract 19-bit field
+    uint32_t a19 = (uint32_t)((key >> 42) & 0x7FFFF);
+
+    // Shift back to original position (restore the lost low 5 bits as 0s)
+//    uint32_t a = (a19 << 5);
+
+    // Restore the constant top 8 bits (0x8C per your earlier note)
+//    a |= 0x8C000000;
+
+    return a19;
+}
+
+static inline uint64_t hash64(uint64_t key) {
+    uint64_t h = 1469598103934665603ULL; // FNV offset basis
+    h ^= key; 
+    h *= 1099511628211ULL;               // FNV prime
+    return h;
 }
 
 void gfx_texture_cache_invalidate(void* orig_addr) {
@@ -335,11 +376,15 @@ void gfx_texture_cache_invalidate(void* orig_addr) {
 
 	size_t hash = (uintptr_t) segaddr;
 	hash = (hash >> 5) & 0x3ff;
+
+
+	uintptr_t addrcomp = ((uintptr_t)segaddr>>5)&0x7FFFF;
 	struct TextureHashmapNode** node = &gfx_texture_cache.hashmap[hash];
 	uintptr_t last_node = &gfx_texture_cache.pool[gfx_texture_cache.pool_pos];
 	while (*node != NULL && ((uintptr_t)*node < last_node)) {
 		__builtin_prefetch((*node)->next);
-		if ((*node)->texture_addr == segaddr) {
+		uintptr_t unpaddr = (uintptr_t)unpack_A((*node)->key);
+		if (unpaddr == addrcomp) {
 			(*node)->dirty = 1;
 		}
 		node = &(*node)->next;
@@ -350,11 +395,15 @@ void gfx_opengl_replace_texture(const uint8_t* rgba32_buf, int width, int height
 
 extern void gfx_opengl_set_tile_addr(int tile, GLuint addr);
 
+//int max_lookup = 0;
+
 static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, struct TextureHashmapNode** n, const uint8_t* orig_addr,
 										uint32_t tmem, uint32_t fmt, uint32_t siz, uint16_t uls, uint16_t ult) {
 	void* segaddr = segmented_to_virtual((void *)orig_addr);
 	size_t hash = (uintptr_t) segaddr;
 	hash = (hash >> 5) & 0x3ff;
+
+	uint64_t newkey = pack_key(segaddr,uls,ult,fmt,siz);
 
 	struct TextureHashmapNode** node = &gfx_texture_cache.hashmap[hash];
 	if ((uintptr_t)rdp.loaded_texture[tile].addr < 0x8c010000u) {
@@ -368,8 +417,9 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 	while (*node != NULL && ((uintptr_t)*node < last_node)) {
 		__builtin_prefetch((*node)->next);
 
-		if ((*node)->texture_addr == segaddr && (*node)->ult == ult && (*node)->uls == uls &&
-			(*node)->fmt == fmt && (*node)->siz == siz) {
+		if ((*node)->key == newkey
+			/* (*node)->texture_addr == segaddr && (*node)->ult == ult && (*node)->uls == uls &&
+			(*node)->fmt == fmt && (*node)->siz == siz */) {
 			gfx_rapi->select_texture(tile, (*node)->texture_id);
 			gfx_opengl_set_tile_addr(tile, segaddr);
 
@@ -395,19 +445,27 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 	}
 
 	*node = &gfx_texture_cache.pool[gfx_texture_cache.pool_pos++];
-	if ((*node)->texture_addr == NULL) {
+//	if (gfx_texture_cache.pool_pos > max_lookup) {
+//		max_lookup = gfx_texture_cache.pool_pos;
+//		printf("max pool pos %d\n", max_lookup);
+//	}
+//	if ((*node)->texture_addr == NULL) {
+	if ((*node)->key == 0) {
 		(*node)->texture_id = gfx_rapi->new_texture();
 	}
 	gfx_rapi->select_texture(tile, (*node)->texture_id);
 	gfx_opengl_set_tile_addr(tile, segaddr);
 
 	gfx_rapi->set_sampler_parameters(tile, 0, 0, 0);
-
+#if 0
 	(*node)->texture_addr = segaddr;
 	(*node)->fmt = fmt;
 	(*node)->siz = siz;
 	(*node)->uls = uls;
 	(*node)->ult = ult;
+#endif
+	(*node)->key = pack_key(segaddr,uls,ult,fmt,siz);
+
 	(*node)->dirty = 0;
 
 	(*node)->tmem = tmem;
@@ -1982,9 +2040,8 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         uint32_t color_g = 0;
         uint32_t color_b = 0;
         uint32_t color_a = 0;
-{
-		{
-        if (num_inputs == 2) {
+
+		if (num_inputs == 2) {
             int i0 = comb->shader_input_mapping[0][1] == CC_PRIM;
             int i2 = comb->shader_input_mapping[0][0] == CC_ENV;
 
@@ -2083,6 +2140,14 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
             }
         } else {
         thenextthing:
+ 		if (!in_intro) {
+			if ((v_arr[i]->color.a == 255) && (v_arr[i]->color.b == 0) &&
+			(v_arr[i]->color.g == 0) && (v_arr[i]->color.a == 255)) {
+				buf_vbo[buf_num_vert].color.packed = PACK_ARGB8888(v_arr[i]->color.r, v_arr[i]->color.g,
+                                                                      v_arr[i]->color.b, v_arr[i]->color.a);
+				goto nextvert;
+			}
+		}
             for (j = 0; j < num_inputs; j++) {
                 /*@Note: use_alpha ? 1 : 0 */
                 for (k = 0; k < 1 + (use_alpha ? 0 : 0); k++) {
@@ -2121,9 +2186,8 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
                 }
             }
         }
-	}
-}
-        buf_num_vert++;
+nextvert:
+		buf_num_vert++;
         buf_vbo_len += sizeof(dc_fast_t);
     }
     buf_vbo_num_tris += 1;
@@ -2487,35 +2551,46 @@ static void  gfx_dp_set_tile_size(uint8_t tile, uint16_t uls, uint16_t ult, uint
 		rdp.textures_changed[1] = 1;
 	}
 }
-
+extern uint16_t common_tlut_hud_type_C_rank_font[];
+extern uint16_t common_tlut_finish_line_banner[];
 static void  __attribute__((noinline)) gfx_dp_load_tlut(UNUSED uint8_t tile, UNUSED uint32_t high_index) {
 	rdp.palette = rdp.texture_to_load.addr;
 #if 1
 	uint32_t* srcp = (uint32_t *)segmented_to_virtual((void*)rdp.texture_to_load.addr);
+	uint16_t clearcolor;
+	int hud_thing = (srcp == segmented_to_virtual(common_tlut_hud_type_C_rank_font));
+	if (segmented_to_virtual(common_tlut_finish_line_banner) == srcp) {
+		clearcolor = 0x7fff;
+	} else {
+		clearcolor = 0;
+	}
+
 	uint32_t* tlp32 = (uint32_t *)tlut;
 	for (int i = 0; i < 128; i++) {
 		uint32_t twoc = *srcp++;
 		uint16_t c1 = twoc & 0xffff;
 		uint16_t c2 = twoc >> 16;
 		uint8_t a = !!(c1 & 0x100);
-		if (a) {
-			c1 = (c1 << 8) | ((c1 >> 8) & 0xff);
+		if (a || hud_thing) {
+			c1 = __builtin_bswap16(c1);//(c1 << 8) | ((c1 >> 8) & 0xff);
 			uint8_t r = c1 >> 11;
 			uint8_t g = (c1 >> 6) & 0x1f;
 			uint8_t b = (c1 >> 1) & 0x1f;
-			c1 = 0x8000 | (r << 10) | (g << 5) | (b);
+			a = (c1 & 1);
+			c1 = (a << 15) | (r << 10) | (g << 5) | (b);
 		} else {
-			c1 = 0;
+			c1 = clearcolor;
 		}
 		a = !!(c2 & 0x100);
-		if (a) {
-			c2 = (c2 << 8) | ((c2 >> 8) & 0xff);
+		if (a || hud_thing) {
+			c2 = __builtin_bswap16(c2);//(c2 << 8) | ((c2 >> 8) & 0xff);
 			uint8_t r = c2 >> 11;
 			uint8_t g = (c2 >> 6) & 0x1f;
 			uint8_t b = (c2 >> 1) & 0x1f;
-			c2 = 0x8000 | (r << 10) | (g << 5) | (b);
+			a = (c2 & 1);
+			c2 = (a << 15) | (r << 10) | (g << 5) | (b);
 		} else {
-			c2 = 0;
+			c2 = clearcolor;
 		}	
 		*tlp32++ = (c2 << 16) | c1;
 	}
