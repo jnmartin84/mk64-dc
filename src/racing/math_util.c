@@ -41,32 +41,6 @@ static inline void scaled_sincoss(u16 arg0, f32* s, f32* c, f32 scale) {
     *c = __c * scale;
 }
 
-
-// This functions looks similar to a segment of code from func_802A4A0C in skybox_and_splitscreen.c
-UNUSED s32 func_802B4F60(UNUSED s32 arg0, Vec3f arg1, UNUSED s32 arg2, UNUSED f32 arg3, UNUSED f32 arg4) {
-    Mat4 sp30;
-    f32 sp2C;
-    f32 sp28;
-    Vec3f sp1C;
-    vec3f_copy_return(sp1C, arg1);
-    sp28 = sp1C[0];
-    sp2C = sp1C[1];
-    // wut?
-    if (sp2C && sp2C) {};
-    sp2C = ((sp30[0][3] * sp28) + (sp30[1][3] * sp2C) + (sp30[2][3] * sp1C[2])) + sp30[3][3];
-    // double wut?
-    if (sp28 && sp28) {};
-    mtxf_translate_vec3f_mat4(sp1C, sp30);
-    if (0.0f >= sp2C) {
-        return 0;
-    } else {
-        return 1;
-    }
-}
-
-UNUSED void func_802B4FF0() {
-}
-
 /**
  * Inserts matrix into the rsp. Position, rotation and mode of where to render the next object and check number of
  * object already render Note that gMatrixObjectCount gets reset at the beginning of the game loop. So no cleanup needs
@@ -248,7 +222,7 @@ void mtxf_identity(Mat4 mtx) {
     memset(mtx, 0, sizeof(float)*16);
     mtx[0][0] = mtx[1][1] = mtx[2][2] = mtx[3][3] = 1.0f;
 #else
-    if ((uintptr_t)mtx & 15 == 0) {
+    if (((uintptr_t)mtx & 15) == 0) {
         shz_xmtrx_set_identity();
         shz_xmtrx_store_4x4(mtx);
     } else {
