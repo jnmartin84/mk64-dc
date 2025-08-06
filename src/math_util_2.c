@@ -12,6 +12,7 @@
 #include "code_80057C60.h"
 #include "defines.h"
 #include "camera.h"
+#include "sh4zam.h"
 
 #if 0
 //#pragma intrinsic(sqrtf)
@@ -596,6 +597,7 @@ UNUSED void func_80041A70(void) {
 }
 
 void mtfx_translation_x_y(Mat4 arg0, s32 x, s32 y) {
+#if 0
     arg0[0][0] = 1.0f;
     arg0[1][1] = 1.0f;
     arg0[2][2] = 1.0f;
@@ -612,7 +614,10 @@ void mtfx_translation_x_y(Mat4 arg0, s32 x, s32 y) {
     arg0[1][3] = 0.0f;
     arg0[2][3] = 0.0f;
     arg0[3][3] = 1.0f;
-
+#else
+    shz_xmtrx_init_translation(x, y, 0.0f);
+    shz_xmtrx_store_4x4(arg0);
+#endif
     /*
      * 1 0 0 x
      * 0 1 0 y
@@ -622,6 +627,7 @@ void mtfx_translation_x_y(Mat4 arg0, s32 x, s32 y) {
 }
 
 void mtxf_u16_rotate_z(Mat4 dest, u16 angle) {
+#if 0
     f32 sin_theta;// = sins(angle);
     f32 cos_theta;// = coss(angle);
 
@@ -643,9 +649,14 @@ void mtxf_u16_rotate_z(Mat4 dest, u16 angle) {
     dest[2][3] = 0.0f;
     dest[2][2] = 1.0f;
     dest[3][3] = 1.0f;
+#else
+    shz_xmtrx_init_rotation_z(SHZ_ANGLE(angle));
+    shz_xmtrx_store_4x4(dest);
+#endif
 }
 
 void mtxf_scale_x_y(Mat4 dest, f32 scale) {
+#if 0
     dest[1][0] = 0.0f;
     dest[2][0] = 0.0f;
     dest[3][0] = 0.0f;
@@ -662,6 +673,10 @@ void mtxf_scale_x_y(Mat4 dest, f32 scale) {
     dest[3][3] = 1.0f;
     dest[0][0] = scale;
     dest[1][1] = scale;
+#else
+    shz_xmtrx_init_scale(scale, scale, 1.0f);
+    shz_xmtrx_store_4x4(dest);
+#endif
 }
 
 #if 0
@@ -881,6 +896,7 @@ UNUSED void func_8004252C(Mat4 arg0, u16 arg1, u16 arg2) {
 
 void mtxf_set_matrix_transformation(Mat4 transformMatrix, Vec3f translationVector, Vec3su rotationVector,
                                     f32 scalingFactor) {
+ #if 1   
     f32 sinX;// = sins(rotationVector[0]);
     f32 cosX;// = coss(rotationVector[0]);
     f32 sinY;// = sins(rotationVector[1]);
@@ -909,9 +925,16 @@ void mtxf_set_matrix_transformation(Mat4 transformMatrix, Vec3f translationVecto
     transformMatrix[1][2] = ((sinY * sinZ) + (sinX * cosY * cosZ)) * scalingFactor;
     transformMatrix[2][2] = cosX * cosY * scalingFactor;
     transformMatrix[3][2] = translationVector[2];
+#else // Needs more time to cook, still reesty, yet gainful.
+    shz_xmtrx_init_rotation(SHZ_ANGLE(rotationVector[0]), SHZ_ANGLE(rotationVector[1]), SHZ_ANGLE(rotationVector[2]));
+    shz_xmtrx_apply_scale(scalingFactor, scalingFactor, scalingFactor);
+    shz_xmtrx_set_translation(translationVector[0], translationVector[1], translationVector[2]);
+    shz_xmtrx_store_4x4((shz_matrix_4x4_t *)transformMatrix);
+#endif
 }
 
 void mtxf_set_matrix_scale_transl(Mat4 transformMatrix, Vec3f vec1, Vec3f vec2, f32 scale) {
+#if 0
     transformMatrix[0][0] = scale;
     transformMatrix[1][0] = 0.0f;
     transformMatrix[2][0] = 0.0f;
@@ -928,6 +951,11 @@ void mtxf_set_matrix_scale_transl(Mat4 transformMatrix, Vec3f vec1, Vec3f vec2, 
     transformMatrix[1][3] = 0.0f;
     transformMatrix[2][3] = 0.0f;
     transformMatrix[3][3] = 1.0f;
+#else
+    shz_xmtrx_init_scale(scale, -scale, -scale);
+    shz_xmtrx_set_translation(vec1[0] - vec2[0], vec1[1] - vec2[1], vec1[2] - vec2[2]);
+    shz_xmtrx_store_4x4(transformMatrix);
+#endif
 }
 
 /**
@@ -939,8 +967,9 @@ void mtxf_set_matrix_scale_transl(Mat4 transformMatrix, Vec3f vec1, Vec3f vec2, 
  **/
 
 void mtxf_set_matrix_gObjectList(s32 objectIndex, Mat4 transformMatrix) {
-    f32 sinX;
     Object* object = &gObjectList[objectIndex];
+#if 1    
+    f32 sinX;
     f32 sinY;
     f32 cosY;
     f32 sinZ;
@@ -973,6 +1002,14 @@ void mtxf_set_matrix_gObjectList(s32 objectIndex, Mat4 transformMatrix) {
     transformMatrix[1][3] = 0.0f;
     transformMatrix[2][3] = 0.0f;
     transformMatrix[3][3] = 1.0f;
+#else  // Gainful, but still reesty!
+    shz_xmtrx_init_rotation(SHZ_ANGLE(object->orientation[0]), 
+                            SHZ_ANGLE(object->orientation[1]), 
+                            SHZ_ANGLE(object->orientation[2]));
+    shz_xmtrx_apply_scale(object->sizeScaling, object->sizeScaling, object->sizeScaling);
+    shz_xmtrx_set_translation(object->pos[0], object->pos[1], object->pos[2]);
+    shz_xmtrx_store_4x4(transformMatrix);
+#endif
 }
 
 #if 0
@@ -1071,6 +1108,7 @@ UNUSED void vec3f_rotate(Vec3f dest, Vec3f pos, Vec3s rot) {
 
 // apply to position a rotation x y only and put in dest
 void vec3f_rotate_x_y(Vec3f dest, Vec3f pos, Vec3s rot) {
+#if 1
     f32 sp2C;
     f32 sp28;
     f32 sp24;
@@ -1090,6 +1128,14 @@ void vec3f_rotate_x_y(Vec3f dest, Vec3f pos, Vec3s rot) {
     dest[0] = (sp2C * cosine2) - (sp24 * sine2);
     dest[1] = (sp2C * sine1 * sine2) + (sp28 * cosine1) + (sp24 * sine1 * cosine2);
     dest[2] = ((sp2C * cosine1 * sine2) - (sp28 * sine1)) + (sp24 * cosine1 * cosine2);
+#else /* NOT A GAIN YET */
+    shz_xmtrx_init_rotation_y(SHZ_ANGLE(rot[0]));
+    shz_xmtrx_apply_rotation_x(SHZ_ANGLE(rot[1]));
+    shz_vec3_t out = shz_xmtrx_trans_vec3((shz_vec3_t) { .x = pos[0], .y = pos[1], .z = pos[2] });
+    dest[0] = out.x;
+    dest[1] = out.y;
+    dest[2] = out.z;
+#endif
 }
 
 /**

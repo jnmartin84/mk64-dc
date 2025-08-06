@@ -7,6 +7,7 @@
 #include <main.h>
 #include <PR/gbi.h>
 #include "code_80057C60.h"
+#include "sh4zam.h"
 
 Vec3s sOriginalPosAnimation;
 s16 isNotTheFirst;
@@ -34,6 +35,8 @@ void convert_to_fixed_point_matrix_animation(Mtx* dest, Mat4 src) {
 }
 
 void mtxf_translate_rotate2(Mat4 dest, Vec3f pos, Vec3s angle) {
+#if 1
+    
     register f32 sx = sins(angle[0]);
     register f32 cx = coss(angle[0]);
 
@@ -62,6 +65,11 @@ void mtxf_translate_rotate2(Mat4 dest, Vec3f pos, Vec3s angle) {
     dest[3][1] = pos[1];
     dest[3][2] = pos[2];
     dest[3][3] = 1.0f;
+#else
+    shz_xmtrx_init_rotation(SHZ_ANGLE(angle[0]), SHZ_ANGLE(angle[1]), SHZ_ANGLE(angle[2]));
+    shz_xmtrx_set_translation(pos[0], pos[1], pos[2]);
+    shz_xmtrx_store_4x4(dest);
+#endif
 }
 
 void render_limb_or_add_mtx(Armature* arg0, s16* arg1, AnimationLimbVector arg2, s32 timeCycle) {

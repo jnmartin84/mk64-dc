@@ -112,3 +112,5 @@ torch.hash.yml
 *.cdi
 
 dc_data
+
+._*
