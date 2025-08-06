@@ -896,7 +896,7 @@ UNUSED void func_8004252C(Mat4 arg0, u16 arg1, u16 arg2) {
 
 void mtxf_set_matrix_transformation(Mat4 transformMatrix, Vec3f translationVector, Vec3su rotationVector,
                                     f32 scalingFactor) {
- #if 0   
+ #if 1   
     f32 sinX;// = sins(rotationVector[0]);
     f32 cosX;// = coss(rotationVector[0]);
     f32 sinY;// = sins(rotationVector[1]);
@@ -925,7 +925,7 @@ void mtxf_set_matrix_transformation(Mat4 transformMatrix, Vec3f translationVecto
     transformMatrix[1][2] = ((sinY * sinZ) + (sinX * cosY * cosZ)) * scalingFactor;
     transformMatrix[2][2] = cosX * cosY * scalingFactor;
     transformMatrix[3][2] = translationVector[2];
-#else
+#else // Needs more time to cook, still reesty, yet gainful.
     shz_xmtrx_init_rotation(SHZ_ANGLE(rotationVector[0]), SHZ_ANGLE(rotationVector[1]), SHZ_ANGLE(rotationVector[2]));
     shz_xmtrx_apply_scale(scalingFactor, scalingFactor, scalingFactor);
     shz_xmtrx_set_translation(translationVector[0], translationVector[1], translationVector[2]);
@@ -968,7 +968,7 @@ void mtxf_set_matrix_scale_transl(Mat4 transformMatrix, Vec3f vec1, Vec3f vec2, 
 
 void mtxf_set_matrix_gObjectList(s32 objectIndex, Mat4 transformMatrix) {
     Object* object = &gObjectList[objectIndex];
-#if 0    
+#if 1    
     f32 sinX;
     f32 sinY;
     f32 cosY;
@@ -1002,7 +1002,7 @@ void mtxf_set_matrix_gObjectList(s32 objectIndex, Mat4 transformMatrix) {
     transformMatrix[1][3] = 0.0f;
     transformMatrix[2][3] = 0.0f;
     transformMatrix[3][3] = 1.0f;
-#else
+#else  // Gainful, but still reesty!
     shz_xmtrx_init_rotation(SHZ_ANGLE(object->orientation[0]), 
                             SHZ_ANGLE(object->orientation[1]), 
                             SHZ_ANGLE(object->orientation[2]));

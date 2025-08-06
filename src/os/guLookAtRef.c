@@ -111,9 +111,10 @@ void guLookAtReflectF(float mf[4][4], LookAt* l, float xEye, float yEye, float z
                           xLook, yLook, zLook, 0.0f);
 
 #else
-    *((SHZ_ALIASING shz_vec3_t *)mf[3]) = shz_matrix4x4_trans_vec3(mf, (shz_vec3_t) { .x = xEye, .y = yEye, .z = zEye });
-    for(unsigned r = 0; r < 3; ++r)
-        mf[3][r] *= -1.0f; 
+    shz_vec3_t out = shz_matrix4x4_trans_vec3((SHZ_ALIASING const shz_matrix_4x4_t *)mf, (shz_vec3_t) { .x = xEye, .y = yEye, .z = zEye });
+    mf[3][0] = -out.x;
+    mf[3][1] = -out.y;
+    mf[3][2] = -out.z;
 #endif
 
 }

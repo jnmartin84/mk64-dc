@@ -1228,6 +1228,12 @@ SHZ_INLINE void shz_xmtrx_init_rotation(float roll, float pitch, float yaw) {
     shz_xmtrx_apply_rotation_x(roll);
 }
 
+SHZ_INLINE void shz_xmtrx_apply_rotation(float roll, float pitch, float yaw) {
+    shz_xmtrx_apply_rotation_x(roll);
+    shz_xmtrx_apply_rotation_y(pitch);
+    shz_xmtrx_apply_rotation_z(yaw);
+}
+
 SHZ_INLINE void shz_xmtrx_transpose(void) {
     asm volatile (R"(
         frchg
@@ -1263,7 +1269,117 @@ SHZ_INLINE void shz_xmtrx_transpose(void) {
     : "fpul");
 }
 
+
 SHZ_INLINE shz_vec3_t shz_matrix4x4_trans_vec3(const shz_matrix_4x4_t *m, shz_vec3_t v) {
+    shz_vec3_t out;
+
+    register float fr0 asm("fr0") = v.x;
+    register float fr1 asm("fr1") = v.y;
+    register float fr2 asm("fr2") = v.z;
+    register float fr3 asm("fr3") = 0.0f;
+
+    register float fr4 asm("fr4") = m->elem2D[0][0];
+    register float fr5 asm("fr5") = m->elem2D[1][0];
+    register float fr6 asm("fr6") = m->elem2D[2][0];
+    register float fr7 asm("fr7") = 0.0f;
+
+    asm volatile("fipr fv0, fv4" 
+        : "+f" (fr7)
+        : "f" (fr0), "f" (fr1), "f" (fr2), "f" (fr3),
+          "f" (fr4), "f" (fr5), "f" (fr6));
+
+    __atomic_thread_fence(1);
+
+    register float fr8  asm("fr8")  = m->elem2D[0][1];
+    register float fr9  asm("fr9")  = m->elem2D[1][1];
+    register float fr10 asm("fr10") = m->elem2D[2][1];
+    register float fr11 asm("fr11") = 0.0f;
+
+    asm volatile("fipr fv0, fv8" 
+        : "+f" (fr11)
+        : "f" (fr0), "f" (fr1), "f" (fr2), "f" (fr3),
+          "f" (fr8), "f" (fr9), "f" (fr10));
+
+    __atomic_thread_fence(1);
+
+    out.x = fr7;
+
+    __atomic_thread_fence(1);
+
+    fr4 = m->elem2D[0][2];
+    fr5 = m->elem2D[1][2];
+    fr6 = m->elem2D[2][2];
+    fr7 = 0.0f;
+
+    asm volatile("fipr fv0, fv4" 
+        : "+f" (fr7)
+        : "f" (fr0), "f" (fr1), "f" (fr2), "f" (fr3),
+          "f" (fr4), "f" (fr5), "f" (fr6));
+
+    __atomic_thread_fence(1);      
+
+    out.y = fr11;
+    out.z = fr7;
+
+    return out;
+}
+
+SHZ_INLINE shz_vec3_t shz_matrix3x3_trans_vec3(const shz_matrix_3x3_t *m, shz_vec3_t v) {
+    shz_vec3_t out;
+
+    register float fr0 asm("fr0") = v.x;
+    register float fr1 asm("fr1") = v.y;
+    register float fr2 asm("fr2") = v.z;
+    register float fr3 asm("fr3") = 0.0f;
+
+    register float fr4 asm("fr4") = m->elem2D[0][0];
+    register float fr5 asm("fr5") = m->elem2D[1][0];
+    register float fr6 asm("fr6") = m->elem2D[2][0];
+    register float fr7 asm("fr7") = 0.0f;
+
+    asm volatile("fipr fv0, fv4" 
+        : "+f" (fr7)
+        : "f" (fr0), "f" (fr1), "f" (fr2), "f" (fr3),
+          "f" (fr4), "f" (fr5), "f" (fr6));
+
+    __atomic_thread_fence(1);
+
+    register float fr8  asm("fr8")  = m->elem2D[0][1];
+    register float fr9  asm("fr9")  = m->elem2D[1][1];
+    register float fr10 asm("fr10") = m->elem2D[2][1];
+    register float fr11 asm("fr11") = 0.0f;
+
+    asm volatile("fipr fv0, fv8" 
+        : "+f" (fr11)
+        : "f" (fr0), "f" (fr1), "f" (fr2), "f" (fr3),
+          "f" (fr8), "f" (fr9), "f" (fr10));
+
+
+    __atomic_thread_fence(1);
+
+    out.x = fr7;
+
+    __atomic_thread_fence(1);
+
+    fr4 = m->elem2D[0][2];
+    fr5 = m->elem2D[1][2];
+    fr6 = m->elem2D[2][2];
+    fr7 = 0.0f;
+
+    asm volatile("fipr fv0, fv4" 
+        : "+f" (fr7)
+        : "f" (fr0), "f" (fr1), "f" (fr2), "f" (fr3),
+          "f" (fr4), "f" (fr5), "f" (fr6));
+
+    __atomic_thread_fence(1);      
+
+    out.y = fr11;
+    out.z = fr7;
+
+    return out;
+}
+
+SHZ_INLINE shz_vec3_t shz_matrix4x4_trans_vec3_transpose(const shz_matrix_4x4_t *m, shz_vec3_t v) {
     shz_vec3_t out;
 
     register float fr0 asm("fr0") = v.x;
@@ -1317,7 +1433,7 @@ SHZ_INLINE shz_vec3_t shz_matrix4x4_trans_vec3(const shz_matrix_4x4_t *m, shz_ve
     return out;
 }
 
-SHZ_INLINE shz_vec3_t shz_matrix3x3_trans_vec3(const shz_matrix_3x3_t *m, shz_vec3_t v) {
+SHZ_INLINE shz_vec3_t shz_matrix3x3_trans_vec3_transpose(const shz_matrix_3x3_t *m, shz_vec3_t v) {
     shz_vec3_t out;
 
     register float fr0 asm("fr0") = v.x;

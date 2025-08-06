@@ -1269,7 +1269,7 @@ static void gfx_transposed_matrix_mul(float res[3], const float a[3], const floa
 	res[2] = a[0] * b[2][0] + a[1] * b[2][1] + a[2] * b[2][2];
 #endif
 #else
-    shz_vec3_t out = shz_matrix4x4_trans_vec3(b, (shz_vec3_t) { .x = a[0], .y = a[1], .z = a[2] });
+    shz_vec3_t out = shz_matrix4x4_trans_vec3_transpose(b, (shz_vec3_t) { .x = a[0], .y = a[1], .z = a[2] });
     res[0] = out.x;
     res[1] = out.y;
     res[2] = out.z;

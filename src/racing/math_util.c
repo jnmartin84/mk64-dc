@@ -372,7 +372,7 @@ void func_802B5794(Mat4 mtx, Vec3f from, Vec3f to) {
     mtx[2][3] = 0.0f;
     mtx[3][3] = 1.0f;
 
-    *((SHZ_ALIASING shz_vec3_t *)mtx[3]) = shz_matrix4x4_trans_vec3(mtx, (shz_vec3_t) { .x = from[0], .y = from[1], .z = from[2] });
+    *((SHZ_ALIASING shz_vec3_t *)mtx[3]) = shz_matrix4x4_trans_vec3_transpose(mtx, (shz_vec3_t) { .x = from[0], .y = from[1], .z = from[2] });
     for(unsigned r = 0; r < 3; ++r)
         mtx[3][r] *= -1.0f;     
 }
@@ -707,7 +707,7 @@ void mtxf_translate_vec3f_mat3(Vec3f pos, Mat3 mat) {
     pos[1] = new_y;
     pos[2] = new_z;
 #else
-    shz_vec3_t out = shz_matrix3x3_trans_vec3(mat, (shz_vec3_t) { .x = pos[0], .y = pos[1], .z = pos[2] });
+    shz_vec3_t out = shz_matrix3x3_trans_vec3_transpose(mat, (shz_vec3_t) { .x = pos[0], .y = pos[1], .z = pos[2] });
     pos[0] = out.x;
     pos[1] = out.y;
     pos[2] = out.z;
@@ -735,7 +735,7 @@ void mtxf_translate_vec3f_mat4(Vec3f pos, Mat4 mat) {
     pos[2] = fipr(mat[2][0],mat[2][1],mat[2][2],0,pos[0],pos[1],pos[2],0);
 #endif
 #else
-    shz_vec3_t out = shz_matrix4x4_trans_vec3(mat, (shz_vec3_t) { .x = pos[0], .y = pos[1], .z = pos[2] });
+    shz_vec3_t out = shz_matrix4x4_trans_vec3_transpose(mat, (shz_vec3_t) { .x = pos[0], .y = pos[1], .z = pos[2] });
     pos[0] = out.x;
     pos[1] = out.y;
     pos[2] = out.z;
