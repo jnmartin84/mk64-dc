@@ -90,7 +90,7 @@ static int thd_each_cb(kthread_t* thd, void* data) {
 
 
     /* Only record the main thread (for now) */
-    if(strcmp(thd->label, "[kernel]") != 0) {
+    if(strncmp(thd->label, "thread"/* "[kernel]" */, 6) != 0) {
         return 0;
     }
 

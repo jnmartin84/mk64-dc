@@ -108,7 +108,7 @@ __attribute__((noinline)) void stacktrace() {
 		}
 		printf("]\n");
 	} else {
-		printf("]\n", (uintptr_t)sp);
+		printf("%08x ]\n", (uintptr_t)sp);
 	}
 }
 
@@ -180,7 +180,7 @@ void n64_memcpy(void* dst, const void* src, size_t size) {
     __builtin_prefetch(bsrc);
     if ((!(((uintptr_t)bdst | (uintptr_t)bsrc) & 3))) {
         while (words_to_copy--) {
-            if (words_to_copy & 3 == 0) {
+            if ((words_to_copy & 3) == 0) {
                 __builtin_prefetch(bsrc + 16);
             }
             *wdst++ = *wsrc++;
@@ -207,7 +207,7 @@ void n64_memcpy(void* dst, const void* src, size_t size) {
             case 7:
                 goto n64copy7;
         }
-    }/*  else if ((!(((uintptr_t)bdst | (uintptr_t)bsrc) & 1))) {
+    }  else if ((!(((uintptr_t)bdst | (uintptr_t)bsrc) & 1))) {
         while (shorts_to_copy--) {
             *sdst++ = *ssrc++;
         }
@@ -233,7 +233,7 @@ void n64_memcpy(void* dst, const void* src, size_t size) {
             case 7:
                 goto n64copy7;
         }
-    } */ else {
+    } else {
         while (words_to_copy > 0) {
             uint8_t b1, b2, b3, b4;
             b1 = *bsrc++;
@@ -287,66 +287,6 @@ n64copy1:
     *bdst++ = *bsrc++;
     return;
 }
-#if 0
-void n64_memset(void *dst, uint8_t val, size_t size)
-{
-    uint8_t *bdst = (uint8_t *)dst;
-    uint16_t *sdst = (uint16_t *)dst;
-    uint32_t *wdst = (uint32_t *)dst;
-
-    int size_to_copy = size;
-    int words_to_copy = size_to_copy >> 2;
-    int shorts_to_copy = size_to_copy >> 1;
-    int bytes_to_copy = size_to_copy - (words_to_copy<<2);
-    int sbytes_to_copy = size_to_copy - (shorts_to_copy<<1);
-
-    if ((!((uintptr_t)bdst&3))) {
-        while (words_to_copy--) {
-            *wdst++ = 0;
-        }
-
-        bdst = (uint8_t *)wdst;
-
-        while (bytes_to_copy--) {
-            *bdst++ = 0;
-        }
-    } else if ((!((uintptr_t)sdst&1))) {
-        while (shorts_to_copy--) {
-            *sdst = 0;
-        }
-
-        bdst = (uint8_t *)sdst;
-        while (sbytes_to_copy--) {
-            *bdst++ = 0;
-        }
-    } else {
-        while (words_to_copy > 0) {
-            *bdst++ = 0;
-            *bdst++ = 0;
-            *bdst++ = 0;
-            *bdst++ = 0;
-
-            words_to_copy--;
-        }
-
-        while(bytes_to_copy--) {
-            *bdst++ = 0;
-        }
-    }
-}
-#endif
-
-#if 0
-/**
- * @brief Allocate and DMA.
- */
-void* load_data(uintptr_t startAddr, uintptr_t endAddr, uintptr_t target) {
-    void* allocated;
-    uintptr_t size = endAddr - startAddr;
-    dma_copy((u8*) target, (u8*) startAddr, size);
-    return (void*) target;
-}
-#endif
 
 void gfx_texture_cache_invalidate(void* arg);
 extern u8 *ROVING_SEG3_BUF;
@@ -358,15 +298,9 @@ void mio0decode_noinval(const unsigned char *in, unsigned char *out);
 
 u8* dma_textures(u8 texture[], UNUSED size_t arg1, size_t arg2) {
     u8* temp_v0;
-//    void* temp_a0;
     temp_v0 = (u8*) ROVING_SEG3_BUF;
-//    temp_a0 = temp_v0 + arg2;
-//    arg1 = ALIGN16(arg1);
     arg2 = ALIGN16(arg2);
-    //dma_copy(temp_a0, texture, arg1);
-    //mio0decode((u8*) temp_a0, temp_v0);
     mio0decode_noinval((u8 *)texture, temp_v0);
-//    gfx_texture_cache_invalidate(temp_v0);
     ROVING_SEG3_BUF += arg2;
     return temp_v0;
 }
@@ -374,7 +308,6 @@ u8* dma_textures(u8 texture[], UNUSED size_t arg1, size_t arg2) {
 void func_802A86A8(CourseVtx* data, u32 arg1) {
     CourseVtx* courseVtx = data;
     Vtx* vtx;
-    s32 tmp = ALIGN16(arg1 * 0x10);
     u32 i;
     s8 temp_a0;
     s8 temp_a3;
@@ -443,7 +376,7 @@ struct UnkStr_802AA7C8 {
     uintptr_t unkC;
 };
 
-const char __attribute__((aligned(32))) coursenames[20][32] = {
+char __attribute__((aligned(32))) coursenames[20][32] = {
 "mario_raceway",
 "choco_mountain",
 "bowsers_castle",

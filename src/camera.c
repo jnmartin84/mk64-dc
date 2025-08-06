@@ -999,10 +999,8 @@ void func_8001EE98(Player* player, Camera* camera, s8 index) {
 }
 
 void func_8001F394(Player* player, f32* arg1) {
-    f32 var_f0;
-    UNUSED s32 pad;
-    s32 playerIndex;
-    UNUSED s32 pad2;
+    f32 var_f0 = 0;
+    s32 playerIndex = 0;
     Camera* camera = &cameras[0];
 
     if (player == gPlayerOne) {
@@ -1129,13 +1127,12 @@ void func_8001F394(Player* player, f32* arg1) {
 }
 
 void func_8001F87C(s32 cameraId) {
-    s32 playerIndex;
+    s32 playerIndex = 0;
     // Why?
     s32 id = cameraId;
 
     Player *player = &gPlayers[playerIndex];
 
-    if (gPlayerOne) {}
     if (gActiveScreenMode == SCREEN_MODE_1P) {
         if (gModeSelection == GRAND_PRIX) {
             for (playerIndex = 0; playerIndex < NUM_PLAYERS; playerIndex++) {

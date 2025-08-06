@@ -1316,7 +1316,9 @@ s32 func_80089F24(s32 objectIndex) {
 }
 
 s32 func_8008A060(s32 objectIndex, Camera* camera, u16 arg2) {
-    u16 temp_t3;
+    //! @warning Always true
+//    u16 temp_t3;
+    s16 temp_t3;
     s32 var_v1;
 
     var_v1 = 0;
@@ -1330,7 +1332,8 @@ s32 func_8008A060(s32 objectIndex, Camera* camera, u16 arg2) {
 }
 
 s32 func_8008A0B4(s32 objectIndex, Player* player, Camera* camera, u16 arg3) {
-    u16 temp_t3;
+    //u16 temp_t3;
+    s16 temp_t3;
     f32 x_diff;
     f32 z_diff;
     s32 var_t0;
@@ -1346,7 +1349,8 @@ s32 func_8008A0B4(s32 objectIndex, Player* player, Camera* camera, u16 arg3) {
 }
 
 uint8_t is_object_visible_on_camera(s32 objectIndex, Camera* camera, u16 angle) {
-    u16 temp_t2 = (get_angle_between_xy(camera->pos[0], gObjectList[objectIndex].pos[0], camera->pos[2],
+    //u16 temp_t2 
+    s16 temp_t2 = (get_angle_between_xy(camera->pos[0], gObjectList[objectIndex].pos[0], camera->pos[2],
                                     gObjectList[objectIndex].pos[2]) +
 //               ((s32) angle / 2)) -
                ((s32) angle >> 1)) -
@@ -1731,7 +1735,7 @@ void func_8008B1D4(s32 objectIndex) {
 
 void func_8008B284(s32 objectIndex) {
     s32 someIndex;
-    s32 sp0;
+    s32 sp0 = 0;
     s32 temp_a1;
     s32 temp_a2;
     SplineControlPoint* test;

@@ -114,6 +114,10 @@ extern char *fnpre;
 
 static char texfn[256];
 
+extern u16 gTexturePodium1[];
+extern u16 gTexturePodium2[];
+extern u16 gTexturePodium3[];
+
 void load_ceremony_data(void) {
     sprintf(texfn, "%s/dc_data/ceremony_data.bin", fnpre);
     FILE* file = fopen(texfn, "rb");
@@ -145,6 +149,14 @@ void load_ceremony_data(void) {
     fclose(file);
     file = NULL;
     set_segment_base_addr(0xB, (void*) CEREMONY_BUF);
+    u16 *sPod1 = (u16 *)segmented_to_virtual(gTexturePodium1);
+    u16 *sPod2 = (u16 *)segmented_to_virtual(gTexturePodium2);
+    u16 *sPod3 = (u16 *)segmented_to_virtual(gTexturePodium3);
+    for (int i=0;i<32*32;i++) {
+        sPod1[i] = __builtin_bswap16(sPod1[i]);
+        sPod2[i] = __builtin_bswap16(sPod2[i]);
+        sPod3[i] = __builtin_bswap16(sPod3[i]);
+    }
 }
 
 void load_ceremony_cutscene(void) {

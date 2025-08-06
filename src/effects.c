@@ -1592,7 +1592,6 @@ void func_8008FEDC(Player* player, UNUSED s8 arg1) {
 void course_update_path_point(Player* player, s8 playerId) {
     s16 pathPoint;
 
-#if !ENABLE_CUSTOM_COURSE_ENGINE
     switch (gCurrentCourseId) {
         case COURSE_BOWSER_CASTLE:
             pathPoint = gNearestPathPointByPlayerId[playerId];
@@ -1674,9 +1673,6 @@ void course_update_path_point(Player* player, s8 playerId) {
             }
             break;
     }
-#else
-
-#endif
 }
 
 void func_80090178(Player* player, s8 playerId, Vec3f arg2, Vec3f arg3) {

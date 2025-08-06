@@ -522,8 +522,8 @@ int main(UNUSED int argc, UNUSED char **argv) {
     gPhysicalFramebuffers[2] = fb[2];
     dbgio_enable();
     dbglog_set_level(0);
-    dbgio_dev_select("fb");
-    dbgio_printf("\n\n\n\n\n\n\n                Loading game data...\n");
+//    dbgio_dev_select("fb");
+//    dbgio_printf("\n\n\n\n\n\n\n                Loading game data...\n");
     thd_sleep(375);
     FILE* fntest = fopen("/pc/dc_data/common_data.bin", "rb");
     if (NULL == fntest) {
@@ -544,15 +544,15 @@ int main(UNUSED int argc, UNUSED char **argv) {
 
     fclose(fntest);
     thd_sleep(375);
-    dbgio_disable();
+//    dbgio_disable();
     setup_audio_data();
 //    dbgio_enable();
 //    dbgio_dev_select("fb");
 //    dbgio_printf("\n\n\n\n\n\n\n\n\n             Ready.\n");
 //    dbgio_disable();
 
-    //    profiler_init("/pc/gmon.out");
-  //  profiler_start();
+    //profiler_init("/pc/audiogmon.out");
+    //profiler_start();
 
     rainbow_print(180+18, 260-24, "Welcome to Mario Kart :)");
 
@@ -758,7 +758,7 @@ void update_controller(s32 index) {
 
     if (state->buttons & CONT_A)
         ucheld |= 0x8000;//A_BUTTON;
-    if (state->buttons & CONT_B)
+    if (state->buttons & CONT_X)
         ucheld |= 0x4000;//B_BUTTON;
     if (state->ltrig)
         ucheld |= 0x2000;//Z_TRIG;
@@ -778,7 +778,7 @@ void update_controller(s32 index) {
         ucheld |= 0x0010;//R_TRIG;
     if (state->buttons & CONT_Y)
         ucheld |= 0x0008;//C_UP
-    if (state->buttons & CONT_X)
+    if (state->buttons & CONT_B)
         ucheld |= 0x0001;//C_RIGHT
 
     controller->buttonPressed = ucheld & (ucheld ^ controller->button);
@@ -1681,7 +1681,8 @@ void race_logic_loop(void) {
 
         case SCREEN_MODE_2P_SPLITSCREEN_HORIZONTAL:
 
-             if (gCurrentCourseId == COURSE_DK_JUNGLE) {
+             if (gCurrentCourseId == COURSE_DK_JUNGLE ||
+                gCurrentCourseId == COURSE_TOADS_TURNPIKE) {
                 gTickSpeed = 3;
             } else {
                 gTickSpeed = 2;

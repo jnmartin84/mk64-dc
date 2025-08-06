@@ -2873,7 +2873,7 @@ void course_update_clouds(s32 arg0) {
         D_8018D210 = (-(D_8018D200 / 2) * 0xB6) - 0x71C;
         D_8018D1E8 = 1.7578125 / D_8018D200;
         D_8018D218 = 0xA0;
-#if !ENABLE_CUSTOM_COURSE_ENGINE
+
         switch (gCurrentCourseId) {    /* switch 2 */
             case COURSE_MARIO_RACEWAY: /* switch 2 */
                 // Uses Luigi Raceway's clouds for display purposes?
@@ -2914,9 +2914,6 @@ void course_update_clouds(s32 arg0) {
                 break;
         }
     }
-#else
-
-#endif
 }
 
 void func_80078F64(void) {

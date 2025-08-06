@@ -50,6 +50,20 @@ void func_80281CB4(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
 extern Gfx D_80284F70[];
 extern Gfx D_80284EE0[];
 
+void clear_framebuffer2(s32 color) {
+    gDPPipeSync(gDisplayListHead++);
+
+    gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
+    gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
+
+    gDPSetFillColor(gDisplayListHead++, color);
+    gDPFillRectangle(gDisplayListHead++, 0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
+
+    gDPPipeSync(gDisplayListHead++);
+
+    gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
+}
+
 void render_podium_ceremony(void) {
     Camera* camera = &cameras[0];
     UNUSED s32 pad[3];
@@ -60,7 +74,7 @@ void render_podium_ceremony(void) {
     func_802A53A4();
     init_rdp();
     if (gGotoMenu != 0xFFFF) {
-        clear_framebuffer(0);
+        clear_framebuffer2(0);
         if (D_80287554 >= 4) {
             gIsInQuitToMenuTransition = 0;
             gGamestateNext = gGotoMenu;

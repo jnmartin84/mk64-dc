@@ -180,7 +180,7 @@ void track_minimap_settings(void) {
     if (gCurrentCourseId < NUM_COURSES - 1) {
         func_8006EEE8((s32) gCurrentCourseId);
     }
-#if !ENABLE_CUSTOM_COURSE_ENGINE
+
     switch (gCurrentCourseId) {
         case COURSE_MARIO_RACEWAY:
             D_8018D220 = (void*) dma_textures(gTextureExhaust5, 0x443, 0x1000);
@@ -324,9 +324,7 @@ void track_minimap_settings(void) {
             gMiniMapX = 32;
             gMiniMapY = 31;
     }
-#else
 
-#endif
     if (gIsMirrorMode != 0) {
         gMiniMapX = D_8018D2B0 - gMiniMapX;
     }
@@ -643,7 +641,6 @@ void course_init_cloud(void) {
     s32 var_s0;
     s32 var_s4;
 
-#if !ENABLE_CUSTOM_COURSE_ENGINE
     switch (gCurrentCourseId) {
         case COURSE_MARIO_RACEWAY:
             // Uses Kalimari Desert's clouds for initialization?
@@ -692,9 +689,6 @@ void course_init_cloud(void) {
             init_stars(gWarioStadiumStars);
             break;
     }
-#else
-
-#endif
     func_8008C23C();
 }
 
@@ -715,7 +709,6 @@ void init_course_objects(void) {
     s32 objectId;
     s32 i;
 
-#if !ENABLE_CUSTOM_COURSE_ENGINE
     switch (gCurrentCourseId) {
         case COURSE_MARIO_RACEWAY:
             if (gGamestate != 9) {
@@ -962,16 +955,11 @@ void init_course_objects(void) {
         case COURSE_DK_JUNGLE:
             for (i = 0; i < NUM_TORCHES; i++) {
                 init_smoke_particles(i);
-                // wtf?
-                if (D_8018CF10) {}
             }
             break;
         default:
             break;
     }
-#else
-
-#endif
 }
 
 void init_hud_one_player(void) {

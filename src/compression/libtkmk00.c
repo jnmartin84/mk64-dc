@@ -10,8 +10,8 @@
 
 #define TKMK00_VERSION "0.1"
 
-static int32_t t1, t7, t8, t9, s0, s1, s3, s4, s6, s7, v0, v1;
-
+static int32_t t1,  t8, t9, s0, s1, s4, s6, s7, v0, v1;
+static uint32_t t7, s3;
 // 0x400 allocated on stack
 static uint16_t rgba_buf[0x40];     // SP[000]-SP[07F] - buffer of 32 RGBA colors
 static uint16_t buffer80_u16[0x3F]; // SP[080]-SP[0FD]

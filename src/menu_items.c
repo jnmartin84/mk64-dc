@@ -332,7 +332,6 @@ char* gCupNames[] = {
     "special cup",
 };
 
-#if !ENABLE_CUSTOM_COURSE_ENGINE
 // Displays at beginning of course
 char* gCourseNames[] = {
 #include "assets/course_metadata/gCourseNames.inc.c"
@@ -341,22 +340,15 @@ char* gCourseNames[] = {
 char* gCourseNamesDup[] = {
 #include "assets/course_metadata/gCourseNames.inc.c"
 };
-#else
-
-#endif
 
 char* gCourseNamesDup2[] = {
 #include "assets/course_metadata/gCourseNames.inc.c"
 };
 
-#if !ENABLE_CUSTOM_COURSE_ENGINE
 // Used in debug menu at splash screen
 char* gDebugCourseNames[] = {
 #include "assets/course_metadata/gCourseDebugNames.inc.c"
 };
-#else
-
-#endif
 
 const s8 gPerCupIndexByCourseId[] = {
 #include "assets/course_metadata/gPerCupIndexByCourseId.inc.c"
@@ -4134,13 +4126,10 @@ void convert_img_to_greyscale(s32 arg0, u32 arg1) {
     color = &gMenuTextureBuffer[sMenuTextureMap[arg0].offset];
     size = sMenuTextureMap[arg0 + 1].offset - sMenuTextureMap[arg0].offset;
     for (i = 0; i < (u32) size; i++) {
-		uint16_t c = //*color;
-        (*color << 8) | ((*color >> 8)&0xff);//
-        //*color;
-#if 1
-        red= ((c & 0xF800) >> 11) * 0x55;
+		uint16_t c = __builtin_bswap16(*color);
+        red = ((c & 0xF800) >> 11) * 0x55;
         green = ((c & 0x7C0) >> 6) * 0x4B;
-		blue= ((c & 0x3E) >> 1) * 0x5F;
+		blue = ((c & 0x3E) >> 1) * 0x5F;
         alpha =     c & 0x1;
         temp_t9 = red + green + blue;
         temp_t9 >>= 8;
@@ -4148,21 +4137,8 @@ void convert_img_to_greyscale(s32 arg0, u32 arg1) {
         if (temp_t9 >= 0x20) {
             temp_t9 = 0x1F;
         }
-       // temp_t9 = 0x1f - temp_t9;
         *color++ = (temp_t9 << 1) | (temp_t9 << 6) | (temp_t9 << 11) | alpha;
-       // (c & 0xF800) | (c & 0x7C0) | (c & 0x3E) | alpha;
-#else
-        alpha = 1;
-        red= (c>>11)&0x1f;//((c & 0xF800) >> 11);
-        green = (c>>6)&0x1f;//((c & 0x7C0) >> 6);
-		blue= (c>>1)&0x1f;//((c & 0x3E) >> 1);
-        temp_t9 = (u32)((f64)red*0.2126 + (f64)green*0.7152 + (f64)blue*0.0722);
-        if (temp_t9 >= 0x20) {
-            temp_t9 = 0x1F;
-        }
-        *color++ = (temp_t9 << 11) | (temp_t9 << 6) | (temp_t9 << 1) | alpha;
-#endif
-        }
+    }
 }
 
 void adjust_img_colour(s32 arg0, s32 arg1, u32 arg2, u32 arg3, u32 arg4) {
@@ -4292,6 +4268,8 @@ Gfx* render_menu_textures(Gfx* arg0, MenuTexture* arg1, s32 column, s32 row) {
         if (temp_v0_3 != NULL && arg1 != gMenuTexturesBackground[0] && arg1 != gMenuTexturesBackground[1]) {
             gfx_texture_cache_invalidate(temp_v0_3);
         }
+
+//        gDPSetTextureFilter(gDisplayListHead++, G_TF_POINT);
 
         if (temp_v0_3 != NULL) {
             if (D_8018E7AC[4] != 4) {
@@ -6314,9 +6292,9 @@ glEnable(GL_DEPTH_TEST);
                     // render player name boxes
                     gDisplayListHead = render_menu_textures(
                         gDisplayListHead, segmented_to_virtual(D_800E7D54[one]), arg0->column, arg0->row);
-                    //stupid_fucking_faces_hack = 1;
+                    stupid_fucking_faces_hack = 1;
                     func_8009A7EC(arg0->D_8018DEE0_index, arg0->column, arg0->row, var_v1, arg0->param1);
-                    //stupid_fucking_faces_hack = 0;
+                    stupid_fucking_faces_hack = 0;
                     render_cursor_player(arg0, var_v1, 0x000000FF);
                 }
                 break;
@@ -6780,9 +6758,7 @@ void render_menu_item_data_course_image(MenuItem* arg0) {
     }
     // course minimap
     func_8004EF9C(gCupCourseOrder[gTimeTrialDataCourseIndex / 4][gTimeTrialDataCourseIndex % 4]);
-    do {
-        gDPSetTextureFilter(gDisplayListHead++, G_TF_BILERP);
-    } while (0);
+    gDPSetTextureFilter(gDisplayListHead++, G_TF_BILERP);
 }
 
 void render_menu_item_data_course_info(MenuItem* arg0) {

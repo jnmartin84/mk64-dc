@@ -156,8 +156,7 @@ void draw_vmu_icon(int index) {
 
 char *fnpre;
 
-uint8_t progbuf[8400000] = {0};
-
+uint8_t progbuf[9000000] = {0};
 int main(int argc, char **argv) {
     //void *subelf;
 	maple_device_t *vmudev = NULL;
@@ -212,7 +211,7 @@ int main(int argc, char **argv) {
     size_t bin_read = 0;
     fs_seek(bin_file, 0, SEEK_SET);
     while (bin_rem_size > bin_chunk_size) {
-        ssize_t rv = fs_read(bin_file, (void *)progbuf + bin_read, (195165));
+        ssize_t rv = fs_read(bin_file, (void *)progbuf + bin_read, (196851));
         if (rv == -1)
             assert(0 == 1);
         bin_read += rv;

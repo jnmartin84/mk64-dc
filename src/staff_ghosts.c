@@ -173,7 +173,7 @@ void set_staff_ghost(void) {
 int mio0_encode(const unsigned char *in, unsigned int length, unsigned char *out);
 
 s32 compress_replay_ghost(void) {
-    s32 phi_v0;
+    s32 phi_v0 = -1;
 
     if (sReplayGhostBufferSize != 0) {
         // func_80040174 in mio0_decode.s
@@ -182,6 +182,8 @@ s32 compress_replay_ghost(void) {
         phi_v0 = mio0_encode(sReplayGhostBuffer, (sReplayGhostBufferSize * 4) + 0x20, gReplayGhostCompressed);
         return phi_v0 + 0x1e;
     }
+
+    return phi_v0;
 }
 void mio0decode_noinval(const unsigned char *in, unsigned char *out);
 

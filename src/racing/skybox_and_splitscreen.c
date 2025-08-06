@@ -1585,6 +1585,7 @@ extern u8 gWSTexture682F1C[];
 extern u8 gWSTexture683118[];
 
 void wario_jumbotron(void) {
+    static int currentScreenSection = 0;
     s16 temp_v0;
 
     if (gActiveScreenMode == SCREEN_MODE_3P_4P_SPLITSCREEN) {
@@ -1599,33 +1600,54 @@ void wario_jumbotron(void) {
     } else if (temp_v0 > 2) {
         temp_v0 = 0;
     }
+
+        currentScreenSection++;
+        if (currentScreenSection >= 6) {
+            currentScreenSection = 0;
+        }
+        /**
+         * The jumbo television screen is split into six sections each section is copied one at a time.
+         * This is done to fit within the n64's texture size requirements; 64x32
+         */
+        switch (currentScreenSection) {
+            case 0:
     copy_framebuffer2(D_800DC5DC, D_800DC5E0, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
                       (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture68272C)); // gSegmentTable[5] + 0x8800));
     gfx_texture_cache_invalidate(gWSTexture68272C);
-
+break;
+case 1:
     copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
                       (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture682928)); // gSegmentTable[5] + 0x9800));
     gfx_texture_cache_invalidate(gWSTexture682928);
+break;
+case 2:
 
     copy_framebuffer2(D_800DC5DC, D_800DC5E0 + 32, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
                       (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture682B24)); // gSegmentTable[5] + 0xA800));
     gfx_texture_cache_invalidate(gWSTexture682B24);
+break;
+case 3:
 
     copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0 + 32, 64, 32,
                       (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
                       (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture682D20)); // gSegmentTable[5] + 0xB800));
     gfx_texture_cache_invalidate(gWSTexture682D20);
+break;
+case 4:
 
     copy_framebuffer2(D_800DC5DC, D_800DC5E0 + 64, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
                       (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture682F1C)); // gSegmentTable[5] + 0xC800));
     gfx_texture_cache_invalidate(gWSTexture682F1C);
+break;
+case 5:
 
     copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0 + 64, 64, 32,
                       (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
                       (u16*) PHYSICAL_TO_VIRTUAL(gWSTexture683118)); // gSegmentTable[5] + 0xD800));
     gfx_texture_cache_invalidate(gWSTexture683118);
+break;
 }
-
+}
 extern u8 gLRTexture68272C[];
 extern u8 gLRTexture682928[];
 extern u8 gLRTexture682B24[];
@@ -1635,7 +1657,7 @@ extern u8 gLRTexture683118[];
 
 void luigi_jumbotron(void) {
     s16 temp_v0;
-
+static int currentScreenSection = 0;
     if (gActiveScreenMode == SCREEN_MODE_3P_4P_SPLITSCREEN) {
         D_800DC5DC = 0;
     } else {
@@ -1648,6 +1670,14 @@ void luigi_jumbotron(void) {
     } else if (temp_v0 > 2) {
         temp_v0 = 0;
     }
+
+            currentScreenSection++;
+        if (currentScreenSection >= 6) {
+            currentScreenSection = 0;
+        }
+        switch (currentScreenSection) {
+            case 0:
+
     /**
      * The jumbo television screen is split into six sections each section is copied one at a time.
      * This is done to fit within the n64's texture size requirements; 64x32
@@ -1655,26 +1685,37 @@ void luigi_jumbotron(void) {
     copy_framebuffer2(D_800DC5DC, D_800DC5E0, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
                       (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture68272C)));
     gfx_texture_cache_invalidate(gLRTexture68272C);
-
+break;
+case 1:
     copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
                       (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture682928)));
     gfx_texture_cache_invalidate(gLRTexture682928);
+break;
+case 2:
 
     copy_framebuffer2(D_800DC5DC, D_800DC5E0 + 32, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
                       (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture682B24)));
     gfx_texture_cache_invalidate(gLRTexture682B24);
+break;
+case 3:
 
     copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0 + 32, 64, 32,
                       (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
                       (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture682D20)));
     gfx_texture_cache_invalidate(gLRTexture682D20);
+break;
+case 4:
 
     copy_framebuffer2(D_800DC5DC, D_800DC5E0 + 64, 64, 32, (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
                       (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture682F1C)));
     gfx_texture_cache_invalidate(gLRTexture682F1C);
+break;
+case 5:
 
     copy_framebuffer2(D_800DC5DC + 64, D_800DC5E0 + 64, 64, 32,
                       (u16*) PHYSICAL_TO_VIRTUAL(gPhysicalFramebuffers[temp_v0]),
                       (u16*) PHYSICAL_TO_VIRTUAL(segmented_to_virtual(gLRTexture683118)));
     gfx_texture_cache_invalidate(gLRTexture683118);
+break;
+}
 }

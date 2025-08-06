@@ -126,6 +126,8 @@ UNUSED static void resample_16bit(const unsigned short* in, int inwidth, int inh
 }
 
 static inline uint32_t next_pot(uint32_t v) {
+    if (v <= 8)
+        return 8;
     v--;
     v |= v >> 1;
     v |= v >> 2;
@@ -134,6 +136,16 @@ static inline uint32_t next_pot(uint32_t v) {
     v |= v >> 16;
     v++;
     return v;
+}
+
+static inline uint32_t prev_pot(uint32_t n) {
+    if (n <= 16) return 8;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    return n - (n >> 1);
 }
 
 static inline uint32_t is_pot(const uint32_t v) {
@@ -180,15 +192,38 @@ static inline GLenum texenv_set_texture_texture(UNUSED struct ShaderProgram* prg
 }
 extern int16_t fog_mul;
 extern int16_t fog_ofs;
-
+typedef enum {
+    /* 0x00 */ COURSE_MARIO_RACEWAY = 0,
+    /* 0x01 */ COURSE_CHOCO_MOUNTAIN,
+    /* 0x02 */ COURSE_BOWSER_CASTLE,
+    /* 0x03 */ COURSE_BANSHEE_BOARDWALK,
+    /* 0x04 */ COURSE_YOSHI_VALLEY,
+    /* 0x05 */ COURSE_FRAPPE_SNOWLAND,
+    /* 0x06 */ COURSE_KOOPA_BEACH,
+    /* 0x07 */ COURSE_ROYAL_RACEWAY,
+    /* 0x08 */ COURSE_LUIGI_RACEWAY,
+    /* 0x09 */ COURSE_MOO_MOO_FARM,
+    /* 0x0A */ COURSE_TOADS_TURNPIKE,
+    /* 0x0B */ COURSE_KALAMARI_DESERT,
+    /* 0x0C */ COURSE_SHERBET_LAND,
+    /* 0x0D */ COURSE_RAINBOW_ROAD,
+    /* 0x0E */ COURSE_WARIO_STADIUM,
+    /* 0x0F */ COURSE_BLOCK_FORT,
+    /* 0x10 */ COURSE_SKYSCRAPER,
+    /* 0x11 */ COURSE_DOUBLE_DECK,
+    /* 0x12 */ COURSE_DK_JUNGLE,
+    /* 0x13 */ COURSE_BIG_DONUT,
+    /* 0x14 */ COURSE_AWARD_CEREMONY,
+    /* 0x15 */ NUM_COURSES
+} COURSES;
 extern s16 gCurrentCourseId;
-
+#include <kos.h>
 static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
     // vertices are always there
     glVertexPointer(3, GL_FLOAT, sizeof(dc_fast_t), &cur_buf[0].vert);
     glTexCoordPointer(2, GL_FLOAT, sizeof(dc_fast_t), &cur_buf[0].texture);
     glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(dc_fast_t), &cur_buf[0].color);
-
+PVR_SET(PVR_FB_CFG_2, 0x00000001);
     // have texture(s), specify same texcoords for every active texture
     if (prg->texture_used[0] || prg->texture_used[1]) {
         glEnable(GL_TEXTURE_2D);
@@ -205,12 +240,17 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
         fogmax = fogmin + (128000.0f / (float) fog_mul);
 
         // choco mountain
-        if (gCurrentCourseId == 1) {
+        if (gCurrentCourseId == COURSE_CHOCO_MOUNTAIN) {
             fogmin *= 0.4f;
             fogmax *= 0.6f;
         } else {
-            fogmin *= 1.2f;
-            fogmax *= 1.4f;
+            if (gCurrentCourseId == COURSE_MOO_MOO_FARM) {
+                fogmin *= 3.0f;
+                fogmax *= 4.0f;
+            } else {
+                fogmin *= 1.2f;
+                fogmax *= 1.4f;
+            }
         }
 
         glFogi(GL_FOG_MODE, GL_LINEAR);
@@ -227,7 +267,7 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
 #if 1
         if (prg->shader_id & SHADER_OPT_TEXTURE_EDGE) {
             glEnable(GL_ALPHA_TEST);
-            glAlphaFunc(GL_GREATER, 0.6f);
+            glAlphaFunc(GL_GREATER, 0.0333f);
         } else {
             glDisable(GL_ALPHA_TEST);
         }
@@ -380,6 +420,45 @@ static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int 
 
     // we don't support non power of two textures, scale to next power of two if necessary
     if ((!is_pot(width) || !is_pot(height)) || (width < 8) || (height < 8)) {
+#if 1
+        uint32_t final_w = width;
+        uint32_t final_h = height;
+
+        if (final_w < 8)
+            final_w = 8;
+        if (final_h < 8)
+            final_h = 8;
+        if (!is_pot(final_w)) {
+            uint32_t prev_w = prev_pot(final_w);
+            uint32_t next_w = next_pot(final_w);
+            uint32_t avg = (next_w + prev_w) >> 1;
+            //printf("prev %d next %d avg %d actual %d\n", prev_w, next_w, avg, final_w);
+            if (final_w < avg) {
+                final_w = prev_w;
+            } else {
+                final_w = next_w;
+            }
+            //printf("width %d -> %d\n", width, final_w);
+        }
+
+        if (!is_pot(final_h)) {
+            uint32_t prev_h = prev_pot(final_h);
+            uint32_t next_h = next_pot(final_h);
+            uint32_t avg = (next_h + prev_h) >> 1;
+            if (final_h < avg) {
+                final_h = prev_h;
+            } else {
+                final_h = next_h;
+            }
+            //printf("height %d -> %d\n", height, final_h);
+        }
+
+        //resample_16bit
+        resample_32bit((const uint16_t*) rgba32_buf, width, height, (uint16_t*) scaled, final_w, final_h);
+        rgba32_buf = (uint8_t*) scaled;
+        width = final_w;
+        height = final_h;
+#else
         int pwidth = next_pot(width);
         int pheight = next_pot(height);
 
@@ -396,6 +475,7 @@ static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int 
         rgba32_buf = (uint8_t*) scaled;
         width = pwidth;
         height = pheight;
+#endif
     }
 
     glTexImage2D(GL_TEXTURE_2D, 0, intFormat, width, height, 0, GL_BGRA, type, rgba32_buf);
@@ -1033,7 +1113,16 @@ static void gfx_opengl_init(void) {
     config.initial_immediate_capacity = 0;
     glKosInitEx(&config);
     // glKosInit();
-
+#ifdef __DREAMCAST__
+    if (vid_check_cable() != CT_VGA)
+    {
+        vid_set_mode(DM_640x480_NTSC_IL, PM_RGB565);
+    }
+    else
+    {
+        vid_set_mode(DM_640x480_VGA, PM_RGB565);
+    }
+#endif
     //    getRamStatus();
     fflush(stdout);
 

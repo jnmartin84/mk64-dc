@@ -26,9 +26,7 @@
 
 extern s32 gDemoTimer;
 extern s16 D_802BA048;
-#if !ENABLE_CUSTOM_COURSE_ENGINE
 s16 gCurrentCourseId = 0;
-#endif
 s16 gCurrentlyLoadedCourseId = 0xFF;
 u16 D_800DC5A8 = 0;
 s32 D_800DC5AC = 0;
@@ -252,7 +250,6 @@ void setup_race(void) {
 
 // sound related
 void func_80002DAC(void) {
-#if !ENABLE_CUSTOM_COURSE_ENGINE
     switch (gCurrentCourseId) {
         case COURSE_MARIO_RACEWAY:
             vec3f_set(D_8015F748, -223.0f, 94.0f, -155.0f);
@@ -287,9 +284,6 @@ void func_80002DAC(void) {
         default:
             break;
     }
-#else
-
-#endif
 }
 
 /**

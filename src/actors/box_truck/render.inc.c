@@ -13,9 +13,7 @@
  * @param arg1
  */
 void render_actor_box_truck(Camera* arg0, struct Actor* arg1) {
-    UNUSED s32 pad[6];
     Mat4 spD8;
-    UNUSED s32 pad2[32];
     f32 temp_f0 =
         is_within_render_distance(arg0->pos, arg1->pos, arg0->rot[1], 2500.0f, gCameraZoom[arg0 - camera1], 9000000.0f);
     if (temp_f0 < 0.0f) {
@@ -41,9 +39,9 @@ void render_actor_box_truck(Camera* arg0, struct Actor* arg1) {
         }
 
         if (gActiveScreenMode == SCREEN_MODE_1P) {
-            if (temp_f0 < 160000.0f) {
+            /* if (temp_f0 < 160000.0f) {
                 gSPDisplayList(gDisplayListHead++, &toads_turnpike_dl_0);
-            } else if (temp_f0 < 640000.0f) {
+            } else */ if (temp_f0 < 640000.0f) {
                 gSPDisplayList(gDisplayListHead++, &toads_turnpike_dl_1);
             } else {
                 gSPDisplayList(gDisplayListHead++, &toads_turnpike_dl_2);

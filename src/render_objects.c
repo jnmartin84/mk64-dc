@@ -2541,7 +2541,6 @@ void render_mini_map_finish_line(s32 arg0) {
 
     var_f2 = ((gMiniMapFinishLineX[arg0] + D_8018D2F0) - (D_8018D2B0 / 2)) + gMiniMapX;
     var_f0 = ((gMiniMapFinishLineY[arg0] + D_8018D2F8) - (D_8018D2B8 / 2)) + gMiniMapY;
-#if !ENABLE_CUSTOM_COURSE_ENGINE
     switch (gCurrentCourseId) { /* irregular */
         case COURSE_MARIO_RACEWAY:
             var_f0 = var_f0 - 2.0;
@@ -2554,9 +2553,6 @@ void render_mini_map_finish_line(s32 arg0) {
             break;
     }
     draw_hud_2d_texture_8x8(var_f2, var_f0, (u8*) common_texture_minimap_finish_line);
-#else
-
-#endif
 }
 
 extern u16 l_common_texture_minimap_kart_mario[][64];

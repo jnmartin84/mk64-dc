@@ -895,6 +895,9 @@ void render_luigi_raceway(struct UnkStruct_800DC5EC* arg0) {
     D_800DC5E0 = 72;
 
     // Render only the first player camera onto the television billboard. Screen agnostic screens of other players).
+    if ((gActiveScreenMode != SCREEN_MODE_1P) && (sp22 >= 10) && (sp22 < 17)) {
+        luigi_jumbotron();
+    }
     if ((gActiveScreenMode == SCREEN_MODE_1P) && (sp22 >= 10) && (sp22 < 17)) {
 #if 1
         prevFrame = (s16) sRenderedFramebuffer - 1;
@@ -1176,7 +1179,10 @@ void render_wario_stadium(struct UnkStruct_800DC5EC* arg0) {
 
     D_800DC5DC = 88;
     D_800DC5E0 = 72;
-    if (gActiveScreenMode == SCREEN_MODE_1P) {
+    if (gActiveScreenMode != SCREEN_MODE_1P) {
+        wario_jumbotron();
+    }
+    else if (gActiveScreenMode == SCREEN_MODE_1P) {
 #if 1
         prevFrame = (s16) sRenderedFramebuffer - 1;
         if (prevFrame < 0) {

@@ -12,9 +12,7 @@
  * @param arg1
  */
 void render_actor_school_bus(Camera* arg0, struct Actor* arg1) {
-    UNUSED s32 pad[6];
     Mat4 spC8;
-    UNUSED s32 pad2[32];
     f32 temp_f0;
 
     temp_f0 =
@@ -28,11 +26,10 @@ void render_actor_school_bus(Camera* arg0, struct Actor* arg1) {
 
     mtxf_pos_rotation_xyz(spC8, arg1->pos, arg1->rot);
     if (render_set_position(spC8, 0) != 0) {
-
         if (gActiveScreenMode == SCREEN_MODE_1P) {
-            if (temp_f0 < 160000.0f) {
+            /* if (temp_f0 < 160000.0f) {
                 gSPDisplayList(gDisplayListHead++, &toads_turnpike_dl_3);
-            } else if (temp_f0 < 640000.0f) {
+            } else */ if (temp_f0 < 640000.0f) {
                 gSPDisplayList(gDisplayListHead++, &toads_turnpike_dl_4);
             } else {
                 gSPDisplayList(gDisplayListHead++, &toads_turnpike_dl_5);

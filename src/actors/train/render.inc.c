@@ -65,10 +65,13 @@ void render_actor_train_engine(Camera* camera, struct TrainCar* actor) {
     gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_22DB8);
     gSPPopMatrix(gDisplayListHead++, G_MTX_MODELVIEW);
 
-    mtxf_rotate_x(sp120, actor->wheelRot);
-    vec3f_set(sp160, -17.0, 6.0f, 32.0f);
-    mtxf_translate(spE0, sp160);
-    mtxf_multiplication(spA0, sp120, spE0);
+//    mtxf_rotate_x(sp120, actor->wheelRot);
+ //   vec3f_set(sp160, -17.0, 6.0f, 32.0f);
+   // mtxf_translate(spE0, sp160);
+   // mtxf_multiplication(spA0, sp120, spE0);
+    spA0[3][0] = spA0[3][0] - 34.0f * sp120[0][0];
+    spA0[3][1] = spA0[3][1] - 34.0f * sp120[0][1];
+    spA0[3][2] = spA0[3][2] - 34.0f * sp120[0][2];
 
     maxObjectsReached = render_set_position(spA0, 3) == 0;
     if (maxObjectsReached) {
@@ -91,10 +94,13 @@ void render_actor_train_engine(Camera* camera, struct TrainCar* actor) {
     gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_22DB8);
     gSPPopMatrix(gDisplayListHead++, G_MTX_MODELVIEW);
 
-    mtxf_rotate_x(sp120, (s16) (actor->wheelRot + 0x16C));
-    vec3f_set(sp160, -17.0f, 6.0f, 16.0f);
-    mtxf_translate(spE0, sp160);
-    mtxf_multiplication(spA0, sp120, spE0);
+///    mtxf_rotate_x(sp120, (s16) (actor->wheelRot + 0x16C));
+  //  vec3f_set(sp160, -17.0f, 6.0f, 16.0f);
+   // mtxf_translate(spE0, sp160);
+//    mtxf_multiplication(spA0, sp120, spE0);
+    spA0[3][0] = spA0[3][0] - 34.0f * sp120[0][0];
+    spA0[3][1] = spA0[3][1] - 34.0f * sp120[0][1];
+    spA0[3][2] = spA0[3][2] - 34.0f * sp120[0][2];
 
     maxObjectsReached = render_set_position(spA0, 3) == 0;
     if (maxObjectsReached) {
@@ -117,11 +123,16 @@ void render_actor_train_engine(Camera* camera, struct TrainCar* actor) {
     gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_22D70);
     gSPPopMatrix(gDisplayListHead++, G_MTX_MODELVIEW);
 
+#if 0
     mtxf_rotate_x(sp120, (s16) (actor->wheelRot + 0x444));
     vec3f_set(sp160, -17.0f, 12.0f, -12.0f);
     mtxf_translate(spE0, sp160);
     mtxf_multiplication(spA0, sp120, spE0);
-
+#else
+    spA0[3][0] = spA0[3][0] - 34.0f * sp120[0][0];
+    spA0[3][1] = spA0[3][1] - 34.0f * sp120[0][1];
+    spA0[3][2] = spA0[3][2] - 34.0f * sp120[0][2];
+#endif
     maxObjectsReached = render_set_position(spA0, 3) == 0;
     if (maxObjectsReached) {
         return;
@@ -143,10 +154,13 @@ void render_actor_train_engine(Camera* camera, struct TrainCar* actor) {
     gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_22D70);
     gSPPopMatrix(gDisplayListHead++, G_MTX_MODELVIEW);
 
-    mtxf_rotate_x(sp120, (s16) (actor->wheelRot + 0x2D8));
-    vec3f_set(sp160, -17.0f, 12.0f, -34.0f);
-    mtxf_translate(spE0, sp160);
-    mtxf_multiplication(spA0, sp120, spE0);
+//    mtxf_rotate_x(sp120, (s16) (actor->wheelRot + 0x2D8));
+  //  vec3f_set(sp160, -17.0f, 12.0f, -34.0f);
+  //  mtxf_translate(spE0, sp160);
+   // mtxf_multiplication(spA0, sp120, spE0);
+    spA0[3][0] = spA0[3][0] - 34.0f * sp120[0][0];
+    spA0[3][1] = spA0[3][1] - 34.0f * sp120[0][1];
+    spA0[3][2] = spA0[3][2] - 34.0f * sp120[0][2];
 
     maxObjectsReached = render_set_position(spA0, 3) == 0;
     if (maxObjectsReached) {
@@ -206,10 +220,13 @@ void render_actor_train_tender(Camera* camera, struct TrainCar* actor) {
     gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_22DB8);
     gSPPopMatrix(gDisplayListHead++, G_MTX_MODELVIEW);
 
-    mtxf_rotate_x(sp120, actor->wheelRot);
-    vec3f_set(sp160, -17.0, 6.0f, 8.0f);
-    mtxf_translate(spE0, sp160);
-    mtxf_multiplication(spA0, sp120, spE0);
+//    mtxf_rotate_x(sp120, actor->wheelRot);
+//    vec3f_set(sp160, -17.0, 6.0f, 8.0f);
+//    mtxf_translate(spE0, sp160);
+//    mtxf_multiplication(spA0, sp120, spE0);
+    spA0[3][0] = spA0[3][0] - 34.0f * sp120[0][0];
+    spA0[3][1] = spA0[3][1] - 34.0f * sp120[0][1];
+    spA0[3][2] = spA0[3][2] - 34.0f * sp120[0][2];
 
     if (render_set_position(spA0, 3) == 0) {
         return;
@@ -230,10 +247,13 @@ void render_actor_train_tender(Camera* camera, struct TrainCar* actor) {
     gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_22DB8);
     gSPPopMatrix(gDisplayListHead++, G_MTX_MODELVIEW);
 
-    mtxf_rotate_x(sp120, (s16) (actor->wheelRot + 0x444));
-    vec3f_set(sp160, -17.0f, 6.0f, -8.0f);
-    mtxf_translate(spE0, sp160);
-    mtxf_multiplication(spA0, sp120, spE0);
+//    mtxf_rotate_x(sp120, (s16) (actor->wheelRot + 0x444));
+//    vec3f_set(sp160, -17.0f, 6.0f, -8.0f);
+//    mtxf_translate(spE0, sp160);
+//    mtxf_multiplication(spA0, sp120, spE0);
+    spA0[3][0] = spA0[3][0] - 34.0f * sp120[0][0];
+    spA0[3][1] = spA0[3][1] - 34.0f * sp120[0][1];
+    spA0[3][2] = spA0[3][2] - 34.0f * sp120[0][2];
 
     if (render_set_position(spA0, 3) == 0) {
         return;
@@ -296,10 +316,13 @@ void render_actor_train_passenger_car(Camera* camera, struct TrainCar* actor) {
     gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_22DB8);
     gSPPopMatrix(gDisplayListHead++, G_MTX_MODELVIEW);
 
-    mtxf_rotate_x(sp120, actor->wheelRot);
-    vec3f_set(sp160, -17.0, 6.0f, 28.0f);
-    mtxf_translate(spE0, sp160);
-    mtxf_multiplication(spA0, sp120, spE0);
+//    mtxf_rotate_x(sp120, actor->wheelRot);
+//    vec3f_set(sp160, -17.0, 6.0f, 28.0f);
+//    mtxf_translate(spE0, sp160);
+//    mtxf_multiplication(spA0, sp120, spE0);
+    spA0[3][0] = spA0[3][0] - 34.0f * sp120[0][0];
+    spA0[3][1] = spA0[3][1] - 34.0f * sp120[0][1];
+    spA0[3][2] = spA0[3][2] - 34.0f * sp120[0][2];
 
     if (render_set_position(spA0, 3) == 0) {
         return;
@@ -320,10 +343,13 @@ void render_actor_train_passenger_car(Camera* camera, struct TrainCar* actor) {
     gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_22DB8);
     gSPPopMatrix(gDisplayListHead++, G_MTX_MODELVIEW);
 
-    mtxf_rotate_x(sp120, (s16) (actor->wheelRot + 0x222));
-    vec3f_set(sp160, -17.0f, 6.0f, 12.0f);
-    mtxf_translate(spE0, sp160);
-    mtxf_multiplication(spA0, sp120, spE0);
+//    mtxf_rotate_x(sp120, (s16) (actor->wheelRot + 0x222));
+  //  vec3f_set(sp160, -17.0f, 6.0f, 12.0f);
+    //mtxf_translate(spE0, sp160);
+    //mtxf_multiplication(spA0, sp120, spE0);
+    spA0[3][0] = spA0[3][0] - 34.0f * sp120[0][0];
+    spA0[3][1] = spA0[3][1] - 34.0f * sp120[0][1];
+    spA0[3][2] = spA0[3][2] - 34.0f * sp120[0][2];
 
     if (render_set_position(spA0, 3) == 0) {
         return;
@@ -344,10 +370,13 @@ void render_actor_train_passenger_car(Camera* camera, struct TrainCar* actor) {
     gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_22DB8);
     gSPPopMatrix(gDisplayListHead++, G_MTX_MODELVIEW);
 
-    mtxf_rotate_x(sp120, (s16) (actor->wheelRot + 0x5B0));
-    vec3f_set(sp160, -17.0f, 6.0f, -8.0f);
-    mtxf_translate(spE0, sp160);
-    mtxf_multiplication(spA0, sp120, spE0);
+//    mtxf_rotate_x(sp120, (s16) (actor->wheelRot + 0x5B0));
+//    vec3f_set(sp160, -17.0f, 6.0f, -8.0f);
+ //   mtxf_translate(spE0, sp160);
+  //  mtxf_multiplication(spA0, sp120, spE0);
+    spA0[3][0] = spA0[3][0] - 34.0f * sp120[0][0];
+    spA0[3][1] = spA0[3][1] - 34.0f * sp120[0][1];
+    spA0[3][2] = spA0[3][2] - 34.0f * sp120[0][2];
 
     if (render_set_position(spA0, 3) == 0) {
         return;
@@ -368,10 +397,13 @@ void render_actor_train_passenger_car(Camera* camera, struct TrainCar* actor) {
     gSPDisplayList(gDisplayListHead++, d_course_kalimari_desert_dl_22DB8);
     gSPPopMatrix(gDisplayListHead++, G_MTX_MODELVIEW);
 
-    mtxf_rotate_x(sp120, (s16) (actor->wheelRot + 0x16C));
-    vec3f_set(sp160, -17.0f, 6.0f, -24.0f);
-    mtxf_translate(spE0, sp160);
-    mtxf_multiplication(spA0, sp120, spE0);
+//    mtxf_rotate_x(sp120, (s16) (actor->wheelRot + 0x16C));
+  //  vec3f_set(sp160, -17.0f, 6.0f, -24.0f);
+   // mtxf_translate(spE0, sp160);
+    //mtxf_multiplication(spA0, sp120, spE0);
+    spA0[3][0] = spA0[3][0] - 34.0f * sp120[0][0];
+    spA0[3][1] = spA0[3][1] - 34.0f * sp120[0][1];
+    spA0[3][2] = spA0[3][2] - 34.0f * sp120[0][2];
 
     if (render_set_position(spA0, 3) == 0) {
         return;

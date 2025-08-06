@@ -269,7 +269,6 @@ void func_80027EDC(Player* player, s8 playerId) {
     if (((player->type & PLAYER_HUMAN) == PLAYER_HUMAN) &&
         ((player->type & PLAYER_INVISIBLE_OR_BOMB) != PLAYER_INVISIBLE_OR_BOMB)) {
 
-#if !ENABLE_CUSTOM_COURSE_ENGINE
         switch (gCurrentCourseId) {
             case COURSE_MARIO_RACEWAY:
                 if (((s16) gNearestPathPointByPlayerId[playerId] >= 0x19B) &&
@@ -400,11 +399,7 @@ void func_80027EDC(Player* player, s8 playerId) {
             default:
                 break;
         }
-#else
-
-#endif
     } else {
-#if !ENABLE_CUSTOM_COURSE_ENGINE
         switch (gCurrentCourseId) {
             case COURSE_MARIO_RACEWAY:
                 if (((s16) gNearestPathPointByPlayerId[playerId] >= 0x19B) &&
@@ -520,14 +515,11 @@ void func_80027EDC(Player* player, s8 playerId) {
             default:
                 break;
         }
-#else
-
-#endif
     }
 }
 
 void func_80028864(Player* player, Camera* camera, s8 playerId, s8 screenId) {
-    u16 isVisible;
+    u16 isVisible = 0;
 
     if (!(player->type & PLAYER_START_SEQUENCE)) {
         switch (gActiveScreenMode) {

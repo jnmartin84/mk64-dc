@@ -700,7 +700,6 @@ void render_player_snow_effect_four(void) {
 }
 
 void render_object_for_player(s32 cameraId) {
-#if !ENABLE_CUSTOM_COURSE_ENGINE
     switch (gCurrentCourseId) {
         case COURSE_MARIO_RACEWAY:
             break;
@@ -785,9 +784,6 @@ void render_object_for_player(s32 cameraId) {
             }
             break;
     }
-#else
-
-#endif
 
     render_object_smoke_particles(cameraId);
     render_object_leaf_particle(cameraId);
@@ -1579,7 +1575,6 @@ void func_8005A71C(void) {
 }
 
 void update_object(void) {
-#if !ENABLE_CUSTOM_COURSE_ENGINE
     switch (gCurrentCourseId) {
         case COURSE_MARIO_RACEWAY:
         case COURSE_CHOCO_MOUNTAIN:
@@ -1648,9 +1643,6 @@ void update_object(void) {
             update_ferries_smoke_particle();
             break;
     }
-#else
-
-#endif
 
     if (D_80165730 != 0) {
         func_80074EE8();

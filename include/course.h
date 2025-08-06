@@ -26,7 +26,6 @@ struct _struct_gCoursePathSizes_0x10 {
     /* 0x0A */ char padA[6];
 }; // size 0x10
 
-#if !ENABLE_CUSTOM_COURSE_ENGINE
 typedef enum {
     /* 0x00 */ COURSE_MARIO_RACEWAY = 0,
     /* 0x01 */ COURSE_CHOCO_MOUNTAIN,
@@ -52,34 +51,6 @@ typedef enum {
     /* 0x15 */ NUM_COURSES
 } COURSES;
 
-#else
-
-#define COURSE_MARIO_RACEWAY
-#define COURSE_CHOCO_MOUNTAIN
-#define COURSE_BOWSER_CASTLE
-#define COURSE_BANSHEE_BOARDWALK
-#define COURSE_YOSHI_VALLEY
-#define COURSE_FRAPPE_SNOWLAND
-#define COURSE_KOOPA_BEACH
-#define COURSE_ROYAL_RACEWAY
-#define COURSE_LUIGI_RACEWAY
-#define COURSE_MOO_MOO_FARM
-#define COURSE_TOADS_TURNPIKE
-#define COURSE_KALAMARI_DESERT
-#define COURSE_SHERBET_LAND
-#define COURSE_RAINBOW_ROAD
-#define COURSE_WARIO_STADIUM
-#define COURSE_BLOCK_FORT
-#define COURSE_SKYSCRAPER
-#define COURSE_DOUBLE_DECK
-#define COURSE_DK_JUNGLE
-#define COURSE_BIG_DONUT
-#define COURSE_AWARD_CEREMONY
-#define NUM_COURSES
-
-#endif
-
-#if !ENABLE_CUSTOM_COURSE_ENGINE
 extern s16 gCurrentCourseId;
 extern s16* D_800DCBB4[];
 #define GET_COURSE_800DCBB4(n) D_800DCBB4[gCurrentCourseId][n]
@@ -114,25 +85,5 @@ extern f32 gCourseNearPersp;
     *(f32*) segmented_to_virtual(&cpu_CurveTargetSpeed[gCurrentCourseId][cc])
 #define GET_COURSE_cpu_NormalTargetSpeed(cc) \
     *(f32*) segmented_to_virtual(&cpu_NormalTargetSpeed[gCurrentCourseId][cc])
-#else
-#define gCurrentCourseId
-#define GET_COURSE_800DCBB4(n)
-#define GET_COURSE_AIMaximumSeparation
-#define GET_COURSE_PathSizes
-#define GET_COURSE_AISteeringSensitivity
-#define GET_COURSE_AIMinimumSeparation
-#define GET_COURSE_PathTable(p)
-#define GET_COURSE_PathTable2(p)
-#define GET_COURSE_AIBehaviour
-#define GET_COURSE_Name
-#define GET_COURSE_NameDup
-#define GET_COURSE_debugName
-#define gCourseFarPersp
-#define gCourseNearPersp
-#define GET_COURSE_D_0D0096B8(cc)
-#define GET_COURSE_cpu_OffTrackTargetSpeed(cc)
-#define GET_COURSE_cpu_CurveTargetSpeed(cc)
-#define GET_COURSE_cpu_NormalTargetSpeed(cc)
-#endif
 
 #endif // COURSE_H

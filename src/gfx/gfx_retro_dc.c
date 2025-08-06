@@ -22,6 +22,9 @@
 #include <GL/glext.h>
 #include <GL/glkos.h>
 #include "gl_fast_vert.h"
+
+#include "sh4zam.h"
+
 extern int in_intro;
 
 uint32_t last_set_texture_image_width;
@@ -380,6 +383,7 @@ void gfx_texture_cache_invalidate(void* orig_addr) {
 
 	uintptr_t addrcomp = ((uintptr_t)segaddr>>5)&0x7FFFF;
 	struct TextureHashmapNode** node = &gfx_texture_cache.hashmap[hash];
+    __builtin_prefetch(*node);
 	uintptr_t last_node = &gfx_texture_cache.pool[gfx_texture_cache.pool_pos];
 	while (*node != NULL && ((uintptr_t)*node < last_node)) {
 		__builtin_prefetch((*node)->next);
@@ -1295,9 +1299,9 @@ static void __attribute__((noinline)) import_texture(int tile) {
 	}
 } */
 }
-#include <kos.h>
 
 static void gfx_normalize_vector(float v[3]) {
+#if 0
 #if 0
 	float s = sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 	v[0] /= s;
@@ -1305,16 +1309,28 @@ static void gfx_normalize_vector(float v[3]) {
 	v[2] /= s;
 #endif
 	vec3f_normalize(v[0], v[1], v[2]);
-}
+#else
+    shz_vec3_t norm = shz_vec3_normalize((shz_vec3_t) { .x = v[0], .y = v[1], .z = v[2] });
+    v[0] = norm.x; v[1] = norm.y; v[2] = norm.z;
+#endif
+ }
 
 static void gfx_transposed_matrix_mul(float res[3], const float a[3], const float b[4][4]) {
-	res[0] = fipr(a[0],a[1],a[2],0,b[0][0],b[0][1],b[0][2],0);
+
+#if 0
+    res[0] = fipr(a[0],a[1],a[2],0,b[0][0],b[0][1],b[0][2],0);
 	res[1] = fipr(a[0],a[1],a[2],0,b[1][0],b[1][1],b[1][2],0);
 	res[2] = fipr(a[0],a[1],a[2],0,b[2][0],b[2][1],b[2][2],0);
 #if 0
 	res[0] = a[0] * b[0][0] + a[1] * b[0][1] + a[2] * b[0][2];
 	res[1] = a[0] * b[1][0] + a[1] * b[1][1] + a[2] * b[1][2];
 	res[2] = a[0] * b[2][0] + a[1] * b[2][1] + a[2] * b[2][2];
+#endif
+#else
+    shz_vec3_t out = shz_matrix4x4_trans_vec3_transpose(b, (shz_vec3_t) { .x = a[0], .y = a[1], .z = a[2] });
+    res[0] = out.x;
+    res[1] = out.y;
+    res[2] = out.z;
 #endif
 }
 
@@ -1328,105 +1344,11 @@ static void calculate_normal_dir(const Light_t* light, float coeffs[3]) {
 	gfx_normalize_vector(coeffs);
 }
 
-// thanks @FalcoGirgis
-inline static void fast_mat_store(matrix_t* mtx) {
-	asm volatile(
-		R"(
-			fschg
-			add            #64-8,%[mtx]
-			fmov.d    xd14,@%[mtx]
-			add            #-32,%[mtx]
-			pref    @%[mtx]
-			add         #32,%[mtx]
-			fmov.d    xd12,@-%[mtx]
-			fmov.d    xd10,@-%[mtx]
-			fmov.d    xd8,@-%[mtx]
-			fmov.d    xd6,@-%[mtx]
-			fmov.d    xd4,@-%[mtx]
-			fmov.d    xd2,@-%[mtx]
-			fmov.d    xd0,@-%[mtx]
-			fschg
-		)"
-		: [mtx] "+&r"(mtx), "=m"(*mtx)
-		:
-		:);
-}
-
-// thanks @FalcoGirgis
-inline static void fast_mat_load(const matrix_t* mtx) {
-	asm volatile(
-		R"(
-			fschg
-			fmov.d    @%[mtx],xd0
-			add        #32,%[mtx]
-			pref    @%[mtx]
-			add        #-(32-8),%[mtx]
-			fmov.d    @%[mtx]+,xd2
-			fmov.d    @%[mtx]+,xd4
-			fmov.d    @%[mtx]+,xd6
-			fmov.d    @%[mtx]+,xd8
-			fmov.d    @%[mtx]+,xd10
-			fmov.d    @%[mtx]+,xd12
-			fmov.d    @%[mtx]+,xd14
-			fschg
-		)"
-		: [mtx] "+r"(mtx)
-		:
-		:);
-}
-
-// thanks @FalcoGirgis
-inline static void mat_load_apply(const matrix_t* matrix1, const matrix_t* matrix2) {
-	unsigned int prefetch_scratch;
-
-	asm volatile("mov %[bmtrx], %[pref_scratch]\n\t"
-				 "add #32, %[pref_scratch]\n\t"
-				 "fschg\n\t"
-				 "pref @%[pref_scratch]\n\t"
-				 // back matrix
-				 "fmov.d @%[bmtrx]+, XD0\n\t"
-				 "fmov.d @%[bmtrx]+, XD2\n\t"
-				 "fmov.d @%[bmtrx]+, XD4\n\t"
-				 "fmov.d @%[bmtrx]+, XD6\n\t"
-				 "pref @%[fmtrx]\n\t"
-				 "fmov.d @%[bmtrx]+, XD8\n\t"
-				 "fmov.d @%[bmtrx]+, XD10\n\t"
-				 "fmov.d @%[bmtrx]+, XD12\n\t"
-				 "mov %[fmtrx], %[pref_scratch]\n\t"
-				 "add #32, %[pref_scratch]\n\t"
-				 "fmov.d @%[bmtrx], XD14\n\t"
-				 "pref @%[pref_scratch]\n\t"
-				 // front matrix
-				 // interleave loads and matrix multiply 4x4
-				 "fmov.d @%[fmtrx]+, DR0\n\t"
-				 "fmov.d @%[fmtrx]+, DR2\n\t"
-				 "fmov.d @%[fmtrx]+, DR4\n\t"
-				 "ftrv XMTRX, FV0\n\t"
-
-				 "fmov.d @%[fmtrx]+, DR6\n\t"
-				 "fmov.d @%[fmtrx]+, DR8\n\t"
-				 "ftrv XMTRX, FV4\n\t"
-
-				 "fmov.d @%[fmtrx]+, DR10\n\t"
-				 "fmov.d @%[fmtrx]+, DR12\n\t"
-				 "ftrv XMTRX, FV8\n\t"
-
-				 "fmov.d @%[fmtrx], DR14\n\t"
-				 "fschg\n\t"
-				 "ftrv XMTRX, FV12\n\t"
-				 "frchg\n"
-				 : [bmtrx] "+&r"((unsigned int) matrix1), [fmtrx] "+r"((unsigned int) matrix2),
-				   [pref_scratch] "=&r"(prefetch_scratch)
-				 : // no inputs
-				 : "fr0", "fr1", "fr2", "fr3", "fr4", "fr5", "fr6", "fr7", "fr8", "fr9", "fr10", "fr11", "fr12", "fr13",
-				   "fr14", "fr15");
-}
-
 // typedef float[4][4] __attribute__((aligned(32))) matrix_t;
 // float res[4][4], const float a[4][4], const float b[4][4]) {
-static void gfx_matrix_mul(matrix_t res, const matrix_t a, const matrix_t b) {
-	mat_load_apply((matrix_t *)b, (matrix_t *)a);
-	fast_mat_store((matrix_t *)res);
+static void gfx_matrix_mul(shz_matrix_4x4_t *res, const shz_matrix_4x4_t *a, const shz_matrix_4x4_t *b) {
+	shz_xmtrx_load_4x4_apply_store(res, b, a);
+	//fast_mat_store(res);
 	#if 0
 	float tmp[4][4];
 	int i,j;
@@ -1461,25 +1383,27 @@ static __attribute__((noinline)) void gfx_sp_matrix(uint8_t parameters, const in
 	}
 #else
 	// For a modified GBI where fixed point values are replaced with floats
-	n64_memcpy(matrix, saddr, sizeof(matrix));
+	shz_xmtrx_load_4x4_unaligned(saddr);
+    shz_xmtrx_store_4x4(matrix);
+    //n64_memcpy(matrix, saddr, sizeof(matrix));
 #endif
 
 	matrix_dirty = 1;
 
 	if (parameters & G_MTX_PROJECTION) {
 		if (parameters & G_MTX_LOAD) {
-			memcpy32(rsp.P_matrix, matrix, sizeof(matrix));
+			shz_matrix_4x4_copy(rsp.P_matrix, matrix);
 		} else {
 			gfx_matrix_mul(rsp.P_matrix, (const float (*)[4]) matrix, (const float (*)[4]) rsp.P_matrix);
 		}
 	} else { // G_MTX_MODELVIEW
 		if ((parameters & G_MTX_PUSH) && rsp.modelview_matrix_stack_size < 11) {
 			++rsp.modelview_matrix_stack_size;
-			memcpy32(rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1],
-				   rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 2], sizeof(matrix));
+			shz_matrix_4x4_copy(rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1],
+				                rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 2]);
 		}
 		if (parameters & G_MTX_LOAD) {
-			memcpy32(rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1], matrix, sizeof(matrix));
+			shz_matrix_4x4_copy(rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1], matrix);
 		} else {
 			gfx_matrix_mul(rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1], matrix,
 							rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1]);
@@ -1664,7 +1588,12 @@ static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, siz
         x = v->ob[0];
         y = v->ob[1];
         z = v->ob[2];
-        mat_trans_single3_nodivw(x, y, z, w);
+        // This copying in + out shit should get optimized away
+        shz_vec4_t out = shz_xmtrx_trans_vec4((shz_vec4_t) { .x = x, .y = y, .z = z, .w = 1.0f });
+        x = out.x;
+        y = out.y;
+        z = out.z;
+        w = out.w;
 
         short U = v->tc[0] * rsp.texture_scaling_factor.s >> 16;
         short V = v->tc[1] * rsp.texture_scaling_factor.t >> 16;
@@ -1753,19 +1682,18 @@ static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t
     for (size_t i = 0; i < n_vertices; i++, dest_index++) {
         const Vtx_t* v = &vertices[i].v;
         struct LoadedVertex* d = &rsp.loaded_vertices[dest_index];
-        float x, y, z, w;
 
-		x = d->x = v->ob[0];
-        y = d->y = v->ob[1];
-        z = d->z = v->ob[2];
+		d->x = v->ob[0];
+        d->y = v->ob[1];
+        d->z = v->ob[2];
         d->w = 1.0f;
 
-		mat_trans_single3_nodivw(x, y, z, w);
+		shz_vec4_t out = shz_xmtrx_trans_vec4((shz_vec4_t) { .x = d->x, .y = d->y, .z = d->z, .w = 1.0f });
 
-		d->_x = x;
-        d->_y = y;
-        d->_z = z;
-        d->_w = w;
+		d->_x = out.x;
+        d->_y = out.y;
+        d->_z = out.z;
+        d->_w = out.w;
 
         d->color.r = v->cn[0];
         d->color.g = v->cn[1];
@@ -1776,14 +1704,14 @@ static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t
         d->v = (float)(v->tc[1] * rsp.texture_scaling_factor.t >> 16);
 
         // trivial clip rejection
-        d->wlt0 = (w < 0);
+        d->wlt0 = (out.w < 0);
 		uint8_t cr = 0;
-        cr = !(z > w);
-		cr = (cr << 1) | !(z < -w);
-		cr = (cr << 1) | !(y >  w);
-		cr = (cr << 1) | !(y < -w);
-		cr = (cr << 1) | !(x >  w);
-		cr = (cr << 1) | !(x < -w);
+        cr = !(out.z > out.w);
+		cr = (cr << 1) | !(out.z < -out.w);
+		cr = (cr << 1) | !(out.y >  out.w);
+		cr = (cr << 1) | !(out.y < -out.w);
+		cr = (cr << 1) | !(out.x >  out.w);
+		cr = (cr << 1) | !(out.x < -out.w);
 		d->clip_rej = cr;
 //		if(z < -w) nearz_clip_verts++;
     }
@@ -1797,7 +1725,7 @@ static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t de
         glLoadMatrixf((const float*) rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1]);
         matrix_dirty = 0;
     }
-    fast_mat_load(&rsp.MP_matrix);
+    shz_xmtrx_load_4x4(&rsp.MP_matrix);
     total_verts += n_vertices;
     if (rsp.geometry_mode & G_LIGHTING) {
         if (rsp.lights_changed) {

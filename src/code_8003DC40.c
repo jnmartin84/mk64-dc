@@ -240,7 +240,6 @@ void func_8003F46C(Player* player, Vec3f arg1, Vec3f arg2, Vec3f arg3, f32* arg4
         player->kartHopVelocity = 0.0f;
         return;
     } else {
-#if !ENABLE_CUSTOM_COURSE_ENGINE
         switch (gCurrentCourseId) {
             case COURSE_MARIO_RACEWAY:
                 apply_surface_push_and_slope_response(player, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
@@ -265,9 +264,6 @@ void func_8003F46C(Player* player, Vec3f arg1, Vec3f arg2, Vec3f arg3, f32* arg4
                 apply_surface_push_and_slope_response(player, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
                 break;
         }
-#else
-
-#endif
         if (player->effects & UNKNOWN_EFFECT_0x10000) {
             player->unk_DAC = 0.5f;
         }

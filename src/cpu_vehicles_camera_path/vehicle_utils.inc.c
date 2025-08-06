@@ -73,7 +73,6 @@ void spawn_course_vehicles(void) {
     f32 origXPos;
     f32 origZPos;
 
-#if !ENABLE_CUSTOM_COURSE_ENGINE
     switch (gCurrentCourseId) {
         case COURSE_KALAMARI_DESERT:
             for (loopIndex = 0; loopIndex < NUM_TRAINS; loopIndex++) {
@@ -165,9 +164,6 @@ void spawn_course_vehicles(void) {
             }
             break;
     }
-#else
-
-#endif
 }
 
 void set_vehicle_pos_pathPoint(TrainCarStuff* trainCar, Path2D* posXZ, u16 pathPoint) {
