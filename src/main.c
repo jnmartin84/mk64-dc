@@ -514,17 +514,21 @@ void rainbow_print(int x, int y, char *text) {
 
 int main(UNUSED int argc, UNUSED char **argv) {
     thd_set_hz(300);
+
     must_inval_bg = 0;
     stupid_fucking_faces_hack = 0;
+
     wasSoftReset = (s16)0;
+
     gPhysicalFramebuffers[0] = fb[0];
     gPhysicalFramebuffers[1] = fb[1];
     gPhysicalFramebuffers[2] = fb[2];
+
     dbgio_enable();
     dbglog_set_level(0);
-//    dbgio_dev_select("fb");
-//    dbgio_printf("\n\n\n\n\n\n\n                Loading game data...\n");
+
     thd_sleep(375);
+
     FILE* fntest = fopen("/pc/dc_data/common_data.bin", "rb");
     if (NULL == fntest) {
         fntest = fopen("/cd/dc_data/common_data.bin", "rb");
@@ -534,29 +538,23 @@ int main(UNUSED int argc, UNUSED char **argv) {
             while(1){}
            exit(-1);
         } else {
-//            dbgio_printf("             using /cd for assets\n");
             fnpre = "/cd";
         }
     } else {
-//        dbgio_printf("             using /pc for assets\n");
         fnpre = "/pc";
     }
 
     fclose(fntest);
     thd_sleep(375);
-//    dbgio_disable();
+    dbgio_disable();
     setup_audio_data();
-//    dbgio_enable();
-//    dbgio_dev_select("fb");
-//    dbgio_printf("\n\n\n\n\n\n\n\n\n             Ready.\n");
-//    dbgio_disable();
 
     //profiler_init("/pc/audiogmon.out");
     //profiler_start();
 
     rainbow_print(180+18, 260-24, "Welcome to Mario Kart :)");
 
-    thd_sleep(2000);
+    thd_sleep(1500);
     thread5_game_loop(NULL);
 
     return 0;
