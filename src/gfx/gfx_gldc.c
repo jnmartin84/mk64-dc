@@ -753,6 +753,13 @@ static void one_minus_env_plus_prim_setup_pre(void* vbo, size_t num_tris) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     // modulate texture
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+
+    glEnable(GL_BLEND);
+    glDisable(GL_TEXTURE_2D);
+    glBlendFunc(GL_ONE, GL_ONE);
+    // render opaque black untextured polys first to reset bg alpha
+
     // store copy of original vertex colors
     // AND
     // set them to solid black with 255 alpha
@@ -764,7 +771,9 @@ static void one_minus_env_plus_prim_setup_pre(void* vbo, size_t num_tris) {
         tris[i].color.array.b = 0;
         tris[i].color.array.a = 255;
     }
-    glEnable(GL_BLEND);
+    glDrawArrays(GL_TRIANGLES, 0, 3 * num_tris);
+
+    glEnable(GL_TEXTURE_2D);
     // generate a solid "inverse cutout" texture
     // all opaque pixels become one solid color
     // transparent stay transparent
