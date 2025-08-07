@@ -1103,7 +1103,10 @@ void mtxf_translate_rotate(Mat4 dest, Vec3f pos, Vec3s orientation) {
     dest[2][2] = cosX * cosY;
     dest[3][2] = pos[2];
 #else
-    shz_xmtrx_init_rotation(SHZ_ANGLE(orientation[0]), SHZ_ANGLE(orientation[1]), SHZ_ANGLE(orientation[2]));
+    shz_xmtrx_init_rotation_x(SHZ_ANGLE(orientation[0]));
+    shz_xmtrx_apply_rotation_y(SHZ_ANGLE(orientation[1]));
+    shz_xmtrx_apply_rotation_z(SHZ_ANGLE(orientation[2]));
+    //shz_xmtrx_init_rotation(SHZ_ANGLE(orientation[0]), SHZ_ANGLE(orientation[1]), SHZ_ANGLE(orientation[2]));
     shz_xmtrx_set_translation(pos[0], pos[1], pos[2]);
     shz_xmtrx_store_4x4(dest);
 #endif

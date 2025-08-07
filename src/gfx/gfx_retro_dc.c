@@ -24,6 +24,7 @@
 #include "gl_fast_vert.h"
 
 #include "sh4zam.h"
+#include <kos.h>
 
 extern int in_intro;
 
@@ -95,52 +96,32 @@ struct __attribute__((aligned(32))) LoadedVertex {
 	uint8_t	wlt0;
 };
 
-
-static inline uint64_t pack_key(uint32_t a, uint16_t b, uint16_t c, uint8_t d, uint8_t e) {
-    uint64_t key = 0;
-    key |= ((uint64_t)((a >> 5) & 0x7FFFF)) << 42; // 19 bits
-    key |= ((uint64_t)b & 0xFFFF) << 26;           // 16 bits
-    key |= ((uint64_t)c & 0xFFFF) << 10;           // 16 bits
-    key |= ((uint64_t)d & 0xFF)   << 2;            // 8 bits
-    key |= ((uint64_t)(e & 0x3));                  // 2 bits
-    return key;
-}
-
-
 // exactly one cache-line in size
 struct TextureHashmapNode {
 	// 0
 	struct TextureHashmapNode* next;
 	// 4
 	uint32_t texture_id;
-#if 0
 	// 8
 	const uint8_t* texture_addr;
+	// 12
+	uint32_t tmem;
 	// 16
 	uint16_t uls;
 	// 18
 	uint16_t ult;
 	// 20
 	uint8_t fmt, siz;
-#endif
-	// 8
-	uint64_t key;
-	// 16
-	uint32_t tmem;
-	// 20
-	uint8_t dirty;
-	// 21
-	uint8_t linear_filter;
 	// 22
-	uint8_t cms, cmt;
+	uint8_t dirty;
 	// 23
-	uint8_t pad1;
+	uint8_t linear_filter;
 	// 24
-	uint32_t pad2;
-	// 28
-	uint32_t pad3;
-	// 28
-//	uint32_t pad3;
+	uint8_t cms, cmt;
+	// 26
+	uint32_t pad4;
+	// 30
+	uint16_t pad2;
 };
 
 struct TextureHashmapNode oops_node;
@@ -351,27 +332,6 @@ void gfx_clear_texidx(GLuint texidx);
 
 void reset_texcache(void) {
 	gfx_texture_cache.pool_pos = 0;
-//	memset(&gfx_texture_cache, 0, sizeof(gfx_texture_cache));
-}
-
-static inline uint32_t unpack_A(uint64_t key) {
-    // Extract 19-bit field
-    uint32_t a19 = (uint32_t)((key >> 42) & 0x7FFFF);
-
-    // Shift back to original position (restore the lost low 5 bits as 0s)
-//    uint32_t a = (a19 << 5);
-
-    // Restore the constant top 8 bits (0x8C per your earlier note)
-//    a |= 0x8C000000;
-
-    return a19;
-}
-
-static inline uint64_t hash64(uint64_t key) {
-    uint64_t h = 1469598103934665603ULL; // FNV offset basis
-    h ^= key; 
-    h *= 1099511628211ULL;               // FNV prime
-    return h;
 }
 
 void gfx_texture_cache_invalidate(void* orig_addr) {
@@ -379,16 +339,12 @@ void gfx_texture_cache_invalidate(void* orig_addr) {
 
 	size_t hash = (uintptr_t) segaddr;
 	hash = (hash >> 5) & 0x3ff;
-
-
-	uintptr_t addrcomp = ((uintptr_t)segaddr>>5)&0x7FFFF;
 	struct TextureHashmapNode** node = &gfx_texture_cache.hashmap[hash];
     __builtin_prefetch(*node);
 	uintptr_t last_node = &gfx_texture_cache.pool[gfx_texture_cache.pool_pos];
 	while (*node != NULL && ((uintptr_t)*node < last_node)) {
 		__builtin_prefetch((*node)->next);
-		uintptr_t unpaddr = (uintptr_t)unpack_A((*node)->key);
-		if (unpaddr == addrcomp) {
+		if ((*node)->texture_addr == segaddr) {
 			(*node)->dirty = 1;
 		}
 		node = &(*node)->next;
@@ -399,15 +355,11 @@ void gfx_opengl_replace_texture(const uint8_t* rgba32_buf, int width, int height
 
 extern void gfx_opengl_set_tile_addr(int tile, GLuint addr);
 
-//int max_lookup = 0;
-
 static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, struct TextureHashmapNode** n, const uint8_t* orig_addr,
 										uint32_t tmem, uint32_t fmt, uint32_t siz, uint16_t uls, uint16_t ult) {
 	void* segaddr = segmented_to_virtual((void *)orig_addr);
 	size_t hash = (uintptr_t) segaddr;
 	hash = (hash >> 5) & 0x3ff;
-
-	uint64_t newkey = pack_key(segaddr,uls,ult,fmt,siz);
 
 	struct TextureHashmapNode** node = &gfx_texture_cache.hashmap[hash];
 	if ((uintptr_t)rdp.loaded_texture[tile].addr < 0x8c010000u) {
@@ -421,9 +373,8 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 	while (*node != NULL && ((uintptr_t)*node < last_node)) {
 		__builtin_prefetch((*node)->next);
 
-		if ((*node)->key == newkey
-			/* (*node)->texture_addr == segaddr && (*node)->ult == ult && (*node)->uls == uls &&
-			(*node)->fmt == fmt && (*node)->siz == siz */) {
+		if ((*node)->texture_addr == segaddr && (*node)->ult == ult && (*node)->uls == uls &&
+			(*node)->fmt == fmt && (*node)->siz == siz) {
 			gfx_rapi->select_texture(tile, (*node)->texture_id);
 			gfx_opengl_set_tile_addr(tile, segaddr);
 
@@ -449,27 +400,19 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 	}
 
 	*node = &gfx_texture_cache.pool[gfx_texture_cache.pool_pos++];
-//	if (gfx_texture_cache.pool_pos > max_lookup) {
-//		max_lookup = gfx_texture_cache.pool_pos;
-//		printf("max pool pos %d\n", max_lookup);
-//	}
-//	if ((*node)->texture_addr == NULL) {
-	if ((*node)->key == 0) {
+	if ((*node)->texture_addr == NULL) {
 		(*node)->texture_id = gfx_rapi->new_texture();
 	}
 	gfx_rapi->select_texture(tile, (*node)->texture_id);
 	gfx_opengl_set_tile_addr(tile, segaddr);
 
 	gfx_rapi->set_sampler_parameters(tile, 0, 0, 0);
-#if 0
+
 	(*node)->texture_addr = segaddr;
 	(*node)->fmt = fmt;
 	(*node)->siz = siz;
 	(*node)->uls = uls;
 	(*node)->ult = ult;
-#endif
-	(*node)->key = pack_key(segaddr,uls,ult,fmt,siz);
-
 	(*node)->dirty = 0;
 
 	(*node)->tmem = tmem;
@@ -1301,7 +1244,7 @@ static void __attribute__((noinline)) import_texture(int tile) {
 }
 
 static void gfx_normalize_vector(float v[3]) {
-#if 0
+#if 1
 #if 0
 	float s = sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 	v[0] /= s;
@@ -1327,10 +1270,7 @@ static void gfx_transposed_matrix_mul(float res[3], const float a[3], const floa
 	res[2] = a[0] * b[2][0] + a[1] * b[2][1] + a[2] * b[2][2];
 #endif
 #else
-    shz_vec3_t out = shz_matrix4x4_trans_vec3_transpose(b, (shz_vec3_t) { .x = a[0], .y = a[1], .z = a[2] });
-    res[0] = out.x;
-    res[1] = out.y;
-    res[2] = out.z;
+    *((shz_vec3_t *)res) = shz_matrix4x4_trans_vec3_transpose(b, *((shz_vec3_t *)a));
 #endif
 }
 
@@ -1585,11 +1525,8 @@ static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, siz
         struct LoadedVertex* d = &rsp.loaded_vertices[dest_index];
 
         float x, y, z, w;
-        x = v->ob[0];
-        y = v->ob[1];
-        z = v->ob[2];
         // This copying in + out shit should get optimized away
-        shz_vec4_t out = shz_xmtrx_trans_vec4((shz_vec4_t) { .x = x, .y = y, .z = z, .w = 1.0f });
+        shz_vec4_t out = shz_xmtrx_trans_vec4((shz_vec4_t) { .x = v->ob[0], .y = v->ob[1], .z = v->ob[2], .w = 1.0f });
         x = out.x;
         y = out.y;
         z = out.z;
@@ -1604,8 +1541,8 @@ static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, siz
 
         if (rsp.current_num_lights == 2) {
             float intensity;
-            intensity = recip127 * shz_dot8f(vn->n[0], vn->n[1], vn->n[2], 0, rsp.current_lights_coeffs[0][0],
-                                             rsp.current_lights_coeffs[0][1], rsp.current_lights_coeffs[0][2], 0);
+            intensity = recip127 * shz_dot8f(vn->n[0], vn->n[1], vn->n[2], 0.0f, rsp.current_lights_coeffs[0][0],
+                                             rsp.current_lights_coeffs[0][1], rsp.current_lights_coeffs[0][2], 0.0f);
 
             if (intensity > 0.0f) {
                 r += intensity * rsp.current_lights[0].col[0];
@@ -1622,12 +1559,18 @@ static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, siz
         if (rsp.geometry_mode & G_TEXTURE_GEN) {
             float dotx; // = 0,
             float doty; // = 0;
-            dotx = recip127 * shz_dot8f(vn->n[0], vn->n[1], vn->n[2], 0, rsp.current_lookat_coeffs[0][0],
-                                        rsp.current_lookat_coeffs[0][1], rsp.current_lookat_coeffs[0][2], 0);
+            {
+                register float fr8  asm ("fr8")  = vn->n[0];
+                register float fr9  asm ("fr9")  = vn->n[1];
+                register float fr10 asm ("fr10") = vn->n[2];
+                register float fr11 asm ("fr11") = 0;//vn->n[3];
+ 
+                dotx = recip127 * shz_dot8f(fr8, fr9, fr10, fr11, rsp.current_lookat_coeffs[0][0],
+                                            rsp.current_lookat_coeffs[0][1], rsp.current_lookat_coeffs[0][2], 0);
 
-            doty = recip127 * shz_dot8f(vn->n[0], vn->n[1], vn->n[2], 0, rsp.current_lookat_coeffs[1][0],
-                                        rsp.current_lookat_coeffs[1][1], rsp.current_lookat_coeffs[1][2], 0);
-
+                doty = recip127 * shz_dot8f(fr8, fr9, fr10, fr11, rsp.current_lookat_coeffs[1][0],
+                                            rsp.current_lookat_coeffs[1][1], rsp.current_lookat_coeffs[1][2], 0);
+            }
             if (dotx < -1.0f)
                 dotx = -1.0f;
             else if (dotx > 1.0f)
@@ -1688,12 +1631,7 @@ static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t
         d->z = v->ob[2];
         d->w = 1.0f;
 
-		shz_vec4_t out = shz_xmtrx_trans_vec4((shz_vec4_t) { .x = d->x, .y = d->y, .z = d->z, .w = 1.0f });
-
-		d->_x = out.x;
-        d->_y = out.y;
-        d->_z = out.z;
-        d->_w = out.w;
+		*((shz_vec4_t *)&d->_x) = shz_xmtrx_trans_vec4(*((shz_vec4_t *)&d->x));
 
         d->color.r = v->cn[0];
         d->color.g = v->cn[1];
@@ -1704,14 +1642,14 @@ static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t
         d->v = (float)(v->tc[1] * rsp.texture_scaling_factor.t >> 16);
 
         // trivial clip rejection
-        d->wlt0 = (out.w < 0);
+        d->wlt0 = (d->_w < 0);
 		uint8_t cr = 0;
-        cr = !(out.z > out.w);
-		cr = (cr << 1) | !(out.z < -out.w);
-		cr = (cr << 1) | !(out.y >  out.w);
-		cr = (cr << 1) | !(out.y < -out.w);
-		cr = (cr << 1) | !(out.x >  out.w);
-		cr = (cr << 1) | !(out.x < -out.w);
+        cr = !(d->_z > d->_w);
+		cr = (cr << 1) | !(d->_z < -d->_w);
+		cr = (cr << 1) | !(d->_y >  d->_w);
+		cr = (cr << 1) | !(d->_y < -d->_w);
+		cr = (cr << 1) | !(d->_x >  d->_w);
+		cr = (cr << 1) | !(d->_x < -d->_w);
 		d->clip_rej = cr;
 //		if(z < -w) nearz_clip_verts++;
     }
@@ -1762,8 +1700,10 @@ extern s32 gIsMirrorMode;
 */
 
 static inline float approx_recip_sign(float v) {
-	float _v = 1.0f / sqrtf(v * v);
-	return copysignf(_v, v);
+	return shz_fast_invf(v);
+    //float _v = 1.0f / sqrtf(v * v);
+	//return copysignf(_v, v);
+    //return _v;
 }
 
 int total_tri=0;
@@ -1958,8 +1898,8 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
                 u += 0.5f;
                 v += 0.5f;
             }
-            buf_vbo[buf_num_vert].texture.u = u / (float) tex_width;
-            buf_vbo[buf_num_vert].texture.v = v / (float) tex_height;
+            buf_vbo[buf_num_vert].texture.u = u * shz_inverse_posf((float) tex_width);
+            buf_vbo[buf_num_vert].texture.v = v * shz_inverse_posf((float) tex_height);
         }
 
         int j, k;
@@ -1968,8 +1908,9 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         uint32_t color_g = 0;
         uint32_t color_b = 0;
         uint32_t color_a = 0;
-
-		if (num_inputs == 2) {
+{
+		{
+        if (num_inputs == 2) {
             int i0 = comb->shader_input_mapping[0][1] == CC_PRIM;
             int i2 = comb->shader_input_mapping[0][0] == CC_ENV;
 
@@ -2051,7 +1992,7 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
                 gn = (float) color_g;
                 bn = (float) color_b;
                 an = (float) color_a;
-                float maxc = 255.0f / (float) max_c;
+                float maxc = 255.0f * shz_inverse_posf((float) max_c);
                 rn *= maxc;
                 gn *= maxc;
                 bn *= maxc;
@@ -2068,7 +2009,7 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
             }
         } else {
         thenextthing:
- 		if (!in_intro) {
+		if (!in_intro) {
 			if ((v_arr[i]->color.a == 255) && (v_arr[i]->color.b == 0) &&
 			(v_arr[i]->color.g == 0) && (v_arr[i]->color.a == 255)) {
 				buf_vbo[buf_num_vert].color.packed = PACK_ARGB8888(v_arr[i]->color.r, v_arr[i]->color.g,
@@ -2114,8 +2055,10 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
                 }
             }
         }
+	}
+}
 nextvert:
-		buf_num_vert++;
+        buf_num_vert++;
         buf_vbo_len += sizeof(dc_fast_t);
     }
     buf_vbo_num_tris += 1;
@@ -2258,8 +2201,8 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 				u += 0.5f;
 				v += 0.5f;
 			}
-			quad_vbo[tri_num_vert].texture.u = u / tex_width;
-			quad_vbo[tri_num_vert].texture.v = v / tex_height;
+			quad_vbo[tri_num_vert].texture.u = u * shz_inverse_posf(tex_width);
+			quad_vbo[tri_num_vert].texture.v = v * shz_inverse_posf(tex_height);
 		}
 
 		struct RGBA white = (struct RGBA) { 0xff, 0xff, 0xff, 0xff };
@@ -2300,7 +2243,7 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 			rn = (float) color_r;
 			gn = (float) color_g;
 			bn = (float) color_b;
-			float maxc = 255.0f / (float) max_c;
+			float maxc = 255.0f * shz_inverse_posf((float) max_c);
 			rn *= maxc;
 			gn *= maxc;
 			bn *= maxc;
@@ -2479,11 +2422,12 @@ static void  gfx_dp_set_tile_size(uint8_t tile, uint16_t uls, uint16_t ult, uint
 		rdp.textures_changed[1] = 1;
 	}
 }
+
+
 extern uint16_t common_tlut_hud_type_C_rank_font[];
 extern uint16_t common_tlut_finish_line_banner[];
 static void  __attribute__((noinline)) gfx_dp_load_tlut(UNUSED uint8_t tile, UNUSED uint32_t high_index) {
 	rdp.palette = rdp.texture_to_load.addr;
-#if 1
 	uint32_t* srcp = (uint32_t *)segmented_to_virtual((void*)rdp.texture_to_load.addr);
 	uint16_t clearcolor;
 	int hud_thing = (srcp == segmented_to_virtual(common_tlut_hud_type_C_rank_font));
@@ -2522,26 +2466,6 @@ static void  __attribute__((noinline)) gfx_dp_load_tlut(UNUSED uint8_t tile, UNU
 		}	
 		*tlp32++ = (c2 << 16) | c1;
 	}
-#else
-	uint16_t* srcp = segmented_to_virtual((void*)rdp.texture_to_load.addr);
-	if (((uintptr_t)srcp & 3) == 0)
-		printf("word tlut\n");
-
-	uint16_t* tlp = tlut;
-	for (int i = 0; i < 256; i++) {
-		uint16_t c = *srcp++;
-		uint8_t a = !!(c & 0x100);
-		if (a) {
-			c = (c << 8) | ((c >> 8) & 0xff);
-			uint8_t r = c >> 11;
-			uint8_t g = (c >> 6) & 0x1f;
-			uint8_t b = (c >> 1) & 0x1f;
-			*tlp++ = 0x8000 | (r << 10) | (g << 5) | (b);
-		} else {
-			*tlp++ = 0;
-		}
-	}
-#endif
 }
 
 static void  gfx_dp_load_block(UNUSED uint8_t tile, UNUSED uint32_t uls, UNUSED uint32_t ult, uint32_t lrs,
@@ -3210,3 +3134,4 @@ void gfx_end_frame(void) {
 		gfx_wapi->swap_buffers_end();
 	}
 }
+
