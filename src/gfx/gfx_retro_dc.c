@@ -96,32 +96,50 @@ struct __attribute__((aligned(32))) LoadedVertex {
 	uint8_t	wlt0;
 };
 
+static inline uint64_t pack_key(uint32_t a, uint16_t b, uint16_t c, uint8_t d, uint8_t e) {
+    uint64_t key = 0;
+    key |= ((uint64_t)((a >> 5) & 0x7FFFF)) << 42; // 19 bits
+    key |= ((uint64_t)b & 0xFFFF) << 26;           // 16 bits
+    key |= ((uint64_t)c & 0xFFFF) << 10;           // 16 bits
+    key |= ((uint64_t)d & 0xFF)   << 2;            // 8 bits
+    key |= ((uint64_t)(e & 0x3));                  // 2 bits
+    return key;
+}
+
 // exactly one cache-line in size
 struct TextureHashmapNode {
 	// 0
 	struct TextureHashmapNode* next;
 	// 4
 	uint32_t texture_id;
+#if 0
 	// 8
 	const uint8_t* texture_addr;
-	// 12
-	uint32_t tmem;
 	// 16
 	uint16_t uls;
 	// 18
 	uint16_t ult;
 	// 20
 	uint8_t fmt, siz;
-	// 22
+#endif
+	// 8
+	uint64_t key;
+	// 16
+	uint32_t tmem;
+	// 20
 	uint8_t dirty;
-	// 23
+	// 21
 	uint8_t linear_filter;
-	// 24
+	// 22
 	uint8_t cms, cmt;
-	// 26
-	uint32_t pad4;
-	// 30
-	uint16_t pad2;
+	// 23
+	uint8_t pad1;
+	// 24
+	uint32_t pad2;
+	// 28
+	uint32_t pad3;
+	// 28
+//	uint32_t pad3;
 };
 
 struct TextureHashmapNode oops_node;
@@ -334,17 +352,41 @@ void reset_texcache(void) {
 	gfx_texture_cache.pool_pos = 0;
 }
 
+static inline uint32_t unpack_A(uint64_t key) {
+    // Extract 19-bit field
+    uint32_t a19 = (uint32_t)((key >> 42) & 0x7FFFF);
+
+    // Shift back to original position (restore the lost low 5 bits as 0s)
+//    uint32_t a = (a19 << 5);
+
+    // Restore the constant top 8 bits (0x8C per your earlier note)
+//    a |= 0x8C000000;
+
+    return a19;
+}
+
+static inline uint64_t hash64(uint64_t key) {
+    uint64_t h = 1469598103934665603ULL; // FNV offset basis
+    h ^= key; 
+    h *= 1099511628211ULL;               // FNV prime
+    return h;
+}
+
 void gfx_texture_cache_invalidate(void* orig_addr) {
  	void* segaddr = segmented_to_virtual(orig_addr);
 
 	size_t hash = (uintptr_t) segaddr;
 	hash = (hash >> 5) & 0x3ff;
+
+
+	uintptr_t addrcomp = ((uintptr_t)segaddr>>5)&0x7FFFF;
 	struct TextureHashmapNode** node = &gfx_texture_cache.hashmap[hash];
-    __builtin_prefetch(*node);
+	__builtin_prefetch(*node);
 	uintptr_t last_node = &gfx_texture_cache.pool[gfx_texture_cache.pool_pos];
 	while (*node != NULL && ((uintptr_t)*node < last_node)) {
 		__builtin_prefetch((*node)->next);
-		if ((*node)->texture_addr == segaddr) {
+		uintptr_t unpaddr = (uintptr_t)unpack_A((*node)->key);
+		if (unpaddr == addrcomp) {
 			(*node)->dirty = 1;
 		}
 		node = &(*node)->next;
@@ -361,6 +403,8 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 	size_t hash = (uintptr_t) segaddr;
 	hash = (hash >> 5) & 0x3ff;
 
+	uint64_t newkey = pack_key(segaddr,uls,ult,fmt,siz);
+
 	struct TextureHashmapNode** node = &gfx_texture_cache.hashmap[hash];
 	if ((uintptr_t)rdp.loaded_texture[tile].addr < 0x8c010000u) {
 		gfx_rapi->select_texture(tile, oops_texture_id);
@@ -373,8 +417,9 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 	while (*node != NULL && ((uintptr_t)*node < last_node)) {
 		__builtin_prefetch((*node)->next);
 
-		if ((*node)->texture_addr == segaddr && (*node)->ult == ult && (*node)->uls == uls &&
-			(*node)->fmt == fmt && (*node)->siz == siz) {
+		if ((*node)->key == newkey
+			/* (*node)->texture_addr == segaddr && (*node)->ult == ult && (*node)->uls == uls &&
+			(*node)->fmt == fmt && (*node)->siz == siz */) {
 			gfx_rapi->select_texture(tile, (*node)->texture_id);
 			gfx_opengl_set_tile_addr(tile, segaddr);
 
@@ -400,19 +445,23 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 	}
 
 	*node = &gfx_texture_cache.pool[gfx_texture_cache.pool_pos++];
-	if ((*node)->texture_addr == NULL) {
+//	if ((*node)->texture_addr == NULL) {
+	if ((*node)->key == 0) {
 		(*node)->texture_id = gfx_rapi->new_texture();
 	}
 	gfx_rapi->select_texture(tile, (*node)->texture_id);
 	gfx_opengl_set_tile_addr(tile, segaddr);
 
 	gfx_rapi->set_sampler_parameters(tile, 0, 0, 0);
-
+#if 0
 	(*node)->texture_addr = segaddr;
 	(*node)->fmt = fmt;
 	(*node)->siz = siz;
 	(*node)->uls = uls;
 	(*node)->ult = ult;
+#endif
+	(*node)->key = pack_key(segaddr,uls,ult,fmt,siz);
+
 	(*node)->dirty = 0;
 
 	(*node)->tmem = tmem;
@@ -420,6 +469,7 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 	(*node)->cmt = 0;
 	(*node)->linear_filter = 0;
 	(*node)->next = NULL;
+
 	*n = *node;
 
 	return 0;
