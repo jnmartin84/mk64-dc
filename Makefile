@@ -336,7 +336,7 @@ ifeq ($(TARGET_N64),1)
 endif
 
 ifeq ($(TARGET_DC),1)
-  TARGET_CFLAGS := -MMD -MP -MT -DGBI_FLOATS -fno-strict-aliasing -Wall -Os -DTARGET_DC -D_LANGUAGE_C -DTARGET_DC -D_LANGUAGE_C  -Iinclude -Ibuild/us -Ibuild/us/include -Isrc -Isrc/racing -Isrc/ending -I. -DVERSION_US=1 -DF3DEX_GBI=1 -DF3D_OLD=1 -D_LANGUAGE_C=1 -DNON_MATCHING=1 -DAVOID_UB=1 -DAVOID_UB=1 -DGCC=1 -g3 -Wall -Wextra -DENABLE_OPENGL -Os -Wno-incompatible-pointer-types -Wno-int-conversion
+  TARGET_CFLAGS := -DGBI_FLOATS -fno-strict-aliasing -Wall -Os -DTARGET_DC -D_LANGUAGE_C -DTARGET_DC -D_LANGUAGE_C  -Iinclude -Ibuild/us -Ibuild/us/include -Isrc -Isrc/racing -Isrc/ending -I. -DVERSION_US=1 -DF3DEX_GBI=1 -DF3D_OLD=1 -D_LANGUAGE_C=1 -DNON_MATCHING=1 -DAVOID_UB=1 -DAVOID_UB=1 -DGCC=1 -g3 -Wall -Wextra -DENABLE_OPENGL -Os -Wno-incompatible-pointer-types -Wno-int-conversion
   CC_CFLAGS :=
 endif
 
