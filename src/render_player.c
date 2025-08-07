@@ -1073,7 +1073,7 @@ void func_80021DA8(void) {
 }
 
 void mtxf_translate_rotate(Mat4 dest, Vec3f pos, Vec3s orientation) {
-#if 0
+#if 1
     f32 sinX;// = sins(orientation[0]);
     f32 cosX;// = coss(orientation[0]);
     f32 sinY;// = sins(orientation[1]);
