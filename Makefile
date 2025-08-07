@@ -336,9 +336,7 @@ ifeq ($(TARGET_N64),1)
 endif
 
 ifeq ($(TARGET_DC),1)
-  TARGET_CFLAGS := -DGBI_FLOATS -fno-strict-aliasing -Wall -Os -DTARGET_DC -D_LANGUAGE_C -DTARGET_DC -D_LANGUAGE_C  -Iinclude -IlibGL-1.1.0/include -Ibuild/us -Ibuild/us/include -Isrc -Isrc/racing -Isrc/ending -I. -DVERSION_US=1 -DF3DEX_GBI=1 -DF3D_OLD=1 -D_LANGUAGE_C=1 -DNON_MATCHING=1 -DAVOID_UB=1 -DAVOID_UB=1 -DGCC=1 -g3 -Wall -Wextra -DENABLE_OPENGL -Os -Wno-incompatible-pointer-types -Wno-int-conversion
-#  TARGET_CFLAGS := -fno-strict-aliasing -Wall -Os -DTARGET_DC -D_LANGUAGE_C -DTARGET_DC -D_LANGUAGE_C  -Iinclude -IlibGL-1.1.0/include -Ibuild/us -Ibuild/us/include -Isrc -Isrc/racing -Isrc/ending -I. -DVERSION_US=1 -DF3DEX_GBI=1 -DF3D_OLD=1 -D_LANGUAGE_C=1 -DNON_MATCHING=1 -DAVOID_UB=1 -DAVOID_UB=1 -DGCC=1 -g3 -Wall -Wextra -Wno-incompatible-pointer-types -Wno-int-conversion -DENABLE_OPENGL -Os
-#  TARGET_CFLAGS := -Os -DTARGET_DC -D_LANGUAGE_C
+  TARGET_CFLAGS := -MMD -MP -MT -DGBI_FLOATS -fno-strict-aliasing -Wall -Os -DTARGET_DC -D_LANGUAGE_C -DTARGET_DC -D_LANGUAGE_C  -Iinclude -Ibuild/us -Ibuild/us/include -Isrc -Isrc/racing -Isrc/ending -I. -DVERSION_US=1 -DF3DEX_GBI=1 -DF3D_OLD=1 -D_LANGUAGE_C=1 -DNON_MATCHING=1 -DAVOID_UB=1 -DAVOID_UB=1 -DGCC=1 -g3 -Wall -Wextra -DENABLE_OPENGL -Os -Wno-incompatible-pointer-types -Wno-int-conversion
   CC_CFLAGS :=
 endif
 
@@ -439,9 +437,6 @@ ifeq ($(GCC),1)
   $(BUILD_DIR)/src/racing/math_util.o: TARGET_CFLAGS += -O3
   $(BUILD_DIR)/src/math_util_2.o: TARGET_CFLAGS += -O3
   $(BUILD_DIR)/src/racing/collision.o: TARGET_CFLAGS += -O3
-  $(BUILD_DIR)/src/main.o:                          OPT_FLAGS := -g
-  $(BUILD_DIR)/src/racing/skybox_and_splitscreen.o: OPT_FLAGS := -g
-  $(BUILD_DIR)/src/racing/render_courses.o:         OPT_FLAGS := -g
   $(BUILD_DIR)/courses/%/course_textures.linkonly.o: TARGET_CFLAGS += -fno-lto
   $(BUILD_DIR)/courses/%/course_displaylists.inc.o: TARGET_CFLAGS += -fno-lto
   $(BUILD_DIR)/courses/%/course_vertices.inc.o: TARGET_CFLAGS += -fno-lto
@@ -453,12 +448,7 @@ ifeq ($(GCC),1)
   $(BUILD_DIR)/courses/staff_ghost_data.o: TARGET_CFLAGS += -fno-lto
   $(SAFE_C_FILES): OPT_FLAGS := 
   $(SAFE_C_FILES): CC        := kos-cc
-#  $(SAFE_C_FILES): MIPSISET  := -mips3
-#  $(SAFE_C_FILES): CFLAGS    := -G 0 $(OPT_FLAGS) $(TARGET_CFLAGS) $(MIPSISET) $(DEF_INC_CFLAGS) -mno-shared -march=vr4300 -mfix4300 -mabi=32 -mhard-float \
- #  -mdivide-breaks -fno-stack-protector -fno-common -fno-zero-initialized-in-bss -fno-PIC -mno-abicalls -fno-strict-aliasing -fno-inline-functions          \
-  # -ffreestanding -fwrapv -Wall -Wextra -ffast-math -fno-unsafe-math-optimizations
   $(SAFE_C_FILES): CC_CHECK := kos-cc
-# -m32
 endif
 
 
