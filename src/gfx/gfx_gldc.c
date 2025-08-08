@@ -223,7 +223,6 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
     glVertexPointer(3, GL_FLOAT, sizeof(dc_fast_t), &cur_buf[0].vert);
     glTexCoordPointer(2, GL_FLOAT, sizeof(dc_fast_t), &cur_buf[0].texture);
     glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(dc_fast_t), &cur_buf[0].color);
-PVR_SET(PVR_FB_CFG_2, 0x00000001);
     // have texture(s), specify same texcoords for every active texture
     if (prg->texture_used[0] || prg->texture_used[1]) {
         glEnable(GL_TEXTURE_2D);
@@ -753,6 +752,13 @@ static void one_minus_env_plus_prim_setup_pre(void* vbo, size_t num_tris) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     // modulate texture
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+
+    glEnable(GL_BLEND);
+    glDisable(GL_TEXTURE_2D);
+    glBlendFunc(GL_ONE, GL_ONE);
+    // render opaque black untextured polys first to reset bg alpha
+
     // store copy of original vertex colors
     // AND
     // set them to solid black with 255 alpha
@@ -764,7 +770,9 @@ static void one_minus_env_plus_prim_setup_pre(void* vbo, size_t num_tris) {
         tris[i].color.array.b = 0;
         tris[i].color.array.a = 255;
     }
-    glEnable(GL_BLEND);
+    glDrawArrays(GL_TRIANGLES, 0, 3 * num_tris);
+
+    glEnable(GL_TEXTURE_2D);
     // generate a solid "inverse cutout" texture
     // all opaque pixels become one solid color
     // transparent stay transparent
@@ -1113,6 +1121,7 @@ static void gfx_opengl_init(void) {
     config.initial_immediate_capacity = 0;
     glKosInitEx(&config);
     // glKosInit();
+#if 0
 #ifdef __DREAMCAST__
     if (vid_check_cable() != CT_VGA)
     {
@@ -1122,6 +1131,7 @@ static void gfx_opengl_init(void) {
     {
         vid_set_mode(DM_640x480_VGA, PM_RGB565);
     }
+#endif
 #endif
     //    getRamStatus();
     fflush(stdout);
@@ -1190,9 +1200,9 @@ static void gfx_opengl_start_frame(void) {
     glDisable(GL_SCISSOR_TEST);
     glDepthMask(GL_TRUE); // Must be set to clear Z-buffer
 
-    glClearColor((float)D_800DC5D0/255.0f, (float)D_800DC5D4/255.0f,
-    (float)D_800DC5D8/255.0f,1.0f);
-//    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+//    glClearColor((float)D_800DC5D0/255.0f, (float)D_800DC5D4/255.0f,
+  //  (float)D_800DC5D8/255.0f,1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_SCISSOR_TEST);
     newest_texture = 0;

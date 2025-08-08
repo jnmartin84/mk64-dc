@@ -1598,14 +1598,9 @@ void update_player(s32 playerId) {
                 if (D_801630E8[playerId] != 0) {
                     sPlayerAngle[playerId] = -get_angle_between_points(player->oldPos, player->pos);
                     var_a0_2 =
-                    // jnmartin84            
-                    // did i fuck this up
-                    ((s32)(gCurrentPathPointExpectedRotationPath[(sSomeNearestPathPoint + 2) % gSelectedPathCount] *
-                         0x168)) >> 16;
-
-//                        (gCurrentPathPointExpectedRotationPath[(sSomeNearestPathPoint + 2) % gSelectedPathCount] *
-//                         0x168) /
-//                        65535;
+                        (gCurrentPathPointExpectedRotationPath[(sSomeNearestPathPoint + 2) % gSelectedPathCount] *
+                         0x168) /
+                        65535;
                     newAngle = (sPlayerAngle[playerId] * 0x168) / 65535;
                     if (var_a0_2 < -0xB4) {
                         var_a0_2 += 0x168;
