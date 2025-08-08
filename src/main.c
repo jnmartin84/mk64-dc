@@ -48,6 +48,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+KOS_INIT_FLAGS(INIT_IRQ | INIT_CONTROLLER | INIT_VMU | INIT_CDROM);
+
 char *fnpre;
 const void *__kos_romdisk;
 void runtime_reset(void);

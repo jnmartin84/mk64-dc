@@ -157,6 +157,9 @@ void draw_vmu_icon(int index) {
 char *fnpre;
 
 uint8_t progbuf[9000000] = {0};
+
+KOS_INIT_FLAGS(INIT_IRQ | INIT_NO_SHUTDOWN | INIT_CONTROLLER | INIT_VMU | INIT_CDROM);
+
 int main(int argc, char **argv) {
     //void *subelf;
 	maple_device_t *vmudev = NULL;
