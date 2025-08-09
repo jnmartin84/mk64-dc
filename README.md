@@ -3,7 +3,10 @@ This is a Sega Dreamcast port of the Mario Kart 64 decompilation [ https://githu
 
 If you ask for a CDI or ISO, I will tell you to go fuck yourself, and I probably won't be polite about it.
 
-Here's how to build it yourself. 
+Here's how to build it yourself. Deviate from these instructions at your own risk, but follow them *precisely* and you shall be rewarded for your efforts:
+![DK's Jungle Parkway](/media/screenshot1.png)
+![Koopa Troopa Beach](/media/screenshot2.png)
+![Rainbow Road](/media/screenshot3.png)
 
 # build guide #
 
