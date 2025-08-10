@@ -486,7 +486,7 @@ const uint32_t rainbow[] = {
 void rainbow_print(int x, int y, char *text) {
     int ci = 0;
     void *ptr = (void*)((uintptr_t)vram_s + ((y*640*2) + (x*2)));
-    for (int i=0;i<strlen(text);i++) {
+    for (size_t i=0;i<strlen(text);i++) {
         if (ci == 18) ci = 0;
         bfont_draw_ex(ptr, 640, rainbow[ci%7], 0x00000000, 16, 1, text[i], 0, 0);
         if (text[i] != ' ') ci++;
@@ -494,7 +494,7 @@ void rainbow_print(int x, int y, char *text) {
     }
     ptr = (void*)((uintptr_t)vram_s + (((y+1)*640*2) + ((x+1)*2)));
     ci = 0;
-    for (int i=0;i<strlen(text);i++) {
+    for (size_t i=0;i<strlen(text);i++) {
         if (ci == 18) ci = 0;
         bfont_draw_ex(ptr, 640, rainbow[ci%7], 0x00000000, 16, 0, text[i], 0, 0);
         if (text[i] != ' ') ci++;
@@ -502,7 +502,7 @@ void rainbow_print(int x, int y, char *text) {
     }
     ptr = (void*)((uintptr_t)vram_s + (((y-1)*640*2) + ((x-1)*2)));
     ci = 0;
-    for (int i=0;i<strlen(text);i++) {
+    for (size_t i=0;i<strlen(text);i++) {
         if (ci == 18) ci = 0;
         bfont_draw_ex(ptr, 640, rainbow[ci%7], 0x00000000, 16, 0, text[i], 0, 0);
         if (text[i] != ' ') ci++;
@@ -749,10 +749,11 @@ void update_controller(s32 index) {
             exit(0);
         }
     }
+
     const char stickH =state->joyx;
     const char stickV = 0xff-((uint8_t)(state->joyy));
-        controller->rawStickX = ((float)stickH/127)*80;
-        controller->rawStickY = ((float)stickV/127)*80;
+    controller->rawStickX = ((float)stickH/127)*80;
+    controller->rawStickY = ((float)stickV/127)*80;
 
     if (state->buttons & CONT_A)
         ucheld |= 0x8000;//A_BUTTON;
@@ -833,7 +834,7 @@ void func_80000BEC(void) {
 void dispatch_audio_sptask(UNUSED struct SPTask* spTask) {
 }
 
-static void exec_display_list(struct SPTask* spTask) {
+static void exec_display_list(UNUSED struct SPTask* spTask) {
 	send_display_list(&gGfxPool->spTask);
 }
 
@@ -1029,7 +1030,7 @@ void setup_game_memory(void) {
 
     fseek(file, 0, SEEK_END);
     long filesize = ftell(file);
-    printf("common data is %d\n", filesize);
+    //printf("common data is %ld\n", filesize);
     rewind(file);
 
     long toread = filesize;
