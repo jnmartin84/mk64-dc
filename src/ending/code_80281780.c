@@ -282,4 +282,8 @@ void load_ceremony_cutscene(void) {
         nextrp = (nextrp << 8) | ((nextrp >> 8) & 0xff);
         reflp[i] = nextrp;
     }
+
+    if (strncmp("/cd", fnpre, 3) == 0) {
+        cdrom_spin_down();
+    }
 }

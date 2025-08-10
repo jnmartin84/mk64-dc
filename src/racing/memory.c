@@ -567,5 +567,8 @@ u8* load_course(s32 courseId) {
     }
     decompress_textures(0);
 //    unmute_stream();
+    if (strncmp("/cd", fnpre, 3) == 0) {
+        cdrom_spin_down();
+    }
     return COMP_VERT_BUF;
 }
