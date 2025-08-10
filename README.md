@@ -1,7 +1,7 @@
 # Mario Kart 64   
 This is a Sega Dreamcast port of the Mario Kart 64 decompilation [ https://github.com/n64decomp/mk64 ] .
 
-If you ask for a CDI or ISO, I will tell you to go fuck yourself, and I probably won't be polite about it.
+Do not ask for a CDI or ISO. Learn how to build it or don't play it. We don't care.
 
 Here's how to build it yourself. Deviate from these instructions at your own risk, but follow them *precisely* and you shall be rewarded for your efforts:
 ![DK's Jungle Parkway](/media/screenshot1.png)
