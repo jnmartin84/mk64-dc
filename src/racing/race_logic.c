@@ -507,7 +507,7 @@ f32 func_8028EE8C(s32 arg0) {
 void func_8028EEF0(s32 i) {
     gPlayers[i].type |= PLAYER_CINEMATIC_MODE;
 }
-
+extern void runtime_reset(void);
 void func_8028EF28(void) {
     s16 currentPosition;
     s32 i;
@@ -525,6 +525,7 @@ void func_8028EF28(void) {
             gPlayers[i].lapCount++;
 
             if ((gPlayers[i].type & PLAYER_HUMAN) != 0) {
+if (i == 0 && gPlayers[i].lapCount) runtime_reset();
                 // jnmartin84 - testing hack
                 if (gPlayers[i].lapCount == 3) { //
 //                    3) {
