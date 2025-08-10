@@ -756,29 +756,37 @@ void update_controller(s32 index) {
     controller->rawStickY = ((float)stickV/127)*80;
 
     if (state->buttons & CONT_A)
-        ucheld |= 0x8000;//A_BUTTON;
+        ucheld |= 0x8000; //A_BUTTON
+#if defined(BUTTON_SWAP_X)
     if (state->buttons & CONT_X)
-        ucheld |= 0x4000;//B_BUTTON;
+        ucheld |= 0x0001; //C_RIGHT
+    if (state->buttons & CONT_B)
+        ucheld |= 0x4000; //B_BUTTON
+#else
+    if (state->buttons & CONT_X)
+        ucheld |= 0x4000; //B_BUTTON
+    if (state->buttons & CONT_B)
+        ucheld |= 0x0001; //C_RIGHT
+#endif
+
     if (state->ltrig)
-        ucheld |= 0x2000;//Z_TRIG;
+        ucheld |= 0x2000; //Z_TRIG
     if (state->buttons & CONT_START)
-       ucheld |= 0x1000;//START_BUTTON;
+       ucheld |= 0x1000; //START_BUTTON
 
     if (state->buttons & CONT_DPAD_UP)
-        ucheld |= 0x0800;//U_CBUTTONS;
+        ucheld |= 0x0800; //U_JPAD
     if (state->buttons & CONT_DPAD_DOWN)
-        ucheld |= 0x0400;//D_CBUTTONS;
+        ucheld |= 0x0400; //D_JPAD
     if (state->buttons & CONT_DPAD_LEFT)
-        ucheld |= 0x0200;//L_CBUTTONS;
+        ucheld |= 0x0200; //L_JPAD
     if (state->buttons & CONT_DPAD_RIGHT)
-        ucheld |= 0x0100;//R_CBUTTONS;
+        ucheld |= 0x0100; //R_JPAD
 
     if (state->rtrig)
-        ucheld |= 0x0010;//R_TRIG;
+        ucheld |= 0x0010; //R_TRIG
     if (state->buttons & CONT_Y)
-        ucheld |= 0x0008;//C_UP
-    if (state->buttons & CONT_B)
-        ucheld |= 0x0001;//C_RIGHT
+        ucheld |= 0x0008; //C_UP
 
     controller->buttonPressed = ucheld & (ucheld ^ controller->button);
     controller->buttonDepressed = controller->button & (ucheld ^ controller->button);

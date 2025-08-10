@@ -9,8 +9,11 @@ include safe_gcc.mk
 default: all
 
 # Preprocessor definitions
+
+# uncomment to put brake/back on the X button
+#DEFINES := BUTTON_SWAP_X=1
+
 DEFINES := 
-#_FINALROM=1 NDEBUG=1 F3DEX_GBI_2=1
 
 #==============================================================================#
 # Build Options                                                                #
