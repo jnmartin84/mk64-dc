@@ -1349,6 +1349,22 @@ s32 func_8008A0B4(s32 objectIndex, Player* player, Camera* camera, u16 arg3) {
 }
 
 uint8_t is_object_visible_on_camera(s32 objectIndex, Camera* camera, u16 angle) {
+    u16 temp_t2;
+    s32 var_t0;
+
+    var_t0 = 0;
+    temp_t2 = (get_angle_between_xy(camera->pos[0], gObjectList[objectIndex].pos[0], camera->pos[2],
+                                    gObjectList[objectIndex].pos[2]) +
+               ((s32) angle / 2)) -
+              camera->rot[1];
+    if ((temp_t2 >= 0) && (angle >= temp_t2)) {
+        var_t0 = 1;
+    }
+    return var_t0;
+}
+
+#if 0
+uint8_t is_object_visible_on_camera(s32 objectIndex, Camera* camera, u16 angle) {
     //u16 temp_t2 
     s16 temp_t2 = (get_angle_between_xy(camera->pos[0], gObjectList[objectIndex].pos[0], camera->pos[2],
                                     gObjectList[objectIndex].pos[2]) +
@@ -1360,6 +1376,7 @@ uint8_t is_object_visible_on_camera(s32 objectIndex, Camera* camera, u16 angle) 
     }
     return 0;
 }
+#endif
 
 void func_8008A1D0(s32 objectIndex, s32 cameraId, s32 arg2, s32 arg3) {
     Camera* camera = &camera1[cameraId];

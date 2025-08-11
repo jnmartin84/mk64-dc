@@ -120,6 +120,7 @@ void func_8001F9E4(Player* player, Camera* camera, s8 screenId) {
     }
 }
 
+#if 0
 u16 check_player_camera_collision(Player* player, Camera* camera, f32 arg2, f32 arg3) {
     UNUSED f32 pad[6];
     f32 sp64;
@@ -181,6 +182,55 @@ u16 check_player_camera_collision(Player* player, Camera* camera, f32 arg2, f32 
     if (((sp64 >= 0) && (sp60 >= 0) && (sp5C >= 0)) || (((sp64) <= 0) && (sp60 <= 0) && (sp5C <= 0))) {
         ret = 1;
     }
+    return ret;
+}
+#endif
+
+u16 check_player_camera_collision(Player* player, Camera* camera, f32 arg2, f32 arg3) {
+    UNUSED f32 pad[6];
+    f32 sp64;
+    f32 sp60;
+    f32 sp5C;
+    f32 sp58;
+    f32 sp54;
+    f32 sp50;
+    f32 sp4C;
+    f32 sp48;
+    f32 sp44;
+    s16 var_v0;
+    u16 ret;
+
+    ret = 0;
+    switch (gActiveScreenMode) { /* irregular */
+        case SCREEN_MODE_1P:
+            var_v0 = 0x293C;
+            break;
+        case SCREEN_MODE_2P_SPLITSCREEN_HORIZONTAL:
+        case SCREEN_MODE_2P_SPLITSCREEN_VERTICAL:
+            var_v0 = 0x3058;
+            break;
+        case SCREEN_MODE_3P_4P_SPLITSCREEN:
+            var_v0 = 0x1FFE;
+            break;
+        default:
+            if (1) {}
+            var_v0 = 0x1FFE;
+            break;
+    }
+    sp4C = (arg2 * coss((camera->rot[1] - var_v0))) + camera->pos[2];
+    sp58 = (arg2 * sins((camera->rot[1] - var_v0))) + camera->pos[0];
+    sp48 = (arg2 * coss((camera->rot[1] + var_v0))) + camera->pos[2];
+    sp54 = (arg2 * sins((camera->rot[1] + var_v0))) + camera->pos[0];
+    sp44 = (arg3 * coss((camera->rot[1] + 0x5FFA))) + camera->pos[2];
+    sp50 = (arg3 * sins((camera->rot[1] + 0x5FFA))) + camera->pos[0];
+
+    sp64 = ((sp4C - player->pos[2]) * (sp54 - player->pos[0])) - ((sp48 - player->pos[2]) * (sp58 - player->pos[0]));
+    sp60 = ((sp48 - player->pos[2]) * (sp50 - player->pos[0])) - ((sp44 - player->pos[2]) * (sp54 - player->pos[0]));
+    sp5C = ((sp44 - player->pos[2]) * (sp58 - player->pos[0])) - ((sp4C - player->pos[2]) * (sp50 - player->pos[0]));
+
+    if (((sp64 >= 0.0f) && (sp60 >= 0.0f) && (sp5C >= 0.0f)) || (((sp64) <= 0.0f) && (sp60 <= 0.0f) && (sp5C <= 0.0f))) {
+        ret = 1;
+    }        
     return ret;
 }
 
@@ -1073,7 +1123,7 @@ void func_80021DA8(void) {
 }
 
 void mtxf_translate_rotate(Mat4 dest, Vec3f pos, Vec3s orientation) {
-#if 0
+#if 1
     f32 sinX;// = sins(orientation[0]);
     f32 cosX;// = coss(orientation[0]);
     f32 sinY;// = sins(orientation[1]);
@@ -1103,7 +1153,10 @@ void mtxf_translate_rotate(Mat4 dest, Vec3f pos, Vec3s orientation) {
     dest[2][2] = cosX * cosY;
     dest[3][2] = pos[2];
 #else
-    shz_xmtrx_init_rotation(SHZ_ANGLE(orientation[0]), SHZ_ANGLE(orientation[1]), SHZ_ANGLE(orientation[2]));
+    shz_xmtrx_init_rotation_x(SHZ_ANGLE(orientation[0]));
+    shz_xmtrx_apply_rotation_y(SHZ_ANGLE(orientation[1]));
+    shz_xmtrx_apply_rotation_z(SHZ_ANGLE(orientation[2]));
+    //shz_xmtrx_init_rotation(SHZ_ANGLE(orientation[0]), SHZ_ANGLE(orientation[1]), SHZ_ANGLE(orientation[2]));
     shz_xmtrx_set_translation(pos[0], pos[1], pos[2]);
     shz_xmtrx_store_4x4(dest);
 #endif
@@ -1714,6 +1767,7 @@ void render_player_shadow(Player* player, s8 playerId, s8 screenId) {
     f32 spAC;
 //    UNUSED Vec3f pad2;
     f32 var_f2;
+
     f32 ts1,tc1;
 
     temp_t9 = (u16) (player->unk_048[screenId] + player->rotation[1] + player->unk_0C0) / 128; // << 7) & 0xFFFF;
@@ -1796,22 +1850,22 @@ void render_player_shadow_credits(Player* player, s8 playerId, s8 arg2) {
     f32 spB0;
     f32 spAC;
 //    UNUSED Vec3f pad3;
-    f32 ts1,tc1;
+//    f32 ts1,tc1;
     Vec3f sp94 = { 9.0f, 7.0f, 5.0f };
 
+    // todo - restore scaled sincos stuff
     temp_t9 = (u16) (player->unk_048[arg2] + player->rotation[1] + player->unk_0C0) / 128;
     spC0 = -player->rotation[1] - player->unk_0C0;
 
-//    spB0 = -coss(temp_t9 << 7) * 3;
-//    spAC = -sins(temp_t9 << 7) * 3;
-    scaled_sincoss((temp_t9 << 7), &spAC, &spB0, -3.0f);
+    spB0 = -coss(temp_t9 << 7) * 3;
+    spAC = -sins(temp_t9 << 7) * 3;
 
     spC4[0] = 0;
     spC4[1] = spC0;
     spC4[2] = 0;
 
-    spCC[0] = player->pos[0] + ((spB0 * ts1) + (spAC * tc1));
-    spCC[2] = player->pos[2] + ((spB0 * tc1) - (spAC * ts1));
+    spCC[0] = player->pos[0] + ((spB0 * sins(spC0)) + (spAC * coss(spC0)));
+    spCC[2] = player->pos[2] + ((spB0 * coss(spC0)) - (spAC * sins(spC0)));
     spCC[1] = gObjectList[indexObjectList1[playerId]].pos[1] + sp94[playerId];
 
     mtxf_translate_rotate(sp118, spCC, spC4);

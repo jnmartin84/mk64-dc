@@ -1,7 +1,7 @@
 # Mario Kart 64   
 This is a Sega Dreamcast port of the Mario Kart 64 decompilation [ https://github.com/n64decomp/mk64 ] .
 
-If you ask for a CDI or ISO, I will tell you to go fuck yourself, and I probably won't be polite about it.
+Do not ask for a CDI or ISO. Learn how to build it or don't play it. We don't care.
 
 Here's how to build it yourself. Deviate from these instructions at your own risk, but follow them *precisely* and you shall be rewarded for your efforts:
 ![DK's Jungle Parkway](/media/screenshot1.png)
@@ -35,7 +35,7 @@ You will need a host/native GCC install and a full working Dreamcast/KallistiOS 
 
 See the [Dreamcast Wiki](https://dreamcast.wiki/Getting_Started_with_Dreamcast_development) for instructions. Windows users can get everything needed from installing the latest version of [DreamSDK](https://dreamsdk.org/).
 
-Mario Kart 64 DC has only been tested to build and run using `sh-elf-gcc` versions 13, 14, and 15. Use any other major version at your own risk. No support will be provided.
+Mario Kart 64 DC has only been tested to build and run using `sh-elf-gcc` versions 13 (13.3), 14 (14.2) and 15 (15.?). Use any other major version at your own risk. No support will be provided.
 
 *NOTE: WHEN BUILDING KOS, USE THE `environ.sh` FILE PROVIDED IN THE `mario-kart-64-dc` REPO.*
 
@@ -122,8 +122,8 @@ The following is the mapping of N64 controls/actions to Dreamcast controls.
     Dreamcast Analog Stick - N64 Analog Stick (move in game)
     Dreamcast Start - N64 Start (... start)
     Dreamcast A button - N64 A button (accelerate, menu select)
-    Dreamcast B button - N64 B button (brake, menu back?)
-    Dreamcast X button - N64 right C button (HUD change)
+    Dreamcast X button - N64 B button (brake, menu back?)
+    Dreamcast B button - N64 right C button (HUD change)
     Dreamcast Y button - N64 up C button (camera)
     Dreamcast L trigger - N64 Z trigger (use item)
     Dreamcast R trigger - N64 R trigger (jump/drift)
