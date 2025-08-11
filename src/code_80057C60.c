@@ -4484,12 +4484,12 @@ void func_800635D4(Player* player, s16 arg1, UNUSED s8 arg2, UNUSED s8 arg3) {
     f32 sp3C;
     f32 ts1,tc1;
     scaled_sincoss(player->unk_258[10 + arg1].unk_020, &ts1, &tc1,
-        ((-player->unk_258[10 + arg1].unk_01E * 0.75f)));//(player->speed / 18.0f) * 216.0f) / 20.0f));
+        ((-player->unk_258[10 + arg1].unk_01E * (player->speed / 18.0f) * 216.0f) / 20.0f));
 
     if (player->unk_258[10 + arg1].unk_010 == 1) {
         if ((player->effects & LIGHTNING_EFFECT)) {
             composite_rotation(&sp44, &sp40, &sp3C, -2.0f, 0.0f,
-                          (-player->unk_258[10 + arg1].unk_01E * (player->speed * 0.75f)), /// 18.0f) * 216.0f) / 16,
+                          (-player->unk_258[10 + arg1].unk_01E * (player->speed / 18.0f) * 216.0f) / 16,
                           -player->unk_258[10 + arg1].unk_020, 2 * -player->unk_206);
             player->unk_258[10 + arg1].unk_000[0] = player->tyres[BACK_LEFT].pos[0] + sp44;
             player->unk_258[10 + arg1].unk_000[2] = player->tyres[BACK_LEFT].pos[2] + sp3C;
@@ -4505,7 +4505,7 @@ void func_800635D4(Player* player, s16 arg1, UNUSED s8 arg2, UNUSED s8 arg3) {
         }
     } else if ((player->effects & LIGHTNING_EFFECT)) {
         composite_rotation(&sp44, &sp40, &sp3C, 2.0f, 0.0f,
-                      (-player->unk_258[10 + arg1].unk_01E * (player->speed * 0.75f)),// / 18.0f) * 216.0f) / 16,
+                      (-player->unk_258[10 + arg1].unk_01E * (player->speed / 18.0f) * 216.0f) / 16,
                       -player->unk_258[10 + arg1].unk_020, 2 * -player->unk_206);
         player->unk_258[10 + arg1].unk_000[0] = player->tyres[BACK_RIGHT].pos[0] + sp44;
         player->unk_258[10 + arg1].unk_000[2] = player->tyres[BACK_RIGHT].pos[2] + sp3C;
