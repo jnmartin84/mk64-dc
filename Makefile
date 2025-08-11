@@ -493,12 +493,17 @@ format:
 clean:
 	$(RM) -r $(BUILD_DIR)
 	$(RM) -r build/$(ELF)
+	rm -f IP.BIN
+	rm -f 1ST_READ.BIN
 	rm -f mariokart64.iso
 	rm -f mk64.bin
 	rm -f mariokart64.cdi
 	rm -f mariokart64.ds.iso
 	rm -f loader.bin
 	rm -f loader.elf
+	rm -f data_segment2.O
+	rm -f test.o
+	rm -f memcpy32.o
 	rm -rf tmp
 
 model_extract: $(MODELS_PROC)
@@ -785,6 +790,9 @@ LDFLAGS += -R $(BUILD_DIR)/assets/code/common_data/common_data.elf
 # Finalize and Link                                                            #
 #==============================================================================#
 
+memcpy32.o: memcpy32.S
+	kos-as memcpy32.S -o memcpy32.o
+
 test.o: $(O_FILES)
 	sh-elf-ld -EL --relocatable build/us/data/zkarts/all_kart.o build/us/courses/staff_ghost_data.o -o test.o
 	sh-elf-objcopy --add-symbol __kart_texturesSegmentRomEnd=.data:0x004fcac4 test.o
@@ -803,13 +811,13 @@ $(ELF):	$(O_FILES) memcpy32.o test.o data_segment2.o $(COURSE_DATA_TARGETS) $(BU
 
 ifeq ($(HAVE_CDI4DC), yes)
 
-1ST_READ.BIN: loader.bin
-	rm -f 1ST_READ.BIN
-	$(KOS_BASE)/utils/scramble/scramble loader.bin 1ST_READ.BIN
-
 IP.BIN:
 	rm -f IP.BIN
 	$(KOS_BASE)/utils/makeip/makeip ip.txt IP.BIN
+
+1ST_READ.BIN: loader.bin
+	rm -f 1ST_READ.BIN
+	$(KOS_BASE)/utils/scramble/scramble loader.bin 1ST_READ.BIN
 
 tmp: mk64.bin 1ST_READ.BIN
 	rm -rf tmp
