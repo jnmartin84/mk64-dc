@@ -5,6 +5,8 @@ include util.mk
 
 include safe_gcc.mk
 
+HAVE_CDI4DC := $(shell which cdi4dc > /dev/null 2>&1 && echo "yes" || echo "no")
+
 # Default target
 default: all
 
@@ -490,6 +492,14 @@ format:
 
 clean:
 	$(RM) -r $(BUILD_DIR)
+	$(RM) -r build/$(ELF)
+	rm -f mariokart64.iso
+	rm -f mk64.bin
+	rm -f mariokart64.cdi
+	rm -f mariokart64.ds.iso
+	rm -f loader.bin
+	rm -f loader.elf
+	rm -rf tmp
 
 model_extract: $(MODELS_PROC)
 
@@ -791,12 +801,69 @@ $(ELF):	$(O_FILES) memcpy32.o test.o data_segment2.o $(COURSE_DATA_TARGETS) $(BU
 	kos-cc -g3 -o ${BUILD_DIR_BASE}/$@ -Xlinker -Map=build/us/mario-kart.elf.map -Wl,--just-symbols=build/us/assets/code/common_data/common_data.elf -Wl,--just-symbols=build/us/courses/mario_raceway/course_data.elf -Wl,--just-symbols=build/us/courses/choco_mountain/course_data.elf -Wl,--just-symbols=build/us/courses/bowsers_castle/course_data.elf -Wl,--just-symbols=build/us/courses/banshee_boardwalk/course_data.elf -Wl,--just-symbols=build/us/courses/yoshi_valley/course_data.elf -Wl,--just-symbols=build/us/courses/frappe_snowland/course_data.elf -Wl,--just-symbols=build/us/courses/koopa_troopa_beach/course_data.elf -Wl,--just-symbols=build/us/courses/royal_raceway/course_data.elf -Wl,--just-symbols=build/us/courses/luigi_raceway/course_data.elf -Wl,--just-symbols=build/us/courses/moo_moo_farm/course_data.elf -Wl,--just-symbols=build/us/courses/toads_turnpike/course_data.elf -Wl,--just-symbols=build/us/courses/kalimari_desert/course_data.elf -Wl,--just-symbols=build/us/courses/sherbet_land/course_data.elf -Wl,--just-symbols=build/us/courses/rainbow_road/course_data.elf -Wl,--just-symbols=build/us/courses/wario_stadium/course_data.elf -Wl,--just-symbols=build/us/courses/block_fort/course_data.elf -Wl,--just-symbols=build/us/courses/skyscraper/course_data.elf -Wl,--just-symbols=build/us/courses/double_deck/course_data.elf -Wl,--just-symbols=build/us/courses/dks_jungle_parkway/course_data.elf -Wl,--just-symbols=build/us/courses/big_donut/course_data.elf -Wl,--just-symbols=build/us/assets/code/startup_logo/startup_logo.elf -Wl,--just-symbols=build/us/assets/code/ceremony_data/ceremony_data.elf -Wl,--just-symbols=build/us/courses/yoshi_valley/course_data.elf -Wl,--just-symbols=build/us/courses/skyscraper/course_data.elf -Wl,--just-symbols=build/us/courses/choco_mountain/course_data.elf -Wl,--just-symbols=build/us/courses/block_fort/course_data.elf -Wl,--just-symbols=build/us/courses/bowsers_castle/course_data.elf -Wl,--just-symbols=build/us/courses/toads_turnpike/course_data.elf -Wl,--just-symbols=build/us/courses/kalimari_desert/course_data.elf -Wl,--just-symbols=build/us/courses/luigi_raceway/course_data.elf -Wl,--just-symbols=build/us/courses/frappe_snowland/course_data.elf -Wl,--just-symbols=build/us/courses/rainbow_road/course_data.elf -Wl,--just-symbols=build/us/courses/double_deck/course_data.elf -Wl,--just-symbols=build/us/courses/mario_raceway/course_data.elf -Wl,--just-symbols=build/us/courses/big_donut/course_data.elf -Wl,--just-symbols=build/us/courses/wario_stadium/course_data.elf -Wl,--just-symbols=build/us/courses/koopa_troopa_beach/course_data.elf -Wl,--just-symbols=build/us/courses/sherbet_land/course_data.elf -Wl,--just-symbols=build/us/courses/dks_jungle_parkway/course_data.elf -Wl,--just-symbols=build/us/courses/banshee_boardwalk/course_data.elf -Wl,--just-symbols=build/us/courses/moo_moo_farm/course_data.elf -Wl,--just-symbols=build/us/courses/royal_raceway/course_data.elf $(REAL_OBJFILES) -lGL
 	./generate_dc_data.sh
 
-cdi:
+ifeq ($(HAVE_CDI4DC), yes)
+
+1ST_READ.BIN: loader.bin
+	rm -f 1ST_READ.BIN
+	$(KOS_BASE)/utils/scramble/scramble loader.bin 1ST_READ.BIN
+
+IP.BIN:
+	rm -f IP.BIN
+	$(KOS_BASE)/utils/makeip/makeip ip.txt IP.BIN
+
+tmp: mk64.bin 1ST_READ.BIN
+	rm -rf tmp
+	mkdir tmp
+	cp -r dc_data tmp/dc_data
+	cp mk64.bin tmp/mk64.bin
+	cp ghost.ico tmp/ghost.ico
+	cp kart.ico tmp/kart.ico
+	cp 1ST_READ.BIN tmp/1ST_READ.BIN
+
+mariokart64.iso: IP.BIN loader.bin tmp
+	rm -f mariokart64.iso
+	mkisofs -C 0,11702 -V "Mario Kart 64" -G IP.BIN -r -J -l -o mariokart64.iso tmp
+	rm -rf tmp
+
+mariokart64.ds.iso: IP.BIN loader.bin tmp
+	rm -f mariokart64.ds.iso
+	cp loader.bin tmp/1ST_READ.BIN
+	mkisofs -V "Mario Kart 64" -G IP.BIN -r -J -l -o mariokart64.ds.iso tmp
+	rm -rf tmp
+
+mariokart64.cdi: mariokart64.iso
+	cdi4dc mariokart64.iso mariokart64.cdi > cdi.log
+	@echo && echo && echo "*** CDI Baked Successfully ($@) ***" && echo && echo
+
+dsiso: mariokart64.ds.iso
+
+else
+
+mariokart64.cdi: mk64.bin loader.elf
 	@test -s ${BUILD_DIR_BASE}/mario-kart.elf || { echo "Please run make before running make cdi . Exiting"; exit 1; }
 	$(RM) mariokart64.cdi
-	$(RM) mk64.bin
-	sh-elf-objcopy -O binary $(BUILD_DIR_BASE)/mario-kart.elf mk64.bin
 	mkdcdisc -f ghost.ico -f kart.ico -f mk64.bin -d dc_data -e loader.elf -o mariokart64.cdi -n "Mario Kart 64" -v 3
+
+endif
+
+loader.elf: loader.c
+	kos-cc loader.c -o loader.elf -Iinclude
+
+loader.bin: loader.elf
+	rm -f loader.bin
+	kos-objcopy -R .stack -O binary loader.elf loader.bin
+
+mk64.bin: ${ELF}
+	rm -f mk64.bin
+	kos-objcopy -R .stack -O binary ${BUILD_DIR_BASE}/${ELF} mk64.bin
+
+flycast: mariokart64.cdi
+	flycast mariokart64.cdi
+
+run: loader.elf mk64.bin
+	$(KOS_LOADER) loader.elf -f
+
+cdi: mariokart64.cdi
 
 dcload:
 	sudo ./dcload-ip/host-src/tool/dc-tool-ip -x ${BUILD_DIR_BASE}/mario-kart.elf -c ./
