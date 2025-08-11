@@ -8,6 +8,8 @@ Here's how to build it yourself. Deviate from these instructions at your own ris
 ![Koopa Troopa Beach](/media/screenshot2.png)
 ![Rainbow Road](/media/screenshot3.png)
 
+NOTE: This game has been tested and works properly on ***physical hardware***. Emulation is already known to have many issues with this release, so do not open up a ticket unless you've confirmed that it is an actual bug on real hardware.
+
 # Build Guide #
 
 **Pre-requisites**
@@ -148,7 +150,7 @@ The game will still function normally without a VMU present.
 
 # Acknowledgments
 
-On the Dreamcast side:
+## Dreamcast Side ##
 Falco Girgis (@gyrovorbis) - the game doesn't have sound without him. Extreme optimizations to the audio mixer made full speed gameplay and pristine sound possible.
 Other optimizations to matrix math across the entire code base kept it fast and made it faster.
 
@@ -158,7 +160,9 @@ Luke Benstead (@kazade) - Without GLdc, this project would have taken 6 more mon
 
 @stiffpeaks - VMU assets and case artwork
 
-On the N64 side:
+John Brooks (@JBrooksBSI) - The man credited as the "Lead Technologist" for World Series Baseball 2k2 graciously offered some incredibly good advice over X/Twitter with regards to vectorizing aDPCMdecImpl(), which directly resulted in better audio performance while under load.
+
+## Nintendo 64 Side ##
 
 MK64 decomp team.
 
