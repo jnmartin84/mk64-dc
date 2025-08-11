@@ -114,6 +114,15 @@ Moments later, you will have a `mariokart64.cdi` ready to burn to disc.
 
 If you are trying to use the disc image on anything OTHER than a CDR, I cannot help you and will not even pretend to try to help. You're on your own.
 
+**How to Generate Mario Kart 64 DreamShell Image**
+
+Users of DreamShell will want to create a DreamShell-compatible ISO using the following commands
+
+    cd ~/mario-kart-64-dc
+    make dsiso
+
+Moments later, you will have a `mariokart64.ds.iso` which is ready to be copied to your IDE drive or SD card!
+
 # Playing Mario Kart 64 on the Sega Dreamcast #
 
 The following is the mapping of N64 controls/actions to Dreamcast controls.
