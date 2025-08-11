@@ -35,7 +35,7 @@ You will need a host/native GCC install and a full working Dreamcast/KallistiOS 
 
 See the [Dreamcast Wiki](https://dreamcast.wiki/Getting_Started_with_Dreamcast_development) for instructions. Windows users can get everything needed from installing the latest version of [DreamSDK](https://dreamsdk.org/).
 
-Mario Kart 64 DC has only been tested to build and run using `sh-elf-gcc` versions 14 and 15. Use any other major version at your own risk. No support will be provided.
+Mario Kart 64 DC has only been tested to build and run using `sh-elf-gcc` versions 13, 14, and 15. Use any other major version at your own risk. No support will be provided.
 
 *NOTE: WHEN BUILDING KOS, USE THE `environ.sh` FILE PROVIDED IN THE `mario-kart-64-dc` REPO.*
 
