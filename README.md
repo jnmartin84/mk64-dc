@@ -8,7 +8,9 @@ Here's how to build it yourself. Deviate from these instructions at your own ris
 ![Koopa Troopa Beach](/media/screenshot2.png)
 ![Rainbow Road](/media/screenshot3.png)
 
-# build guide #
+NOTE: This game has been tested and works properly on ***physical hardware***. Emulation is already known to have many issues with this release, so do not open up a ticket unless you've confirmed that it is an actual bug on real hardware.
+
+# Build Guide #
 
 **Pre-requisites**
 
@@ -27,12 +29,13 @@ The build is known to work on the following platforms as of the current commit:
 
     Ubuntu 22.04
     macOS 15.5
+    Windows 11 (with DreamSDK)
 
 It should work on most other Linux environments.
 
 You will need a host/native GCC install and a full working Dreamcast/KallistiOS compiler toolchain install. You will also need to install the latest `kos-ports`.
 
-See [ https://dreamcast.wiki/Getting_Started_with_Dreamcast_development ] for instructions.
+See the [Dreamcast Wiki](https://dreamcast.wiki/Getting_Started_with_Dreamcast_development) for instructions. Windows users can get everything needed from installing the latest version of [DreamSDK](https://dreamsdk.org/).
 
 Mario Kart 64 DC has only been tested to build and run using `sh-elf-gcc` versions 13 (13.3), 14 (14.2) and 15 (15.?). Use any other major version at your own risk. No support will be provided.
 
@@ -74,7 +77,7 @@ Under `~/mario-kart-64-dc/tools/torch` you will find a `README.md` with instruct
 See: [ https://github.com/HarbourMasters/Torch/blob/6a2eb921482f2eb3b3cb5b675152d6d21d1a20ff/README.md ]
 
 
-For Linux and other Linux-like environments, follow those instructions or nothing else will work. Then continue with the following commands (we will start from the beginning so there is no confusion):
+For Linux and other Linux-like environments (such as with DreamSDK on Windows), follow those instructions or nothing else will work. Then continue with the following commands (we will start from the beginning so there is no confusion):
 
     source /opt/toolchains/dc/kos/environ.sh
     cd ~/mario-kart-64-dc
@@ -98,10 +101,11 @@ For macOS, make sure you have `gmake` installed (you may need to install it with
     CMAKE_POLICY_VERSION_MINIMUM=3.5 gmake assets
     CMAKE_POLICY_VERSION_MINIMUM=3.5 gmake
 
-**How to generate Mario Kart 64 disc image**
+**How to Generate Mario Kart 64 Disc Image**
 
 Make sure that you have `mkdcdisc` built and the executable available on your path.
-See: [ https://gitlab.com/simulant/mkdcdisc ] for that.
+See: [ https://gitlab.com/simulant/mkdcdisc ] for that. Windows users of DreamSDK
+will not need this dependency.
 
 Once that is taken care of, run the following commands 
 
@@ -111,6 +115,15 @@ Once that is taken care of, run the following commands
 Moments later, you will have a `mariokart64.cdi` ready to burn to disc.
 
 If you are trying to use the disc image on anything OTHER than a CDR, I cannot help you and will not even pretend to try to help. You're on your own.
+
+**How to Generate Mario Kart 64 DreamShell Image**
+
+Users of DreamShell will want to create a DreamShell-compatible ISO using the following commands
+
+    cd ~/mario-kart-64-dc
+    make dsiso
+
+Moments later, you will have a `mariokart64.ds.iso` which is ready to be copied to your IDE drive or SD card!
 
 # Playing Mario Kart 64 on the Sega Dreamcast #
 
@@ -137,7 +150,7 @@ The game will still function normally without a VMU present.
 
 # Acknowledgments
 
-On the Dreamcast side:
+## Dreamcast Side ##
 Falco Girgis (@gyrovorbis) - the game doesn't have sound without him. Extreme optimizations to the audio mixer made full speed gameplay and pristine sound possible.
 Other optimizations to matrix math across the entire code base kept it fast and made it faster.
 
@@ -147,7 +160,9 @@ Luke Benstead (@kazade) - Without GLdc, this project would have taken 6 more mon
 
 @stiffpeaks - VMU assets and case artwork
 
-On the N64 side:
+John Brooks (@JBrooksBSI) - The man credited as the "Lead Technologist" for World Series Baseball 2k2 graciously offered some incredibly good advice over X/Twitter with regards to vectorizing aDPCMdecImpl(), which directly resulted in better audio performance while under load.
+
+## Nintendo 64 Side ##
 
 MK64 decomp team.
 
