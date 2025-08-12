@@ -1121,7 +1121,7 @@ static void gfx_opengl_init(void) {
     config.initial_immediate_capacity = 0;
     glKosInitEx(&config);
     // glKosInit();
-#if 0
+#if 1
 #ifdef __DREAMCAST__
     if (vid_check_cable() != CT_VGA)
     {
