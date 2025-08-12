@@ -251,9 +251,9 @@ void runtime_reset(void) {
     if (credits_started)
         return;
 
-    mutex_lock(&reset_mutex);
+//    mutex_lock(&reset_mutex);
 
-    snd_stream_volume(shnd, 0);
+//    snd_stream_volume(shnd, 0);
     audio_started = false;
     // --- Initial Pre-fill of Ring Buffer with Silence ---
     sq_clr(cb_buf_internal, sizeof(cb_buf_internal));
@@ -261,9 +261,9 @@ void runtime_reset(void) {
     if (!cb_init(RING_BUFFER_MAX_BYTES)) {
         printf("CB INIT FAILURE!\n");
     }
-    snd_stream_volume(shnd, 160);
+//    snd_stream_volume(shnd, 160);
 
-    mutex_unlock(&reset_mutex);
+//    mutex_unlock(&reset_mutex);
 }
 
 static void audio_dc_play(const uint8_t *buf, size_t len) {

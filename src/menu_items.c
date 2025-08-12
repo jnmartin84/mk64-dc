@@ -4662,6 +4662,8 @@ void func_8009CE1C(void) {
     }
 }
 
+extern void runtime_reset(void);
+
 void func_8009CE64(s32 arg0) {
     s32 thing;
     s32 var_a1;
@@ -4759,6 +4761,7 @@ void func_8009CE64(s32 arg0) {
                                     break;
                             }
                             if (var_a1 != 0) {
+                                runtime_reset();
                                 gIsGamePaused = 0;
                             }
                         }
@@ -11596,6 +11599,7 @@ void func_800ADF48(MenuItem* arg0) {
                     if (controller->buttonPressed & (START_BUTTON | A_BUTTON)) {
                         if (arg0->state == D_800F0B50[gModeSelection]) {
                             arg0->state = 0;
+                            runtime_reset();
                             gIsGamePaused = 0;
                             func_8028DF38();
                             func_800C9F90(0U);
