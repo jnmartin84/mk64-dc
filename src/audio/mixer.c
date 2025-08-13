@@ -799,9 +799,9 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
             float *accf = (float *)acc_vec;
             const shz_vec4_t in_vec = { .x = prev2, .y = prev1, .z = 1.0f };
 
-            shz_xmtrx_load_3x4_rows(&tbl[0][0], &tbl[1][0], &ins[0]);
+            shz_xmtrx_load_3x4_rows((const shz_vec4_t*)&tbl[0][0], (const shz_vec4_t*)&tbl[1][0], (const shz_vec4_t*)&ins[0]);
             acc_vec[0] = shz_xmtrx_trans_vec4(in_vec);
-            shz_xmtrx_load_3x4_rows(&tbl[0][4], &tbl[1][4], &ins[4]);
+            shz_xmtrx_load_3x4_rows((const shz_vec4_t*)&tbl[0][4], (const shz_vec4_t*)&tbl[1][4], (const shz_vec4_t*)&ins[4]);
             acc_vec[1] = shz_xmtrx_trans_vec4(in_vec);
 
             {
@@ -812,7 +812,7 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
                 accf[2] = shz_dot8f(fone, ins0, ins1, ins2, accf[2], tbl[1][1], tbl[1][0], 0.0f);
                 accf[7] = shz_dot8f(fone, ins0, ins1, ins2, accf[7], tbl[1][6], tbl[1][5], tbl[1][4]);
                 accf[1] += (tbl[1][0] * ins0);
-                shz_xmtrx_load_4x4_cols(&accf[3], &tbl[1][2], &tbl[1][1], &tbl[1][0]);
+                shz_xmtrx_load_4x4_cols((const shz_vec4_t*)&accf[3], (const shz_vec4_t*)&tbl[1][2], (const shz_vec4_t*)&tbl[1][1], (const shz_vec4_t*)&tbl[1][0]);
                 *(SHZ_ALIASING shz_vec4_t*)&accf[3] =
                     shz_xmtrx_trans_vec4((shz_vec4_t) { .x = fone, .y = ins0, .z = ins1, .w = ins2 });
             }
@@ -853,24 +853,24 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     int i = 0;
     float* tbl_f = NULL;
     float sample_f = 0;
+    size_t l;
 
     int16_t *dp, *sp;
     int32_t *wdp, *wsp;
 
-    if (flags & A_INIT) {
-        tmp[0] = 0;
-        tmp[1] = 0;
-        tmp[2] = 0;
-        tmp[3] = 0;
-        tmp[4] = 0;
-    } else {
-        wdp = dp = tmp;
-        wsp = sp = state;
-        if ((((uintptr_t)wdp | (uintptr_t)wsp) & 3) == 0)
-        for (int l = 0; l < 8; l++) {
-            *wdp++ = *wsp++;
-        } else for (int l = 0; l < 16; l++) {
-            *dp++ = *sp++;
+    if (!(flags & A_INIT)) {
+        dp = tmp;
+        sp = state;
+
+        wdp = (int32_t *)dp;
+        wsp = (int32_t *)sp;
+
+        if ((((uintptr_t)wdp | (uintptr_t)wsp) & 3) == 0) {
+            for (l = 0; l < 8; l++)
+                *wdp++ = *wsp++;
+        } else {
+            for (l = 0; l < 16; l++)
+                *dp++ = *sp++;
         }
     }
 
@@ -881,7 +881,7 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
 
     dp = in;
     sp = tmp;
-    for (int l = 0; l < 4; l++)
+    for (l = 0; l < 4; l++)
         *dp++ = *sp++;
 
     do {
@@ -910,7 +910,7 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     state[4] = (int16_t) pitch_accumulator;
     dp = (int16_t*) (state);
     sp = in;
-    for (int l = 0; l < 4; l++)
+    for (l = 0; l < 4; l++)
         *dp++ = *sp++;
 
     i = (in - in_initial + 4) & 7;
@@ -921,7 +921,7 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     state[5] = i;
     dp = (int16_t*) (state + 8);
     sp = in;
-    for (int l = 0; l < 8; l++)
+    for (l = 0; l < 8; l++)
         *dp++ = *sp++;
 }
 
