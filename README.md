@@ -34,13 +34,14 @@ You will need a host/native GCC install and a full working Dreamcast/KallistiOS 
 
 See [ https://dreamcast.wiki/Getting_Started_with_Dreamcast_development ] for instructions.
 
-Mario Kart 64 DC has only been tested to build and run using `sh-elf-gcc` versions 13 (13.3), 14 (14.2) and 15 (15.?). Use any other major version at your own risk. No support will be provided.
+Mario Kart 64 DC has only been tested to build and run using `sh-elf-gcc` versions 13 (13.2, 13.3), 14 (14.2) and 15 (15.?). Use any other major version at your own risk. No support will be provided.
 
 *NOTE: WHEN BUILDING KOS, USE THE `environ.sh` FILE PROVIDED IN THE `mario-kart-64-dc` REPO.*
 
-Mario Kart 64 can be built using an unmodified copy of KOS cloned directly from the official repo. I have tested it with `master` as of 2025/05/30 (commit `680d1862`). I suggest using that specific commit id. I will not guarantee that it even *builds* against any other KOS commit, nevermind that it runs.
+Mario Kart 64 can be built using an unmodified copy of KOS cloned directly from the official repo. Mario Kart 64 requires the use of KallistiOS commit `680d1862` (from `master` branch). 
+There are zero guarantee that it even *builds* against any other KOS commit, nevermind that it runs or runs correctly.
 
-If you are going to file a Github issue, make sure you are using that version to test your problem.
+If you are going to file a Github issue, make sure you are using that version to test your problem. Your issue will be closed without action otherwise.
 
 Please follow the instructions for building KOS found in the wiki: [ https://dreamcast.wiki/Getting_Started_with_Dreamcast_development#Configuring_and_compiling_KOS_and_kos-ports ].
 
