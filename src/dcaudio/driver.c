@@ -25,7 +25,7 @@
 #define DC_STEREO_AUDIO ( DC_AUDIO_CHANNELS == 2)
 // Sample rate for the AICA (32kHz)
 #define DC_AUDIO_FREQUENCY (26800) 
-#define RING_BUFFER_MAX_BYTES (SND_STREAM_BUFFER_MAX * 2 /* / 2 */)
+#define RING_BUFFER_MAX_BYTES (16384)
 
 // --- Global State for Dreamcast Audio Backend ---
 // Handle for the sound stream
@@ -158,7 +158,7 @@ static void cb_clear(void) {
 
 // --- KOS Stream Audio Callback (Consumer): Called by KOS when the AICA needs more data ---
 #define NUM_BUFFER_BLOCKS (2)
-#define TEMP_BUF_SIZE ((SND_STREAM_BUFFER_MAX/*  / 2 */) * NUM_BUFFER_BLOCKS)
+#define TEMP_BUF_SIZE ((8192) * NUM_BUFFER_BLOCKS)
 static uint8_t __attribute__((aligned(32))) temp_buf[TEMP_BUF_SIZE];
 static unsigned int temp_buf_sel = 0;
 
@@ -172,14 +172,14 @@ void unmute_stream(void) {
 
 void *audio_callback(UNUSED snd_stream_hnd_t hnd, int samples_requested_bytes, int *samples_returned_bytes) {
     size_t samples_requested = samples_requested_bytes / 4;
-    size_t samples_avail_bytes = cb_read_data(temp_buf + ((SND_STREAM_BUFFER_MAX) * temp_buf_sel) , samples_requested_bytes);
+    size_t samples_avail_bytes = cb_read_data(temp_buf + ((8192) * temp_buf_sel) , samples_requested_bytes);
     
     *samples_returned_bytes = samples_requested_bytes;
     size_t samples_returned = samples_avail_bytes / 4;
     
     /*@Note: This is more correct, fill with empty audio */
     if (samples_avail_bytes < (unsigned)samples_requested_bytes) {
-        memset(temp_buf + ((SND_STREAM_BUFFER_MAX) * temp_buf_sel) + samples_avail_bytes, 0, (samples_requested_bytes - samples_avail_bytes));
+//        memset(temp_buf + ((8192) * temp_buf_sel) + samples_avail_bytes, 0, (samples_requested_bytes - samples_avail_bytes));
     }
     
     temp_buf_sel += 1;
@@ -187,9 +187,8 @@ void *audio_callback(UNUSED snd_stream_hnd_t hnd, int samples_requested_bytes, i
         temp_buf_sel = 0;
     }
     
-    return (void*)(temp_buf + ((SND_STREAM_BUFFER_MAX) * temp_buf_sel));
+    return (void*)(temp_buf + ((8192) * temp_buf_sel));
 }
-mutex_t reset_mutex;
 
 static bool audio_dc_init(void) {
     if (snd_stream_init()) {
@@ -199,8 +198,6 @@ static bool audio_dc_init(void) {
 
     thd_set_hz(300);
     
-    mutex_init(&reset_mutex, MUTEX_TYPE_NORMAL);
-
     // --- Initial Pre-fill of Ring Buffer with Silence ---
     sq_clr(cb_buf_internal, sizeof(cb_buf_internal));
     sq_clr(temp_buf, sizeof(temp_buf));
@@ -213,7 +210,7 @@ static bool audio_dc_init(void) {
            (unsigned int)RING_BUFFER_MAX_BYTES);
     
     // Allocate the sound stream with KOS
-    shnd = snd_stream_alloc(audio_callback, (SND_STREAM_BUFFER_MAX / 8));
+    shnd = snd_stream_alloc(audio_callback, 8192);
     if (shnd == SND_STREAM_INVALID) {
         printf("SND: Stream allocation failure!\n");
         snd_stream_destroy(shnd);
@@ -246,33 +243,11 @@ static int audio_dc_get_desired_buffered(void) {
     return 1100;
 }
 
-extern int credits_started;
-void runtime_reset(void) {
-    if (credits_started)
-        return;
-
-    mutex_lock(&reset_mutex);
-
-    snd_stream_volume(shnd, 0);
-    audio_started = false;
-    // --- Initial Pre-fill of Ring Buffer with Silence ---
-    sq_clr(cb_buf_internal, sizeof(cb_buf_internal));
-    sq_clr(temp_buf, sizeof(temp_buf));
-    if (!cb_init(RING_BUFFER_MAX_BYTES)) {
-        printf("CB INIT FAILURE!\n");
-    }
-    snd_stream_volume(shnd, 160);
-
-    mutex_unlock(&reset_mutex);
-}
-
 static void audio_dc_play(const uint8_t *buf, size_t len) {
-    mutex_lock(&reset_mutex);
- 
     size_t ring_data_available = cb_get_used();
     size_t written = cb_write_data(buf, len);
 
-    if ((!audio_started) && (ring_data_available > ((SND_STREAM_BUFFER_MAX*5) / 32))) {
+    if ((!audio_started) /* && (ring_data_available > (SND_STREAM_BUFFER_MAX / 4)) */) {
         audio_started = true;
         snd_stream_start(shnd, DC_AUDIO_FREQUENCY, DC_STEREO_AUDIO);
     }
@@ -280,8 +255,6 @@ static void audio_dc_play(const uint8_t *buf, size_t len) {
     if (audio_started) {
         snd_stream_poll(shnd);
     }
-
-    mutex_unlock(&reset_mutex);
 }
 
 struct AudioAPI audio_dc = {
