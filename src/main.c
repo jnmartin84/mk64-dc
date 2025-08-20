@@ -50,7 +50,6 @@
 
 char *fnpre;
 const void *__kos_romdisk;
-void runtime_reset(void);
 
 void func_80091B78(void);
 void audio_init(void);
@@ -2122,38 +2121,31 @@ int credits_started = 0;
 void update_gamestate(void) {
     switch (gGamestate) {
         case START_MENU_FROM_QUIT:
-            runtime_reset();
             func_80002658();
             gCurrentlyLoadedCourseId = COURSE_NULL;
             break;
         case MAIN_MENU_FROM_QUIT:
-            runtime_reset();
             func_800025D4();
             gCurrentlyLoadedCourseId = COURSE_NULL;
             break;
         case PLAYER_SELECT_MENU_FROM_QUIT:
-            runtime_reset();
             func_80002600();
             gCurrentlyLoadedCourseId = COURSE_NULL;
             break;
         case COURSE_SELECT_MENU_FROM_QUIT:
-            runtime_reset();
             func_8000262C();
             gCurrentlyLoadedCourseId = COURSE_NULL;
             break;
         case RACING:
-            runtime_reset();
             setup_race();
             break;
         case ENDING:
             gCurrentlyLoadedCourseId = COURSE_NULL;
-            runtime_reset();
             load_ceremony_cutscene();
             break;
         case CREDITS_SEQUENCE:
             credits_started = 1;
             gCurrentlyLoadedCourseId = COURSE_NULL;
-            runtime_reset();
             load_credits();
             break;
     }
@@ -2245,15 +2237,14 @@ void SPINNING_THREAD(UNUSED void *arg) {
     while (1) {
 //        {
 //            irq_disable_scoped();
-            while (vblticker <= last_vbltick + 1)
+            while (vblticker <= last_vbltick)
                 genwait_wait((void*)&vblticker, NULL, 15, NULL);
 //        }
 
         last_vbltick = vblticker;
 
         create_next_audio_buffer(audio_buffer, SAMPLES_HIGH);
-        create_next_audio_buffer(audio_buffer + (SAMPLES_HIGH * 2), SAMPLES_HIGH);
 
-        audio_api->play((u8 *)audio_buffer, (AUDIOBUF_SIZE * 2));
+        audio_api->play((u8 *)audio_buffer, (SAMPLES_HIGH * 2 * 2));
     }
 }
