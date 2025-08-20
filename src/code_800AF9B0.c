@@ -43,6 +43,8 @@ void func_800AF9E4(Vtx* arg0, s32 arg1, s32 arg2, s32 arg3, s16 arg4, s16 arg5, 
     s32 r, g, b;
     s32 i;
 
+int white= (arg1 & 1) && (!(arg2 & 1));
+
     for (i = 0; i < 4; i++) {
         (arg0 + i)->v.ob[0] = ((i % 2) * arg7) + arg6 - 504;
         if (i / 2 == 0) {
@@ -75,6 +77,9 @@ void func_800AF9E4(Vtx* arg0, s32 arg1, s32 arg2, s32 arg3, s16 arg4, s16 arg5, 
     }
 
     gDPSetPrimColor(gDisplayListHead++, 0, 0, r, g, b, 255);
+    // force the flag to use prim color only
+    // loses lighting but at least we see the checkers
+    gDPSetCombineMode(gDisplayListHead++, G_CC_PRIMITIVE, G_CC_PRIMITIVE);
     gDPPipeSync(gDisplayListHead++);
     gSPVertex(gDisplayListHead++, VIRTUAL_TO_PHYSICAL2(arg0), 4, 0);
     gSP1Triangle(gDisplayListHead++, 1, 2, 0, 0);
@@ -176,7 +181,8 @@ void func_800B0004(void) {
     gSPLight(gDisplayListHead++, VIRTUAL_TO_PHYSICAL2(&D_800E8680), LIGHT_2);
     gSPNumLights(gDisplayListHead++, NUMLIGHTS_1);
     gSPSetGeometryMode(gDisplayListHead++, G_SHADE | G_SHADING_SMOOTH);
-    gDPSetCombineLERP(gDisplayListHead++, PRIMITIVE, 0, SHADE, 0, 0, 0, 0, SHADE, PRIMITIVE, 0, SHADE, 0, 0, 0, 0, SHADE);
+    // revisit this when color combiner fakery is better
+    //gDPSetCombineLERP(gDisplayListHead++, PRIMITIVE, 0, SHADE, 0, 0, 0, 0, SHADE, PRIMITIVE, 0, SHADE, 0, 0, 0, 0, SHADE);
     gSPClearGeometryMode(gDisplayListHead++, G_CULL_BACK);
     gSPSetGeometryMode(gDisplayListHead++, G_LIGHTING);
     vtxs = (D_8018EDB4 % 2) ? (D_8018EDB8) : (D_8018EDBC);

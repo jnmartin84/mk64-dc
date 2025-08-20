@@ -189,7 +189,8 @@ void func_802A38B4(void) {
     }
 }
 
-void func_802A39E0(struct UnkStruct_800DC5EC* arg0) {
+void func_802A39E0(UNUSED struct UnkStruct_800DC5EC* arg0) {
+#if 0
     s32 ulx = arg0->screenStartX - (arg0->screenWidth / 2);
     s32 uly = arg0->screenStartY - (arg0->screenHeight / 2);
     s32 lrx = arg0->screenStartX + (arg0->screenWidth / 2);
@@ -244,6 +245,7 @@ void func_802A39E0(struct UnkStruct_800DC5EC* arg0) {
     gDPFillRectangle(gDisplayListHead++, ulx, uly, lrx - 1, lry - 1);
 
     gDPPipeSync(gDisplayListHead++);
+#endif
     gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH,
                      VIRTUAL_TO_PHYSICAL(gPhysicalFramebuffers[sRenderingFramebuffer])); // 0x1FFFFFFF
     gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
@@ -254,6 +256,7 @@ void func_802A39E0(struct UnkStruct_800DC5EC* arg0) {
  * Initialize the z-buffer for the current frame.
  */
 void init_z_buffer(void) {
+#if 0
     gDPPipeSync(gDisplayListHead++);
     gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
     gDPSetDepthImage(gDisplayListHead++, gPhysicalZBuffer);
@@ -263,6 +266,7 @@ void init_z_buffer(void) {
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     gDPFillRectangle(gDisplayListHead++, 0, 0, 319, 239);
     gDPPipeSync(gDisplayListHead++);
+#endif
     gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH,
                      VIRTUAL_TO_PHYSICAL(gPhysicalFramebuffers[sRenderingFramebuffer]));
     gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
@@ -275,6 +279,7 @@ void init_z_buffer(void) {
 void init_rdp(void) {
     gDPPipeSync(gDisplayListHead++);
     gDPPipelineMode(gDisplayListHead++, G_PM_1PRIMITIVE);
+// this happens mid-frame and breaks the correct scissoring behavior in multi-player
 //    gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     gDPSetCombineMode(gDisplayListHead++, G_CC_SHADE, G_CC_SHADE);
     gDPSetTextureLOD(gDisplayListHead++, G_TL_TILE);
