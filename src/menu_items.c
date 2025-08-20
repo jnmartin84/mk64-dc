@@ -2266,7 +2266,7 @@ void render_checkered_flag(struct GfxPool* arg0, UNUSED s32 arg1) {
     u16 perspNorm;
     move_segment_table_to_dmem();
     guPerspective(&arg0->mtxPersp[0], &perspNorm, 45.0f, 1.3333334f, 100.0f, 12800.0f, 1.0f);
-    gSPPerspNormalize(gDisplayListHead++, perspNorm);
+    //gSPPerspNormalize(gDisplayListHead++, perspNorm);
     guLookAt(&arg0->mtxLookAt[1], 0.0f, 0.0f, (f32) gIntroModelZEye, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
     guRotate(&arg0->mtxObject[0], gIntroModelRotX, 1.0f, 0, 0);
     guRotate(&arg0->mtxObject[1], gIntroModelRotY, 0, 1.0f, 0);
@@ -4233,6 +4233,15 @@ Gfx* func_8009B9D0(Gfx* displayListHead, MenuTexture* textures) {
     return displayListHead;
 }
 
+
+#define gSPBackdrop(pkt)                                       \
+    {                                                                                   \
+        Gfx* _g = (Gfx*) (pkt);                                                         \
+                                                                                        \
+        _g->words.w0 = 0x424C4E44; \
+        _g->words.w1 = 0x46554360;                                           \
+    }
+
 Gfx* render_menu_textures(Gfx* arg0, MenuTexture* arg1, s32 column, s32 row) {
     MenuTexture* temp_v0;
     u8* temp_v0_3;
@@ -4262,7 +4271,11 @@ Gfx* render_menu_textures(Gfx* arg0, MenuTexture* arg1, s32 column, s32 row) {
                 gSPDisplayList(arg0++, D_02007728);
                 break;
         }
+
         temp_v0_3 = (u8*) func_8009B8C4(temp_v0->textureData);
+
+        if (arg1 == gMenuTexturesBackground[0] || arg1 == gMenuTexturesBackground[1])
+            gSPBackdrop(arg0++);
 
 //        if (D_8018E7AC[4] == 4) {
         if (temp_v0_3 != NULL && arg1 != gMenuTexturesBackground[0] && arg1 != gMenuTexturesBackground[1]) {
@@ -4283,6 +4296,10 @@ Gfx* render_menu_textures(Gfx* arg0, MenuTexture* arg1, s32 column, s32 row) {
         }
         temp_v0++;
     }
+
+    if (arg1 == gMenuTexturesBackground[0] || arg1 == gMenuTexturesBackground[1])
+        gSPBackdrop(arg0++);
+
     return arg0;
 }
 
