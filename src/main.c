@@ -768,8 +768,12 @@ void update_controller(s32 index) {
         ucheld |= 0x0001; //C_RIGHT
 #endif
 
-    if (state->ltrig)
-        ucheld |= 0x2000; //Z_TRIG
+    if (state->ltrig) {
+        if (gGamestate > 3) // DC L is N64 Z in-game
+            ucheld |= 0x2000; //Z_TRIG
+        else // DC L becomes N64 L in-menu
+            ucheld |= 0x0020; //L_TRIG
+    }
     if (state->buttons & CONT_START)
        ucheld |= 0x1000; //START_BUTTON
 
