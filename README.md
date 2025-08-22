@@ -17,7 +17,8 @@ Let this comment from Yuzo Koshiro convince you:
 ![Dreamcast sound quality](/media/sound.jpg)
 
 
-Here's how to build it yourself. Deviate from these instructions at your own risk, but follow them *precisely* and you shall be rewarded for your efforts:
+Anyway, here's how to build it yourself. Deviate from these instructions at your own risk, but follow them *precisely* and you shall be rewarded for your efforts:
+
 ![DK's Jungle Parkway](/media/screenshot1.png)
 ![Koopa Troopa Beach](/media/screenshot2.png)
 ![Rainbow Road](/media/screenshot3.png)
