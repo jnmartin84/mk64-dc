@@ -5,7 +5,8 @@ Do not ask for a CDI or ISO. Learn how to build it or don't play it.
 
 We are not getting sued by Nintendo to make your lives easy.
 
-**A quick note about the in-game sound**
+## A quick note about the in-game sound ##
+
 "The game sounds bad."
 
 This is true but the blame is in the wrong place. The game sounds fine. Dreamcasts sound terrible. 
@@ -13,6 +14,7 @@ This is true but the blame is in the wrong place. The game sounds fine. Dreamcas
 Let this comment from Yuzo Koshiro convince you:
 
 ![Dreamcast sound quality](/media/sound.jpg)
+
 
 Here's how to build it yourself. Deviate from these instructions at your own risk, but follow them *precisely* and you shall be rewarded for your efforts:
 ![DK's Jungle Parkway](/media/screenshot1.png)
