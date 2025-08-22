@@ -5,7 +5,8 @@ Do not ask for a CDI or ISO. Learn how to build it or don't play it.
 
 We are not getting sued by Nintendo to make your lives easy.
 
-## A quick note about the in-game sound ##
+**A quick note about the in-game sound**
+
 
 "The game sounds bad."
 
