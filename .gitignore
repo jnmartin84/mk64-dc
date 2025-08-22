@@ -6,6 +6,7 @@ src/gfx/gfx_pvr.h
 *.o
 *.obj
 mario-kart.elf
+mk64.bin
 
 # Linker output
 *.ilk
