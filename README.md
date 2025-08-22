@@ -50,9 +50,9 @@ It should work on most other Linux environments.
 
 You will need a host/native GCC install and a full working Dreamcast/KallistiOS compiler toolchain install. You will also need to install the latest `kos-ports`.
 
-See the [Dreamcast Wiki](https://dreamcast.wiki/Getting_Started_with_Dreamcast_development) for instructions. Windows users can get everything needed from installing the latest version of [DreamSDK](https://dreamsdk.org/).
+See the [Dreamcast Wiki](https://dreamcast.wiki/Getting_Started_with_Dreamcast_development) for instructions. Windows users can get everything needed from installing the latest version of [DreamSDK](https://sizious.emunova.net/dreamsdk/releases/DreamSDK-R4-dev-alpha5-Setup.iso).
 
-Mario Kart 64 DC has only been tested to build and run using `sh-elf-gcc` versions 13 (13.2, 13.3), 14 (14.2) and 15 (15.?). Use any other major version at your own risk. No support will be provided.
+Mario Kart 64 DC has only been tested to build and run using `sh-elf-gcc` versions 13 (13.2, 13.3), 14 (14.2) and 15 (15.1). Use any other major version at your own risk. No support will be provided.
 
 *NOTE: WHEN BUILDING KOS, USE THE `environ.sh` FILE PROVIDED IN THE `mario-kart-64-dc` REPO.*
 
@@ -92,8 +92,7 @@ To build the source into an ELF file, run the following commands (exactly as wri
 Under `~/mario-kart-64-dc/tools/torch` you will find a `README.md` with instructions on installing dependencies for `torch`.
 See: [ https://github.com/HarbourMasters/Torch/blob/6a2eb921482f2eb3b3cb5b675152d6d21d1a20ff/README.md ]
 
-
-For Linux and other Linux-like environments (such as with DreamSDK on Windows), follow those instructions or nothing else will work. Then continue with the following commands (we will start from the beginning so there is no confusion):
+For Linux and other Linux-like environments, follow those instructions or nothing else will work. Then continue with the following commands (we will start from the beginning so there is no confusion):
 
     source /opt/toolchains/dc/kos/environ.sh
     cd ~/mario-kart-64-dc
@@ -116,6 +115,31 @@ For macOS, make sure you have `gmake` installed (you may need to install it with
     cd ..
     CMAKE_POLICY_VERSION_MINIMUM=3.5 gmake assets
     CMAKE_POLICY_VERSION_MINIMUM=3.5 gmake
+
+For Windows DreamSDK users the following prerequesites must be installed:
+* Python, CMake, Git
+* GLdc from kos-ports
+
+Next, you must fix the `CMakeLists.txt` file in `tools/torch` to add the `wininet` library:
+
+    # Link StormLib
+
+    set(STORMLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/StormLib)
+    add_subdirectory(${STORMLIB_DIR})
+    target_link_libraries(${PROJECT_NAME} PRIVATE storm wininet)
+
+After doing this, we can build Mario Kart 64 with DreamSDK using the following commands:
+
+    git clone https://github.com/jnmartin84/mk64-dc.git mario-kart-64-dc
+    cd ~/mario-kart-64-dc
+    mv /opt/toolchains/dc/kos/environ.sh /opt/toolchains/dc/kos/environ.sh.orig
+    cp environ.sh /opt/toolchains/dc/kos/environ.sh
+    source /opt/toolchains/dc/kos/environ.sh
+    cd tools
+    CMAKE_POLICY_VERSION_MINIMUM=3.5 make
+    cd ~/mario-kart-64-dc
+    make assets
+    make
 
 **How to Generate Mario Kart 64 Disc Image**
 
