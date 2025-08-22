@@ -834,6 +834,14 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len
     if (cur_shader->shader_id == 0x01200200)
         skybox_setup_pre();
 
+    // checkered flag
+    if (cur_shader->shader_id == 0x00000081) {
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+        glDepthFunc(GL_ALWAYS);
+        glEnable(GL_BLEND);
+    }
+
     if (cur_shader->shader_id == 0x01a00200)
         over_skybox_setup_pre();
 
@@ -901,12 +909,26 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len
 
     if (cur_shader->shader_id == 0x09045551)
         star_effect_particle_blend_setup_post();
+
+    // checkered flag
+    if (cur_shader->shader_id == 0x00000081) {
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+        glDepthFunc(GL_LESS);
+        glEnable(GL_BLEND);
+    }
 }
 
+extern int title_backdrop;
+
+extern void *gTextureBackgroundBlueSky;
+extern void *gTextureBackgroundSunset;
 extern u8 gTextureMarioFace00[];
 extern u8 gTextureBowserFace16_end[];
+
 extern void gfx_opengl_2d_projection(void);
 extern void gfx_opengl_reset_projection(void);
+
 void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size_t buf_vbo_num_tris) {
     glDisable(GL_FOG);
     gfx_opengl_2d_projection();
@@ -919,7 +941,6 @@ void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size
     glTexCoordPointer(2, GL_FLOAT, sizeof(dc_fast_t), &tris[0].texture);
     glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(dc_fast_t), &tris[0].color);
 
-//    glEnable(GL_BLEND);
     if (buf_vbo_num_tris) {
         glEnable(GL_TEXTURE_2D);
         // if there's two textures, set primary texture first
@@ -928,39 +949,6 @@ void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size
     } else {
         glDisable(GL_TEXTURE_2D);
     }
-
-#if 0
-#if 1
-    if (in_intro &&
-        cur_shader->shader_id == 0x01200200) { // 18874437){ // 0x1200045, skybox  // may need to relook at this
-        glDepthMask(GL_FALSE);
-        glDepthFunc(GL_LEQUAL);
-        glDisable(GL_BLEND);
-        glDisable(GL_FOG);
-    }
-
-#if 1
-    if (in_intro && cur_shader->shader_id == 0x01a00200) { // clouds over skybox
-        glEnable(GL_BLEND);
-        glEnable(GL_DEPTH_TEST);
-        glDepthMask(GL_TRUE);
-        glDepthFunc(GL_LEQUAL);
-        glPushMatrix();
-        glTranslatef(0.0f, 0.0f, -3500.0f);
-    }
-#endif
-    if (in_intro && is_zmode_decal) {
-        // Adjust depth values slightly for zmode_decal objects
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LEQUAL);
-        glDepthMask(GL_TRUE);
-
-        // Push the geometry slightly towards the camera
-        glPushMatrix();
-        glTranslatef(0.0f, 2.1f, 0.9f); // magic values need fine tuning.
-    }
-#endif
-#endif
 
     if (!in_intro) {
         if (blend_fuck) {
@@ -982,90 +970,30 @@ void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size
         glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     }
 
-#if 0
-    if (pr || pg || pb) {
-        printf("shader 0x%08x\n", cur_shader->shader_id);
+    if (cur_shader->shader_id == 0x01a00a00) {
+        if (title_backdrop) {
+            glDisable(GL_DEPTH_TEST);
+            glDepthMask(GL_FALSE);
+            glDepthFunc(GL_ALWAYS);
+            glDisable(GL_BLEND);
+        }
     }
 
-    if (((cur_shader->shader_id & 0x00ffffff) != 0x00141548) || (!(pr || pg || pb))) {
-#endif
-    
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     if (use_one_inv) {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 
-
-#if 0
-    } else if ((cur_shader->shader_id & 0x00ffffff) == 0x00141548) {
-        dc_fast_t* tris = buf_vbo;
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-        for (int i = 0; i < 3 * 2; i++) {
-            backups[i] = tris[i].color.packed;
-            tris[i].color.array.r = 0;
-            tris[i].color.array.g = 0;
-            tris[i].color.array.b = 0;
-            tris[i].color.array.a = 255;
+    if (cur_shader->shader_id == 0x01a00a00) {
+        if (title_backdrop) {
+            glEnable(GL_DEPTH_TEST);
+            glDepthMask(GL_TRUE);
+            glDepthFunc(GL_LESS);
+            glEnable(GL_BLEND);
         }
-
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glDrawArrays(GL_TRIANGLES, 0, 3 * 2);
-
-        for (int i = 0; i < 3 * 2; i++) {
-            tris[i].color.array.r = pr;
-            tris[i].color.array.g = pg;
-            tris[i].color.array.b = pb;
-            tris[i].color.array.a = 255;
-        }
-        glEnable(GL_DEPTH_TEST);
-        glDepthMask(GL_TRUE);
-        glDepthFunc(GL_EQUAL);
-        glDisable(GL_TEXTURE_2D);
-        glBlendFunc(GL_ONE_MINUS_DST_ALPHA, GL_DST_ALPHA);
-
-        glDrawArrays(GL_TRIANGLES, 0, 3 * 2);
-        for (int i = 0; i < 3 * 2; i++) {
-            tris[i].color.packed = backups[i];
-        }
-        glEnable(GL_TEXTURE_2D);
-        glBlendFunc(GL_ONE, GL_ONE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glDrawArrays(GL_TRIANGLES, 0, 3 * 2);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glDepthFunc(GL_LESS);     
-    }
-#endif
-
-#if 0
-    if (!in_intro) {
-        glDepthMask(GL_TRUE);
-        glDepthFunc(GL_LESS);
-    }
-#if 1
-    if (in_intro && is_zmode_decal) {
-        glPopMatrix();
-        glDepthFunc(GL_LESS); // Reset depth function
     }
 
-    if (in_intro && cur_shader->shader_id == 0x01200200) { // 18874437){ // 0x1200045, skybox
-        //        glPopMatrix();
-        glDepthMask(GL_TRUE);
-        glDepthFunc(GL_LESS);
-        glEnable(GL_BLEND);
-        glEnable(GL_FOG);
-    }
-
-    if (in_intro && cur_shader->shader_id == 0x01a00200) {
-        glPopMatrix();
-    }
-#endif
-#endif
-//    glEnable(GL_BLEND);
     gfx_opengl_reset_projection();
 }
 
@@ -1121,7 +1049,7 @@ static void gfx_opengl_init(void) {
     config.initial_immediate_capacity = 0;
     glKosInitEx(&config);
     // glKosInit();
-#if 0
+#if 1
 #ifdef __DREAMCAST__
     if (vid_check_cable() != CT_VGA)
     {

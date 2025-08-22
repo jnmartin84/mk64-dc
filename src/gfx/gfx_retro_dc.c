@@ -2294,6 +2294,7 @@ static inline void* seg_addr(uintptr_t w1) {
 #define C0(pos, width) ((cmd->words.w0 >> (pos)) & ((1U << width) - 1))
 #define C1(pos, width) ((cmd->words.w1 >> (pos)) & ((1U << width) - 1))
 
+int title_backdrop = 0;
 int use_one_inv = 0;
 int depth_off = 0;
 static void  __attribute__((noinline)) gfx_run_dl(Gfx* cmd) {
@@ -2313,6 +2314,8 @@ static void  __attribute__((noinline)) gfx_run_dl(Gfx* cmd) {
 				use_one_inv ^= 1;
 			} else if(cmd->words.w1 == 0x4655434D) {
 				depth_off ^= 1;
+			} else if(cmd->words.w1 == 0x46554360) {
+				title_backdrop ^= 1;
 			}
 			++cmd;
 			continue;

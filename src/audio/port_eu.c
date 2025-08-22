@@ -61,6 +61,10 @@ void create_next_audio_buffer(s16* samples, u32 num_samples) {
 //    OSMesg specId = {0};
     OSMesg msg = {0};
 
+    if (gAudioFrameCount == 0) {
+        gAudioRandom = osGetTime();
+    }
+
     gAudioFrameCount++;
 //    gCurrAiBufferIndex %= 3;
 
@@ -98,6 +102,7 @@ void create_next_audio_buffer(s16* samples, u32 num_samples) {
 
     gAudioCmd = gAudioCmdBuffers[gAudioTaskIndex]; 
     gAudioCmd = synthesis_execute((Acmd*) gAudioCmd, &abiCmdCount, samples, num_samples);
+
     gAudioRandom = osGetCount() * (gAudioRandom + gAudioFrameCount);
 }
 
