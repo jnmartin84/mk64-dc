@@ -113,5 +113,14 @@ torch.hash.yml
 *.cdi
 
 dc_data
-
+1ST_READ.BIN
+IP.BIN
+cdi.log
+flycast.log
+header.iso
+loader.bin
+mariokart64.iso
+mk64.bin
+tmp
+loader.elf
 ._*
