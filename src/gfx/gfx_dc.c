@@ -63,6 +63,7 @@ uint8_t skip_debounce = 0;
 const unsigned int FRAME_TIME_MS = 33; // hopefully get right on target @ 33.3
 
 static uint8_t gfx_dc_start_frame(void) {
+#if 0
     const unsigned int cur_time = GetSystemTimeLow();
     const unsigned int elapsed = cur_time - last_time;
 
@@ -72,10 +73,11 @@ static uint8_t gfx_dc_start_frame(void) {
     }
     // skip if frame took longer than 1 / 30 = 33.3 ms
     if (elapsed > FRAME_TIME_MS) {
-        skip_debounce = 1; // skip a max of once every 4 frames
+        skip_debounce = 0; // skip a max of once every 4 frames
         last_time = cur_time;
         return 0;
     }
+#endif
     return 1;
 }
 
@@ -88,6 +90,9 @@ static void gfx_dc_swap_buffers_end(void) {
     const unsigned int elapsed = cur_time - last_time;
     last_time = cur_time;
 
+    /* Lets us yield to other threads*/
+    glKosSwapBuffers();
+
     if (force_30fps && elapsed < FRAME_TIME_MS) {
 #ifdef DEBUG
         printf("elapsed %d ms fps %f delay %d \n", elapsed, 1000.0f / elapsed, FRAME_TIME_MS - elapsed);
@@ -96,8 +101,6 @@ static void gfx_dc_swap_buffers_end(void) {
         last_time += (FRAME_TIME_MS - elapsed);
     }
 
-    /* Lets us yield to other threads*/
-    glKosSwapBuffers();
 }
 
 /* Idk what this is for? */

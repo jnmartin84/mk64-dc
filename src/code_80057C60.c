@@ -37,6 +37,8 @@
 #include "sounds.h"
 #include "data/some_data.h"
 
+#include "sh4zam.h"
+
 //! @warning this macro is undef'd at the end of this file
 #define MAKE_RGB(r, g, b) (((r) << 0x10) | ((g) << 0x08) | (b << 0x00))
 
@@ -557,7 +559,7 @@ void render_object(u32 arg0) {
 
 void render_object_p1(void) {
 
-    gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
+    //gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[0]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxLookAt[0]),
@@ -579,7 +581,7 @@ void render_object_p1(void) {
 
 void render_object_p2(void) {
 
-    gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
+    //gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[1]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxLookAt[1]),
@@ -592,7 +594,7 @@ void render_object_p2(void) {
 }
 
 void render_object_p3(void) {
-    gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
+    //gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[2]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxLookAt[2]),
@@ -606,7 +608,7 @@ void render_object_p3(void) {
 
 void render_object_p4(void) {
 
-    gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
+    //gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[3]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxLookAt[3]),
@@ -662,7 +664,7 @@ void render_player_snow_effect(u32 arg0) {
 }
 
 void render_player_snow_effect_one(void) {
-    gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
+    //gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[0]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxLookAt[0]),
@@ -673,7 +675,7 @@ void render_player_snow_effect_one(void) {
 }
 
 void render_player_snow_effect_two(void) {
-    gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
+    //gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[1]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxLookAt[1]),
@@ -682,7 +684,7 @@ void render_player_snow_effect_two(void) {
 }
 
 void render_player_snow_effect_three(void) {
-    gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
+    //gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[2]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxLookAt[2]),
@@ -691,7 +693,7 @@ void render_player_snow_effect_three(void) {
 }
 
 void render_player_snow_effect_four(void) {
-    gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
+    //gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[3]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxLookAt[3]),
@@ -6136,9 +6138,9 @@ void render_battle_balloon(Player* player, s8 arg1, s16 arg2, s8 arg3) {
         xdiff = (var_f20 = player->pos[0] - cameras[arg3].pos[0]);
         zdiff = player->pos[2] - cameras[arg3].pos[2];
         if (gActiveScreenMode != 3) {
-            var_f20 = sqrtf((xdiff * xdiff) + (zdiff * zdiff)) / 300.0f;
+            var_f20 = shz_sqrtf_fsrra((xdiff * xdiff) + (zdiff * zdiff)) / 300.0f;
         } else {
-            var_f20 = sqrtf((xdiff * xdiff) + (zdiff * zdiff)) / 200.0f;
+            var_f20 = shz_sqrtf_fsrra((xdiff * xdiff) + (zdiff * zdiff)) / 200.0f;
         }
         if (var_f20 >= 1.8) {
             var_f20 = 1.8f;

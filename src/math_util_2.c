@@ -423,6 +423,11 @@ Vec3f* vec3f_set_xyz(Vec3f arg0, f32 arg1, f32 arg2, f32 arg3) {
 
 #include <kos.h>
 Vec3f* MK64_vec3f_normalize(Vec3f dest) {
+//    shz_vec3_t out = shz_vec3_normalize(shz_vec3_deref(&dest));
+//    dest[0] = out.x;
+//    dest[1] = out.y;
+//    dest[2] = out.z;
+//    return (Vec3f*) &dest;
 #if 0
     f32 invsqrt = 1.0f / sqrtf(dest[0] * dest[0] + dest[1] * dest[1] + dest[2] * dest[2]);
 
@@ -771,7 +776,7 @@ void func_80041D34(void) {
 }
 
 void set_matrix_hud_screen(void) {
-    gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
+    //gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxOrtho),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
 }

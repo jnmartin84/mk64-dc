@@ -32,6 +32,8 @@
 #include "data/path_spawn_metadata.h"
 #include "math_util_2.h"
 
+#include "sh4zam.h"
+
 static inline void sincoss(u16 arg0, f32* s, f32* c) {
     register float __s __asm__("fr2");
     register float __c __asm__("fr3");
@@ -2649,9 +2651,10 @@ void func_80015C94(Camera* camera, UNUSED Player* unusedPlayer, UNUSED s32 arg2,
     zdiff = midZ - D_80164638[cameraId];
     distance = sqrtf((xdiff * xdiff) + (ydiff * ydiff) + (zdiff * zdiff));
     if (distance != 0.0) {
-        midX = D_801645F8[cameraId] + ((D_80164648[cameraId] * xdiff) / distance);
-        midY = D_80164618[cameraId] + ((D_80164648[cameraId] * ydiff) / distance);
-        midZ = D_80164638[cameraId] + ((D_80164648[cameraId] * zdiff) / distance);
+        f32 rdist = 1.0f / distance;
+        midX = D_801645F8[cameraId] + ((D_80164648[cameraId] * xdiff) * rdist);
+        midY = D_80164618[cameraId] + ((D_80164648[cameraId] * ydiff) * rdist);
+        midZ = D_80164638[cameraId] + ((D_80164648[cameraId] * zdiff) * rdist);
     } else {
         midX = D_801645F8[cameraId];
         midY = D_80164618[cameraId];

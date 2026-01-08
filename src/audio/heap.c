@@ -628,7 +628,7 @@ void audio_reset_session(void) {
     gAudioBufferParameters.resampleRate = 32000.0f / ((f32) (s32) gAudioBufferParameters.frequency);
     gAudioBufferParameters.unkUpdatesPerFrameScaled = 0.001171875f / gAudioBufferParameters.updatesPerFrame;
     gAudioBufferParameters.updatesPerFrameInv = 1.0f / gAudioBufferParameters.updatesPerFrame;
-    gMaxSimultaneousNotes = temp_s6->maxSimultaneousNotes;
+    gMaxSimultaneousNotes = /* 16;// */temp_s6->maxSimultaneousNotes;
     gVolume = temp_s6->volume;
     gTempoInternalToExternal =
         (u32) (((gAudioBufferParameters.updatesPerFrame * 2880000.0f) / gTatumsPerBeat) / D_803B7178);

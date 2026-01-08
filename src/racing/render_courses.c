@@ -313,7 +313,7 @@ void func_8029122C(struct UnkStruct_800DC5EC* arg0, s32 playerId) {
             gDPSetBlendMask(gDisplayListHead++, 0xFF);
             gDPSetCombineMode(gDisplayListHead++, G_CC_MODULATEIA, G_CC_MODULATEIA);
             gDPSetTextureFilter(gDisplayListHead++, G_TF_BILERP);
-            gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
+            //gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
 
             mtxf_identity(matrix);
             render_set_position(matrix, 0);
@@ -347,7 +347,7 @@ void func_8029122C(struct UnkStruct_800DC5EC* arg0, s32 playerId) {
             gDPSetBlendMask(gDisplayListHead++, 0xFF);
             gDPSetCombineMode(gDisplayListHead++, G_CC_MODULATEIA, G_CC_MODULATEIA);
             gDPSetTextureFilter(gDisplayListHead++, G_TF_BILERP);
-            gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
+            //gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
 
             mtxf_identity(matrix);
             render_set_position(matrix, 0);
@@ -369,7 +369,7 @@ void func_8029122C(struct UnkStruct_800DC5EC* arg0, s32 playerId) {
             gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON);
             gDPSetBlendMask(gDisplayListHead++, 0xFF);
             gDPSetTextureFilter(gDisplayListHead++, G_TF_BILERP);
-            gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
+            //gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
 
             mtxf_identity(matrix);
             render_set_position(matrix, 0);

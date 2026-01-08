@@ -285,7 +285,7 @@ void init_rdp(void) {
     gDPSetTextureLOD(gDisplayListHead++, G_TL_TILE);
     gDPSetTextureLUT(gDisplayListHead++, G_TT_NONE);
     gDPSetTextureDetail(gDisplayListHead++, G_TD_CLAMP);
-    gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
+    //gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
     gDPSetTextureFilter(gDisplayListHead++, G_TF_BILERP);
     gDPSetTextureConvert(gDisplayListHead++, G_TC_FILT);
     gDPSetCombineKey(gDisplayListHead++, G_CK_NONE);
@@ -899,9 +899,9 @@ void render_player_one_1p_screen(void) {
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_LIGHTING | G_SHADING_SMOOTH);
     gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
 #ifdef VERSION_EU
-    guPerspective(&gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
+    guPerspective(&gGfxPool->mtxPersp[0], /* &perspNorm, */ gCameraZoom[0], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
 #else
-    guPerspective(&gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
+    guPerspective(&gGfxPool->mtxPersp[0], /* &perspNorm, */ gCameraZoom[0], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
     //gSPPerspNormalize(gDisplayListHead++, perspNorm);
@@ -962,9 +962,9 @@ void render_player_one_2p_screen_vertical(void) {
     set_the_scissor(D_800DC5EC);
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU
-    guPerspective(&gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
+    guPerspective(&gGfxPool->mtxPersp[0], /* &perspNorm, */ gCameraZoom[0], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
 #else
-    guPerspective(&gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
+    guPerspective(&gGfxPool->mtxPersp[0], /* &perspNorm, */ gCameraZoom[0], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
     //gSPPerspNormalize(gDisplayListHead++, perspNorm);
@@ -1029,9 +1029,9 @@ void render_player_two_2p_screen_vertical(void) {
 #endif
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU
-    guPerspective(&gGfxPool->mtxPersp[1], &perspNorm, gCameraZoom[1], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
+    guPerspective(&gGfxPool->mtxPersp[1], /* &perspNorm, */ gCameraZoom[1], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
 #else
-    guPerspective(&gGfxPool->mtxPersp[1], &perspNorm, gCameraZoom[1], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
+    guPerspective(&gGfxPool->mtxPersp[1], /* &perspNorm, */ gCameraZoom[1], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
     //gSPPerspNormalize(gDisplayListHead++, perspNorm);
@@ -1092,9 +1092,9 @@ void render_player_one_2p_screen_horizontal(void) {
 #endif
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU
-    guPerspective(&gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
+    guPerspective(&gGfxPool->mtxPersp[0], /* &perspNorm, */ gCameraZoom[0], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
 #else
-    guPerspective(&gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
+    guPerspective(&gGfxPool->mtxPersp[0], /* &perspNorm, */ gCameraZoom[0], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
     //gSPPerspNormalize(gDisplayListHead++, perspNorm);
@@ -1156,9 +1156,9 @@ void render_player_two_2p_screen_horizontal(void) {
 #endif
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU
-    guPerspective(&gGfxPool->mtxPersp[1], &perspNorm, gCameraZoom[1], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
+    guPerspective(&gGfxPool->mtxPersp[1], /* &perspNorm, */ gCameraZoom[1], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
 #else
-    guPerspective(&gGfxPool->mtxPersp[1], &perspNorm, gCameraZoom[1], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
+    guPerspective(&gGfxPool->mtxPersp[1], /* &perspNorm, */ gCameraZoom[1], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
     //gSPPerspNormalize(gDisplayListHead++, perspNorm);
@@ -1216,9 +1216,9 @@ void render_player_one_3p_4p_screen(void) {
     set_the_scissor(D_800DC5EC);
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU
-    guPerspective(&gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
+    guPerspective(&gGfxPool->mtxPersp[0], /* &perspNorm, */ gCameraZoom[0], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
 #else
-    guPerspective(&gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
+    guPerspective(&gGfxPool->mtxPersp[0], /* &perspNorm, */ gCameraZoom[0], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
     //gSPPerspNormalize(gDisplayListHead++, perspNorm);
@@ -1277,9 +1277,9 @@ void render_player_two_3p_4p_screen(void) {
     set_the_scissor(D_800DC5F0);
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU
-    guPerspective(&gGfxPool->mtxPersp[1], &perspNorm, gCameraZoom[1], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
+    guPerspective(&gGfxPool->mtxPersp[1], /* &perspNorm, */ gCameraZoom[1], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
 #else
-    guPerspective(&gGfxPool->mtxPersp[1], &perspNorm, gCameraZoom[1], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
+    guPerspective(&gGfxPool->mtxPersp[1], /* &perspNorm, */ gCameraZoom[1], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
     //gSPPerspNormalize(gDisplayListHead++, perspNorm);
@@ -1339,9 +1339,9 @@ void render_player_three_3p_4p_screen(void) {
 
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU
-    guPerspective(&gGfxPool->mtxPersp[2], &perspNorm, gCameraZoom[2], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
+    guPerspective(&gGfxPool->mtxPersp[2], /* &perspNorm, */ gCameraZoom[2], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
 #else
-    guPerspective(&gGfxPool->mtxPersp[2], &perspNorm, gCameraZoom[2], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
+    guPerspective(&gGfxPool->mtxPersp[2], /* &perspNorm, */ gCameraZoom[2], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
     //gSPPerspNormalize(gDisplayListHead++, perspNorm);
@@ -1409,9 +1409,9 @@ void render_player_four_3p_4p_screen(void) {
 
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
 #ifdef VERSION_EU
-    guPerspective(&gGfxPool->mtxPersp[3], &perspNorm, gCameraZoom[3], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
+    guPerspective(&gGfxPool->mtxPersp[3], /* &perspNorm, */ gCameraZoom[3], sp9C, gCourseNearPersp, gCourseFarPersp, 1.0f);
 #else
-    guPerspective(&gGfxPool->mtxPersp[3], &perspNorm, gCameraZoom[3], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
+    guPerspective(&gGfxPool->mtxPersp[3], /* &perspNorm, */ gCameraZoom[3], gScreenAspect, gCourseNearPersp, gCourseFarPersp,
                   1.0f);
 #endif
     //gSPPerspNormalize(gDisplayListHead++, perspNorm);

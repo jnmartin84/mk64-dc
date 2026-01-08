@@ -9,6 +9,8 @@
 #include "main.h"
 #include "math_util.h"
 
+#include "sh4zam.h"
+
 /*** Data ***/
 Ambient D_800E8680 = { {
     { 31, 31, 31 },
@@ -37,6 +39,8 @@ void func_800AF9B0(void) {
 //    D_8018EDB8 = (void*) get_next_available_memory_addr(480 * sizeof(Vtx));
 //    D_8018EDBC = (void*) get_next_available_memory_addr(480 * sizeof(Vtx));
 }
+
+#define G_CC_FLAG 0, 0, PRIMITIVE, SHADE, 0, 0, 0, PRIMITIVE
 
 // could be a normal vertex, not a color...
 void func_800AF9E4(Vtx* arg0, s32 arg1, s32 arg2, s32 arg3, s16 arg4, s16 arg5, s32 arg6, s32 arg7) {
@@ -80,8 +84,9 @@ void func_800AF9E4(Vtx* arg0, s32 arg1, s32 arg2, s32 arg3, s16 arg4, s16 arg5, 
     gDPSetCombineMode(gDisplayListHead++, G_CC_PRIMITIVE, G_CC_PRIMITIVE);
     gDPPipeSync(gDisplayListHead++);
     gSPVertex(gDisplayListHead++, VIRTUAL_TO_PHYSICAL2(arg0), 4, 0);
-    gSP1Triangle(gDisplayListHead++, 1, 2, 0, 0);
-    gSP1Triangle(gDisplayListHead++, 3, 2, 1, 0);
+    gSP2Triangles(gDisplayListHead++, 1, 2, 0, 0, 3, 2, 1, 0);
+//    gSP1Triangle(gDisplayListHead++, 1, 2, 0, 0);
+//    gSP1Triangle(gDisplayListHead++, 3, 2, 1, 0);
 }
 
 void func_800AFC54(Vtx* vtx, s32 a, s32 b, s32 c, Vec3s out) {
@@ -115,7 +120,7 @@ void func_800AFC54(Vtx* vtx, s32 a, s32 b, s32 c, Vec3s out) {
     dy = ((varB4 - varA4) * (varC0 - varB0)) - ((varB0 - varA0) * (varC4 - varB4));
     dz = ((varB0 - varA0) * (varC2 - varB2)) - ((varB2 - varA2) * (varC0 - varB0));
     
-    length = sqrtf((dx * dx) + (dy * dy) + (dz * dz));
+    length = shz_sqrtf_fsrra((dx * dx) + (dy * dy) + (dz * dz));
 
     if (length < 0.001) {
         length = 0.001;

@@ -6530,7 +6530,7 @@ MkAnimation D_02007598[21] = {
  * @brief unknown MkAnimation
  * Wario face ?
  */
-MkAnimation D_02007640[2] = {
+MkAnimation __attribute__((aligned(65536))) D_02007640[2] = {
     { D_02006438, 0x00000032 },
     { NULL, 0x00000000 },
 };

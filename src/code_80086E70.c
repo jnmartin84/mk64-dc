@@ -17,6 +17,8 @@
 #include "code_80057C60.h"
 #include "defines.h"
 
+#include "sh4zam.h"
+
 static inline void sincoss(u16 arg0, f32* s, f32* c) {
     register float __s __asm__("fr2");
     register float __c __asm__("fr3");
@@ -321,7 +323,7 @@ uint8_t func_80087A0C(s32 objectIndex, s16 arg1, s16 arg2, s16 arg3, s16 arg4) {
         set_object_flag_status_true(objectIndex, 8);
         temp_v0 = arg2 - arg1;
         temp_a0 = arg4 - arg3;
-        dist = sqrtf((temp_v0 * temp_v0) + (temp_a0 * temp_a0));
+        dist = shz_sqrtf_fsrra((temp_v0 * temp_v0) + (temp_a0 * temp_a0));
         gObjectList[objectIndex].origin_pos[1] = 0.0f;
         gObjectList[objectIndex].direction_angle[1] = atan2s(temp_v0, temp_a0);
         func_8008751C(objectIndex);

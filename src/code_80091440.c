@@ -6,6 +6,8 @@
 #include "math_util.h"
 #include "collision.h"
 
+#include "sh4zam.h"
+
 void func_800914A0(void) {
     D_80152308 = gPlayerOneCopy->unk_006 + 7;
     if ((s32) D_8015F6F8 < D_80152308) {
@@ -57,6 +59,6 @@ UNUSED void func_800914E0(void) {
     sp34 = camera->lookAt[1] - camera->pos[1];
     sp30 = camera->lookAt[2] - camera->pos[2];
     camera->rot[1] = atan2s(sp38, sp30);
-    camera->rot[0] = atan2s(sqrtf((sp38 * sp38) + (sp30 * sp30)), sp34);
+    camera->rot[0] = atan2s(shz_sqrtf_fsrra((sp38 * sp38) + (sp30 * sp30)), sp34);
     camera->rot[2] = 0;
 }

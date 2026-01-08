@@ -540,7 +540,7 @@ void mtxf_scale(Mat4 mat, f32 coef) {
 
 // look like create a translation and rotation matrix with arg1 position and arg2 rotation
 void mtxf_pos_rotation_xyz(Mat4 out, Vec3f pos, Vec3s orientation) {
-#if 0
+#if 1
     f32 sine1;
     f32 cosine1;
     f32 sine2;
@@ -959,7 +959,7 @@ void mtxf_to_mtx(Mtx* dest, Mat4 src) {
  * Helper function for atan2s. Does a look up of the arctangent of y/x assuming
  * the resulting angle is in range [0, 0x2000] (1/8 of a circle).
  */
-#if 0
+#if 1
 // if 2pi is a full circle
 // the output range is [0, 2pi / 8 -> pi/4] is the range
 
@@ -974,6 +974,7 @@ void mtxf_to_mtx(Mtx* dest, Mat4 src) {
 #define twopi_i754 6.283185482025146484375f
 static inline float bump_atan2f(const float y, const float x)
 {
+    if (y == 0 && x == 0) return 0.0f;
 	float abs_y = fabsf(y) + 1e-10f;
 	float absy_plus_absx = abs_y + fabsf(x);
 	float inv_absy_plus_absx = approx_recip(absy_plus_absx);
@@ -986,7 +987,7 @@ static inline float bump_atan2f(const float y, const float x)
 
 u16 atan2_lookup(f32 y, f32 x) {
     u16 ret;
-#if 1
+#if 0
     if (x == 0) {
         ret = gArctanTable[0];
     } else {

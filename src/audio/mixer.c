@@ -444,17 +444,17 @@ static inline int16_t clamp16(int32_t v) {
 }
 
 void aClearBufferImpl(uint16_t addr, int nbytes) {
-    memset(BUF_U8(addr&~3), 0, ROUND_UP_16(nbytes));
+    memset(BUF_U8(addr/* &~3 */), 0, ROUND_UP_16(nbytes));
 }
 
 void n64_memcpy(void* dst, const void* src, size_t size);
 
 void aLoadBufferImpl(const void* source_addr, uint16_t dest_addr, uint16_t nbytes) {
-    n64_memcpy(BUF_U8(dest_addr & ~3), source_addr, ROUND_DOWN_16(nbytes));
+    n64_memcpy(BUF_U8(dest_addr/*  & ~3 */), source_addr, ROUND_DOWN_16(nbytes));
 }
 
 void aSaveBufferImpl(uint16_t source_addr, int16_t* dest_addr, uint16_t nbytes) {
-    n64_memcpy(dest_addr, BUF_S16(source_addr & ~3), ROUND_DOWN_16(nbytes));
+    n64_memcpy(dest_addr, BUF_S16(source_addr /* & ~3 */), ROUND_DOWN_16(nbytes));
 }
 
 void aLoadADPCMImpl(int num_entries_times_16, const int16_t* book_source_addr) {
@@ -496,11 +496,11 @@ void aSetBufferImpl(UNUSED uint8_t flags, uint16_t in, uint16_t out, uint16_t nb
 
 void aInterleaveImpl(uint16_t left, uint16_t right) {
     int count = ROUND_UP_16(rspa.nbytes) / sizeof(int16_t) / 8;
-    int16_t* l = BUF_S16(left&~3);
-    int16_t* r = BUF_S16(right&~3);
+    int16_t* l = BUF_S16(left/* &~3 */);
+    int16_t* r = BUF_S16(right/* &~3 */);
     // printf("interleave left %04x right %04x out %04x nbytes %d\n", left, right, rspa.out, rspa.nbytes);
 
-    uint32_t* d = (uint32_t*) (((uintptr_t) BUF_S16(rspa.out)) & ~3);
+    uint32_t* d = (uint32_t*) (((uintptr_t) BUF_S16(rspa.out)) /* & ~3 */);
     __builtin_prefetch(r);
 
     while (count > 0) {
@@ -544,20 +544,19 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
 void aDMEMMoveImpl(uint16_t in_addr, uint16_t out_addr, int nbytes) {
     // printf("dmemmove in %04x out %04x nbytes %d\n", in_addr, out_addr, nbytes);
 
-    memmove(BUF_U8(out_addr&~3), BUF_U8(in_addr&~3), ROUND_UP_16(nbytes));
+    memmove(BUF_U8(out_addr/* &~3 */), BUF_U8(in_addr/* &~3 */), ROUND_UP_16(nbytes));
 }
 
 void aDMEMCopyImpl(uint16_t in_addr, uint16_t out_addr, int nbytes) {
     // printf("dmemcopy in %04x out %04x nbytes %d\n", in_addr, out_addr, nbytes);
 
-    n64_memcpy(BUF_U8(out_addr&~3), BUF_U8(in_addr&~3), ROUND_UP_16(nbytes));
+    n64_memcpy(BUF_U8(out_addr/* &~3 */), BUF_U8(in_addr/* &~3 */), ROUND_UP_16(nbytes));
 }
 
 void aSetLoopImpl(ADPCM_STATE* adpcm_loop_state) {
     // rspa.adpcm_loop_state = adpcm_loop_state;
-    n64_memcpy(rspa.adpcm_loop_state, adpcm_loop_state, 16 * sizeof(int16_t));
     for (int i = 0; i < 16; i++) {
-        rspa.adpcm_loop_state[i] = (int16_t)__builtin_bswap16(rspa.adpcm_loop_state[i]);
+        rspa.adpcm_loop_state[i] = (int16_t)__builtin_bswap16(((uint16_t *)adpcm_loop_state)[i]);
     }
 }
 
@@ -897,7 +896,7 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
             pitch_accumulator += (pitch << 1);
             in += pitch_accumulator >> 16;
             MEM_BARRIER_PREF(in);
-            pitch_accumulator %= 0x10000;
+            pitch_accumulator &= 0xffff; //%= 0x10000;
             MEM_BARRIER();
             *out++ = clamp16f((sample_f));
             MEM_BARRIER();
@@ -982,21 +981,18 @@ void aDMEMMove2Impl(uint8_t t, uint16_t in_addr, uint16_t out_addr, uint16_t cou
 
 void aDownsampleHalfImpl(uint16_t n_samples, uint16_t in_addr, uint16_t out_addr) {
     // printf("downsample in %04x out %04x nsamp %d\n", in_addr, out_addr, n_samples);
-    uint32_t* __restrict in = (uint32_t*) (((uintptr_t) BUF_S16(in_addr)) & ~3);
+    uint16_t* __restrict in = (uint16_t*) (((uintptr_t) BUF_S16(in_addr)));// & ~3);
     __builtin_prefetch(in);
-    uint32_t* __restrict out = (uint32_t*) (((uintptr_t) BUF_S16(out_addr)) & ~3);
+    uint16_t* __restrict out = (uint16_t*) (((uintptr_t) BUF_S16(out_addr)));// & ~3);
     int n = ROUND_UP_8(n_samples);
 
     do {
         asm volatile("pref @%0" : : "r"(out) : "memory");
-        uint32_t pair0 = *in++;
-        uint32_t pair1 = *in++;
-        uint32_t pair2 = *in++;
-        uint32_t pair3 = *in++;
+        uint16_t pair0 = *in++; in++;
+        uint16_t pair1 = *in++; in++;
         asm volatile("pref @%0" : : "r"(in) : "memory");
-        // its easier to do this the "wrong" way
-        *out++ = (pair0 << 16) | ((uint16_t) pair1); // keep second, discard first
-        *out++ = (pair2 << 16) | ((uint16_t) pair3); // keep second, discard first
-        n -= 4;
+        *out++ = pair0;
+        *out++ = pair1;
+        n -= 2;
     } while (n > 0);
 }

@@ -135,7 +135,7 @@ void load_ceremony_data(void) {
     long toread = filesize;
     long didread = 0;
 
-    while (didread < toread) {
+    while (didread < filesize) {
         long rv = fread(&CEREMONY_BUF[didread], 1, toread - didread, file);
         if (rv == -1) {
             perror("fread");
@@ -200,7 +200,7 @@ void load_ceremony_cutscene(void) {
     long toread = filesize;
     long didread = 0;
 
-    while (didread < toread) {
+    while (didread < filesize) {
         long rv = fread(&COURSE_BUF[didread], 1, toread - didread, file);
         if (rv == -1) {
             perror("fread");

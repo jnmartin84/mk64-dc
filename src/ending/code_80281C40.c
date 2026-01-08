@@ -84,9 +84,9 @@ void render_podium_ceremony(void) {
     }
     func_8028150C();
     gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH);
-    guPerspective((Mtx*) &gGfxPool->mtxPersp[0], &perspNorm, gCameraZoom[0], gScreenAspect, gCourseNearPersp,
+    guPerspective((Mtx*) &gGfxPool->mtxPersp[0],/*  &perspNorm, */ gCameraZoom[0], gScreenAspect, gCourseNearPersp,
                   gCourseFarPersp, 1.0f);
-    gSPPerspNormalize(gDisplayListHead++, perspNorm);
+    //gSPPerspNormalize(gDisplayListHead++, perspNorm);
     gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&gGfxPool->mtxPersp[0]),
               G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
     guLookAt((Mtx*) &gGfxPool->mtxLookAt[0], camera->pos[0], camera->pos[1], camera->pos[2], camera->lookAt[0],

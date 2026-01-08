@@ -253,7 +253,7 @@ void func_80044924(u8* texture, s32 width, s32 height) {
     gDPSetTile(gDisplayListHead++, G_IM_FMT_IA, G_IM_SIZ_16b, 0, G_TX_RENDERTILE, G_TX_LOADTILE, 0,
                G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK,
                G_TX_NOLOD);
-    gDPLoadSync(gDisplayListHead++);
+    //gDPLoadSync(gDisplayListHead++);
     // The last argument to this macro really should be `CALC_DXT_4b(width)` but that creates a massive diff
     gDPLoadBlock(gDisplayListHead++, G_TX_LOADTILE, 0, 0, (((width * height) + 3) >> 2) - 1,
                  ((width / 16) + 2047) / (width / 16));
@@ -292,7 +292,7 @@ void func_80044DA0(u8* image, s32 width, s32 height) {
     gDPSetTile(gDisplayListHead++, G_IM_FMT_I, G_IM_SIZ_16b, 0, G_TX_RENDERTILE, G_TX_LOADTILE, 0,
                G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK,
                G_TX_NOLOD);
-    gDPLoadSync(gDisplayListHead++);
+    //gDPLoadSync(gDisplayListHead++);
     // The last argument to this macro really should be `CALC_DXT_4b(width)` but that creates a massive diff
     gDPLoadBlock(gDisplayListHead++, G_TX_LOADTILE, 0, 0, (((width * height) + 3) >> 2) - 1,
                  ((width / 16) + 2047) / (width / 16));
@@ -319,7 +319,7 @@ void func_80044F34(u8* image, s32 width, s32 height) {
     gDPSetTile(gDisplayListHead++, G_IM_FMT_I, G_IM_SIZ_16b, 0, G_TX_RENDERTILE, G_TX_LOADTILE, 0,
                G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK,
                G_TX_NOLOD);
-    gDPLoadSync(gDisplayListHead++);
+    //gDPLoadSync(gDisplayListHead++);
     // The last argument to this macro really should be `CALC_DXT_4b(width)` but that creates a massive diff
     gDPLoadBlock(gDisplayListHead++, G_TX_LOADTILE, 0, 0, (((width * height) + 3) >> 2) - 1,
                  ((width / 16) + 2047) / (width / 16));
@@ -345,7 +345,7 @@ void func_800450C8(u8* image, s32 width, s32 height) {
     gDPSetTextureImage(gDisplayListHead++, G_IM_FMT_I, G_IM_SIZ_16b, 1, image);
     gDPSetTile(gDisplayListHead++, G_IM_FMT_I, G_IM_SIZ_16b, 0, G_TX_RENDERTILE, G_TX_LOADTILE, 0,
                G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOLOD, G_TX_MIRROR | G_TX_WRAP, masks, G_TX_NOLOD);
-    gDPLoadSync(gDisplayListHead++);
+    //gDPLoadSync(gDisplayListHead++);
     // The last argument to this macro really should be `CALC_DXT_4b(width)` but that creates a massive diff
     gDPLoadBlock(gDisplayListHead++, G_TX_LOADTILE, 0, 0, (((width * height) + 3) >> 2) - 1,
                  ((width / 16) + 2047) / (width / 16));
@@ -1320,6 +1320,16 @@ void func_8004A258(s32 arg0, s32 arg1, u16 arg2, f32 arg3, u8* texture, Vtx* arg
     func_80049970(texture, arg5, arg6, arg7, arg8, arg9);
 }
 
+// for the needle
+void func_8004A258_needle(s32 arg0, s32 arg1, u16 arg2, f32 arg3, u8* texture, Vtx* arg5, s32 arg6, s32 arg7, s32 arg8,
+                   s32 arg9) {
+    func_80042330(arg0, arg1, arg2, arg3);
+    gSPDisplayList(gDisplayListHead++, D_0D007A60);
+//    gDPSetCombineLERP(gDisplayListHead++, 0, 0, 0, SHADE, 0, 0, 0, TEXEL0, 0, 0, 0, SHADE, 0, 0, 0, TEXEL0);
+    gDPSetCombineMode(gDisplayListHead++, G_CC_SHADE, G_CC_SHADE);
+    func_80049970(texture, arg5, arg6, arg7, arg8, arg9);
+}
+
 void func_8004A2F4(s32 arg0, s32 arg1, u16 arg2, f32 arg3, s32 red, s32 green, s32 blue, s32 alpha, u8* texture,
                    Vtx* arg9, s32 argA, s32 argB, s32 argC, s32 argD) {
     func_80042330(arg0, arg1, arg2, arg3);
@@ -1523,8 +1533,8 @@ UNUSED void func_8004B02C(void) {
 
 void func_8004B05C(u8* tlut) {
     gDPLoadTLUT_pal256(gDisplayListHead++, tlut);
-    gDPLoadSync(gDisplayListHead++);
-    gDPSetTexturePersp(gDisplayListHead++, G_TP_NONE);
+    //gDPLoadSync(gDisplayListHead++);
+    //gDPSetTexturePersp(gDisplayListHead++, G_TP_NONE);
 }
 
 void set_prim_only(s32 red, s32 green, s32 blue, s32 alpha) {
@@ -1775,7 +1785,7 @@ UNUSED void func_8004BD14(s32 x, s32 y, u32 width, u32 height, s32 alpha, u8* te
 void func_8004C024(s16 arg0, s16 arg1, s16 arg2, u16 red, u16 green, u16 blue, u16 alpha) {
     gDPSetPrimColor(gDisplayListHead++, 0, 0, red, green, blue, alpha);
     gDPSetTextureLUT(gDisplayListHead++, G_TT_NONE);
-    gDPSetTexturePersp(gDisplayListHead++, G_TP_NONE);
+    //gDPSetTexturePersp(gDisplayListHead++, G_TP_NONE);
     gDPSetCombineMode(gDisplayListHead++, G_CC_PRIMITIVE, G_CC_PRIMITIVE);
     gDPSetRenderMode(gDisplayListHead++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
     func_8004B97C(arg0, arg1, arg2, 1, 1);
@@ -1784,7 +1794,7 @@ void func_8004C024(s16 arg0, s16 arg1, s16 arg2, u16 red, u16 green, u16 blue, u
 void func_8004C148(s16 arg0, s16 arg1, s16 arg2, u16 red, u16 green, u16 blue, u16 alpha) {
     gDPSetPrimColor(gDisplayListHead++, 0, 0, red, green, blue, alpha);
     gDPSetTextureLUT(gDisplayListHead++, G_TT_NONE);
-    gDPSetTexturePersp(gDisplayListHead++, G_TP_NONE);
+    //gDPSetTexturePersp(gDisplayListHead++, G_TP_NONE);
     gDPSetCombineMode(gDisplayListHead++, G_CC_PRIMITIVE, G_CC_PRIMITIVE);
     gDPSetRenderMode(gDisplayListHead++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
     func_8004B97C(arg0, arg1, 1, arg2, 1);

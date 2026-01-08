@@ -16,7 +16,8 @@
 #include "save.h"
 
 char* get_vmu_fn(maple_device_t* vmudev, char* fn);
-void* segmented_to_virtual(void* addr);
+//void* segmented_to_virtual(void* addr);
+#define segmented_to_virtual(a) ((void*)(a))
 
 u64 osClockRate = 62500000;
 void n64_memcpy(void* dst, const void* src, size_t size);

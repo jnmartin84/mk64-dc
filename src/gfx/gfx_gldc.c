@@ -67,6 +67,30 @@ static const dc_fast_t* cur_buf = NULL;
 static uint8_t gl_blend = 0;
 static uint8_t gl_depth = 0;
 
+static struct __attribute__((aligned(32))) {
+    float u_scale[1024];
+    float v_scale[1024];
+} tex_scaler;
+static void resample_tex(const uint16_t* in, int inwidth, int inheight, uint16_t* out, int outwidth, int outheight) {
+    for (int y=0; y < inheight;y++) {
+        memcpy(out + (y*outwidth), in + (y*inwidth), inwidth * 2);
+        uint16_t *ptr = out + (y*outwidth) + inwidth;
+        ptr[0] = 0;
+        ptr[1] = 0;
+        ptr[2] = 0;
+        ptr[3] = 0;
+    }
+}
+
+float get_current_u_scale(void) {
+    int scale_index = tmu_state[0].tex;
+    return tex_scaler.u_scale[scale_index];
+}
+
+float get_current_v_scale(void) {
+    int scale_index = tmu_state[0].tex;
+    return tex_scaler.v_scale[scale_index];
+}
 static void resample_32bit(const uint16_t* in, int inwidth, int inheight, uint16_t* out, int outwidth, int outheight ) {
     int i, j;
     uint32_t* out32 = (uint32_t*)out;
@@ -218,6 +242,23 @@ typedef enum {
 } COURSES;
 extern s16 gCurrentCourseId;
 #include <kos.h>
+
+extern f32 gCourseFarPersp;
+extern f32 gCourseNearPersp;
+
+static inline float exp_map_custom_f(float x) {
+    const float a    = 180.0f;
+    const float ymax = 990.0f;
+    const float den  = expm1f(-a);
+
+    if (x <= 0.0f)    return 0.0f;
+    if (x >= 1000.0f) return ymax;
+
+    const float t   = x / 1000.0f;
+    const float num = expm1f(a * (t - 1.0f));
+    return ymax * (1.0f - num / den);
+}
+
 static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
     // vertices are always there
     glVertexPointer(3, GL_FLOAT, sizeof(dc_fast_t), &cur_buf[0].vert);
@@ -232,7 +273,7 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
 
     if (prg->shader_id & SHADER_OPT_FOG) {
         glEnable(GL_FOG);
-
+#if 0
         float fogmin, fogmax;
 
         fogmin = 500.0f - ((128000.0f * (float) fog_ofs) / (256.0f * (float) fog_mul));
@@ -255,6 +296,21 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
         glFogi(GL_FOG_MODE, GL_LINEAR);
         glFogf(GL_FOG_START, fogmin);
         glFogf(GL_FOG_END, fogmax);
+#endif
+        /* Inputs: fog_mul, fog_ofs (N64), and your OpenGL camera zNear/zFar */
+        float n64_min = 500.0f * (1.0f - (float)fog_ofs / (float)fog_mul);
+        float n64_max = n64_min + 128000.0f / (float)fog_mul;
+
+        /* Convert N64 [0..1000] depth to your eye-space distances [zNear..zFar] */
+        float scale = (gCourseFarPersp - gCourseNearPersp) / 1000.0f;
+        float gl_fog_start = gCourseNearPersp + scale * exp_map_custom_f(n64_min);
+        float gl_fog_end   = gCourseNearPersp + scale * exp_map_custom_f(n64_max);
+//        printf("gl_fog_start %f end %f\n", gl_fog_start, gl_fog_end);
+
+        /* OpenGL fixed-function linear fog */
+        glFogi(GL_FOG_MODE, GL_LINEAR);
+        glFogf(GL_FOG_START, (GLfloat)gl_fog_start * 0.4f);
+        glFogf(GL_FOG_END,   (GLfloat)gl_fog_end * 0.4f);
     } else {
         glDisable(GL_FOG);
     }
@@ -264,7 +320,7 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
         // ^-- uhhh yeah no I think that's wrong and a bug
                // prg->enabled = 1;
 #if 1
-        if (prg->shader_id & SHADER_OPT_TEXTURE_EDGE) {
+        if (/* (prg->shader_id & SHADER_OPT_NOISE) || */ (prg->shader_id & SHADER_OPT_TEXTURE_EDGE)) {
             glEnable(GL_ALPHA_TEST);
             glAlphaFunc(GL_GREATER, 0.0333f);
         } else {
@@ -362,12 +418,13 @@ GLuint newest_texture;
 static void gfx_clear_all_textures(void) {
     GLuint index = 0;
     if (newest_texture != 0) {
-        for (index = 1; index <= newest_texture; index++) {
-            glDeleteTextures(0, &index);
+        for (index = 2; index <= newest_texture; index++) {
+            glDeleteTextures(1, &index);
         }
         tmu_state[0].tex = 0;
         tmu_state[1].tex = 0;
     }
+    newest_texture = 0;
 }
 
 void gfx_clear_texidx(GLuint texidx) {
@@ -419,7 +476,7 @@ static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int 
 
     // we don't support non power of two textures, scale to next power of two if necessary
     if ((!is_pot(width) || !is_pot(height)) || (width < 8) || (height < 8)) {
-#if 1
+#if 0
         uint32_t final_w = width;
         uint32_t final_h = height;
 
@@ -453,11 +510,19 @@ static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int 
         }
 
         //resample_16bit
-        resample_32bit((const uint16_t*) rgba32_buf, width, height, (uint16_t*) scaled, final_w, final_h);
+        resample_tex/* 32bit */((const uint16_t*) rgba32_buf, width, height, (uint16_t*) scaled, final_w, final_h);
         rgba32_buf = (uint8_t*) scaled;
+    int scale_index = tmu_state[0].tex;
+        tex_scaler.u_scale[scale_index] = (float)width / (float)final_w;
+        tex_scaler.v_scale[scale_index] = (float)height / (float)final_h;
         width = final_w;
         height = final_h;
-#else
+    } else {
+        int scale_index = tmu_state[0].tex;
+        tex_scaler.u_scale[scale_index] = 1.0f;
+        tex_scaler.v_scale[scale_index] = 1.0f;
+    }
+        #else
         int pwidth = next_pot(width);
         int pheight = next_pot(height);
 
@@ -474,8 +539,8 @@ static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int 
         rgba32_buf = (uint8_t*) scaled;
         width = pwidth;
         height = pheight;
-#endif
     }
+#endif
 
     glTexImage2D(GL_TEXTURE_2D, 0, intFormat, width, height, 0, GL_BGRA, type, rgba32_buf);
 }
@@ -641,7 +706,7 @@ static void zmode_decal_setup_post(void) {
     glPopMatrix();
     glDepthFunc(GL_LESS);
 }
-
+/* extern int alpha_noise; */
 static void particle_blend_setup_pre(void) {
     // the outer test here discards kart smoke and other white smokes
     if (!((pr == 251) && (pg == 255) && (pb == 251))) {
@@ -748,8 +813,8 @@ static void one_minus_env_plus_prim_setup_pre(void* vbo, size_t num_tris) {
     // * advanced multi-pass sorcery *
     dc_fast_t* tris = (dc_fast_t*) vbo;
     // turn filtering off until final blend
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     // modulate texture
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
@@ -808,8 +873,8 @@ static void one_minus_env_plus_prim_setup_pre(void* vbo, size_t num_tris) {
     // ONE+ONE blend of colored cutout and original texture
     glBlendFunc(GL_ONE, GL_ONE);
     // restore original filtering state for final pass
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, tmu_state[cur_shader->texture_ord[0]].min_filter);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, tmu_state[cur_shader->texture_ord[0]].mag_filter);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, tmu_state[cur_shader->texture_ord[0]].min_filter);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, tmu_state[cur_shader->texture_ord[0]].mag_filter);
     // upon exit, draws the original texture (usually karts, sometimes minimap or hud graphic)
 }
 
@@ -820,6 +885,8 @@ static void one_minus_env_plus_prim_setup_post(void) {
 }
 
 static float depbump = 0.0f;
+
+extern int fix_flash;
 
 static void gfx_opengl_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len, size_t buf_vbo_num_tris) {
     cur_buf = (void*) buf_vbo;
@@ -842,8 +909,12 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len
         glEnable(GL_BLEND);
     }
 
-    if (cur_shader->shader_id == 0x01a00200)
+    if (cur_shader->shader_id == 0x01a00200) {
+        if (fix_flash) {
+            return;
+        }
         over_skybox_setup_pre();
+    }
 
     if (is_zmode_decal)
         zmode_decal_setup_pre();
@@ -877,7 +948,13 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
 
+    /* if (alpha_noise)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE); */
+
     glDrawArrays(GL_TRIANGLES, 0, 3 * buf_vbo_num_tris);
+
+    /* if (alpha_noise)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); */
 
     if (((cur_shader->shader_id & 0x00ffffff) == 0x00141548) && (pr || pg || pb))
         one_minus_env_plus_prim_setup_post();
@@ -952,7 +1029,7 @@ void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size
 
     if (!in_intro) {
         if (blend_fuck) {
-            for (int i = 0; i < 6; i++) {
+            for (int i = 0; i < 4; i++) {
                 tris[i].color.packed = 0xff000000;
             }
             if (blend_fuck == 2)
@@ -961,7 +1038,8 @@ void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size
     }
 
     if (cur_shader->shader_id == 0x01a00200) {
-        for (int i = 0; i < 6; i++) {
+        if (!fix_flash)
+        for (int i = 0; i < 4; i++) {
             tris[i].color.packed = 0xffffffff;
         }
     }
@@ -979,7 +1057,22 @@ void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size
         }
     }
 
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    if (fix_flash) {
+    glEnable(GL_BLEND);
+//    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LEQUAL);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, -4000.0f);
+    }
+
+    glDrawArrays(GL_QUADS, 0, 4);
+
+    if (fix_flash) {
+  glPopMatrix();
+        glDepthFunc(GL_LESS);
+    //        glEnable(GL_BLEND);
+    }
 
     if (use_one_inv) {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1133,7 +1226,7 @@ static void gfx_opengl_start_frame(void) {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_SCISSOR_TEST);
-    newest_texture = 0;
+//     newest_texture = 0;
 }
 
 static void gfx_opengl_end_frame(void) {

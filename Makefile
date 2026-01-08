@@ -867,7 +867,7 @@ run: loader.elf mk64.bin
 cdi: mariokart64.cdi
 
 dcload:
-	sudo ./dcload-ip/host-src/tool/dc-tool-ip -x ${BUILD_DIR_BASE}/mario-kart.elf -c ./
+	sudo dc-tool-ip -x ${BUILD_DIR_BASE}/mario-kart.elf -c ./
 
 .PHONY: all clean distclean distclean_assets default diff test load assets
 # with no prerequisites, .SECONDARY causes no intermediate target to be removed

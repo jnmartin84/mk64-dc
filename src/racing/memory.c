@@ -180,9 +180,7 @@ void n64_memcpy(void* dst, const void* src, size_t size) {
     __builtin_prefetch(bsrc);
     if ((!(((uintptr_t)bdst | (uintptr_t)bsrc) & 3))) {
         while (words_to_copy--) {
-            if ((words_to_copy & 3) == 0) {
-                __builtin_prefetch(bsrc + 16);
-            }
+            __builtin_prefetch(bsrc + 16);
             *wdst++ = *wsrc++;
         }
 
@@ -421,7 +419,7 @@ void decompress_textures(UNUSED u32* arg0) {
 	long toread = filesize;
     long didread = 0;
 
-    while(didread < toread) {
+    while (didread < filesize) {
         long rv = fread(&SEG5_BUF[didread], 1, toread - didread, file);
         if (rv == -1) { printf("FILE IS FUCKED\n"); exit(-1); }
 	    toread -= rv;
@@ -501,7 +499,7 @@ u8* load_course(s32 courseId) {
 	long toread = filesize;
     long didread = 0;
 
-    while (didread < toread) {
+    while (didread < filesize) {
         long rv = fread(&COURSE_BUF[didread], 1, toread - didread, file);
         if (rv == -1) {
             printf("FILE IS FUCKED\n");
@@ -531,7 +529,7 @@ u8* load_course(s32 courseId) {
         long toread = packoffs[gCurrentCourseId];
         long didread = 0;
 
-        while (didread < toread) {
+        while (didread < packoffs[gCurrentCourseId]) {
             long rv = fread(&COMP_VERT_BUF[didread], 1, toread - didread, file);
             if (rv == -1) {
                 printf("FILE IS FUCKED\n");
@@ -546,7 +544,7 @@ u8* load_course(s32 courseId) {
         long toread = filesize - packoffs[gCurrentCourseId];
         long didread = 0;
 
-        while (didread < toread) {
+        while (didread < filesize - packoffs[gCurrentCourseId]) {
             long rv = fread(&UNPACK_BUF[didread], 1, toread - didread, file);
             if (rv == -1) {
                     printf("FILE IS FUCKED\n");

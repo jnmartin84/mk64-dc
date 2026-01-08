@@ -331,7 +331,7 @@ void setup_audio_data(void) {
         long toread = filesize;
         long didread = 0;
 
-        while (didread < toread) {
+        while (didread < filesize) {
             long rv = fread(&AUDIOBANKS_BUF[didread], 1, toread - didread, file);
 
             if (rv == -1) {
@@ -369,7 +369,7 @@ void setup_audio_data(void) {
         long toread = filesize;
         long didread = 0;
 
-        while (didread < toread) {
+        while (didread < filesize) {
             long rv = fread(&AUDIOTABLES_BUF[didread], 1, toread - didread, file);
             if (rv == -1) {
                 printf("FILE IS FUCKED\n");
@@ -405,7 +405,7 @@ void setup_audio_data(void) {
         long toread = filesize;
         long didread = 0;
 
-        while (didread < toread) {
+        while (didread < filesize) {
             long rv = fread(&INSTRUMENT_SETS_BUF[didread], 1, toread - didread, file);
             if (rv == -1) {
                 printf("FILE IS FUCKED\n");
@@ -440,7 +440,7 @@ void setup_audio_data(void) {
         long toread = filesize;
         long didread = 0;
 
-        while (didread < toread) {
+        while (didread < filesize) {
             long rv = fread(&SEQUENCES_BUF[didread], 1, toread - didread, file);
             if (rv == -1) {
                 printf("FILE IS FUCKED\n");
@@ -512,7 +512,7 @@ void rainbow_print(int x, int y, char *text) {
 
 
 int main(UNUSED int argc, UNUSED char **argv) {
-    thd_set_hz(300);
+//    thd_set_hz(300);
 
     must_inval_bg = 0;
     stupid_fucking_faces_hack = 0;
@@ -524,7 +524,7 @@ int main(UNUSED int argc, UNUSED char **argv) {
     gPhysicalFramebuffers[2] = fb[2];
 
     dbgio_enable();
-    dbglog_set_level(0);
+//    dbglog_set_level(0);
 
     thd_sleep(375);
 
@@ -545,7 +545,7 @@ int main(UNUSED int argc, UNUSED char **argv) {
 
     fclose(fntest);
     thd_sleep(375);
-    dbgio_disable();
+//    dbgio_disable();
     setup_audio_data();
 
     //profiler_init("/pc/audiogmon.out");
@@ -1047,7 +1047,7 @@ void setup_game_memory(void) {
     long toread = filesize;
     long didread = 0;
 
-    while (didread < toread) {
+    while (didread < filesize) {
         long rv = fread(&COMMON_BUF[didread], 1, toread - didread, file);
         if (rv == -1) {
             printf("FILE IS FUCKED\n");
@@ -1691,12 +1691,12 @@ void race_logic_loop(void) {
 
         case SCREEN_MODE_2P_SPLITSCREEN_HORIZONTAL:
 
-             if (gCurrentCourseId == COURSE_DK_JUNGLE ||
-                gCurrentCourseId == COURSE_TOADS_TURNPIKE) {
-                gTickSpeed = 3;
-            } else {
-                gTickSpeed = 2;
-            }
+//             if (gCurrentCourseId == COURSE_DK_JUNGLE ||
+  //              gCurrentCourseId == COURSE_TOADS_TURNPIKE) {
+    //            gTickSpeed = 3;
+      //      } else {
+        //        gTickSpeed = 2;
+          //  }
 //            gTickSpeed = 3;
 
             if (gIsGamePaused == 0) {
@@ -2195,7 +2195,7 @@ void thread5_game_loop(UNUSED void* arg) {
     func_800C5CB8();
 	inited = 1;
     vblank_handler_add(&vblfunc, NULL);
-    create_thread(NULL, 5, &SPINNING_THREAD, NULL, NULL, 12);
+    create_thread(NULL, 5, &SPINNING_THREAD, NULL, NULL, PRIO_DEFAULT - 1);
 #define MEMTEST
 #if defined(MEMTEST)
     for(int mi=0;mi<6*1048576;mi+=65536) {

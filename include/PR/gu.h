@@ -8,8 +8,8 @@
 #define GU_PI 3.1415926
 /* Functions */
 
-void guPerspectiveF(float mf[4][4], u16* perspNorm, float fovy, float aspect, float near, float far, float scale);
-void guPerspective(Mtx* m, u16* perspNorm, float fovy, float aspect, float near, float far, float scale);
+void guPerspectiveF(float mf[4][4], /* u16* perspNorm, */ float fovy, float aspect, float near, float far, float scale);
+void guPerspective(Mtx* m, /* u16* perspNorm, */ float fovy, float aspect, float near, float far, float scale);
 void guFrustum(Mtx* m, float left, float right, float bottom, float top, float near, float far, float scale);
 void guOrtho(Mtx* m, float left, float right, float bottom, float top, float near, float far, float scale);
 void guTranslate(Mtx* m, float x, float y, float z);

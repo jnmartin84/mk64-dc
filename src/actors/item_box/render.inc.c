@@ -30,7 +30,7 @@ Gfx l_D_0D002EE8[] = {
     gsDPPipeSync(),
     gsSPTexture(0xFFFF, 0xFFFF, 1, 1, G_OFF),
     gsSPClearGeometryMode(G_LIGHTING),
-   gsDPSetRenderMode(G_RM_AA_ZB_XLU_SURF, G_RM_AA_ZB_XLU_SURF2),
+    gsDPSetRenderMode(G_RM_AA_ZB_XLU_SURF, G_RM_AA_ZB_XLU_SURF2),
     gsDPSetPrimColor(0, 0, 0x08, 0x08, 0x08, 0x7F),
     gsDPSetCombineLERP(0, 0, SHADE, PRIMITIVE, 1, 0, PRIMITIVE, 0, 0, 0, SHADE, PRIMITIVE, 1, 0, PRIMITIVE, 0),
     gsSPVertex(common_vtx_itembox, 4, 0),
