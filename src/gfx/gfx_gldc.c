@@ -1069,7 +1069,7 @@ void gfx_opengl_draw_triangles_2d(void* buf_vbo, UNUSED size_t buf_vbo_len, size
     glDrawArrays(GL_QUADS, 0, 4);
 
     if (fix_flash) {
-  glPopMatrix();
+        glPopMatrix();
         glDepthFunc(GL_LESS);
     //        glEnable(GL_BLEND);
     }

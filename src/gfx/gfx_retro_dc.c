@@ -275,7 +275,6 @@ struct GfxDimensions gfx_current_dimensions;
 static uint8_t dropped_frame;
 
 static dc_fast_t __attribute__((aligned(32))) buf_vbo[MAX_BUFFERED * 3]; // 3 vertices in a triangle
-static dc_fast_t __attribute__((aligned(32))) quad_vbo[2 * 3];           // 2 tris make a quad
 static size_t buf_vbo_len = 0;
 static size_t buf_num_vert = 0;
 static size_t buf_vbo_num_tris = 0;
@@ -1381,12 +1380,6 @@ extern s32 gIsMirrorMode;
 extern float get_current_u_scale(void);
 extern float get_current_v_scale(void);
 
-static inline float approx_recip_sign(float v) {
-	return shz_fast_invf(v);
-    //float _v = 1.0f / sqrtf(v * v);
-	//return copysignf(_v, v);
-    //return _v;
-}
 #define MEM_BARRIER_PREF(ptr) asm volatile("pref @%0" : : "r"((ptr)) : "memory")
 
 int total_tri=0;
@@ -1400,7 +1393,6 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     struct LoadedVertex* v3 = &rsp.loaded_vertices[vtx3_idx];
 	uint8_t l_clip_rej[3] = {clip_rej[vtx1_idx], clip_rej[vtx2_idx], clip_rej[vtx3_idx]};
     struct LoadedVertex* v_arr[3] = { v1, v2, v3 };
-	//total_tri++;
 
 	uint8_t c0 = l_clip_rej[0];
 	uint8_t c1 = l_clip_rej[1];
@@ -1416,91 +1408,36 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
 		float dx2 = v3->_x - v2->_x;
 		float dy2 = v3->_y - v2->_y;
 		float cross = dx1 * dy2 - dy1 * dx2;
-	//    if ((v1->wlt0) ^ (v2->wlt0) ^ (v3->wlt0)) {
+
 		if ((c0 ^ c1 ^ c2) & 0x40) {
 			// If one vertex lies behind the eye, negating cross will give the correct result.
 			// If all vertices lie behind the eye, the triangle will be rejected anyway.
 			cross = -cross;
 		}
+
 		switch (!!gIsMirrorMode) {
             case 0:
                 switch (rsp.geometry_mode & G_CULL_BOTH) {
                     case G_CULL_FRONT:
                         if (cross <= 0) {
-							//rej_tri++;
 							return;
                         }
 						break;
                     case G_CULL_BACK:
                         if (cross >= 0) {
-							//rej_tri++;
 							return;
                         }
 						break;
-                    case G_CULL_BOTH: {
-                        // Why is this even an option?
-						//rej_tri++;
-                        return;
-						}
-						break;        
+					default:
+						break;
 					}
                 break;
             case 1:
                 break;
+			default:
+				break;
         }
 	}
-	#if 0
-    if ((v1->clip_rej | v2->clip_rej | v3->clip_rej) != 0x3f) {
-        // The whole triangle lies outside the visible area
-		//rej_tri++;
-		return;
-    }
-
-	if ((rsp.geometry_mode & G_CULL_BOTH) != 0) {
-		float rw1 = approx_recip_sign(v1->_w);
-		float rw2 = approx_recip_sign(v2->_w);
-		float rw3 = approx_recip_sign(v3->_w);
-
-        float dx1 = (v1->_x * rw1) - (v2->_x * rw2);
-        float dy1 = (v1->_y * rw1) - (v2->_y * rw2);
-        float dx2 = (v3->_x * rw3) - (v2->_x * rw2);
-        float dy2 = (v3->_y * rw3) - (v2->_y * rw2);
-        float cross = dx1 * dy2 - dy1 * dx2;
-
-        if ((v1->wlt0) ^ (v2->wlt0) ^ (v3->wlt0)) {
-            // If one vertex lies behind the eye, negating cross will give the correct result.
-            // If all vertices lie behind the eye, the triangle will be rejected anyway.
-            cross = -cross;
-        }
-
-        switch (!!gIsMirrorMode) {
-            case 0:
-                switch (rsp.geometry_mode & G_CULL_BOTH) {
-                    case G_CULL_FRONT:
-                        if (cross <= 0) {
-							//rej_tri++;
-							return;
-                        }
-						break;
-                    case G_CULL_BACK:
-                        if (cross >= 0) {
-							//rej_tri++;
-							return;
-                        }
-						break;
-                    case G_CULL_BOTH: {
-                        // Why is this even an option?
-						//rej_tri++;
-                        return;
-						}
-						break;        
-					}
-                break;
-            case 1:
-                break;
-        }
-    }
-	#endif
 
     if (matrix_dirty) {
         glMatrixMode(GL_PROJECTION);
@@ -1510,9 +1447,7 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         matrix_dirty = 0;
     }
 
-	//frame_tris++;
-
-    uint8_t depth_test = (rsp.geometry_mode & G_ZBUFFER) == G_ZBUFFER;
+	uint8_t depth_test = (rsp.geometry_mode & G_ZBUFFER) == G_ZBUFFER;
     if (depth_test != rendering_state.depth_test) {
         gfx_flush();
         gfx_rapi->set_depth_test(depth_test);
@@ -1537,13 +1472,15 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         if (memcmp(&rdp.viewport, &rendering_state.viewport, sizeof(rdp.viewport)) != 0) {
             gfx_flush();
             gfx_rapi->set_viewport(rdp.viewport.x, rdp.viewport.y, rdp.viewport.width, rdp.viewport.height);
-            rendering_state.viewport = rdp.viewport;
-        }
+//            rendering_state.viewport = rdp.viewport;
+			n64_memcpy(&rendering_state.viewport, &rdp.viewport, sizeof(rdp.viewport));
+		}
         if (memcmp(&rdp.scissor, &rendering_state.scissor, sizeof(rdp.scissor)) != 0) {
             gfx_flush();
             gfx_rapi->set_scissor(rdp.scissor.x, rdp.scissor.y, rdp.scissor.width, rdp.scissor.height);
-            rendering_state.scissor = rdp.scissor;
-        }
+//            rendering_state.scissor = rdp.scissor;
+			n64_memcpy(&rendering_state.scissor, &rdp.scissor, sizeof(rdp.scissor));
+		}
         rdp.viewport_or_scissor_changed = 0;
     }
 
@@ -1553,17 +1490,6 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     uint8_t use_fog = (rdp.other_mode_l >> 30) == G_BL_CLR_FOG;
     uint8_t texture_edge = (rdp.other_mode_l & CVG_X_ALPHA) == CVG_X_ALPHA;
 	uint8_t use_noise = (rdp.other_mode_l & G_AC_DITHER) == G_AC_DITHER;
-//	if(use_noise)
-//	printf("use_noise %d\n", use_noise);
-	/* if (!alpha_noise && use_noise) {
-		gfx_flush();
-	} else if (alpha_noise && !use_noise) {
-		gfx_flush();
-	}
-	alpha_noise = use_noise; */
-	if (texture_edge) {
-		use_alpha = 1;
-	}
 
     if (texture_edge) {
         use_alpha = 1;
@@ -1593,9 +1519,6 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
 
     if (use_alpha != rendering_state.alpha_blend) {
         gfx_flush();
-        /* if (in_intro) {
-        gfx_rapi->set_use_alpha(1);
-        } */
         gfx_rapi->set_use_alpha(use_alpha);
         rendering_state.alpha_blend = use_alpha;
     }
@@ -1605,36 +1528,27 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     gfx_rapi->shader_get_info(prg, &num_inputs, used_textures);
     int i;
 
-    for (i = 0; i < 2; i++) {
-        if (used_textures[i]) {
-            if (rdp.textures_changed[i]) {
+//    for (i = 0; i < 2; i++) {
+        if (used_textures[0]) {
+            if (rdp.textures_changed[0]) {
                 gfx_flush();
-                import_texture(i);
-                rdp.textures_changed[i] = 0;
+                import_texture(0);
+                rdp.textures_changed[0] = 0;
             }
             uint8_t linear_filter = (rdp.other_mode_h & (3U << G_MDSFT_TEXTFILT)) != G_TF_POINT;
-            if (linear_filter != rendering_state.textures[i]->linear_filter ||
-                rdp.texture_tile.cms != rendering_state.textures[i]->cms ||
-                rdp.texture_tile.cmt != rendering_state.textures[i]->cmt) {
+            if (linear_filter != rendering_state.textures[0]->linear_filter ||
+                rdp.texture_tile.cms != rendering_state.textures[0]->cms ||
+                rdp.texture_tile.cmt != rendering_state.textures[0]->cmt) {
                 gfx_flush();
-                gfx_rapi->set_sampler_parameters(i, linear_filter, rdp.texture_tile.cms, rdp.texture_tile.cmt);
-                rendering_state.textures[i]->linear_filter = linear_filter;
-                rendering_state.textures[i]->cms = rdp.texture_tile.cms;
-                rendering_state.textures[i]->cmt = rdp.texture_tile.cmt;
+                gfx_rapi->set_sampler_parameters(0, linear_filter, rdp.texture_tile.cms, rdp.texture_tile.cmt);
+                rendering_state.textures[0]->linear_filter = linear_filter;
+                rendering_state.textures[0]->cms = rdp.texture_tile.cms;
+                rendering_state.textures[0]->cmt = rdp.texture_tile.cmt;
             }
         }
-    }
+//    }
 
-    /* Will be enabled when pvr fog is working, something isn't quite right current */
-#if 1
-    if (use_fog) {
-        float fog_color[4] = { rdp.fog_color.r * recip255, rdp.fog_color.g * recip255,
-                               rdp.fog_color.b * recip255, (float) (rdp.fog_color.a * recip255) * 0.75f };
-        glFogfv(GL_FOG_COLOR, fog_color);
-    }
-#endif
-
-    uint8_t use_texture = used_textures[0] || used_textures[1];
+    uint8_t use_texture = used_textures[0];// || used_textures[1];
     uint32_t tex_width = (rdp.texture_tile.lrs - rdp.texture_tile.uls + 4) >> 2;
     uint32_t tex_height = (rdp.texture_tile.lrt - rdp.texture_tile.ult + 4) >> 2;
 
@@ -1656,8 +1570,6 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
             color_g = 255 - rdp.env_color.g;
             color_b = 255 - rdp.env_color.b;
             color_a = rdp.prim_color.a;
-
-//            buf_vbo[buf_num_vert].color.packed = PACK_ARGB8888(color_r, color_g, color_b, color_a);
         } else if (i3 && i4) {
             color_r = rdp.prim_color.r;
             color_g = rdp.prim_color.g;
@@ -1699,8 +1611,6 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
             color_g = (uint32_t) gn;
             color_b = (uint32_t) bn;
             color_a = (uint32_t) an;
-
-//            buf_vbo[buf_num_vert].color.packed = PACK_ARGB8888(color_r, color_g, color_b, color_a);
         } else {
             goto thenextthing;
         }
@@ -1718,6 +1628,7 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
                         color_g = rdp.prim_color.g;
                         color_b = rdp.prim_color.b;
                         color_a = rdp.prim_color.a;
+						use_shade = 0;
                         break;
                     case CC_SHADE:
                         use_shade = 1;
@@ -1727,12 +1638,14 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
                         color_g = rdp.env_color.g;
                         color_b = rdp.env_color.b;
                         color_a = rdp.env_color.a;
+						use_shade = 0;
                         break;
                     default:
                         color_r = color_g = color_b = color_a = 255;
                         if (in_intro) {
                             color_a = rdp.env_color.a;
                         }
+						use_shade = 0;
                         break;
                 }
             }
@@ -1760,9 +1673,15 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
             buf_vbo[buf_num_vert].texture.v = v * shz_inverse_posf((float) tex_height);// * get_current_v_scale();
         }
 
-		if (use_shade && (!(c0 & 0x80))) {
-			packedc = PACK_ARGB8888(v_arr[i]->color.r, v_arr[i]->color.g, v_arr[i]->color.b, v_arr[i]->color.a);		
-		} else if ((!in_intro) && c0 & 0x80) {
+		if (use_shade) {
+			color_r = v_arr[i]->color.r;
+			color_g = v_arr[i]->color.g;
+			color_b = v_arr[i]->color.b;
+			color_a = v_arr[i]->color.a;
+			packedc = PACK_ARGB8888(color_r, color_g, color_b, color_a);
+		}
+		
+		if ((!in_intro) && (c0 & 0x80)) {
             uint32_t tc_r;
             uint32_t tc_g;
             uint32_t tc_b;
@@ -1773,9 +1692,11 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
             tc_g = ((color_g * light_g) >> 8) & 0xff;
             tc_b = ((color_b * light_b) >> 8) & 0xff;
             packedc = PACK_ARGB8888(tc_r, tc_g, tc_b, color_a);
-        } else if (((!in_intro) && ((v_arr[i]->color.r == 255) && (v_arr[i]->color.b == 0) && (v_arr[i]->color.g == 0) &&
+        }
+		
+		if (((!in_intro) && ((v_arr[i]->color.r == 255) && (v_arr[i]->color.b == 0) && (v_arr[i]->color.g == 0) &&
                              (v_arr[i]->color.a == 255)))) {
-            packedc = 0xffff0000;//PACK_ARGB8888(v_arr[i]->color.r, v_arr[i]->color.g, v_arr[i]->color.b, v_arr[i]->color.a);
+            packedc = 0xffff0000;
         }
 
         buf_vbo[buf_num_vert].color.packed = packedc;
@@ -1789,50 +1710,39 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     }
 }
 
-#if 1
-extern int first_2d;
 extern void gfx_opengl_reset_frame(int r, int g, int b);
 extern void gfx_opengl_draw_triangles_2d(void* buf_vbo, size_t buf_vbo_len, size_t buf_vbo_num_tris);
 #define approx_recip(x) (1.0f / sqrtf((x)*(x)))
-static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, uint8_t vtx1_idx2, uint8_t vtx2_idx2,
-						   uint8_t vtx3_idx2) {
-	dc_fast_t* v1 = &rsp.loaded_vertices_2D[0];
-	dc_fast_t* v2 = &rsp.loaded_vertices_2D[1];
-	dc_fast_t* v3 = &rsp.loaded_vertices_2D[2];
-	dc_fast_t* v4 = &rsp.loaded_vertices_2D[3];
-	dc_fast_t* pre_v_arr[4] = { v1, v2, v3, v4 };
-//	dc_fast_t* v_arr[6] = { v1, v2, v4, v2, v3, v4 };
+
+static void  __attribute__((noinline)) gfx_sp_quad_2d(void) {
+    dc_fast_t* v2d = &rsp.loaded_vertices_2D[0];
+
 	uint8_t depth_test = (rsp.geometry_mode & G_ZBUFFER) == G_ZBUFFER;
 	if (depth_test != rendering_state.depth_test) {
-		gfx_flush();
 		gfx_rapi->set_depth_test(depth_test);
 		rendering_state.depth_test = depth_test;
 	}
 
 	uint8_t z_upd = (rdp.other_mode_l & Z_UPD) == Z_UPD;
 	if (z_upd != rendering_state.depth_mask) {
-		gfx_flush();
 		gfx_rapi->set_depth_mask(z_upd);
 		rendering_state.depth_mask = z_upd;
 	}
 
 	uint8_t zmode_decal = (rdp.other_mode_l & ZMODE_DEC) == ZMODE_DEC;
 	if (zmode_decal != rendering_state.decal_mode) {
-		gfx_flush();
 		gfx_rapi->set_zmode_decal(zmode_decal);
 		rendering_state.decal_mode = zmode_decal;
 	}
 
 	if (rdp.viewport_or_scissor_changed) {
 		if (memcmp(&rdp.viewport, &rendering_state.viewport, sizeof(rdp.viewport)) != 0) {
-			gfx_flush();
 			gfx_rapi->set_viewport(rdp.viewport.x, rdp.viewport.y, rdp.viewport.width, rdp.viewport.height);
-			rendering_state.viewport = rdp.viewport;
+			n64_memcpy(&rendering_state.viewport, &rdp.viewport, sizeof(rdp.viewport));
 		}
 		if (memcmp(&rdp.scissor, &rendering_state.scissor, sizeof(rdp.scissor)) != 0) {
-			gfx_flush();
 			gfx_rapi->set_scissor(rdp.scissor.x, rdp.scissor.y, rdp.scissor.width, rdp.scissor.height);
-			rendering_state.scissor = rdp.scissor;
+			n64_memcpy(&rendering_state.scissor, &rdp.scissor, sizeof(rdp.scissor));
 		}
 		rdp.viewport_or_scissor_changed = 0;
 	}
@@ -1842,21 +1752,11 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 	uint8_t use_alpha = (rdp.other_mode_l & (G_BL_A_MEM << 18)) == 0;
 	uint8_t use_fog = (rdp.other_mode_l >> 30) == G_BL_CLR_FOG;
 	uint8_t texture_edge = (rdp.other_mode_l & CVG_X_ALPHA) == CVG_X_ALPHA;
-	// this is literally only for the stupid sun in the intro and nothing else
-uint8_t use_noise = (rdp.other_mode_l & G_AC_DITHER) == G_AC_DITHER;
+	uint8_t use_noise = (rdp.other_mode_l & G_AC_DITHER) == G_AC_DITHER;
+
 	if (texture_edge) {
 		use_alpha = 1;
 	}
-	/* if (!alpha_noise && use_noise) {
-		gfx_flush();
-	} else if (alpha_noise && !use_noise) {
-		gfx_flush();
-	}
-	alpha_noise = use_noise; */
-	//if(use_noise) {
-//		cc_id |= SHADER_OPT_T
-	//printf("2dusenoise\n");
-	//}
 
 	if (use_alpha)
 		cc_id |= SHADER_OPT_ALPHA;
@@ -1872,14 +1772,12 @@ uint8_t use_noise = (rdp.other_mode_l & G_AC_DITHER) == G_AC_DITHER;
 	struct ColorCombiner* comb = gfx_lookup_or_create_color_combiner(cc_id);
 	struct ShaderProgram* prg = comb->prg;
 	if (prg != rendering_state.shader_program) {
-		gfx_flush();
 		gfx_rapi->unload_shader(rendering_state.shader_program);
 		gfx_rapi->load_shader(prg);
 		rendering_state.shader_program = prg;
 	}
 
 	if (use_alpha != rendering_state.alpha_blend) {
-		gfx_flush();
 		gfx_rapi->set_use_alpha(use_alpha);
 		rendering_state.alpha_blend = use_alpha;
 	}
@@ -1888,20 +1786,15 @@ uint8_t use_noise = (rdp.other_mode_l & G_AC_DITHER) == G_AC_DITHER;
 	uint8_t used_textures[2];
 	gfx_rapi->shader_get_info(prg, &num_inputs, used_textures);
 	int i;
-
-//	for (i = 0; i < 1/* 2 */; i++) {
+	uint8_t linear_filter = (rdp.other_mode_h & (3U << G_MDSFT_TEXTFILT)) != G_TF_POINT;
 		if (used_textures[0]) {
 			if (rdp.textures_changed[0]) {
-				// necessary
-				gfx_flush();
 				import_texture(0);
 				rdp.textures_changed[0] = 0;
 			}
-			uint8_t linear_filter = (rdp.other_mode_h & (3U << G_MDSFT_TEXTFILT)) != G_TF_POINT;
 			if (linear_filter != rendering_state.textures[0]->linear_filter ||
 				rdp.texture_tile.cms != rendering_state.textures[0]->cms ||
 				rdp.texture_tile.cmt != rendering_state.textures[0]->cmt) {
-				gfx_flush();
 			}
 
 			gfx_rapi->set_sampler_parameters(0, linear_filter, rdp.texture_tile.cms, rdp.texture_tile.cmt);
@@ -1910,18 +1803,53 @@ uint8_t use_noise = (rdp.other_mode_l & G_AC_DITHER) == G_AC_DITHER;
 			rendering_state.textures[0]->cmt = rdp.texture_tile.cmt;
  
 		}
-//	}
 
-	uint8_t use_texture = (used_textures[0]);
-	float recip_tex_width;
-	float recip_tex_height;
+    uint8_t use_texture = used_textures[0];
+    float recip_tex_width = 0.03125f;  // 1 / 32;
+    float recip_tex_height = 0.03125f; // 1 / 32
 
-	if (use_texture) {
-		uint32_t tex_width = ((rdp.texture_tile.lrs - rdp.texture_tile.uls + 4) * 0.25f);
-		uint32_t tex_height = ((rdp.texture_tile.lrt - rdp.texture_tile.ult + 4) * 0.25f);
-		recip_tex_width = approx_recip((float)tex_width);
-		recip_tex_height = approx_recip((float)tex_height);
-	}
+    dc_fast_t* tmpv = v2d;
+
+    if (use_texture) {
+        uint32_t tex_width = ((rdp.texture_tile.lrs - rdp.texture_tile.uls + 4) * 0.25f);
+        uint32_t tex_height = ((rdp.texture_tile.lrt - rdp.texture_tile.ult + 4) * 0.25f);
+        recip_tex_width = shz_fast_invf((float) tex_width);
+        recip_tex_height = shz_fast_invf((float) tex_height);
+        float u;
+        float v;
+
+		float uadj = -(float)((rdp.texture_tile.uls * 0.25f));
+		float vadj = -(float)((rdp.texture_tile.ult * 0.25f));
+		if (linear_filter) {
+			uadj += 0.5f;
+			vadj += 0.5f;
+		}
+
+// div by 32
+				u = (tmpv->texture.u * 0.03125f);
+				v = (tmpv->texture.v * 0.03125f);
+			
+				tmpv->texture.u = (u+uadj) * recip_tex_width;// * get_current_u_scale();
+				tmpv++->texture.v = (v+vadj) * recip_tex_height;// * get_current_v_scale();
+
+				u = (tmpv->texture.u * 0.03125f);
+				v = (tmpv->texture.v * 0.03125f);
+			
+				tmpv->texture.u = (u+uadj) * recip_tex_width;// * get_current_u_scale();
+				tmpv++->texture.v = (v+vadj) * recip_tex_height;// * get_current_v_scale();
+
+				u = (tmpv->texture.u * 0.03125f);
+				v = (tmpv->texture.v * 0.03125f);
+			
+				tmpv->texture.u = (u+uadj) * recip_tex_width;// * get_current_u_scale();
+				tmpv++->texture.v = (v+vadj) * recip_tex_height;// * get_current_v_scale();
+
+				u = (tmpv->texture.u * 0.03125f);
+				v = (tmpv->texture.v * 0.03125f);
+			
+				tmpv->texture.u = (u+uadj) * recip_tex_width;// * get_current_u_scale();
+				tmpv->texture.v = (v+vadj) * recip_tex_height;// * get_current_v_scale();
+    }
 
 	uint32_t rectcolor = 0xffffffff;
 	{
@@ -1978,7 +1906,7 @@ uint8_t use_noise = (rdp.other_mode_l & G_AC_DITHER) == G_AC_DITHER;
 				if (an > max_c)
 					max_c = an;
 
-				float rmc = approx_recip(max_c) * 255.0f;
+				float rmc = shz_divf(255.0f, max_c);
 				rn *= rmc;
 				gn *= rmc;
 				bn *= rmc;
@@ -2002,11 +1930,7 @@ thenext2dthing:
 							rectcolor = PACK_ARGB8888(rdp.prim_color.r, rdp.prim_color.g, rdp.prim_color.b, rdp.prim_color.a);
 							break;
 						case CC_SHADE:
-							tmp.a = pre_v_arr[0]->color.array.a;
-							tmp.r = pre_v_arr[0]->color.array.r;
-							tmp.g = pre_v_arr[0]->color.array.g;
-							tmp.b = pre_v_arr[0]->color.array.b;
-							rectcolor = PACK_ARGB8888(tmp.r, tmp.g, tmp.b, tmp.a);
+							rectcolor = v2d[0].color.packed;
 							break;
 						case CC_ENV:
 							rectcolor = PACK_ARGB8888(rdp.env_color.r, rdp.env_color.g, rdp.env_color.b, rdp.env_color.a);
@@ -2020,38 +1944,13 @@ thenext2dthing:
 		}
 	}
 
-    for (int tri_num_vert = 0; tri_num_vert < 4; tri_num_vert++) {
-		quad_vbo[tri_num_vert].vert.x = pre_v_arr[tri_num_vert]->vert.x;
-		quad_vbo[tri_num_vert].vert.y = pre_v_arr[tri_num_vert]->vert.y;
-		quad_vbo[tri_num_vert].vert.z = pre_v_arr[tri_num_vert]->vert.z;
+    v2d++->color.packed = rectcolor;
+    v2d++->color.packed = rectcolor;
+    v2d++->color.packed = rectcolor;
+    v2d->color.packed = rectcolor;
 
-		if (use_texture) {
-				// div by 32
-				float u = (pre_v_arr[tri_num_vert]->texture.u * 0.03125f);
-				float v = (pre_v_arr[tri_num_vert]->texture.v * 0.03125f);
-				u -= (float)((rdp.texture_tile.uls * 0.25f));
-				v -= (float)((rdp.texture_tile.ult * 0.25f));
-
-				if ((rdp.other_mode_h & (3U << G_MDSFT_TEXTFILT)) != G_TF_POINT) {
-					// Linear filter adds 0.5f to the coordinates
-					u += 0.5f;
-					v += 0.5f;
-				}
-			
-				pre_v_arr[tri_num_vert]->texture.u = u * recip_tex_width;// * get_current_u_scale();
-				pre_v_arr[tri_num_vert]->texture.v = v * recip_tex_height;// * get_current_v_scale();
-		}
-
-		pre_v_arr[tri_num_vert]->color.packed = rectcolor;
-	}
-
-	memcpy32(&quad_vbo[0], pre_v_arr[0], 32);
-	memcpy32(&quad_vbo[1], pre_v_arr[1], 32);
-	memcpy32(&quad_vbo[2], pre_v_arr[2], 32);
-	memcpy32(&quad_vbo[3], pre_v_arr[3], 32);
-	gfx_opengl_draw_triangles_2d((void*) quad_vbo, 4, use_texture);
+    gfx_opengl_draw_triangles_2d((void*) rsp.loaded_vertices_2D, 4, use_texture);
 }
-#endif
 
 static void gfx_sp_geometry_mode(uint32_t clear, uint32_t set) {
 	rsp.geometry_mode &= ~clear;
@@ -2356,6 +2255,9 @@ static void gfx_dp_set_fog_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
 	rdp.fog_color.g = g;
 	rdp.fog_color.b = b;
 	rdp.fog_color.a = a;
+    float fog_color[4] = { rdp.fog_color.r * recip255, rdp.fog_color.g * recip255,
+                               rdp.fog_color.b * recip255, (float) (rdp.fog_color.a * recip255) * 0.75f };
+    glFogfv(GL_FOG_COLOR, fog_color);
 }
 
 static void  gfx_dp_set_fill_color(uint32_t packed_color) {
@@ -2447,7 +2349,7 @@ static void  __attribute__((noinline)) gfx_draw_rectangle(int32_t ulx, int32_t u
 	rdp.viewport_or_scissor_changed = 1;
 	rsp.geometry_mode = 0;
 
-	gfx_sp_quad_2d(0, 1, 3, 1, 2, 3);
+	gfx_sp_quad_2d(/* 0, 1, 3, 1, 2, 3 */);
 
 	rsp.geometry_mode = geometry_mode_saved;
 	rdp.viewport = viewport_saved;
