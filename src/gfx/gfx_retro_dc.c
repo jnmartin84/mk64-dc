@@ -242,6 +242,13 @@ static struct RDP {
 
 	uint32_t other_mode_l, other_mode_h;
 	uint32_t combine_mode;
+	uint32_t packedc;
+	uint32_t color_r;
+	uint32_t color_g;
+	uint32_t color_b;
+	uint32_t color_a;
+	uint8_t use_shade;
+	uint8_t color_dirty;
 
 	struct RGBA env_color, prim_color, fog_color, fill_color;
 	struct XYWidthHeight viewport, scissor;
@@ -1174,8 +1181,8 @@ static void  __attribute__((noinline)) gfx_sp_pop_matrix(uint32_t count) {
 
 //int max_lights = 0;
 
-int nearz_clip_verts = 0;
-int total_verts = 0;
+//int nearz_clip_verts = 0;
+//int total_verts = 0;
 
 static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
     for (size_t i = 0; i < n_vertices; i++, dest_index++) {
@@ -1343,7 +1350,7 @@ static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t
 
 static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
     shz_xmtrx_load_4x4(&rsp.MP_matrix);
-    total_verts += n_vertices;
+    //total_verts += n_vertices;
     if (rsp.geometry_mode & G_LIGHTING) {
         if (rsp.lights_changed) {
             if (rsp.current_num_lights == 2) {
@@ -1382,9 +1389,117 @@ extern float get_current_v_scale(void);
 
 #define MEM_BARRIER_PREF(ptr) asm volatile("pref @%0" : : "r"((ptr)) : "memory")
 
-int total_tri=0;
-int rej_tri=0;
-int nearz_tri = 0;
+void calculate_color(struct ColorCombiner* comb, int num_inputs) {
+	uint32_t color_r = 255;
+    uint32_t color_g = 255;
+    uint32_t color_b = 255;
+    uint32_t color_a = 255;
+    uint32_t packedc = 0;
+    rdp.use_shade = 0;
+    if (num_inputs == 2) {
+        int i0 = comb->shader_input_mapping[0][1] == CC_PRIM;
+        int i2 = comb->shader_input_mapping[0][0] == CC_ENV;
+
+        int i3 = comb->shader_input_mapping[0][0] == CC_PRIM;
+        int i4 = comb->shader_input_mapping[0][1] == CC_ENV;
+
+        if (i0 && i2) {
+            color_r = 255 - rdp.env_color.r;
+            color_g = 255 - rdp.env_color.g;
+            color_b = 255 - rdp.env_color.b;
+            color_a = rdp.prim_color.a;
+        } else if (i3 && i4) {
+            color_r = rdp.prim_color.r;
+            color_g = rdp.prim_color.g;
+            color_b = rdp.prim_color.b;
+            color_a = rdp.prim_color.a;
+
+            color_r *= ((rdp.env_color.r + 255));
+            color_g *= ((rdp.env_color.g + 255));
+            color_b *= ((rdp.env_color.b + 255));
+            color_a *= (rdp.env_color.a);
+
+            color_r >>= 8;
+            color_g >>= 8;
+            color_b >>= 8;
+            color_a >>= 8;
+
+            uint32_t max_c = 255;
+            if (color_r > max_c)
+                max_c = color_r;
+            if (color_g > max_c)
+                max_c = color_g;
+            if (color_b > max_c)
+                max_c = color_b;
+            if (color_a > max_c)
+                max_c = color_a;
+
+            float rn, gn, bn, an;
+            rn = (float) color_r;
+            gn = (float) color_g;
+            bn = (float) color_b;
+            an = (float) color_a;
+            float maxc = 255.0f * shz_inverse_posf((float) max_c);
+            rn *= maxc;
+            gn *= maxc;
+            bn *= maxc;
+            an *= maxc;
+
+            color_r = (uint32_t) rn;
+            color_g = (uint32_t) gn;
+            color_b = (uint32_t) bn;
+            color_a = (uint32_t) an;
+        } else {
+            goto thenextthing;
+        }
+    } else {
+    thenextthing:
+        int j, k;
+
+        // this is a hack to fix the speedometer needle color
+        for (j = 0; j < num_inputs; j++) {
+            /*@Note: use_alpha ? 1 : 0 */
+            for (k = 0; k < 1; k++) {
+                switch (comb->shader_input_mapping[k][j]) {
+                    case CC_PRIM:
+                        color_r = rdp.prim_color.r;
+                        color_g = rdp.prim_color.g;
+                        color_b = rdp.prim_color.b;
+                        color_a = rdp.prim_color.a;
+						rdp.use_shade = 0;
+                        break;
+                    case CC_SHADE:
+                        rdp.use_shade = 1;
+                        break;
+                    case CC_ENV:
+                        color_r = rdp.env_color.r;
+                        color_g = rdp.env_color.g;
+                        color_b = rdp.env_color.b;
+                        color_a = rdp.env_color.a;
+						rdp.use_shade = 0;
+                        break;
+                    default:
+                        color_r = color_g = color_b = color_a = 255;
+                        if (in_intro) {
+                            color_a = rdp.env_color.a;
+                        }
+						rdp.use_shade = 0;
+                        break;
+                }
+            }
+        }
+    }
+	rdp.color_r = color_r;
+	rdp.color_g = color_g;
+	rdp.color_b = color_b;
+	rdp.color_a = color_a;
+	rdp.packedc = PACK_ARGB8888(color_r, color_g, color_b, color_a);
+}
+
+
+//int total_tri=0;
+//int rej_tri=0;
+//int nearz_tri = 0;
 static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx) {
 	MEM_BARRIER_PREF(clip_rej);
 	struct LoadedVertex* v1 = &rsp.loaded_vertices[vtx1_idx];
@@ -1526,6 +1641,12 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     uint8_t num_inputs;
     uint8_t used_textures[2];
     gfx_rapi->shader_get_info(prg, &num_inputs, used_textures);
+
+	if (rdp.color_dirty) {
+		calculate_color(comb, num_inputs);
+		rdp.color_dirty = 0;
+	}
+
     int i;
 
 //    for (i = 0; i < 2; i++) {
@@ -1552,6 +1673,7 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     uint32_t tex_width = (rdp.texture_tile.lrs - rdp.texture_tile.uls + 4) >> 2;
     uint32_t tex_height = (rdp.texture_tile.lrt - rdp.texture_tile.ult + 4) >> 2;
 
+#if 0
     uint32_t color_r = 255;
     uint32_t color_g = 255;
     uint32_t color_b = 255;
@@ -1653,7 +1775,7 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     }
 
 	packedc = PACK_ARGB8888(color_r, color_g, color_b, color_a);
-
+#endif
 	for (i = 0; i < 3; i++) {
         buf_vbo[buf_num_vert].vert.x = v_arr[i]->x;
         buf_vbo[buf_num_vert].vert.y = v_arr[i]->y;
@@ -1672,14 +1794,6 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
             buf_vbo[buf_num_vert].texture.u = u * shz_inverse_posf((float) tex_width);// * get_current_u_scale();
             buf_vbo[buf_num_vert].texture.v = v * shz_inverse_posf((float) tex_height);// * get_current_v_scale();
         }
-
-		if (use_shade) {
-			color_r = v_arr[i]->color.r;
-			color_g = v_arr[i]->color.g;
-			color_b = v_arr[i]->color.b;
-			color_a = v_arr[i]->color.a;
-			packedc = PACK_ARGB8888(color_r, color_g, color_b, color_a);
-		}
 		
 		if ((!in_intro) && (c0 & 0x80)) {
             uint32_t tc_r;
@@ -1688,18 +1802,25 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
             uint32_t light_r = v_arr[i]->color.r;
             uint32_t light_g = v_arr[i]->color.g;
             uint32_t light_b = v_arr[i]->color.b;
-            tc_r = ((color_r * light_r) >> 8) & 0xff;
-            tc_g = ((color_g * light_g) >> 8) & 0xff;
-            tc_b = ((color_b * light_b) >> 8) & 0xff;
-            packedc = PACK_ARGB8888(tc_r, tc_g, tc_b, color_a);
+            tc_r = ((rdp.color_r * light_r) >> 8) & 0xff;
+            tc_g = ((rdp.color_g * light_g) >> 8) & 0xff;
+            tc_b = ((rdp.color_b * light_b) >> 8) & 0xff;
+            rdp.packedc = PACK_ARGB8888(tc_r, tc_g, tc_b, rdp.color_a);
         }
+		else if (rdp.use_shade) {
+			rdp.color_r = v_arr[i]->color.r;
+			rdp.color_g = v_arr[i]->color.g;
+			rdp.color_b = v_arr[i]->color.b;
+			rdp.color_a = v_arr[i]->color.a;
+			rdp.packedc = PACK_ARGB8888(rdp.color_r, rdp.color_g, rdp.color_b, rdp.color_a);
+		}
 		
 		if (((!in_intro) && ((v_arr[i]->color.r == 255) && (v_arr[i]->color.b == 0) && (v_arr[i]->color.g == 0) &&
                              (v_arr[i]->color.a == 255)))) {
-            packedc = 0xffff0000;
+            rdp.packedc = 0xffff0000;
         }
 
-        buf_vbo[buf_num_vert].color.packed = packedc;
+        buf_vbo[buf_num_vert].color.packed = rdp.packedc;
         buf_num_vert++;
         buf_vbo_len += sizeof(dc_fast_t);
     }
@@ -2230,24 +2351,32 @@ static inline uint32_t color_comb(uint32_t a, uint32_t b, uint32_t c, uint32_t d
 		   (color_comb_component(d) << 9);
 }
 static void gfx_dp_set_combine_mode(uint32_t rgb, uint32_t alpha) {
-	rdp.combine_mode = rgb | (alpha << 12);
+	if (rdp.combine_mode != (rgb | (alpha << 12))) {
+		rdp.combine_mode = rgb | (alpha << 12);
+		rdp.color_dirty = 1;
+	}
 }
 uint8_t er,eg,eb,ea;
 
 static void  gfx_dp_set_env_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-	er = rdp.env_color.r = r;
-	eg = rdp.env_color.g = g;
-	eb = rdp.env_color.b = b;
-	ea = rdp.env_color.a = a;
+	if (rdp.env_color.r != r || rdp.env_color.g != g || rdp.env_color.b != b || rdp.env_color.a != a) {
+		er = rdp.env_color.r = r;
+		eg = rdp.env_color.g = g;
+		eb = rdp.env_color.b = b;
+		ea = rdp.env_color.a = a;
+		rdp.color_dirty = 1;
+	}
 }
-
 uint8_t pr,pg,pb,pa;
 
 static void gfx_dp_set_prim_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-	pr = rdp.prim_color.r = r;
-	pg = rdp.prim_color.g = g;
-	pb = rdp.prim_color.b = b;
-	pa = rdp.prim_color.a = a;
+	if (rdp.prim_color.r != r || rdp.prim_color.g != g || rdp.prim_color.b != b || rdp.prim_color.a != a) {
+		pr = rdp.prim_color.r = r;
+		pg = rdp.prim_color.g = g;
+		pb = rdp.prim_color.b = b;
+		pa = rdp.prim_color.a = a;
+		rdp.color_dirty = 1;
+	}
 }
 
 static void gfx_dp_set_fog_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
@@ -2270,6 +2399,7 @@ static void  gfx_dp_set_fill_color(uint32_t packed_color) {
 	rdp.fill_color.g = SCALE_5_8(g);
 	rdp.fill_color.b = SCALE_5_8(b);
 	rdp.fill_color.a = a * 255;
+	rdp.color_dirty = 1;
 }
 
 #if 1
@@ -2753,6 +2883,7 @@ static void gfx_sp_reset() {
 	rsp.modelview_matrix_stack_size = 1;
 	rsp.current_num_lights = 2;
 	rsp.lights_changed = 1;
+	rdp.color_dirty = 1;
 }
 
 void gfx_get_dimensions(uint32_t* width, uint32_t* height) {
@@ -2813,7 +2944,7 @@ void gfx_run(Gfx* commands) {
 void gfx_end_frame(void) {
 	//printf("total vert %d nearz %d\n", total_verts, nearz_clip_verts);
 //	printf("total tri %d rej %d nearz %d\n", total_tri, rej_tri, nearz_tri);
-	total_verts = nearz_clip_verts = total_tri = rej_tri = nearz_tri = 0;
+	//total_verts = nearz_clip_verts = total_tri = rej_tri = nearz_tri = 0;
 	//printf("verts %d tris %d quads %d\n", frame_verts, frame_tris, frame_quads);
 	if (!dropped_frame) {
 		gfx_rapi->finish_render();
