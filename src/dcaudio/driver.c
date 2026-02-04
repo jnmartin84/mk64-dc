@@ -210,7 +210,7 @@ static bool audio_dc_init(void) {
            (unsigned int)RING_BUFFER_MAX_BYTES);
     
     // Allocate the sound stream with KOS
-    shnd = snd_stream_alloc(audio_callback, 8192);
+    shnd = snd_stream_alloc(audio_callback, 4096);
     if (shnd == SND_STREAM_INVALID) {
         printf("SND: Stream allocation failure!\n");
         snd_stream_destroy(shnd);
