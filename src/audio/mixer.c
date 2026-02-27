@@ -13,6 +13,7 @@
 #endif
 
 #include "mixer.h"
+#include <sh4zam/shz_sh4zam.h>
 
 #define recip8192 0.00012207f
 #define recip2048 0.00048828f
@@ -450,11 +451,11 @@ void aClearBufferImpl(uint16_t addr, int nbytes) {
 void n64_memcpy(void* dst, const void* src, size_t size);
 
 void aLoadBufferImpl(const void* source_addr, uint16_t dest_addr, uint16_t nbytes) {
-    n64_memcpy(BUF_U8(dest_addr & ~3), source_addr, ROUND_DOWN_16(nbytes));
+    shz_memcpy(BUF_U8(dest_addr & ~3), source_addr, ROUND_DOWN_16(nbytes));
 }
 
 void aSaveBufferImpl(uint16_t source_addr, int16_t* dest_addr, uint16_t nbytes) {
-    n64_memcpy(dest_addr, BUF_S16(source_addr & ~3), ROUND_DOWN_16(nbytes));
+    shz_memcpy(dest_addr, BUF_S16(source_addr & ~3), ROUND_DOWN_16(nbytes));
 }
 
 void aLoadADPCMImpl(int num_entries_times_16, const int16_t* book_source_addr) {
@@ -550,12 +551,12 @@ void aDMEMMoveImpl(uint16_t in_addr, uint16_t out_addr, int nbytes) {
 void aDMEMCopyImpl(uint16_t in_addr, uint16_t out_addr, int nbytes) {
     // printf("dmemcopy in %04x out %04x nbytes %d\n", in_addr, out_addr, nbytes);
 
-    n64_memcpy(BUF_U8(out_addr&~3), BUF_U8(in_addr&~3), ROUND_UP_16(nbytes));
+    shz_memcpy(BUF_U8(out_addr&~3), BUF_U8(in_addr&~3), ROUND_UP_16(nbytes));
 }
 
 void aSetLoopImpl(ADPCM_STATE* adpcm_loop_state) {
     // rspa.adpcm_loop_state = adpcm_loop_state;
-    n64_memcpy(rspa.adpcm_loop_state, adpcm_loop_state, 16 * sizeof(int16_t));
+    shz_memcpy(rspa.adpcm_loop_state, adpcm_loop_state, 16 * sizeof(int16_t));
     for (int i = 0; i < 16; i++) {
         rspa.adpcm_loop_state[i] = (int16_t)__builtin_bswap16(rspa.adpcm_loop_state[i]);
     }
@@ -565,8 +566,6 @@ void aSetLoopImpl(ADPCM_STATE* adpcm_loop_state) {
 static inline int extend_nyb(int n) {
     return (n ^ 8) - 8;
 }
-
-#include "sh4zam.h"
 
 inline static void shz_xmtrx_load_3x4_rows(const shz_vec4_t* r1, const shz_vec4_t* r2, const shz_vec4_t* r3) {
     asm volatile(R"(
@@ -800,9 +799,9 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
             const shz_vec4_t in_vec = { .x = prev2, .y = prev1, .z = 1.0f };
 
             shz_xmtrx_load_3x4_rows(&tbl[0][0], &tbl[1][0], &ins[0]);
-            acc_vec[0] = shz_xmtrx_trans_vec4(in_vec);
+            acc_vec[0] = shz_xmtrx_transform_vec4(in_vec);
             shz_xmtrx_load_3x4_rows(&tbl[0][4], &tbl[1][4], &ins[4]);
-            acc_vec[1] = shz_xmtrx_trans_vec4(in_vec);
+            acc_vec[1] = shz_xmtrx_transform_vec4(in_vec);
 
             {
                 register float fone asm("fr8")  = 1.0f;
@@ -812,9 +811,9 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
                 accf[2] = shz_dot8f(fone, ins0, ins1, ins2, accf[2], tbl[1][1], tbl[1][0], 0.0f);
                 accf[7] = shz_dot8f(fone, ins0, ins1, ins2, accf[7], tbl[1][6], tbl[1][5], tbl[1][4]);
                 accf[1] += (tbl[1][0] * ins0);
-                shz_xmtrx_load_4x4_cols(&accf[3], &tbl[1][2], &tbl[1][1], &tbl[1][0]);
+                shz_xmtrx_load_cols_4x4(&accf[3], &tbl[1][2], &tbl[1][1], &tbl[1][0]);
                 *(SHZ_ALIASING shz_vec4_t*)&accf[3] =
-                    shz_xmtrx_trans_vec4((shz_vec4_t) { .x = fone, .y = ins0, .z = ins1, .w = ins2 });
+                    shz_xmtrx_transform_vec4((shz_vec4_t) { .x = fone, .y = ins0, .z = ins1, .w = ins2 });
             }
             {
                 register float ins3 asm("fr8")  = ins[3];

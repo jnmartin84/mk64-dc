@@ -66,7 +66,7 @@ void guMtxIdentF(float mf[4][4]) {
     }
 #endif
         shz_xmtrx_init_identity();
-        shz_xmtrx_store_4x4_unaligned(mf);
+        shz_xmtrx_store_unaligned_4x4(mf);
 }
 
 void guMtxIdent(Mtx* m) {

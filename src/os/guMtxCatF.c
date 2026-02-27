@@ -54,9 +54,7 @@ void guMtxCatF(float mf[4][4], float nf[4][4], float res[4][4]) {
         }
     }
 #else // combine these operations into one and pipeline in ASM.
-    shz_xmtrx_load_4x4_unaligned(nf);
-    shz_xmtrx_apply_4x4_unaligned(mf);
-    shz_xmtrx_store_4x4_unaligned(res);
+    shz_xmtrx_load_apply_store_unaligned_4x4(res, nf, mf);
 #endif
 }
 
@@ -66,7 +64,7 @@ void guMtxXFMF(float mf[4][4], float x, float y, float z, float* ox, float* oy, 
     *oy = mf[0][1] * x + mf[1][1] * y + mf[2][1] * z + mf[3][1];
     *oz = mf[0][2] * x + mf[1][2] * y + mf[2][2] * z + mf[3][2];
 #else
-    shz_vec3_t out = shz_matrix4x4_trans_vec3(mf, (shz_vec3_t) { .x = x, .y = y, .z = z });
+    shz_vec3_t out = shz_mat4x4_transform_vec3(mf, (shz_vec3_t) { .x = x, .y = y, .z = z });
     *ox = out.x + mf[3][0];
     *oy = out.y + mf[3][1];
     *oz = out.z + mf[3][2];

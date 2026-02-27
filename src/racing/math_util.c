@@ -162,7 +162,7 @@ void mtxf_copy(Mat4 mat1, Mat4 mat2) {
         }
     }
 #else
-    shz_matrix_4x4_copy(mat2, mat1);
+    shz_mat4x4_copy((shz_mat4x4_t*)mat2, (const shz_mat4x4_t*)mat1);
 #endif
 }
 
@@ -182,7 +182,7 @@ void mtxf_identity(Mat4 mtx) {
         shz_xmtrx_store_4x4(mtx);
     } else {
         shz_xmtrx_init_identity();
-        shz_xmtrx_store_4x4_unaligned(mtx);
+        shz_xmtrx_store_unaligned_4x4(mtx);
     }
 }
 
@@ -343,7 +343,7 @@ void func_802B5794(Mat4 mtx, Vec3f from, Vec3f to) {
     mtx[2][3] = 0.0f;
     mtx[3][3] = 1.0f;
 
-    *((SHZ_ALIASING shz_vec3_t *)mtx[3]) = shz_matrix4x4_trans_vec3_transpose(mtx, (shz_vec3_t) { .x = from[0], .y = from[1], .z = from[2] });
+    *((SHZ_ALIASING shz_vec3_t *)mtx[3]) = shz_mat4x4_transform_vec3_transpose(mtx, (shz_vec3_t) { .x = from[0], .y = from[1], .z = from[2] });
     for(unsigned r = 0; r < 3; ++r)
         mtx[3][r] *= -1.0f;     
 }
@@ -453,8 +453,8 @@ void func_802B5B14(Vec3f b, Vec3s rotate) {
     b[1] = copy[0] * mtx[1][0] + copy[1] * mtx[1][1] + copy[1] * mtx[1][2];
     b[2] = copy[0] * mtx[2][0] + copy[1] * mtx[2][1] + copy[1] * mtx[2][2];
 #else
-    shz_xmtrx_init_rotation(SHZ_ANGLE(rotate[0]), SHZ_ANGLE(rotate[1]), SHZ_ANGLE(rotate[2]));
-    shz_vec3_t result = shz_xmtrx_trans_vec3((shz_vec3_t) { .x = b[0], .y = b[1], .z = b[2] });
+    shz_xmtrx_init_rotation_xyz(SHZ_ANGLE(rotate[0]), SHZ_ANGLE(rotate[1]), SHZ_ANGLE(rotate[2]));
+    shz_vec3_t result = shz_xmtrx_transform_vec3((shz_vec3_t) { .x = b[0], .y = b[1], .z = b[2] });
     b[0] = result.x;
     b[1] = result.y;
     b[2] = result.z;
@@ -540,7 +540,7 @@ void mtxf_scale(Mat4 mat, f32 coef) {
 
 // look like create a translation and rotation matrix with arg1 position and arg2 rotation
 void mtxf_pos_rotation_xyz(Mat4 out, Vec3f pos, Vec3s orientation) {
-#if 0
+#if 1
     f32 sine1;
     f32 cosine1;
     f32 sine2;
@@ -550,12 +550,6 @@ void mtxf_pos_rotation_xyz(Mat4 out, Vec3f pos, Vec3s orientation) {
     sincoss(orientation[0], &sine1,&cosine1);
     sincoss(orientation[1], &sine2,&cosine2);
     sincoss(orientation[2], &sine3,&cosine3);
-/*     sine1 = sins(orientation[0]);
-    cosine1 = coss(orientation[0]);
-    sine2 = sins(orientation[1]);
-    cosine2 = coss(orientation[1]);
-    sine3 = sins(orientation[2]);
-    cosine3 = coss(orientation[2]); */
     out[0][0] = (cosine2 * cosine3) + ((sine1 * sine2) * sine3);
     out[1][0] = (-cosine2 * sine3) + ((sine1 * sine2) * cosine3);
     out[2][0] = cosine1 * sine2;
@@ -678,7 +672,7 @@ void mtxf_translate_vec3f_mat3(Vec3f pos, Mat3 mat) {
     pos[1] = new_y;
     pos[2] = new_z;
 #else
-    shz_vec3_t out = shz_matrix3x3_trans_vec3_transpose(mat, (shz_vec3_t) { .x = pos[0], .y = pos[1], .z = pos[2] });
+    shz_vec3_t out = shz_mat3x3_transform_vec3_transpose(mat, (shz_vec3_t) { .x = pos[0], .y = pos[1], .z = pos[2] });
     pos[0] = out.x;
     pos[1] = out.y;
     pos[2] = out.z;
@@ -706,7 +700,7 @@ void mtxf_translate_vec3f_mat4(Vec3f pos, Mat4 mat) {
     pos[2] = fipr(mat[2][0],mat[2][1],mat[2][2],0,pos[0],pos[1],pos[2],0);
 #endif
 #else
-    shz_vec3_t out = shz_matrix4x4_trans_vec3_transpose(mat, (shz_vec3_t) { .x = pos[0], .y = pos[1], .z = pos[2] });
+    shz_vec3_t out = shz_mat4x4_transform_vec3_transpose(mat, (shz_vec3_t) { .x = pos[0], .y = pos[1], .z = pos[2] });
     pos[0] = out.x;
     pos[1] = out.y;
     pos[2] = out.z;
@@ -819,10 +813,10 @@ void calculate_orientation_matrix(Mat3 dest, f32 arg1, f32 arg2, f32 arg3, s16 r
         c = 0;
         d = arg1 / sqrtf((arg1 * arg1) + (arg3 * arg3));
         calculate_rotation_matrix(matrix, a, b, c, d);
-        shz_xmtrx_apply_3x3_transpose(matrix);
+        shz_xmtrx_apply_transpose_3x3(matrix);
     }
 
-    shz_xmtrx_store_3x3((shz_matrix_3x3_t *)dest);
+    shz_xmtrx_store_3x3((shz_mat3x3_t *)dest);
 #endif
 }
 
@@ -903,7 +897,7 @@ void func_802B6BC0(Mat4 arg0, s16 arg1, f32 arg2, f32 arg3, f32 arg4) {
 // look like create a translation and rotation matrix with arg1 position and arg2 rotation
 void func_802B6D58(Mat4 arg0, Vec3f arg1, Vec3f arg2) {
     shz_dcache_alloc_line(arg0);
-    shz_xmtrx_init_rotation(arg2[0], arg2[1], arg2[2]);
+    shz_xmtrx_init_rotation_xyz(arg2[0], arg2[1], arg2[2]);
     shz_xmtrx_set_translation(arg1[0], arg1[1], arg1[2]);
     shz_xmtrx_store_4x4(arg0);
 }
@@ -912,7 +906,7 @@ void func_802B6D58(Mat4 arg0, Vec3f arg1, Vec3f arg2) {
 
 void mtxf_multiplication(Mat4 dest, Mat4 mat1, Mat4 mat2) {
     shz_dcache_alloc_line(dest);
-    shz_xmtrx_load_4x4_apply_store(dest, mat2, mat1);
+    shz_xmtrx_load_apply_store_4x4(dest, mat2, mat1);
 }
 
 /**
@@ -930,7 +924,7 @@ void mtxf_to_mtx(Mtx* dest, Mat4 src) {
 #ifdef GBI_FLOATS
     __builtin_prefetch(dest);
     shz_xmtrx_load_4x4(src);
-    shz_xmtrx_store_4x4_unaligned(dest);
+    shz_xmtrx_store_unaligned_4x4(dest);
 
 #else
 #ifdef AVOID_UB

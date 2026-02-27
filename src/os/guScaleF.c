@@ -10,7 +10,7 @@ void guScaleF(float mf[4][4], float x, float y, float z) {
     mf[3][3] = 1.0;
 #else
     shz_xmtrx_init_scale(x, y, z);
-    shz_xmtrx_store_4x4_unaligned(mf);
+    shz_xmtrx_store_unaligned_4x4(mf);
 #endif
 }
 

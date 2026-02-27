@@ -239,10 +239,10 @@ void load_texture_block_i8_nomirror(u8* texture, s32 width, s32 height) {
 }
 
 void func_80044924(u8* texture, s32 width, s32 height) {
-    if ((uintptr_t)texture < 0x01000000u) {
+    /*if ((uintptr_t)texture < 0x01000000u) {
         printf("%s low val ptr\n", __func__);
         return;
-    }
+    }*/
 
     // This macro ought to be equivalent to the block of macros below but it doesn't match
     // See comment above the `gDPLoadBlock` macro
@@ -278,10 +278,10 @@ void func_80044BF8(u8* texture, s32 width, s32 height) {
 }
 
 void func_80044DA0(u8* image, s32 width, s32 height) {
-     /* if ((uintptr_t)image < 0x01000000u) {
+    /*if ((uintptr_t)image < 0x01000000u) {
         printf("%s low val ptr\n", __func__);
         return;
-    } */
+    }*/
 
     // This macro ought to be equivalent to the block of macros below but it doesn't match
     // See comment above the `gDPLoadBlock` macro
@@ -306,11 +306,11 @@ void func_80044DA0(u8* image, s32 width, s32 height) {
 
 // Appears to be a complete copy of `func_80044F34`?
 void func_80044F34(u8* image, s32 width, s32 height) {
-    /*  if ((uintptr_t)image < 0x01000000u) {
+    /*if ((uintptr_t)image < 0x01000000u) {
         printf("%s low val ptr\n", __func__);
         return;
-    } */
-   // This macro ought to be equivalent to the block of macros below but it doesn't match
+    }*/
+    // This macro ought to be equivalent to the block of macros below but it doesn't match
     // See comment above the `gDPLoadBlock` macro
     // gDPLoadTextureBlock_4b(gDisplayListHead++, image, G_IM_FMT_I, width, height, 0, G_TX_NOMIRROR | G_TX_CLAMP,
     // G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD);
@@ -332,10 +332,10 @@ void func_80044F34(u8* image, s32 width, s32 height) {
 }
 
 void func_800450C8(u8* image, s32 width, s32 height) {
-    /* if ((uintptr_t)image < 0x01000000u) {
+    /*if ((uintptr_t)image < 0x01000000u) {
         printf("%s low val ptr\n", __func__);
         return;
-    } */
+    }*/
     // This macro ought to be equivalent to the block of macros below but it doesn't match
     // See comment above the `gDPLoadBlock` macro
     // gDPLoadTextureBlock_4b(gDisplayListHead++, image, G_IM_FMT_I, width, height, 0, G_TX_NOMIRROR | G_TX_CLAMP,
@@ -1367,15 +1367,30 @@ UNUSED void func_8004A5E4(Vec3f arg0, Vec3su arg1, f32 arg2, u8* texture, Vtx* a
     func_8004A414(arg0, arg1, arg2, texture, arg4, 16, 16, 16, 16);
 }
 
+Gfx l_D_0D007B98[] = {
+    gsSPDisplayList(D_0D007A08),
+    gsDPSetTextureFilter(G_TF_BILERP),
+    gsDPSetRenderMode(G_RM_ZB_CLD_SURF, G_RM_ZB_CLD_SURF2),
+    gsDPSetCombineMode(G_CC_MODULATEIA, G_CC_MODULATEIA),
+    gsDPSetCombineLERP(0, 0, 0, PRIMITIVE, TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, PRIMITIVE, TEXEL0, 0,
+                      PRIMITIVE, 0),
+    gsDPSetPrimColor(0, 0, 0x14, 0x14, 0x14, 0x7f),
+    gsDPLoadTextureBlock_4b(common_shadow_i4, G_IM_FMT_I, 16, 16, 0, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD),
+    gsSPDisplayList(D_0D0069B0),
+    gsSPTexture(0x8000, 0x8000, 0, G_TX_RENDERTILE, G_OFF),
+    gsSPEndDisplayList(),
+};
+
 void draw_object_shadow(Collision* arg0, Vec3f arg1, f32 arg2) {
     if (func_80041924(arg0, arg1) != 0) {
         D_80183E50[0] = arg1[0];
         D_80183E50[1] = calculate_surface_height(arg1[0], 0.0f, arg1[2], arg0->meshIndexZX) + 0.8;
         D_80183E50[2] = arg1[2];
         rsp_set_matrix_transl_rot_scale(D_80183E50, arg0->orientationVector, arg2);
-        gSPDisplayList(gDisplayListHead++, D_0D007B98);
+        gSPDisplayList(gDisplayListHead++, l_D_0D007B98);
     }
 }
+
 extern Gfx l_D_0D007B20[];
 void func_8004A6EC(s32 objectIndex, f32 scale) {
     Object* object;
@@ -3783,7 +3798,7 @@ void render_lakitu(s32 cameraId) {
             if (var_f2 < 0.0f) {
                 var_f2 = -var_f2;
             }
-            if ((var_f0 + var_f2) <= 200.0) {
+            if ((var_f0 + var_f2) <= 200.0f) {
                 draw_object_shadow(&D_8018C0B0[cameraId], object->pos, 0.35f);
             }
         }

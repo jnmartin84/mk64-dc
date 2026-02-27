@@ -109,7 +109,7 @@ void fix_xbm(unsigned char *p)
 #include "peach.xbm"
 #include "toad.xbm"
 #include "bowser.xbm"
-#if 1
+#if 0
 //defined(SONIC_BUILD)
 #include "sonic.xbm"
 const char *xbms[] = { mario_xbm, luigi_xbm, yoshi_xbm,

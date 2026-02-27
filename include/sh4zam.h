@@ -1,6 +1,12 @@
 #ifndef SH4ZAM_H
 #define SH4ZAM_H
 
+
+#include <sh4zam/shz_sh4zam.h>
+#define TRIG_ARG_SCALE 0.00009587f
+#define SHZ_ANGLE(a) (((float)((uint16_t)a)) * TRIG_ARG_SCALE)
+#if 0
+
 #define SHZ_NOEXCEPT
 #define SHZ_ALIGNAS(n)          __attribute__((aligned(n)))
 #define SHZ_INLINE              inline static
@@ -10,8 +16,6 @@
 
 #define SHZ_FSCA_RAD_FACTOR     10430.37835f
 
-#define TRIG_ARG_SCALE 0.00009587f
-#define SHZ_ANGLE(a) (((float)((uint16_t)a)) * TRIG_ARG_SCALE)
 
 #ifdef __cplusplus
 extern "C" {
@@ -1534,5 +1538,5 @@ SHZ_INLINE void shz_memcpy4_16(void *dst, const void *src) {
 #ifdef __cplusplus
 }
 #endif
-
+#endif
 #endif

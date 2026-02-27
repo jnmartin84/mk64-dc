@@ -1,0 +1,9 @@
+Device Info   : CD-ROM1/1
+Area Symbols  : JUE
+Peripherals   : E000F10
+Product No    : MK64-DC
+Version       : V1.000
+Release Date  : 20251010
+Boot Filename : 1ST_READ.BIN
+SW Maker Name : jnmartin64
+Game Title    : dc-mk64

@@ -52,7 +52,6 @@ KOS_INIT_FLAGS(INIT_IRQ | INIT_CONTROLLER | INIT_VMU | INIT_CDROM);
 
 char *fnpre;
 const void *__kos_romdisk;
-void runtime_reset(void);
 
 void func_80091B78(void);
 void audio_init(void);
@@ -334,7 +333,7 @@ void setup_audio_data(void) {
         long toread = filesize;
         long didread = 0;
 
-        while (didread < toread) {
+        while (didread < filesize) {
             long rv = fread(&AUDIOBANKS_BUF[didread], 1, toread - didread, file);
 
             if (rv == -1) {
@@ -372,7 +371,7 @@ void setup_audio_data(void) {
         long toread = filesize;
         long didread = 0;
 
-        while (didread < toread) {
+        while (didread < filesize) {
             long rv = fread(&AUDIOTABLES_BUF[didread], 1, toread - didread, file);
             if (rv == -1) {
                 printf("FILE IS FUCKED\n");
@@ -408,7 +407,7 @@ void setup_audio_data(void) {
         long toread = filesize;
         long didread = 0;
 
-        while (didread < toread) {
+        while (didread < filesize) {
             long rv = fread(&INSTRUMENT_SETS_BUF[didread], 1, toread - didread, file);
             if (rv == -1) {
                 printf("FILE IS FUCKED\n");
@@ -443,7 +442,7 @@ void setup_audio_data(void) {
         long toread = filesize;
         long didread = 0;
 
-        while (didread < toread) {
+        while (didread < filesize) {
             long rv = fread(&SEQUENCES_BUF[didread], 1, toread - didread, file);
             if (rv == -1) {
                 printf("FILE IS FUCKED\n");
@@ -488,7 +487,7 @@ const uint32_t rainbow[] = {
 void rainbow_print(int x, int y, char *text) {
     int ci = 0;
     void *ptr = (void*)((uintptr_t)vram_s + ((y*640*2) + (x*2)));
-    for (int i=0;i<strlen(text);i++) {
+    for (size_t i=0;i<strlen(text);i++) {
         if (ci == 18) ci = 0;
         bfont_draw_ex(ptr, 640, rainbow[ci%7], 0x00000000, 16, 1, text[i], 0, 0);
         if (text[i] != ' ') ci++;
@@ -496,7 +495,7 @@ void rainbow_print(int x, int y, char *text) {
     }
     ptr = (void*)((uintptr_t)vram_s + (((y+1)*640*2) + ((x+1)*2)));
     ci = 0;
-    for (int i=0;i<strlen(text);i++) {
+    for (size_t i=0;i<strlen(text);i++) {
         if (ci == 18) ci = 0;
         bfont_draw_ex(ptr, 640, rainbow[ci%7], 0x00000000, 16, 0, text[i], 0, 0);
         if (text[i] != ' ') ci++;
@@ -504,7 +503,7 @@ void rainbow_print(int x, int y, char *text) {
     }
     ptr = (void*)((uintptr_t)vram_s + (((y-1)*640*2) + ((x-1)*2)));
     ci = 0;
-    for (int i=0;i<strlen(text);i++) {
+    for (size_t i=0;i<strlen(text);i++) {
         if (ci == 18) ci = 0;
         bfont_draw_ex(ptr, 640, rainbow[ci%7], 0x00000000, 16, 0, text[i], 0, 0);
         if (text[i] != ' ') ci++;
@@ -751,35 +750,48 @@ void update_controller(s32 index) {
             exit(0);
         }
     }
+
     const char stickH =state->joyx;
     const char stickV = 0xff-((uint8_t)(state->joyy));
-        controller->rawStickX = ((float)stickH/127)*80;
-        controller->rawStickY = ((float)stickV/127)*80;
+    controller->rawStickX = ((float)stickH/127)*80;
+    controller->rawStickY = ((float)stickV/127)*80;
 
     if (state->buttons & CONT_A)
-        ucheld |= 0x8000;//A_BUTTON;
+        ucheld |= 0x8000; //A_BUTTON
+#if defined(BUTTON_SWAP_X)
     if (state->buttons & CONT_X)
-        ucheld |= 0x4000;//B_BUTTON;
-    if (state->ltrig)
-        ucheld |= 0x2000;//Z_TRIG;
+        ucheld |= 0x0001; //C_RIGHT
+    if (state->buttons & CONT_B)
+        ucheld |= 0x4000; //B_BUTTON
+#else
+    if (state->buttons & CONT_X)
+        ucheld |= 0x4000; //B_BUTTON
+    if (state->buttons & CONT_B)
+        ucheld |= 0x0001; //C_RIGHT
+#endif
+
+    if (state->ltrig) {
+        if (gGamestate > 3) // DC L is N64 Z in-game
+            ucheld |= 0x2000; //Z_TRIG
+        else // DC L becomes N64 L in-menu
+            ucheld |= 0x0020; //L_TRIG
+    }
     if (state->buttons & CONT_START)
-       ucheld |= 0x1000;//START_BUTTON;
+       ucheld |= 0x1000; //START_BUTTON
 
     if (state->buttons & CONT_DPAD_UP)
-        ucheld |= 0x0800;//U_CBUTTONS;
+        ucheld |= 0x0800; //U_JPAD
     if (state->buttons & CONT_DPAD_DOWN)
-        ucheld |= 0x0400;//D_CBUTTONS;
+        ucheld |= 0x0400; //D_JPAD
     if (state->buttons & CONT_DPAD_LEFT)
-        ucheld |= 0x0200;//L_CBUTTONS;
+        ucheld |= 0x0200; //L_JPAD
     if (state->buttons & CONT_DPAD_RIGHT)
-        ucheld |= 0x0100;//R_CBUTTONS;
+        ucheld |= 0x0100; //R_JPAD
 
     if (state->rtrig)
-        ucheld |= 0x0010;//R_TRIG;
+        ucheld |= 0x0010; //R_TRIG
     if (state->buttons & CONT_Y)
-        ucheld |= 0x0008;//C_UP
-    if (state->buttons & CONT_B)
-        ucheld |= 0x0001;//C_RIGHT
+        ucheld |= 0x0008; //C_UP
 
     controller->buttonPressed = ucheld & (ucheld ^ controller->button);
     controller->buttonDepressed = controller->button & (ucheld ^ controller->button);
@@ -835,7 +847,7 @@ void func_80000BEC(void) {
 void dispatch_audio_sptask(UNUSED struct SPTask* spTask) {
 }
 
-static void exec_display_list(struct SPTask* spTask) {
+static void exec_display_list(UNUSED struct SPTask* spTask) {
 	send_display_list(&gGfxPool->spTask);
 }
 
@@ -1031,13 +1043,13 @@ void setup_game_memory(void) {
 
     fseek(file, 0, SEEK_END);
     long filesize = ftell(file);
-    printf("common data is %d\n", filesize);
+    //printf("common data is %ld\n", filesize);
     rewind(file);
 
     long toread = filesize;
     long didread = 0;
 
-    while (didread < toread) {
+    while (didread < filesize) {
         long rv = fread(&COMMON_BUF[didread], 1, toread - didread, file);
         if (rv == -1) {
             printf("FILE IS FUCKED\n");
@@ -2115,38 +2127,31 @@ int credits_started = 0;
 void update_gamestate(void) {
     switch (gGamestate) {
         case START_MENU_FROM_QUIT:
-            runtime_reset();
             func_80002658();
             gCurrentlyLoadedCourseId = COURSE_NULL;
             break;
         case MAIN_MENU_FROM_QUIT:
-            runtime_reset();
             func_800025D4();
             gCurrentlyLoadedCourseId = COURSE_NULL;
             break;
         case PLAYER_SELECT_MENU_FROM_QUIT:
-            runtime_reset();
             func_80002600();
             gCurrentlyLoadedCourseId = COURSE_NULL;
             break;
         case COURSE_SELECT_MENU_FROM_QUIT:
-            runtime_reset();
             func_8000262C();
             gCurrentlyLoadedCourseId = COURSE_NULL;
             break;
         case RACING:
-            runtime_reset();
             setup_race();
             break;
         case ENDING:
             gCurrentlyLoadedCourseId = COURSE_NULL;
-            runtime_reset();
             load_ceremony_cutscene();
             break;
         case CREDITS_SEQUENCE:
             credits_started = 1;
             gCurrentlyLoadedCourseId = COURSE_NULL;
-            runtime_reset();
             load_credits();
             break;
     }
@@ -2238,15 +2243,14 @@ void SPINNING_THREAD(UNUSED void *arg) {
     while (1) {
 //        {
 //            irq_disable_scoped();
-            while (vblticker <= last_vbltick + 1)
-                genwait_wait((void*)&vblticker, NULL, 15, NULL);
+            while (vblticker <= last_vbltick)
+                genwait_wait((void*)&vblticker, NULL, 15);
 //        }
 
         last_vbltick = vblticker;
 
         create_next_audio_buffer(audio_buffer, SAMPLES_HIGH);
-        create_next_audio_buffer(audio_buffer + (SAMPLES_HIGH * 2), SAMPLES_HIGH);
 
-        audio_api->play((u8 *)audio_buffer, (AUDIOBUF_SIZE * 2));
+        audio_api->play((u8 *)audio_buffer, (SAMPLES_HIGH * 2 * 2));
     }
 }

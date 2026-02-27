@@ -28,6 +28,8 @@
 
 extern int in_intro;
 
+int fix_flash = 0;
+
 uint32_t last_set_texture_image_width;
 int draw_rect;
 uint32_t oops_texture_id;
@@ -956,7 +958,7 @@ static void gfx_transposed_matrix_mul(float res[3], const float a[3], const floa
 	res[2] = a[0] * b[2][0] + a[1] * b[2][1] + a[2] * b[2][2];
 #endif
 #else
-    *((shz_vec3_t *)res) = shz_matrix4x4_trans_vec3_transpose(b, *((shz_vec3_t *)a));
+    *((shz_vec3_t *)res) = shz_mat4x4_transform_vec3_transpose(b, *((shz_vec3_t *)a));
 #endif
 }
 
@@ -972,8 +974,8 @@ static void calculate_normal_dir(const Light_t* light, float coeffs[3]) {
 
 // typedef float[4][4] __attribute__((aligned(32))) matrix_t;
 // float res[4][4], const float a[4][4], const float b[4][4]) {
-static void gfx_matrix_mul(shz_matrix_4x4_t *res, const shz_matrix_4x4_t *a, const shz_matrix_4x4_t *b) {
-	shz_xmtrx_load_4x4_apply_store(res, b, a);
+static void gfx_matrix_mul(shz_mat4x4_t *res, const shz_mat4x4_t *a, const shz_mat4x4_t *b) {
+	shz_xmtrx_load_apply_store_4x4(res, b, a);
 #if 0
 	float tmp[4][4];
 	int i,j;
@@ -1008,7 +1010,7 @@ static __attribute__((noinline)) void gfx_sp_matrix(uint8_t parameters, const in
 	}
 #else
 	// For a modified GBI where fixed point values are replaced with floats
-	shz_xmtrx_load_4x4_unaligned(saddr);
+	shz_xmtrx_load_unaligned_4x4(saddr);
 	shz_xmtrx_store_4x4(matrix);
 	//n64_memcpy(matrix, saddr, sizeof(matrix));
 #endif
@@ -1016,18 +1018,18 @@ static __attribute__((noinline)) void gfx_sp_matrix(uint8_t parameters, const in
 
 	if (parameters & G_MTX_PROJECTION) {
 		if (parameters & G_MTX_LOAD) {
-			shz_matrix_4x4_copy(rsp.P_matrix, matrix);
+			shz_mat4x4_copy(rsp.P_matrix, matrix);
 		} else {
 			gfx_matrix_mul(rsp.P_matrix, (const float (*)[4]) matrix, (const float (*)[4]) rsp.P_matrix);
 		}
 	} else { // G_MTX_MODELVIEW
 		if ((parameters & G_MTX_PUSH) && rsp.modelview_matrix_stack_size < 11) {
 			++rsp.modelview_matrix_stack_size;
-			shz_matrix_4x4_copy(rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1],
+			shz_mat4x4_copy(rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1],
 				                rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 2]);
 		}
 		if (parameters & G_MTX_LOAD) {
-			shz_matrix_4x4_copy(rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1], matrix);
+			shz_mat4x4_copy(rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1], matrix);
 		} else {
 			gfx_matrix_mul(rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1], matrix,
 							rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1]);
@@ -1069,7 +1071,7 @@ static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, siz
 
         float x, y, z, w;
         // This copying in + out shit should get optimized away
-        shz_vec4_t out = shz_xmtrx_trans_vec4((shz_vec4_t) { .x = v->ob[0], .y = v->ob[1], .z = v->ob[2], .w = 1.0f });
+        shz_vec4_t out = shz_xmtrx_transform_vec4((shz_vec4_t) { .x = v->ob[0], .y = v->ob[1], .z = v->ob[2], .w = 1.0f });
         x = out.x;
         y = out.y;
         z = out.z;
@@ -1174,7 +1176,7 @@ static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t
         d->z = v->ob[2];
         d->w = 1.0f;
 
-		*((shz_vec4_t *)&d->_x) = shz_xmtrx_trans_vec4(*((shz_vec4_t *)&d->x));
+		*((shz_vec4_t *)&d->_x) = shz_xmtrx_transform_vec4(*((shz_vec4_t *)&d->x));
 
         d->color.r = v->cn[0];
         d->color.g = v->cn[1];
@@ -1243,7 +1245,7 @@ extern s32 gIsMirrorMode;
 */
 
 static inline float approx_recip_sign(float v) {
-	return shz_fast_invf(v);
+	return shz_invf(v);
     //float _v = 1.0f / sqrtf(v * v);
 	//return copysignf(_v, v);
     //return _v;
@@ -1441,8 +1443,8 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
                 u += 0.5f;
                 v += 0.5f;
             }
-            buf_vbo[buf_num_vert].texture.u = u * shz_inverse_posf((float) tex_width);
-            buf_vbo[buf_num_vert].texture.v = v * shz_inverse_posf((float) tex_height);
+            buf_vbo[buf_num_vert].texture.u = u * shz_invf_fsrra((float) tex_width);
+            buf_vbo[buf_num_vert].texture.v = v * shz_invf_fsrra((float) tex_height);
         }
 
         int j, k;
@@ -1498,7 +1500,7 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
                 gn = (float) color_g;
                 bn = (float) color_b;
                 an = (float) color_a;
-                float maxc = 255.0f * shz_inverse_posf((float) max_c);
+                float maxc = 255.0f * shz_invf_fsrra((float) max_c);
                 rn *= maxc;
                 gn *= maxc;
                 bn *= maxc;
@@ -1708,8 +1710,8 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 				u += 0.5f;
 				v += 0.5f;
 			}
-			quad_vbo[tri_num_vert].texture.u = u * shz_inverse_posf(tex_width);
-			quad_vbo[tri_num_vert].texture.v = v * shz_inverse_posf(tex_height);
+			quad_vbo[tri_num_vert].texture.u = u * shz_invf_fsrra(tex_width);
+			quad_vbo[tri_num_vert].texture.v = v * shz_invf_fsrra(tex_height);
 		}
 
 		struct RGBA white = (struct RGBA) { 0xff, 0xff, 0xff, 0xff };
@@ -1750,7 +1752,7 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 			rn = (float) color_r;
 			gn = (float) color_g;
 			bn = (float) color_b;
-			float maxc = 255.0f * shz_inverse_posf((float) max_c);
+			float maxc = 255.0f * shz_invf_fsrra((float) max_c);
 			rn *= maxc;
 			gn *= maxc;
 			bn *= maxc;
@@ -2294,6 +2296,7 @@ static inline void* seg_addr(uintptr_t w1) {
 #define C0(pos, width) ((cmd->words.w0 >> (pos)) & ((1U << width) - 1))
 #define C1(pos, width) ((cmd->words.w1 >> (pos)) & ((1U << width) - 1))
 
+int title_backdrop = 0;
 int use_one_inv = 0;
 int depth_off = 0;
 static void  __attribute__((noinline)) gfx_run_dl(Gfx* cmd) {
@@ -2313,6 +2316,10 @@ static void  __attribute__((noinline)) gfx_run_dl(Gfx* cmd) {
 				use_one_inv ^= 1;
 			} else if(cmd->words.w1 == 0x4655434D) {
 				depth_off ^= 1;
+			} else if(cmd->words.w1 == 0x46554360) {
+				title_backdrop ^= 1;
+			} else if (cmd->words.w1 == 0xA6A7A8A9) {
+				fix_flash ^= 1;
 			}
 			++cmd;
 			continue;
