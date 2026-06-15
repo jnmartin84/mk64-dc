@@ -305,7 +305,10 @@ void setup_audio_data(void) {
     char texfn[256];
     u8 *AUDIOBANKS_BUF = memalign(32,79936);
     if (!AUDIOBANKS_BUF) printf("can't malloc banks\n");
-    u8 *AUDIOTABLES_BUF = memalign(32,2409664);
+    /* Only the ALSeqFile header of audiotables is needed now (for gAlTbl and
+       sample-address anchoring); the 2.4MB of VADPCM is dead -- the AICA driver
+       plays from the transcoded adpcm_pool instead. */
+    u8 *AUDIOTABLES_BUF = memalign(32,4096);
     if (!AUDIOTABLES_BUF) printf("can't malloc tables\n");
     u8 *INSTRUMENT_SETS_BUF = memalign(32,256);
     if (!INSTRUMENT_SETS_BUF) printf("can't malloc instruments\n");
@@ -365,6 +368,9 @@ void setup_audio_data(void) {
         long filesize = ftell(file);
         //printf("audiotables is %ld @ %08x\n", filesize, (uintptr_t)AUDIOTABLES_BUF);
         rewind(file);
+
+        /* Only load the ALSeqFile header; the VADPCM sample data is unused. */
+        if (filesize > 4096) filesize = 4096;
 
         long toread = filesize;
         long didread = 0;
@@ -459,6 +465,38 @@ void setup_audio_data(void) {
         _sequencesSegmentRomStart = SEQUENCES_BUF;
     }
 
+    /* Load the offline-transcoded AICA-ADPCM sample pool resident, for the AICA
+       hardware-mixing voice driver (src/audio/aica_synth.c). */
+    {
+        extern const unsigned char* gAicaAdpcmPoolBase;
+        sprintf(texfn, "%s/dc_data/adpcm_pool.bin", fnpre);
+        FILE* file = fopen(texfn, "rb");
+        if (!file) {
+            perror("fopen adpcm_pool.bin");
+            printf("\n");
+            while(1){}
+            exit(-1);
+        }
+        fseek(file, 0, SEEK_END);
+        long filesize = ftell(file);
+        rewind(file);
+        u8 *POOL_BUF = memalign(32, (filesize + 31) & ~31);
+        if (!POOL_BUF) printf("can't malloc adpcm_pool\n");
+        long toread = filesize, didread = 0;
+        while (didread < filesize) {
+            long rv = fread(&POOL_BUF[didread], 1, toread - didread, file);
+            if (rv == -1) {
+                printf("adpcm_pool read FAILED\n");
+                while(1){}
+                exit(-1);
+            }
+            toread -= rv;
+            didread += rv;
+        }
+        fclose(file);
+        gAicaAdpcmPoolBase = POOL_BUF;
+    }
+
     _AudioInit();
     audio_init();
     sound_init();
@@ -524,9 +562,9 @@ int main(UNUSED int argc, UNUSED char **argv) {
     gPhysicalFramebuffers[2] = fb[2];
 
     dbgio_enable();
-    dbglog_set_level(0);
+//    dbglog_set_level(0);
 
-    thd_sleep(375);
+//    thd_sleep(375);
 
     FILE* fntest = fopen("/pc/dc_data/common_data.bin", "rb");
     if (NULL == fntest) {
@@ -545,7 +583,7 @@ int main(UNUSED int argc, UNUSED char **argv) {
 
     fclose(fntest);
     thd_sleep(375);
-    dbgio_disable();
+//    dbgio_disable();
     setup_audio_data();
 
     //profiler_init("/pc/audiogmon.out");
@@ -553,7 +591,7 @@ int main(UNUSED int argc, UNUSED char **argv) {
 
     rainbow_print(180+18, 260-24, "Welcome to Mario Kart :)");
 
-    thd_sleep(1500);
+//    thd_sleep(1500);
     thread5_game_loop(NULL);
 
     return 0;
@@ -740,7 +778,12 @@ void update_controller(s32 index) {
     state = maple_dev_status(cont);
 
     if (strcmp("/pc", fnpre) == 0) {
-        if ((state->buttons & CONT_START) && state->ltrig && state->rtrig) {
+        if ((state->buttons & CONT_START) && 
+        (state->buttons & CONT_A) &&
+        (state->buttons & CONT_B) &&
+        (state->buttons & CONT_X) &&
+        (state->buttons & CONT_Y)) {
+        //state->ltrig && state->rtrig) {
             //profiler_stop();
             //profiler_clean_up();
             // give vmu a chance to write and close
@@ -2242,13 +2285,14 @@ void SPINNING_THREAD(UNUSED void *arg) {
 //        {
 //            irq_disable_scoped();
             while (vblticker <= last_vbltick)
-                genwait_wait((void*)&vblticker, NULL, 15, NULL);
+                genwait_wait((void*)&vblticker, NULL, 0); //15), NULL);
 //        }
 
         last_vbltick = vblticker;
 
+        /* AICA hardware mixing: create_next_audio_buffer drives the AICA voices
+           directly (AicaSynth_Update inside synthesis_execute). No software mix
+           buffer is produced, so the KOS stream is no longer pushed/used. */
         create_next_audio_buffer(audio_buffer, SAMPLES_HIGH);
-
-        audio_api->play((u8 *)audio_buffer, (SAMPLES_HIGH * 2 * 2));
     }
 }

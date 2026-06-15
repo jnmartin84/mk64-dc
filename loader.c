@@ -174,7 +174,7 @@ int main(int argc, char **argv) {
     }
 
     dbgio_enable();
-    dbglog_set_level(0);
+//    dbglog_set_level(0);
     dbgio_dev_select("fb");
     dbgio_printf("\n\n\n\n\n\n\n                 Loading...\n");
     thd_sleep(375);
@@ -187,7 +187,7 @@ int main(int argc, char **argv) {
         fnpre = "/pc";
     }
     dbgio_printf("                 Please wait...\n");
-    dbgio_disable();
+//    dbgio_disable();
     thd_sleep(375);
 
     char pixs[3];

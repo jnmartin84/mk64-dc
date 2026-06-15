@@ -863,5 +863,14 @@ void audio_init(void) {
     sound_alloc_pool_init(&gUnkPool1.pool, soundAlloc(&gAudioInitPool, (u32) D_800EA5D8), (u32) D_800EA5D8);
     init_sequence_players();
     gAudioLoadLock = 0x76557364;
+
+#ifdef __DREAMCAST__
+    /* Audio data (gAlTbl/gCtlEntries) is now resident and snd is initialized
+       (_AudioInit ran before audio_init); init the AICA voice driver explicitly. */
+    {
+        extern void AicaSynth_Init(void);
+        AicaSynth_Init();
+    }
+#endif
     //printf("out of audio init\n");
 }

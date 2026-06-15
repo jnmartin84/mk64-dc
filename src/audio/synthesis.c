@@ -6,6 +6,7 @@
 #include "audio/load.h"
 #include "audio/seqplayer.h"
 #include "audio/internal.h"
+#include "audio/aica_synth.h"
 // #include "audio/external.h"
 //#include "PR/abi.h"
 #undef VIRTUAL_TO_PHYSICAL2
@@ -161,38 +162,15 @@ Acmd* synthesis_execute(Acmd* acmd, s32* writtenCmds, s16* aiBuf, s32 bufLen) {
         process_sequences(i - 1);
         synthesis_load_note_subs_eu(gAudioBufferParameters.updatesPerFrame - i);
     }
-    aSegment(cmd++, 0, 0);
-    aiBufPtr = (u32*) aiBuf;
-    for (i = gAudioBufferParameters.updatesPerFrame; i > 0; i--) {
-        if (i == 1) {
-            chunkLen = bufLen;
-        } else {
-            if (bufLen / i >= gAudioBufferParameters.samplesPerUpdateMax) {
-                chunkLen = gAudioBufferParameters.samplesPerUpdateMax;
-            } else if (bufLen / i <= gAudioBufferParameters.samplesPerUpdateMin) {
-                chunkLen = gAudioBufferParameters.samplesPerUpdateMin;
-            } else {
-                chunkLen = gAudioBufferParameters.samplesPerUpdate;
-            }
-        }
-        for (j = 0; j < gNumSynthesisReverbs; j++) {
-            if (gSynthesisReverbs[j].useReverb != 0) {
-                prepare_reverb_ring_buffer(chunkLen, gAudioBufferParameters.updatesPerFrame - i, j);
-            }
-        }
-        cmd = synthesis_do_one_audio_update((s16*) aiBufPtr, chunkLen, cmd, gAudioBufferParameters.updatesPerFrame - i);
-        bufLen -= chunkLen;
-        aiBufPtr += chunkLen;
-    }
 
-    for (j = 0; j < gNumSynthesisReverbs; j++) {
-        if (gSynthesisReverbs[j].framesLeftToIgnore != 0) {
-            gSynthesisReverbs[j].framesLeftToIgnore--;
-        }
-        gSynthesisReverbs[j].curFrame ^= 1;
-    }
-    *writtenCmds = cmd - acmd;
-    return cmd;
+    /* AICA hardware mixing: drive the AICA voices from the finalized NoteSubEu
+       set instead of the software DSP render loop. No command list / output
+       buffer is produced. */
+    (void)aiBuf; (void)bufLen; (void)aiBufPtr; (void)chunkLen; (void)j;
+    AicaSynth_Update();
+
+    *writtenCmds = 0;
+    return acmd;
 }
 
 Acmd* synthesis_resample_and_mix_reverb(Acmd* acmd, s32 bufLen, s16 reverbIndex, s16 updateIndex) {
