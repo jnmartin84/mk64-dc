@@ -1734,12 +1734,12 @@ void race_logic_loop(void) {
 
         case SCREEN_MODE_2P_SPLITSCREEN_HORIZONTAL:
 
-             if (gCurrentCourseId == COURSE_DK_JUNGLE ||
+             /* if (gCurrentCourseId == COURSE_DK_JUNGLE ||
                 gCurrentCourseId == COURSE_TOADS_TURNPIKE) {
                 gTickSpeed = 3;
             } else {
                 gTickSpeed = 2;
-            }
+            } */
 //            gTickSpeed = 3;
 
             if (gIsGamePaused == 0) {
@@ -2285,7 +2285,7 @@ void SPINNING_THREAD(UNUSED void *arg) {
 //        {
 //            irq_disable_scoped();
             while (vblticker <= last_vbltick)
-                genwait_wait((void*)&vblticker, NULL, 0); //15), NULL);
+                genwait_wait((void*)&vblticker, NULL, 0, NULL);
 //        }
 
         last_vbltick = vblticker;

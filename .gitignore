@@ -124,3 +124,6 @@ mk64.bin
 tmp
 loader.elf
 ._*
+
+# AICA beam-encode cache
+tools/aica/.encode_cache/

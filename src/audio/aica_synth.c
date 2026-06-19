@@ -32,6 +32,10 @@ static u8* sTblBase = NULL;        /* shared audiotables blob base (gAlTbl->seqA
 #define MAX_VOICES 64
 #define ARAM_CACHE_ENTRIES 192
 #define AICA_LEN_MAX 65534
+#define AICA_OCTAVE_LOG 0   /* log ADPCM samples pitched past +1 octave -> FORCE_PCM candidates */
+/* Headroom for full-scale synth waves summing on the AICA mix bus (no HW overflow
+   protection). Out of 256 (256 = unity); tune on HW. */
+#define SYNTH_VOL_SCALE 192
 #define WAVE_SAMPLE_COUNT 64
 #define NUM_WAVEFORMS 6
 #define NUM_HARMONICS 4
@@ -136,7 +140,10 @@ static u32 calc_vol(struct NoteSubEu* sub) {
     u32 l = sub->targetVolLeft, r = sub->targetVolRight;
     u32 m = (l > r) ? l : r;
     u32 v = m >> 4;
-    return v > 255 ? 255 : v;
+    if (v > 255) v = 255;
+    /* Headroom for full-scale synth waves summing without clipping. */
+    if (sub->isSyntheticWave) v = (v * SYNTH_VOL_SCALE) >> 8;
+    return v;
 }
 
 /* AICA pan (DIPAN) attenuates the opposite channel in ~3 dB steps (matching the
@@ -201,7 +208,7 @@ static int resolve(struct NoteSubEu* sub, u32* outKey, Resolved* res, AramEntry*
         if (!e) return 0;
         *outEntry = e; *outKey = key;
         res->base = e->aram;
-        res->type = AICA_SM_ADPCM;
+        res->type = d->fmt;   /* AICA_SM_16BIT/8BIT/ADPCM, chosen offline by SNR/octave */
         res->length = d->nsamples > AICA_LEN_MAX ? AICA_LEN_MAX : d->nsamples;
         res->loop = d->loop_flag;
         res->loopstart = d->loop_start;
@@ -307,6 +314,26 @@ void AicaSynth_Update(void) {
             v->channel = chn; v->active = 1; v->sampleKey = key; v->entry = entry;
             chan_start(chn, &res, freq, vol, pan);
             nStarted++;
+#if AICA_OCTAVE_LOG
+            /* Flag real ADPCM samples pitched past +1 octave (ratio = resamplingRateFixedPoint
+               /32768, x2 if hasTwoAdpcmParts > 2.0). AICA ADPCM pitch-clamps there -> add `key`
+               to FORCE_PCM_KEYS. One print per sample per new high; capped. */
+            if (!sub->isSyntheticWave && res.type == AICA_SM_ADPCM) {
+                u32 rate = sub->resamplingRateFixedPoint;
+                if (sub->hasTwoAdpcmParts) rate <<= 1;
+                if (rate > 2u * 32768u) {
+                    static u32 oKey[128]; static u32 oMax[128]; static s32 oN = 0;
+                    s32 j, hit = -1;
+                    for (j = 0; j < oN; j++) if (oKey[j] == key) { hit = j; break; }
+                    if (hit < 0 && oN < 128) { hit = oN++; oKey[hit] = key; oMax[hit] = 0; }
+                    if (hit >= 0 && rate > oMax[hit]) {
+                        oMax[hit] = rate;
+                        printf("OCTAVE key=%lX ratio=%lu.%03lu\n", (unsigned long)key,
+                               (unsigned long)(rate >> 15), (unsigned long)(((rate & 0x7FFFu) * 1000u) >> 15));
+                    }
+                }
+            }
+#endif
             {
                 static int dbgStarts = 0;
                 if (dbgStarts < 48) {

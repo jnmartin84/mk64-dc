@@ -9,7 +9,11 @@ Decimation is scipy-optional: scipy.signal.resample_poly is used when available
 clean checkout builds with only stock Python 3.
 """
 
+import array
+import hashlib
 import math
+import os
+import struct
 
 try:
     import numpy as np
@@ -20,8 +24,75 @@ except Exception:
 
 import vadpcm
 import yamaha_adpcm
+import yamaha_adpcm_v2 as ya2
 
 AICA_MAX = 65534
+BEAM = int(os.environ.get("AICA_BEAM", "32"))
+
+# --- beam-encode result cache: deterministic in (pcm, BEAM, ENC_VERSION), so
+# re-runs skip re-encoding unchanged samples. Safe under multiprocessing (atomic
+# replace). Bump ENC_VERSION whenever yamaha_adpcm_v2.encode changes. ---
+ENC_VERSION = b"ya2-beam-1"
+_CACHE_DIR = os.environ.get("AICA_ENCODE_CACHE",
+                            os.path.join(os.path.dirname(os.path.abspath(__file__)), ".encode_cache"))
+
+
+def beam_encode_cached(pcm):
+    """ya2.encode(pcm, beam=BEAM) with an on-disk cache. Returns (adpcm_bytes, n)."""
+    h = hashlib.sha1(ENC_VERSION)
+    h.update(b"|beam=%d|" % BEAM)
+    h.update(array.array("i", pcm).tobytes())
+    path = os.path.join(_CACHE_DIR, h.hexdigest())
+    try:
+        with open(path, "rb") as f:
+            n = struct.unpack("<I", f.read(4))[0]
+            return f.read(), n
+    except OSError:
+        pass
+    adpcm, n = ya2.encode(pcm, beam=BEAM)
+    os.makedirs(_CACHE_DIR, exist_ok=True)
+    tmp = "%s.tmp%d" % (path, os.getpid())
+    with open(tmp, "wb") as f:
+        f.write(struct.pack("<I", n))
+        f.write(adpcm)
+    os.replace(tmp, path)
+    return adpcm, n
+
+
+# AICA_SM_* sample-format codes (dc/sound/aica_comm.h).
+FMT_PCM16, FMT_PCM8, FMT_ADPCM = 0, 1, 2
+PROMOTE_SNR_DB = float(os.environ.get("AICA_PROMOTE_SNR_DB", "18.0"))   # MK64 ~1.5MB free; pool delta tiny (+128KB @18)
+PCM16_MAX_SAMPLES = int(os.environ.get("AICA_PCM16_MAX_SAMPLES", "2048"))
+# Samples the game pitches above +1 octave (nf>2.0): AICA ADPCM pitch-clamps
+# there, so they must be PCM. Filled from the AICA_OCTAVE_LOG sweep; keyed by
+# src_offset (= s.addr for MK64). Empty until MK64 is swept.
+FORCE_PCM_KEYS = {int(k, 16) for k in os.environ.get("AICA_FORCE_PCM_KEYS", "").replace(",", " ").split()}
+
+
+def _snr_db(ref, test):
+    sig = err = 0.0
+    for a, b in zip(ref, test):
+        sig += float(a) * a
+        err += float(a - b) * (a - b)
+    if err == 0.0:
+        return 99.0
+    if sig == 0.0:
+        return -99.0
+    return 10.0 * math.log10(sig / err)
+
+
+def _pcm16_bytes(pcm):
+    return struct.pack(f"<{len(pcm)}h", *(_clamp16(v) for v in pcm))
+
+
+def _pcm8_bytes(pcm):
+    # AICA 8-bit is signed linear (top 8 bits of the 16-bit sample), rounded.
+    out = bytearray(len(pcm))
+    for i, v in enumerate(pcm):
+        q = (v + 128) >> 8
+        q = -128 if q < -128 else 127 if q > 127 else q
+        out[i] = q & 0xFF
+    return bytes(out)
 
 
 def _clamp16(v):
@@ -56,8 +127,11 @@ def _decimate2(pcm):
     return out
 
 
-def transcode_sample(s):
-    """s: albank_parse.Sample (parsed with_data=True). Returns descriptor dict."""
+def transcode_sample(s, force=False):
+    """s: albank_parse.Sample (parsed with_data=True). Returns descriptor dict.
+    Beam-encodes to ADPCM; promotes to PCM if SNR < PROMOTE_SNR_DB or force
+    (16-bit when short, else 8-bit). `force` = src_offset in FORCE_PCM_KEYS, decided
+    by the caller (transcode_sample lacks the bank base to compute src_offset)."""
     pcm = vadpcm.decode(s.data, s.codec, s.order, s.npredictors, s.book)
     shift = 0
     loop_start, loop_end = s.loop_start, s.loop_end
@@ -69,8 +143,17 @@ def transcode_sample(s):
         loop_start //= 2
         loop_end //= 2
 
-    adpcm, n = yamaha_adpcm.encode(pcm)
+    adpcm, n = beam_encode_cached(pcm)
     assert n <= AICA_MAX, (s.bank, s.addr, n)
+    snr = _snr_db(pcm[:n], ya2.decode(adpcm, n)[:n])
+
+    if force or snr < PROMOTE_SNR_DB:
+        if n <= PCM16_MAX_SAMPLES:
+            fmt, data = FMT_PCM16, _pcm16_bytes(pcm[:n])
+        else:
+            fmt, data = FMT_PCM8, _pcm8_bytes(pcm[:n])
+    else:
+        fmt, data = FMT_ADPCM, adpcm
 
     if not s.has_loop:
         # one-shot: AICA still needs loopend = sample count as the play length
@@ -79,7 +162,9 @@ def transcode_sample(s):
     return {
         "bank": s.bank,
         "addr": s.addr,
-        "adpcm": adpcm,
+        "data": data,
+        "fmt": fmt,
+        "snr": snr,
         "nsamples": n,
         "loop": bool(s.has_loop),
         "loop_start": loop_start,

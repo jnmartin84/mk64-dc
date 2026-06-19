@@ -7,10 +7,12 @@ Lookup key = sampleAddr (offset into the shared audiotables blob). Runtime
 derives it as (patched sample->sampleAddr - (audiotablesBase + 0xB0)).
 """
 
+import os
+from multiprocessing import Pool
 from pathlib import Path
 
 from mk64_albank_parse import parse_all
-from transcode import transcode_sample
+from transcode import transcode_sample, FORCE_PCM_KEYS, FMT_PCM16, FMT_PCM8, FMT_ADPCM
 
 ALIGN = 32
 
@@ -19,21 +21,29 @@ def align_up(n, a):
     return (n + a - 1) & ~(a - 1)
 
 
+def _transcode_one(s):
+    """Pool worker: Sample -> descriptor (pool_offset filled later). key = s.addr."""
+    d = transcode_sample(s, force=(s.addr in FORCE_PCM_KEYS))
+    d["key"] = s.addr
+    return d
+
+
 def main(audiobanks, audiotables, outdir, incdir, pool_path):
     outdir = Path(outdir)
     incdir = Path(incdir)
     pool_path = Path(pool_path)
     tbl_base, samples = parse_all(audiobanks, audiotables, with_data=True)
 
-    descs = []
+    # Beam encode is CPU-heavy + independent -> fan out across cores. Pool.map keeps
+    # order; pool_offset assigned serially after, then re-sorted by key. Deterministic.
+    with Pool(os.cpu_count()) as pool:
+        descs = pool.map(_transcode_one, list(samples.values()))
+
     blob = bytearray()
-    for s in samples.values():
-        d = transcode_sample(s)
+    for d in descs:
         d["pool_offset"] = len(blob)
-        blob += d["adpcm"]
+        blob += d["data"]
         blob += b"\x00" * (align_up(len(blob), ALIGN) - len(blob))
-        d["key"] = s.addr
-        descs.append(d)
 
     descs.sort(key=lambda d: d["key"])
 
@@ -41,7 +51,7 @@ def main(audiobanks, audiotables, outdir, incdir, pool_path):
     keys = [d["key"] for d in descs]
     assert keys == sorted(keys) and len(keys) == len(set(keys))
     for d in descs:
-        assert blob[d["pool_offset"]:d["pool_offset"] + len(d["adpcm"])] == d["adpcm"]
+        assert blob[d["pool_offset"]:d["pool_offset"] + len(d["data"])] == d["data"]
         assert d["nsamples"] <= 65534
         assert 0 <= d["loop_start"] <= d["loop_end"] <= d["nsamples"]
 
@@ -61,6 +71,7 @@ def main(audiobanks, audiotables, outdir, incdir, pool_path):
          "    uint16_t loop_end;",
          "    uint8_t  loop_flag;",
          "    uint8_t  downsample_shift;",
+         "    uint8_t  fmt;              /* AICA_SM_* format: 0=PCM16 1=PCM8 2=ADPCM */",
          "} AicaSampleDesc;", "",
          f"#define AICA_SAMPLE_COUNT {len(descs)}",
          f"#define AICA_ADPCM_POOL_SIZE {len(blob)}u",
@@ -71,14 +82,17 @@ def main(audiobanks, audiotables, outdir, incdir, pool_path):
          '#include "aica_sample_table.h"', "",
          "const AicaSampleDesc gAicaSampleTable[AICA_SAMPLE_COUNT] = {"]
     for d in descs:
-        c.append(f"    {{ 0x{d['key']:06X}, 0x{d['pool_offset']:06X}, {len(d['adpcm']):>6}, "
+        c.append(f"    {{ 0x{d['key']:06X}, 0x{d['pool_offset']:06X}, {len(d['data']):>6}, "
                  f"{d['nsamples']:>5}, {d['loop_start']:>5}, {d['loop_end']:>5}, "
-                 f"{1 if d['loop'] else 0}, {d['downsample_shift']} }},")
+                 f"{1 if d['loop'] else 0}, {d['downsample_shift']}, {d['fmt']} }},")
     c.append("};")
     (outdir / "aica_sample_table.c").write_text("\n".join(c) + "\n")
 
+    n16 = sum(1 for d in descs if d["fmt"] == FMT_PCM16)
+    n8 = sum(1 for d in descs if d["fmt"] == FMT_PCM8)
+    nad = sum(1 for d in descs if d["fmt"] == FMT_ADPCM)
     from transcode import _HAVE_SCIPY
-    print(f"mk64_emit: {len(descs)} descs, pool {len(blob):,} B -> {pool_path}, "
+    print(f"mk64_emit: {len(descs)} descs  ADPCM={nad} PCM16={n16} PCM8={n8}, pool {len(blob):,} B -> {pool_path}, "
           f"table -> {outdir}/{incdir}{'' if _HAVE_SCIPY else '  [stdlib decimate fallback]'}")
 
 
