@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <ultra64.h>
+#include <sincoss.h>
 #include <PR/ultratypes.h>
 #include <macros.h>
 #include <defines.h>
@@ -3269,19 +3270,6 @@ Gfx* func_80098558(Gfx* displayListHead, u32 arg1, u32 arg2, u32 arg3, u32 arg4,
         arg6 += 0x20;
     }
     return displayListHead;
-}
-static inline void sincoss(u16 arg0, f32* s, f32* c) {
-    register float __s __asm__("fr2");
-    register float __c __asm__("fr3");
-
-    asm("lds    %2,fpul\n\t"
-        "fsca    fpul,dr2\n\t"
-        : "=f"(__s), "=f"(__c)
-        : "r"(arg0)
-        : "fpul");
-
-    *s = __s;
-    *c = __c;
 }
 Gfx* func_800987D0(Gfx* displayListHead, u32 arg1, u32 arg2, u32 width, u32 height, s32 column, s32 row,
                    UNUSED u8* arg7, u32 textureWidth, UNUSED s32 textureHeight) {

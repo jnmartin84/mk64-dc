@@ -1,4 +1,5 @@
 #include <ultra64.h>
+#include <sincoss.h>
 #include <macros.h>
 #include <common_structs.h>
 #include <mk64.h>
@@ -17,32 +18,6 @@
 #include "code_80057C60.h"
 #include "defines.h"
 
-static inline void sincoss(u16 arg0, f32* s, f32* c) {
-    register float __s __asm__("fr2");
-    register float __c __asm__("fr3");
-
-    asm("lds    %2,fpul\n\t"
-        "fsca    fpul,dr2\n\t"
-        : "=f"(__s), "=f"(__c)
-        : "r"(arg0)
-        : "fpul");
-
-    *s = __s;
-    *c = __c;
-}
-static inline void scaled_sincoss(u16 arg0, f32* s, f32* c, f32 scale) {
-    register float __s __asm__("fr2");
-    register float __c __asm__("fr3");
-
-    asm("lds    %2,fpul\n\t"
-        "fsca    fpul,dr2\n\t"
-        : "=f"(__s), "=f"(__c)
-        : "r"(arg0)
-        : "fpul");
-
-    *s = __s * scale;
-    *c = __c * scale;
-}
 
 void func_80086E70(s32 objectIndex) {
     gObjectList[objectIndex].unk_0AE = 1; // * 0xE0)) = 1;
@@ -191,7 +166,7 @@ UNUSED void func_800874D4(s32 objectIndex) {
 
 void func_8008751C(s32 objectIndex) {
     float ts1,tc1;
-    scaled_sincoss(gObjectList[objectIndex].direction_angle[1],&ts1,&tc1,gObjectList[objectIndex].unk_034);
+    scaled_sincoss(gObjectList[objectIndex].direction_angle[1], &ts1, &tc1, gObjectList[objectIndex].unk_034);
     gObjectList[objectIndex].velocity[0] = ts1;
 //        gObjectList[objectIndex].unk_034 * sins(gObjectList[objectIndex].direction_angle[1]);
     gObjectList[objectIndex].velocity[2] = tc1;
@@ -218,7 +193,7 @@ void func_8008757C(s32 objectIndex) {
 
 void func_80087620(s32 objectIndex) {
     float ts1,tc1;
-    scaled_sincoss(gObjectList[objectIndex].direction_angle[1] + 0x8000,&ts1,&tc1,gObjectList[objectIndex].unk_034);
+    scaled_sincoss(gObjectList[objectIndex].direction_angle[1] + 0x8000, &ts1, &tc1, gObjectList[objectIndex].unk_034);
     gObjectList[objectIndex].velocity[0] = ts1;
 //        gObjectList[objectIndex].unk_034 * sins(gObjectList[objectIndex].direction_angle[1] + 0x8000);
     gObjectList[objectIndex].velocity[2] = tc1;
@@ -227,7 +202,7 @@ void func_80087620(s32 objectIndex) {
 
 void func_800876A0(s32 objectIndex) {
     float ts1,tc1;
-    scaled_sincoss(gObjectList[objectIndex].direction_angle[1],&ts1,&tc1,gObjectList[objectIndex].unk_034);
+    scaled_sincoss(gObjectList[objectIndex].direction_angle[1], &ts1, &tc1, gObjectList[objectIndex].unk_034);
 
     gObjectList[objectIndex].offset[0] += ts1;
 //        gObjectList[objectIndex].unk_034 * sins(gObjectList[objectIndex].direction_angle[1]);
@@ -454,7 +429,7 @@ void func_80088038(s32 objectIndex, f32 arg1, u16 arg2) {
     f32 sp20;
     float ts1,tc1;
     scaled_sincoss(gObjectList[objectIndex].unk_0C4,&ts1,&tc1,arg1);
-
+ 
     temp_f4 = gObjectList[objectIndex].offset[0];
     sp20 = gObjectList[objectIndex].offset[2];
     gObjectList[objectIndex].unk_0C4 += arg2;
@@ -1013,7 +988,7 @@ UNUSED void func_8008900C(Player* player) {
 void func_80089020(s32 playerId, f32* arg1) {
     f32 var_f0;
     f32 var_f2;
-    Player* player = &gPlayers/* One */[playerId];
+    Player* player = &gPlayerOne[playerId];
 
     if (*arg1 >= 0.0f) {
         var_f2 = *arg1;
@@ -1081,7 +1056,7 @@ f32 func_8008933C(Player* player, s32 objectIndex, f32 arg2, f32 arg3) {
     Object* object;
     struct_D_8018CE10* temp_v1;
 
-    playerId = player - gPlayers/* One */;
+    playerId = player - gPlayerOne;
     temp_v1 = &D_8018CE10[playerId];
     var_f2 = 0.0f;
     if (temp_v1->unk_18[6] == 0) {
@@ -1110,7 +1085,7 @@ void func_80089474(s32 objectIndex, s32 playerId, f32 arg2, f32 arg3, u32 soundB
     UNUSED s32 stackPadding;
     Player* player;
 
-    player = &gPlayers/* One */[playerId];
+    player = &gPlayerOne[playerId];
     if (is_obj_flag_status_active(objectIndex, 0x04000000) != 0) {
         func_80072180();
     }
@@ -1123,7 +1098,7 @@ void func_80089538(s32 objectIndex, s32 playerId, f32 arg2, f32 arg3, u32 soundB
     UNUSED s32 stackPadding;
     Player* player;
 
-    player = &gPlayers/* One */[playerId];
+    player = &gPlayerOne[playerId];
     if ((func_8008933C(player, objectIndex, arg2, arg3) >= 4.0) && ((player->type & PLAYER_CPU) != PLAYER_CPU)) {
         func_800C9060((u8) playerId, soundBits);
     }
@@ -1135,7 +1110,7 @@ s32 func_800895E4(s32 objectIndex) {
     s32 var_s6;
 
     var_s6 = 0;
-    player = gPlayers/* One */;
+    player = gPlayerOne;
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++) {
             if ((gObjectList[objectIndex].state != 0) &&
@@ -1154,7 +1129,7 @@ void func_800896D4(s32 objectIndex, f32 arg1, f32 arg2) {
     Player* player;
     s32 var_s1;
 
-    player = gPlayers/* One */;
+    player = gPlayerOne;
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++) {
             if ((gObjectList[objectIndex].state != 0) && !(player->effects & (STAR_EFFECT | BOO_EFFECT)) &&
@@ -1172,7 +1147,7 @@ void func_80089820(s32 objectIndex, f32 arg1, f32 arg2, u32 arg3) {
     Player* player;
     s32 var_s1;
 
-    player = gPlayers/* One */;
+    player = gPlayerOne;
     set_object_flag_status_false(objectIndex, 0x02000000);
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++) {
@@ -1200,7 +1175,7 @@ void func_80089A04(s32 objectIndex, f32 arg1, f32 arg2) {
     Player* player;
     s32 var_s1;
 
-    player = gPlayers/*One*/;
+    player = gPlayerOne;
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++) {
             if ((gObjectList[objectIndex].state != 0) && !(player->effects & (BOO_EFFECT | STAR_EFFECT)) &&
@@ -1222,7 +1197,7 @@ s32 func_80089B50(s32 objectIndex) {
 
     test = 0;
     sp40 = 0;
-    player = gPlayers/*One*/;
+    player = gPlayerOne;
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++, test++) {
             if ((gObjectList[objectIndex].state != 0) && !(player->effects & (BOO_EFFECT | UNKNOWN_EFFECT_0x1000000)) &&
@@ -1249,7 +1224,7 @@ s32 func_80089CBC(s32 objectIndex, f32 arg1) {
     s32 var_s7;
 
     var_s7 = 0;
-    player = gPlayers/*One*/;
+    player = gPlayerOne;
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++) {
             if ((gObjectList[objectIndex].state != 0) && !(player->effects & (BOO_EFFECT | UNKNOWN_EFFECT_0x1000000))) {
@@ -1275,7 +1250,7 @@ s32 func_80089E18(s32 objectIndex) {
     s32 var_s6;
 
     var_s6 = 0;
-    player = gPlayers/*One*/;
+    player = gPlayerOne;
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++) {
             if ((gObjectList[objectIndex].state != 0) && !(player->effects & 0x800000C0) &&
@@ -1297,7 +1272,7 @@ s32 func_80089F24(s32 objectIndex) {
     s32 var_s7;
 
     var_s7 = 0;
-    player = gPlayers/*One*/;
+    player = gPlayerOne;
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         for (var_s1 = 0; var_s1 < D_8018D158; var_s1++, player++) {
             if ((gObjectList[objectIndex].state != 0) && !(player->effects & 0x800002C0)) {
@@ -1316,9 +1291,9 @@ s32 func_80089F24(s32 objectIndex) {
 }
 
 s32 func_8008A060(s32 objectIndex, Camera* camera, u16 arg2) {
+    //s16 temp_t3;
     //! @warning Always true
-//    u16 temp_t3;
-    s16 temp_t3;
+    u16 temp_t3;
     s32 var_v1;
 
     var_v1 = 0;
@@ -1332,8 +1307,8 @@ s32 func_8008A060(s32 objectIndex, Camera* camera, u16 arg2) {
 }
 
 s32 func_8008A0B4(s32 objectIndex, Player* player, Camera* camera, u16 arg3) {
-    //u16 temp_t3;
-    s16 temp_t3;
+    //s16 temp_t3;
+    u16 temp_t3;
     f32 x_diff;
     f32 z_diff;
     s32 var_t0;
@@ -1379,10 +1354,11 @@ uint8_t is_object_visible_on_camera(s32 objectIndex, Camera* camera, u16 angle) 
 #endif
 
 void func_8008A1D0(s32 objectIndex, s32 cameraId, s32 arg2, s32 arg3) {
-    Camera* camera = &camera1[cameraId];
     u32 temp_v0;
     u16 var_a2;
+    Camera* camera;
 
+    camera = &camera1[cameraId];
     set_object_flag_status_false(objectIndex, 0x00100000 | VISIBLE);
 
     temp_v0 = get_horizontal_distance_to_camera(objectIndex, camera);
@@ -2005,7 +1981,7 @@ void object_origin_pos_randomize_around_xyz(s32 objectIndex, s16 x, s16 y, s16 z
 
 void object_origin_pos_around_player_one(s32 objectIndex, s16 dist, u16 angle) {
     float ts1,tc1;
-    scaled_sincoss(angle,&ts1,&tc1,dist);
+    scaled_sincoss(angle, &ts1, &tc1, dist);
     gObjectList[objectIndex].origin_pos[0] = gPlayerOneCopy->pos[0] + ts1;//(sins(angle) * dist);
     gObjectList[objectIndex].origin_pos[2] = gPlayerOneCopy->pos[2] + tc1;//(coss(angle) * dist);
 }

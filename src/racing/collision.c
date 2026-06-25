@@ -1547,43 +1547,101 @@ f32 get_surface_height(f32 posX, f32 posY, f32 posZ) {
     } else                 \
         out = c;
 
+// Integer AABB of the triangle (split out of add_collision_triangle).
+static void compute_collision_triangle_bounds(s16 x1, s16 y1, s16 z1, s16 x2, s16 y2, s16 z2, s16 x3, s16 y3, s16 z3,
+                                              s16* maxX, s16* maxZ, s16* maxY, s16* minX, s16* minY, s16* minZ) {
+    s16 mxX;
+    s16 mxZ;
+    s16 mxY;
+    s16 mnX;
+    s16 mnY;
+    s16 mnZ;
+
+    MAX3(x1, x2, x3, mxX)
+    MAX3(z1, z2, z3, mxZ)
+    MAX3(y1, y2, y3, mxY)
+    MIN3(x1, x2, x3, mnX)
+    MIN3(y1, y2, y3, mnY)
+    MIN3(z1, z2, z3, mnZ)
+
+    *maxX = mxX;
+    *maxZ = mxZ;
+    *maxY = mxY;
+    *minX = mnX;
+    *minY = mnY;
+    *minZ = mnZ;
+}
+
+// Double-precision normal/plane/facing-axis computation (split out of
+// add_collision_triangle to keep f64 work in its own stack frame).
+// Returns 0 for a degenerate (zero-area) triangle, 1 otherwise.
+static s32 compute_collision_triangle_normal(s16 x1, s16 y1, s16 z1, s16 x2, s16 y2, s16 z2, s16 x3, s16 y3, s16 z3,
+                                             f32* normalX, f32* normalY, f32* normalZ, f32* distance, u16* facingFlag) {
+    f64 crossProductX = (((y2 - y1) * (z3 - z2)) - ((z2 - z1) * (y3 - y2)));
+    f64 crossProductY = (((z2 - z1) * (x3 - x2)) - ((x2 - x1) * (z3 - z2)));
+    f64 crossProductZ = (((x2 - x1) * (y3 - y2)) - ((y2 - y1) * (x3 - x2)));
+
+    // length of the cross product
+    f64 magnitude =
+        sqrtf((crossProductX * crossProductX) + (crossProductY * crossProductY) + (crossProductZ * crossProductZ));
+
+    if (!magnitude) {
+        return 0;
+    }
+
+    *normalX = (f32) crossProductX / magnitude;
+    *normalY = (f32) crossProductY / magnitude;
+    *normalZ = (f32) crossProductZ / magnitude;
+
+    // Distance from x to plane (cross product's normal).
+    *distance = -((*normalX * x1) + (*normalY * y1) + (*normalZ * z1));
+
+    // Square the crossProduct to produce a magnitude
+    crossProductX = crossProductX * crossProductX;
+    crossProductY = crossProductY * crossProductY;
+    crossProductZ = crossProductZ * crossProductZ;
+
+    // Find the axis with the highest magnitude.
+    if ((crossProductX <= crossProductY) && (crossProductY >= crossProductZ)) {
+        *facingFlag = FACING_Y_AXIS; // Y is the significant axis
+    } else if ((crossProductX > crossProductY) && (crossProductX >= crossProductZ)) {
+        *facingFlag = FACING_X_AXIS; // X is the significant axis
+    } else {
+        *facingFlag = FACING_Z_AXIS; // Z is the significant axis
+    }
+
+    return 1;
+}
+
 void add_collision_triangle(Vtx* vtx1, Vtx* vtx2, Vtx* vtx3, s8 surfaceType, u16 sectionId) {
     CollisionTriangle* triangle = &gCollisionMesh[gCollisionMeshCount];
-    s16 x2;
-    s16 z2;
-    u16 vtx1Flag;
-    s16 x3;
     s16 x1;
     s16 y1;
     s16 z1;
-    u16 vtx2Flag;
+    s16 x2;
     s16 y2;
-    u16 vtx3Flag;
-    u16 flags;
+    s16 z2;
+    s16 x3;
     s16 y3;
     s16 z3;
 
-    /* Unused variables placed around doubles for dramatic effect */
-    UNUSED s32 pad2[7];
-
-    f64 crossProductX;
-    f64 crossProductY;
-    f64 crossProductZ;
-    f64 magnitude;
-
-    UNUSED s32 pad3[3];
+    s16 maxX;
+    s16 maxZ;
+    s16 maxY;
+    s16 minX;
+    s16 minY;
+    s16 minZ;
 
     f32 normalX;
     f32 normalY;
     f32 normalZ;
     f32 distance;
+    u16 facingFlag;
 
-    s16 maxX;
-    s16 maxZ;
-    s16 minY;
-    s16 minX;
-    s16 maxY;
-    s16 minZ;
+    u16 vtx1Flag;
+    u16 vtx2Flag;
+    u16 vtx3Flag;
+    u16 flags;
 
     triangle->vtx1 = vtx1;
     triangle->vtx2 = vtx2;
@@ -1616,36 +1674,13 @@ void add_collision_triangle(Vtx* vtx1, Vtx* vtx2, Vtx* vtx3, s8 surfaceType, u16
         y3 = triangle->vtx2->v.ob[1];
         z3 = triangle->vtx2->v.ob[2];
     }
-    MAX3(x1, x2, x3, maxX)
 
-    MAX3(z1, z2, z3, maxZ)
+    compute_collision_triangle_bounds(x1, y1, z1, x2, y2, z2, x3, y3, z3, &maxX, &maxZ, &maxY, &minX, &minY, &minZ);
 
-    MAX3(y1, y2, y3, maxY)
-
-    MIN3(x1, x2, x3, minX)
-
-    MIN3(y1, y2, y3, minY)
-
-    MIN3(z1, z2, z3, minZ)
-
-    crossProductX = (((y2 - y1) * (z3 - z2)) - ((z2 - z1) * (y3 - y2)));
-    crossProductY = (((z2 - z1) * (x3 - x2)) - ((x2 - x1) * (z3 - z2)));
-    crossProductZ = (((x2 - x1) * (y3 - y2)) - ((y2 - y1) * (x3 - x2)));
-
-    // length of the cross product
-    magnitude =
-        sqrtf((crossProductX * crossProductX) + (crossProductY * crossProductY) + (crossProductZ * crossProductZ));
-
-    if (!magnitude) {
+    if (!compute_collision_triangle_normal(x1, y1, z1, x2, y2, z2, x3, y3, z3, &normalX, &normalY, &normalZ, &distance,
+                                           &facingFlag)) {
         return;
     }
-
-    normalX = (f32) crossProductX / magnitude;
-    normalY = (f32) crossProductY / magnitude;
-    normalZ = (f32) crossProductZ / magnitude;
-
-    // Distance from x to plane (cross product's normal).
-    distance = -((normalX * x1) + (normalY * y1) + (normalZ * z1));
 
     // Return if normalY is not vertical.
     // Could be checking if the surface is a floor
@@ -1699,11 +1734,6 @@ void add_collision_triangle(Vtx* vtx1, Vtx* vtx2, Vtx* vtx3, s8 surfaceType, u16
 
     triangle->surfaceType = (u16) surfaceType;
 
-    // Square the crossProduct to produce a magnitude
-    crossProductX = crossProductX * crossProductX;
-    crossProductY = crossProductY * crossProductY;
-    crossProductZ = crossProductZ * crossProductZ;
-
     D_8015F6FA = 0;
     D_8015F6FC = 0;
 
@@ -1724,19 +1754,8 @@ void add_collision_triangle(Vtx* vtx1, Vtx* vtx2, Vtx* vtx3, s8 surfaceType, u16
     }
 
     triangle->flags = flags;
+    triangle->flags |= facingFlag;
 
-    // Find the axis with the highest magnitude.
-
-    // Y is the significant axis
-    if ((crossProductX <= crossProductY) && (crossProductY >= crossProductZ)) {
-        triangle->flags |= FACING_Y_AXIS;
-        // X is the significant axis
-    } else if ((crossProductX > crossProductY) && (crossProductX >= crossProductZ)) {
-        triangle->flags |= FACING_X_AXIS;
-        // Z is the significant axis
-    } else {
-        triangle->flags |= FACING_Z_AXIS;
-    }
     gCollisionMeshCount++;
 }
 

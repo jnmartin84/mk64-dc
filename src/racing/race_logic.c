@@ -103,11 +103,11 @@ void update_player_battle_status(void) {
         // If player has no balloons left
         if (gPlayerBalloonCount[playerIndex] < 0) {
             player->type |= PLAYER_CINEMATIC_MODE;
-            playersDead[deadCounter] = (s16) (player - gPlayers/*One*/);
+            playersDead[deadCounter] = (s16) (player - gPlayerOne);
             deadCounter++;
             func_800CA118((u8) playerIndex); // play sad character sound?
         } else {
-            playersAlive[aliveCounter] = (s16) (player - gPlayers/*One*/);
+            playersAlive[aliveCounter] = (s16) (player - gPlayerOne);
             aliveCounter++;
         }
     }
@@ -526,7 +526,7 @@ void func_8028EF28(void) {
 
             if ((gPlayers[i].type & PLAYER_HUMAN) != 0) {
                 // jnmartin84 - testing hack
-                if (gPlayers[i].lapCount == 3) { //
+                if (gPlayers[i].lapCount == 3) { //1) { //
 //                    3) {
                     func_8028EEF0(i);
 

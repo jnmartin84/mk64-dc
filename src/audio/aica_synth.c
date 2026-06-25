@@ -334,6 +334,7 @@ void AicaSynth_Update(void) {
                 }
             }
 #endif
+#if 0
             {
                 static int dbgStarts = 0;
                 if (dbgStarts < 48) {
@@ -344,17 +345,19 @@ void AicaSynth_Update(void) {
                     dbgStarts++;
                 }
             }
+#endif
         } else {
             if (entry) cache_release(entry);
             chan_update(v->channel, freq, vol, pan);
         }
     }
-
+#if 0
     if ((++sDbgFrame & 0x3F) == 0 && nEnabled) {
         printf("AICAdbg en=%ld synth=%ld res=%ld fail=%ld start=%ld vol[%lu..%lu]\n",
                (long)nEnabled, (long)nSynth, (long)nResolved, (long)nFail,
                (long)nStarted, (unsigned long)dbgVolMin, (unsigned long)dbgVolMax);
     }
+#endif
 }
 
 #else

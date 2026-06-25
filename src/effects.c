@@ -449,7 +449,7 @@ void func_8008D0FC(Player* player, s8 arg1) {
     player->unk_0B8 = 2.0f;
     player->unk_0AC = 1;
     player->effects &= ~0x10;
-    player->unk_044 |= 0x4000;
+    player->unk_044 |= EARLY_START_SPINOUT_EFFECT;
 }
 
 void func_8008D170(Player* player, s8 arg1) {
@@ -471,7 +471,7 @@ void func_8008D170(Player* player, s8 arg1) {
             player->effects |= 0x40000;
         }
         if (var_f0 <= 1.3) {
-            player->unk_044 &= ~0x4000;
+            player->unk_044 &= ~EARLY_START_SPINOUT_EFFECT;
             if ((player->effects & 0x40000) != 0x40000) {
                 func_8008C73C(player, arg1);
                 var_v1 = 0;
@@ -498,7 +498,7 @@ void func_8008D170(Player* player, s8 arg1) {
     player->unk_0AC = var_a3;
     if (player->effects & 8) {
         func_8008C73C(player, arg1);
-        player->unk_044 &= ~0x4000;
+        player->unk_044 &= ~EARLY_START_SPINOUT_EFFECT;
     }
 }
 
@@ -1242,7 +1242,7 @@ void func_8008F104(Player* player, s8 arg1) {
     player->unk_0B2 = 2;
     player->unk_0C0 = 0;
     player->unk_07C = 0;
-    player->effects |= 0x4000;
+    player->effects |= EARLY_START_SPINOUT_EFFECT;
     player->unk_078 = 0;
     D_8018D920[arg1] = -0x8000;
 
@@ -1263,7 +1263,7 @@ void func_8008F1B8(Player* player, s8 arg1) {
 
             temp = ((u16) D_8018D920[arg1] / 182);
             if (temp == 180) {
-                player->effects &= ~0x4000;
+                player->effects &= ~EARLY_START_SPINOUT_EFFECT;
                 player->type &= ~0x80;
                 player->currentSpeed /= 3.0f;
             }
@@ -1273,7 +1273,7 @@ void func_8008F1B8(Player* player, s8 arg1) {
             D_8018D920[arg1] -= 182;
             temp = ((u16) D_8018D920[arg1] / 182);
             if (temp == 180) {
-                player->effects &= ~0x4000;
+                player->effects &= ~EARLY_START_SPINOUT_EFFECT;
                 player->type &= ~0x80;
                 player->currentSpeed /= 3.0f;
             }
@@ -1302,7 +1302,7 @@ void func_8008F1B8(Player* player, s8 arg1) {
 }
 
 void func_8008F3E0(Player* player) {
-    player->effects &= ~0x4000;
+    player->effects &= ~EARLY_START_SPINOUT_EFFECT;
 }
 
 void func_8008F3F4(Player* player, UNUSED s8 arg1) {

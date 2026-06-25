@@ -101,7 +101,6 @@ void set_the_scissor(struct UnkStruct_800DC5EC* arg0) {
     screenStartX /= 4;
     screenStartY /= 4;
 
-#if 0
     lrx = screenStartX + screenWidth;
     if (lrx > SCREEN_WIDTH) {
         lrx = SCREEN_WIDTH;
@@ -113,32 +112,6 @@ void set_the_scissor(struct UnkStruct_800DC5EC* arg0) {
     }
     ulx = 0;
     uly = 0;
-#endif
-
-    ulx = screenStartX - screenWidth;
-    lrx = screenStartX + screenWidth;
-    uly = screenStartY - screenHeight;
-    lry = screenStartY + screenHeight;
-    if (ulx < 16) ulx = 0;
-    else ulx = (ulx + 31) & ~31;
-    if (uly < 16) uly = 0;
-    else uly = (uly + 31) & ~31;
-    lrx = (lrx + 31) & ~31;
-    lry = (lry + 31) & ~31;
-    if (ulx < 0) {
-        ulx = 0;
-    }
-    if (uly < 0) {
-        uly = 0;
-    }
-    if (lrx > SCREEN_WIDTH) {
-        lrx = SCREEN_WIDTH;
-    }
-    if (lry > SCREEN_HEIGHT) {
-        lry = SCREEN_HEIGHT;
-    }/*  else if (lry > 32) {
-        lry -= 32;
-    } */
 
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, ulx, uly, lrx, lry);
 }
@@ -190,12 +163,11 @@ void func_802A38B4(void) {
 }
 
 void func_802A39E0(UNUSED struct UnkStruct_800DC5EC* arg0) {
-#if 0
     s32 ulx = arg0->screenStartX - (arg0->screenWidth / 2);
     s32 uly = arg0->screenStartY - (arg0->screenHeight / 2);
     s32 lrx = arg0->screenStartX + (arg0->screenWidth / 2);
     s32 lry = arg0->screenStartY + (arg0->screenHeight / 2);
-#if 0
+
     if (ulx < 0) {
         ulx = 0;
     }
@@ -214,25 +186,6 @@ void func_802A39E0(UNUSED struct UnkStruct_800DC5EC* arg0) {
     if (uly >= lry) {
         lry = uly + 2;
     }
-#endif
-    if (ulx < 16) ulx = 0;
-    else ulx = (ulx + 31) & ~31;
-    if (uly < 16) uly = 0;
-    else uly = (uly + 31) & ~31;
-    lrx = (lrx + 31) & ~31;
-    lry = (lry + 31) & ~31;
-    if (ulx < 0) {
-        ulx = 0;
-    }
-    if (uly < 0) {
-        uly = 0;
-    }
-    if (lrx > SCREEN_WIDTH) {
-        lrx = SCREEN_WIDTH;
-    }
-    if (lry > SCREEN_HEIGHT) {
-        lry = SCREEN_HEIGHT;
-    }
 
     gDPPipeSync(gDisplayListHead++);
     gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
@@ -245,9 +198,9 @@ void func_802A39E0(UNUSED struct UnkStruct_800DC5EC* arg0) {
     gDPFillRectangle(gDisplayListHead++, ulx, uly, lrx - 1, lry - 1);
 
     gDPPipeSync(gDisplayListHead++);
-#endif
     gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH,
                      VIRTUAL_TO_PHYSICAL(gPhysicalFramebuffers[sRenderingFramebuffer])); // 0x1FFFFFFF
+    //gDPFillRectangle(gDisplayListHead++, ulx, uly, lrx - 1, lry - 1);
     gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
     gDPSetDepthSource(gDisplayListHead++, G_ZS_PIXEL);
 }
@@ -373,15 +326,14 @@ void draw_splitscreen_separators(void) {
 
     switch (gActiveScreenMode) {
         case SCREEN_MODE_2P_SPLITSCREEN_VERTICAL:
-            gDPFillRectangle(gDisplayListHead++, 157, 0, 159, 239);
+            gDPFillRectangle(gDisplayListHead++, 158, 0, 160, 239);
             break;
         case SCREEN_MODE_2P_SPLITSCREEN_HORIZONTAL:
-            gDPFillRectangle(gDisplayListHead++, 0, 127, 319, 129);
-            //gDPFillRectangle(gDisplayListHead++, 0, 223, 319, 223+32);
+            gDPFillRectangle(gDisplayListHead++, 0, 119, 319, 121);
             break;
         case SCREEN_MODE_3P_4P_SPLITSCREEN:
-            gDPFillRectangle(gDisplayListHead++, 159, 0, 161, 239);
-            gDPFillRectangle(gDisplayListHead++, 0, 127, 319, 129);
+            gDPFillRectangle(gDisplayListHead++, 158, 0, 160, 239);
+            gDPFillRectangle(gDisplayListHead++, 0, 119, 319, 121);
             break;
     }
     gDPPipeSync(gDisplayListHead++);

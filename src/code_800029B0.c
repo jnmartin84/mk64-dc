@@ -141,10 +141,9 @@ s16 gPlayerPositionLUT[8]; // Player index at each position
 u16 gNumPermanentActors;
 s32 code_800029B0_bss_pad2[44];
 
-struct Actor gActorListBacking[1+ACTOR_LIST_SIZE];
+struct Actor gActorListBacking[1 + ACTOR_LIST_SIZE];
+struct Actor *gActorList = &gActorListBacking[1];
 
-
-struct Actor *gActorList = &gActorListBacking[1];//[ACTOR_LIST_SIZE];
 //! @warning todo: Is this apart of the actor array?
 UNUSED u8 D_80162578[sizeof(struct Actor)];
 
@@ -153,8 +152,14 @@ s16 sIsController1Unplugged;
 s32 D_801625EC;
 s32 D_801625F0;
 s32 D_801625F4;
-/* s32 D_801625F8;
-f32 D_801625FC; */
+
+void nuke_everything();
+extern int must_inval_bg;
+
+#include "buffer_sizes.h"
+extern u8 __attribute__((aligned(32))) SEG3_BUF[SEG3_BUF_SIZE];
+u8 *ROVING_SEG3_BUF;
+
 
 void func_800029B0(void) {
     switch (D_800DC5A8) {
@@ -169,9 +174,7 @@ void func_800029B0(void) {
             break;
     }
 }
-//#include <stdio.h>
-void nuke_everything();
-extern int must_inval_bg;
+
 void setup_race(void) {
     struct Controller* controller;
     int i;
@@ -202,7 +205,6 @@ void setup_race(void) {
     func_80005310();
     func_8003D080();
     init_hud();
-    //printf("out of init hud\n");
     D_800DC510 = 0;
     gNumSpawnedShells = 0;
     D_800DC5B8 = 0;
@@ -210,13 +212,9 @@ void setup_race(void) {
     gDemoTimer = -1;
     D_802BA048 = 0;
     func_802A74BC();
-    //printf("out of 802a74bc\n");
     set_perspective_and_aspect_ratio();
-    //printf("out of set_perspective_and_aspect_ratio\n");
     func_80091FA4();
-    //printf("out of func_80091FA4\n");
     init_actors_and_load_textures();
-    //printf("out of init_actors_and_load_textures\n");
     if (gModeSelection != BATTLE) {
         D_8015F8D0[1] = (f32) (gCurrentTrackPath->posY - 15);
         D_8015F8D0[2] = gCurrentTrackPath->posZ;
@@ -230,9 +228,7 @@ void setup_race(void) {
     }
     if (!gDemoMode) {
         func_800CA008(gPlayerCountSelection1 - 1, gCurrentCourseId + 4);
-        //printf("out of func_800CA008\n");
         func_800CB2C4();
-        //printf("out of func_800CB2C4 \n");
     }
 
     controller = gControllerOne;
@@ -244,8 +240,6 @@ void setup_race(void) {
         controller->buttonDepressed = 0;
         controller->button = 0;
     }
-
-    //printf("exiting setup_race\n");
 }
 
 // sound related
@@ -295,10 +289,6 @@ void clear_nmi_buffer(void) {
         osAppNmiBuffer[i] = 0;
     }
 }
-
-#include "buffer_sizes.h"
-extern u8 __attribute__((aligned(32))) SEG3_BUF[SEG3_BUF_SIZE];
-u8 *ROVING_SEG3_BUF;
 
 void func_80003040(void) {
     Vec3f position;

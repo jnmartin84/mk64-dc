@@ -96,6 +96,12 @@ struct __attribute__((aligned(32))) LoadedVertex {
 	uint8_t clip_rej;
 	// 45
 	uint8_t	wlt0;
+	// 46 — Cohen-Sutherland-style scissor outcode (which scissor edges this vertex
+	// is OUTSIDE of), plus the scissor generation it was computed for so we can
+	// lazily recompute it if the scissor changed after the vertex was loaded.
+	uint8_t scissor_oc;
+	// 47
+	uint8_t scissor_gen;
 };
 
 static inline uint64_t pack_key(uint32_t a, uint16_t b, uint16_t c, uint8_t d, uint8_t e) {
@@ -244,6 +250,136 @@ struct RenderingState rendering_state;
 struct GfxDimensions gfx_current_dimensions;
 
 static uint8_t dropped_frame;
+
+// ---- Software scissor clipping state ----
+// GLdc still applies the per-player viewport (glViewport); we only replace the
+// scissor. The scissor rectangle is expressed as NDC bounds in the player's own
+// clip space, i.e. relative to the active viewport's window mapping:
+//   win = v.xy + (ndc+1)/2 * v.wh   =>   ndc = 2*(scissor - v.xy)/v.wh - 1
+static float sc_ndc_xmin = -1.0f, sc_ndc_xmax = 1.0f;
+static float sc_ndc_ymin = -1.0f, sc_ndc_ymax = 1.0f;
+static int sc_is_fullscreen = 1;
+// Eye-plane guard so the homogeneous scissor planes always divide by w > 0.
+#define SCISSOR_W_EPS 0.00001f
+
+// Per-vertex scissor outcode bits: each set bit means the vertex is OUTSIDE that
+// scissor edge. SC_FORCE marks a vertex at/behind the eye (w<=eps), whose edge
+// bits are meaningless (homogeneous test sign is undefined), so any triangle that
+// touches it must take the full clip path.
+#define SC_LEFT   0x01
+#define SC_RIGHT  0x02
+#define SC_BOTTOM 0x04
+#define SC_TOP    0x08
+#define SC_FORCE  0x10
+#define SC_EDGE_MASK 0x0F
+// Bumped whenever the scissor planes change; vertices store the gen they were
+// computed under so gfx_sp_tri1 can lazily refresh a stale outcode.
+static uint8_t cur_scissor_gen = 1;
+
+// Float copies of the viewport/scissor rects (lower-left window space), captured
+// before they are truncated into the uint16 rdp.viewport/rdp.scissor fields. The
+// uint16 store wraps negative coords (which happen during sliding/shrinking
+// transitions) to ~65000 and drops the fraction, so the clip math must NOT read
+// the rdp fields. Init to a full 640x480 screen.
+static float vpf_x = 0.0f,   vpf_y = 0.0f,   vpf_w = 640.0f, vpf_h = 480.0f;
+static float scf_x = 0.0f,   scf_y = 0.0f,   scf_w = 640.0f, scf_h = 480.0f;
+
+// Recompute the scissor NDC bounds from the current viewport + scissor rects.
+// Called whenever either changes (both live in the same lower-left window space).
+static void gfx_recompute_scissor_planes(void) {
+	float vx = vpf_x;
+	float vy = vpf_y;
+	float vw = vpf_w;
+	float vh = vpf_h;
+	if (vw <= 0.0f) vw = 1.0f;
+	if (vh <= 0.0f) vh = 1.0f;
+
+	float sx = scf_x;
+	float sy = scf_y;
+	float sw = scf_w;
+	float sh = scf_h;
+
+	sc_ndc_xmin = 2.0f * (sx - vx) / vw - 1.0f;
+	sc_ndc_xmax = 2.0f * ((sx + sw) - vx) / vw - 1.0f;
+	sc_ndc_ymin = 2.0f * (sy - vy) / vh - 1.0f;
+	sc_ndc_ymax = 2.0f * ((sy + sh) - vy) / vh - 1.0f;
+
+	// Clip region is scissor INTERSECT viewport. On N64 the RSP confines geometry
+	// to the viewport frustum (NDC +/-1), so geometry never legitimately exists
+	// outside the viewport rect; a scissor looser than the viewport (e.g. race
+	// start sets scissor = whole half but viewport = one quadrant) must NOT widen
+	// the clip past the viewport edge, or GLdc's guard band lets the frustum
+	// overhang bleed into the neighbouring pane. Clamp every bound to [-1, 1].
+	// (Non-overlapping scissor/viewport collapse to an empty interval => nothing
+	// draws, which is also the correct N64 result.)
+	sc_ndc_xmin = sc_ndc_xmin < -1.0f ? -1.0f : (sc_ndc_xmin > 1.0f ? 1.0f : sc_ndc_xmin);
+	sc_ndc_xmax = sc_ndc_xmax < -1.0f ? -1.0f : (sc_ndc_xmax > 1.0f ? 1.0f : sc_ndc_xmax);
+	sc_ndc_ymin = sc_ndc_ymin < -1.0f ? -1.0f : (sc_ndc_ymin > 1.0f ? 1.0f : sc_ndc_ymin);
+	sc_ndc_ymax = sc_ndc_ymax < -1.0f ? -1.0f : (sc_ndc_ymax > 1.0f ? 1.0f : sc_ndc_ymax);
+
+	// Skip the software clip only when the viewport fills the whole framebuffer
+	// (single player): then in-frustum geometry maps inside the screen and any
+	// frustum overhang falls off-screen harmlessly. For a sub-viewport (split
+	// screen) we must clip even if scissor == viewport, because GLdc's imprecise
+	// frustum clipping lets overhang bleed into the neighbouring pane.
+	float fbw = (float) gfx_current_dimensions.width;
+	float fbh = (float) gfx_current_dimensions.height;
+	int vp_is_full = (vx <= 0.5f && vy <= 0.5f &&
+	                  (vx + vw) >= fbw - 0.5f && (vy + vh) >= fbh - 0.5f);
+	int scissor_covers_vp = (sc_ndc_xmin <= -0.999f && sc_ndc_xmax >= 0.999f &&
+	                         sc_ndc_ymin <= -0.999f && sc_ndc_ymax >= 0.999f);
+	sc_is_fullscreen = (vp_is_full && scissor_covers_vp);
+
+	// Invalidate cached per-vertex scissor outcodes (they were computed against the
+	// old planes). 0 is reserved as "never computed", so skip it on wrap.
+	if (++cur_scissor_gen == 0)
+		cur_scissor_gen = 1;
+
+#define SCISSOR_DEBUG 0
+#if SCISSOR_DEBUG
+	// Trace each UNIQUE viewport/scissor combo exactly once for the whole run
+	// (deduped against ALL states seen, not just the previous one). Cycling
+	// gameplay quadrants therefore cost ~7 lines total instead of 7 per frame,
+	// so the log never drains before a later transition (e.g. results screen).
+	// Grep "SCIS"; the results-screen states are whatever appears last.
+	{
+		#define SCIS_MAX 2048
+		static float seen[SCIS_MAX][8];
+		static int seen_n = 0;
+		float cur[8] = { vpf_x, vpf_y, vpf_w, vpf_h, scf_x, scf_y, scf_w, scf_h };
+		int found = 0;
+		for (int q = 0; q < seen_n; q++) {
+			if (memcmp(cur, seen[q], sizeof(cur)) == 0) { found = 1; break; }
+		}
+		if (!found && seen_n < SCIS_MAX) {
+			memcpy(seen[seen_n++], cur, sizeof(cur));
+			printf("SCIS vp[%.1f %.1f %.1f %.1f] sc[%.1f %.1f %.1f %.1f] "
+			       "ndc x[%.3f..%.3f] y[%.3f..%.3f] full=%d\n",
+			       vpf_x, vpf_y, vpf_w, vpf_h, scf_x, scf_y, scf_w, scf_h,
+			       sc_ndc_xmin, sc_ndc_xmax, sc_ndc_ymin, sc_ndc_ymax, sc_is_fullscreen);
+		}
+	}
+#endif
+}
+
+// Compute a vertex's scissor outcode from its (homogeneous) clip-space coords.
+// w>0 is guaranteed past the eye-plane check, so do one fast reciprocal + two
+// muls to get NDC and compare directly against the bounds (cheaper than 4 muls,
+// and fdiv is far slower on SH4). The reciprocal is approximate, but the outcode
+// is only a classifier — gfx_build_clipped_fan still clips with exact math.
+static inline uint8_t compute_scissor_outcode(float x, float y, float w) {
+	if (w <= SCISSOR_W_EPS)
+		return SC_FORCE;
+	float rw = shz_inverse_posf(w); // w>0 here: single fsrra-based reciprocal
+	float nx = x * rw;
+	float ny = y * rw;
+	uint8_t oc = 0;
+	if (nx < sc_ndc_xmin) oc |= SC_LEFT;
+	if (nx > sc_ndc_xmax) oc |= SC_RIGHT;
+	if (ny < sc_ndc_ymin) oc |= SC_BOTTOM;
+	if (ny > sc_ndc_ymax) oc |= SC_TOP;
+	return oc;
+}
 
 static dc_fast_t __attribute__((aligned(32))) buf_vbo[MAX_BUFFERED * 3]; // 3 vertices in a triangle
 static dc_fast_t __attribute__((aligned(32))) quad_vbo[2 * 3];           // 2 tris make a quad
@@ -1154,6 +1290,11 @@ static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, siz
 //        if (z < -w)
 //            nearz_clip_verts++;
 
+        // Invalidate the scissor outcode (gen 0 = "not computed"). gfx_sp_tri1
+        // computes it lazily on first use, so single-player / unused verts pay
+        // nothing and each used vertex is classified once per scissor generation.
+        d->scissor_gen = 0;
+
 		d->x = v->ob[0];
         d->y = v->ob[1];
         d->z = v->ob[2];
@@ -1197,6 +1338,10 @@ static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t
 		cr = (cr << 1) | !(d->_x < -d->_w);
 		d->clip_rej = cr;
 //		if(z < -w) nearz_clip_verts++;
+
+        // Invalidate the scissor outcode (gen 0 = "not computed"); gfx_sp_tri1
+        // computes it lazily on first use (see the lit path for the rationale).
+        d->scissor_gen = 0;
     }
 }
 
@@ -1254,6 +1399,122 @@ static inline float approx_recip_sign(float v) {
 int total_tri=0;
 int rej_tri=0;
 int nearz_tri = 0;
+
+// ---- Software scissor: homogeneous Sutherland-Hodgman clip -------------------
+// A triangle is clipped in (baked) clip space against the eye plane (w>eps) and
+// the 4 scissor planes. The plane-crossing parameter t is computed in clip space
+// but applied to the *object-space* attributes too: because the projection is a
+// linear map of homogeneous object coords, lerp(objA,objB,t) maps exactly onto
+// lerp(clipA,clipB,t). The clipped object-space verts are then fed to GL as
+// usual, keeping perspective-correct texturing/shading with no re-transform error.
+#define CLIP_MAX 12
+
+static struct LoadedVertex clip_bufA[CLIP_MAX] __attribute__((aligned(32)));
+static struct LoadedVertex clip_bufB[CLIP_MAX] __attribute__((aligned(32)));
+
+static inline void clip_lerp_vertex(struct LoadedVertex* o, const struct LoadedVertex* a,
+                                    const struct LoadedVertex* b, float t) {
+	o->_x = a->_x + t * (b->_x - a->_x);
+	o->_y = a->_y + t * (b->_y - a->_y);
+	o->_z = a->_z + t * (b->_z - a->_z);
+	o->_w = a->_w + t * (b->_w - a->_w);
+	o->x  = a->x  + t * (b->x  - a->x);
+	o->y  = a->y  + t * (b->y  - a->y);
+	o->z  = a->z  + t * (b->z  - a->z);
+	o->w  = 1.0f;
+	o->u  = a->u  + t * (b->u  - a->u);
+	o->v  = a->v  + t * (b->v  - a->v);
+	o->color.r = (uint8_t) (a->color.r + t * ((float) b->color.r - (float) a->color.r));
+	o->color.g = (uint8_t) (a->color.g + t * ((float) b->color.g - (float) a->color.g));
+	o->color.b = (uint8_t) (a->color.b + t * ((float) b->color.b - (float) a->color.b));
+	o->color.a = (uint8_t) (a->color.a + t * ((float) b->color.a - (float) a->color.a));
+	o->clip_rej = 0x3f;
+	o->wlt0 = 0;
+}
+
+// Fill the active 5 clip planes (eye + 4 scissor) as {A,B,C,D,E}:
+// signed distance = A*_x + B*_y + C*_z + D*_w + E ; inside when >= 0.
+static inline void clip_fill_planes(float planes[5][5]) {
+	// eye guard: _w - eps >= 0
+	planes[0][0] = 0.0f; planes[0][1] = 0.0f; planes[0][2] = 0.0f; planes[0][3] = 1.0f; planes[0][4] = -SCISSOR_W_EPS;
+	// _x/_w >= xmin  ->  _x - xmin*_w >= 0
+	planes[1][0] = 1.0f; planes[1][1] = 0.0f; planes[1][2] = 0.0f; planes[1][3] = -sc_ndc_xmin; planes[1][4] = 0.0f;
+	// _x/_w <= xmax  ->  xmax*_w - _x >= 0
+	planes[2][0] = -1.0f; planes[2][1] = 0.0f; planes[2][2] = 0.0f; planes[2][3] = sc_ndc_xmax; planes[2][4] = 0.0f;
+	// _y/_w >= ymin
+	planes[3][0] = 0.0f; planes[3][1] = 1.0f; planes[3][2] = 0.0f; planes[3][3] = -sc_ndc_ymin; planes[3][4] = 0.0f;
+	// _y/_w <= ymax
+	planes[4][0] = 0.0f; planes[4][1] = -1.0f; planes[4][2] = 0.0f; planes[4][3] = sc_ndc_ymax; planes[4][4] = 0.0f;
+}
+
+static inline float clip_dist(const struct LoadedVertex* v, const float p[5]) {
+	return p[0] * v->_x + p[1] * v->_y + p[2] * v->_z + p[3] * v->_w + p[4];
+}
+
+static int clip_against_plane(const struct LoadedVertex* in, int n, struct LoadedVertex* out, const float p[5]) {
+	int m = 0;
+	for (int i = 0; i < n; i++) {
+		const struct LoadedVertex* cur = &in[i];
+		const struct LoadedVertex* nxt = &in[(i + 1 == n) ? 0 : (i + 1)];
+		float dc = clip_dist(cur, p);
+		float dn = clip_dist(nxt, p);
+		int inc = (dc >= 0.0f);
+		int inn = (dn >= 0.0f);
+		if (inc && m < CLIP_MAX) {
+			out[m++] = *cur;
+		}
+		if ((inc != inn) && m < CLIP_MAX) {
+			float t = dc / (dc - dn);
+			clip_lerp_vertex(&out[m++], cur, nxt, t);
+		}
+	}
+	return m;
+}
+
+// Clip the triangle (a,b,c) and emit the resulting polygon as a triangle fan of
+// pointers into a static buffer. Returns the number of output triangles (0..6).
+// clip_mask says which planes the triangle actually crosses (from the OR of the
+// three vertex outcodes): we only run a Sutherland-Hodgman pass for those, so a
+// typical single-edge straddle costs one pass instead of five. Convexity
+// guarantees clipping a crossed plane can't push verts outside an un-crossed one.
+// The eye (w>eps) plane is mapped to SC_FORCE and clipped FIRST so the scissor
+// passes see w>0.
+static int gfx_build_clipped_fan(const struct LoadedVertex* a, const struct LoadedVertex* b,
+                                 const struct LoadedVertex* c, struct LoadedVertex* out_tris[][3],
+                                 uint8_t clip_mask) {
+	static const uint8_t plane_bit[5] = { SC_FORCE, SC_LEFT, SC_RIGHT, SC_BOTTOM, SC_TOP };
+
+	clip_bufA[0] = *a;
+	clip_bufA[1] = *b;
+	clip_bufA[2] = *c;
+	int n = 3;
+
+	float planes[5][5];
+	clip_fill_planes(planes);
+
+	struct LoadedVertex* src = clip_bufA;
+	struct LoadedVertex* dst = clip_bufB;
+	for (int pi = 0; pi < 5; pi++) {
+		if (!(clip_mask & plane_bit[pi]))
+			continue;
+		n = clip_against_plane(src, n, dst, planes[pi]);
+		if (n < 3)
+			return 0;
+		struct LoadedVertex* tmp = src;
+		src = dst;
+		dst = tmp;
+	}
+
+	int nt = 0;
+	for (int k = 1; k + 1 < n && nt < 6; k++) {
+		out_tris[nt][0] = &src[0];
+		out_tris[nt][1] = &src[k];
+		out_tris[nt][2] = &src[k + 1];
+		nt++;
+	}
+	return nt;
+}
+
 static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx) {
     struct LoadedVertex* v1 = &rsp.loaded_vertices[vtx1_idx];
     struct LoadedVertex* v2 = &rsp.loaded_vertices[vtx2_idx];
@@ -1428,6 +1689,45 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     uint32_t tex_width = (rdp.texture_tile.lrs - rdp.texture_tile.uls + 4) >> 2;
     uint32_t tex_height = (rdp.texture_tile.lrt - rdp.texture_tile.ult + 4) >> 2;
 
+    // Software scissor, classified from the three per-vertex scissor outcodes
+    // (cheap byte ops, à la clip_rej). Refresh any outcode that went stale since
+    // its vertex was loaded under an older scissor. Then: none-outside -> emit as
+    // is; all-three-outside-one-edge -> drop; else clip only the crossed planes.
+    // Single full-screen scissor skips all of this (single-player keeps its cost).
+    static struct LoadedVertex* fan_tris[6][3];
+    int n_tris;
+    if (sc_is_fullscreen) {
+        fan_tris[0][0] = v1; fan_tris[0][1] = v2; fan_tris[0][2] = v3;
+        n_tris = 1;
+    } else {
+        if (v1->scissor_gen != cur_scissor_gen) { v1->scissor_oc = compute_scissor_outcode(v1->_x, v1->_y, v1->_w); v1->scissor_gen = cur_scissor_gen; }
+        if (v2->scissor_gen != cur_scissor_gen) { v2->scissor_oc = compute_scissor_outcode(v2->_x, v2->_y, v2->_w); v2->scissor_gen = cur_scissor_gen; }
+        if (v3->scissor_gen != cur_scissor_gen) { v3->scissor_oc = compute_scissor_outcode(v3->_x, v3->_y, v3->_w); v3->scissor_gen = cur_scissor_gen; }
+
+        uint8_t oc_or  = v1->scissor_oc | v2->scissor_oc | v3->scissor_oc;
+        uint8_t oc_and = v1->scissor_oc & v2->scissor_oc & v3->scissor_oc;
+
+        if (oc_or == 0) {
+            // fully inside every edge, none behind the eye -> emit unclipped
+            fan_tris[0][0] = v1; fan_tris[0][1] = v2; fan_tris[0][2] = v3;
+            n_tris = 1;
+        } else if (oc_and & SC_EDGE_MASK) {
+            // all three share an outside edge -> whole triangle is off-pane
+            n_tris = 0;
+        } else {
+            // A behind-eye vertex's edge bits are meaningless, so when SC_FORCE is
+            // present clip every plane; otherwise clip only the edges crossed.
+            uint8_t clip_mask = (oc_or & SC_FORCE) ? (SC_FORCE | SC_EDGE_MASK) : oc_or;
+            n_tris = gfx_build_clipped_fan(v1, v2, v3, fan_tris, clip_mask);
+        }
+    }
+
+    for (int ti = 0; ti < n_tris; ti++) {
+        v1 = fan_tris[ti][0];
+        v_arr[0] = fan_tris[ti][0];
+        v_arr[1] = fan_tris[ti][1];
+        v_arr[2] = fan_tris[ti][2];
+
     for (i = 0; i < 3; i++) {
         buf_vbo[buf_num_vert].vert.x = v_arr[i]->x;
         buf_vbo[buf_num_vert].vert.y = v_arr[i]->y;
@@ -1575,6 +1875,7 @@ nextvert:
 	if (buf_vbo_num_tris == MAX_BUFFERED) {
         gfx_flush();
     }
+    } // for (ti) clipped-fan triangles
 }
 
 #if 1
@@ -1822,6 +2123,16 @@ static void gfx_calc_and_set_viewport(const Vp_t* viewport) {
 	rdp.viewport.width = width;
 	rdp.viewport.height = height;
 
+	// Keep the un-truncated float rect for the clip math (rdp.viewport is uint16).
+	vpf_x = x;
+	vpf_y = y;
+	vpf_w = width;
+	vpf_h = height;
+
+	// GLdc applies this viewport via glViewport; recompute the software-scissor NDC
+	// bounds, which are expressed relative to the viewport mapping.
+	gfx_recompute_scissor_planes();
+
 	rdp.viewport_or_scissor_changed = 1;
 }
 
@@ -1881,6 +2192,16 @@ static void gfx_dp_set_scissor(UNUSED uint32_t mode, uint32_t ulx, uint32_t uly,
 	rdp.scissor.y = y;
 	rdp.scissor.width = width;
 	rdp.scissor.height = height;
+
+	// Keep the un-truncated float rect for the clip math (rdp.scissor is uint16).
+	scf_x = x;
+	scf_y = y;
+	scf_w = width;
+	scf_h = height;
+
+	// Scissoring is done in software (homogeneous clip in gfx_sp_tri1) instead of
+	// glScissor / PVR userclip; recompute the NDC bounds relative to the viewport.
+	gfx_recompute_scissor_planes();
 
 	rdp.viewport_or_scissor_changed = 1;
 }

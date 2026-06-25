@@ -198,7 +198,6 @@ typedef struct {
 void func_800C94A4(u8);
 void func_800CADD0(u8, f32);
 void func_800C13F0(void);
-void audio_reset_session_eu(OSMesg);
 f32 func_800C1480(u8, u8);
 s8 func_800C15D0(u8, u8, u8);
 s8 func_800C16E8(f32, f32, u8);

@@ -1547,7 +1547,6 @@ void func_80295D6C(void) {
 
 #include "buffer_sizes.h"
 extern CollisionTriangle allColTris[allColTris_SIZE];
-#include <stdio.h>
 
 /**
  * @brief Also sets vertex colours for the course vtx data
@@ -1781,7 +1780,6 @@ void course_generate_collision_mesh(void) {
 #else
 
 #endif
-printf("generated mesh\n");
 }
 
 extern u16 gRRWTexture648508[];

@@ -537,7 +537,10 @@ static void gfx_opengl_set_viewport(int x, int y, int width, int height) {
 }
 
 static void gfx_opengl_set_scissor(int x, int y, int width, int height) {
-    glScissor(x, y, width, height);
+    // Scissoring is performed in software (homogeneous clip in gfx_retro_dc.c)
+    // instead of glScissor / PVR userclip, which leaks across the multiple
+    // viewport/scissor changes per frame used by split-screen.
+    (void) x; (void) y; (void) width; (void) height;
 }
 
 static void gfx_opengl_set_use_alpha(uint8_t use_alpha) {
