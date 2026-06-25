@@ -16,3 +16,6 @@
 [submodule "tools/blender/fast64"]
 	path = tools/blender/fast64
 	url = https://github.com/Fast-64/fast64.git
+[submodule "GLdc"]
+	path = GLdc
+	url = https://github.com/jnmartin84/GLdc.git

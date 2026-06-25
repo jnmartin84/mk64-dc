@@ -112,6 +112,7 @@ OSMesg gSIEventMesgBuf[3];
 OSContStatus gControllerStatuses[4];
 OSContPad gControllerPads[4];
 u8 gControllerBits;
+u8 gKeyboardBit;
 // Contains a 32x32 grid of indices into gCollisionIndices containing indices into gCollisionMesh
 CollisionGrid gCollisionGrid[1024];
 u16 gNumActors;
@@ -659,14 +660,26 @@ int sd_x,sd_y;
 
 void init_controllers(void) {
     gControllerBits = 0;
+    gKeyboardBit = 0;
 
     maple_device_t *cont;
+    int detected = 0;
     for (int i=0;i<4;i++) {
         cont = NULL;
         cont = maple_enum_type(i, MAPLE_FUNC_CONTROLLER);
-        if (cont)
+        if (cont) {
             gControllerBits |= (1 << i);
+            ++detected;
+        }
     }
+
+    if(detected < 4) {
+        cont = maple_enum_type(0, MAPLE_FUNC_KEYBOARD);
+        if(cont) {
+            gControllerBits |= gKeyboardBit = (1 << detected);
+        }
+    }
+
     if ((gControllerBits & 1) == 0) {
         sIsController1Unplugged = 1;
     } else {
@@ -764,6 +777,64 @@ void init_controllers(void) {
 extern void __osPfsCloseAllFiles(void);
 u16 ucheld;
 u16 stick;
+
+void update_keyboard(s32 index) {
+	struct Controller* controller = &gControllers[index];
+    maple_device_t *kbd;
+    kbd_state_t *state;
+    ucheld = 0;
+    stick = 0;
+
+    kbd = maple_enum_type(0, MAPLE_FUNC_KEYBOARD);
+    if(!kbd) return;
+
+    state = maple_dev_status(kbd);
+
+    if (strcmp("/pc", fnpre) == 0)
+        if(state->key_states[KBD_KEY_ESCAPE].is_down) {
+            __osPfsCloseAllFiles();
+            exit(0);
+        }
+
+    if (state->key_states[KBD_KEY_A].is_down ||
+        state->key_states[KBD_KEY_X].is_down ||
+        state->key_states[KBD_KEY_SPACE].is_down)
+        ucheld |= 0x8000; //A_BUTTON
+
+    if (state->key_states[KBD_KEY_B].is_down ||
+        state->key_states[KBD_KEY_C].is_down)
+        ucheld |= 0x4000; //B_BUTTON
+
+    if (state->key_states[KBD_KEY_ENTER].is_down ||
+        state->key_states[KBD_KEY_S].is_down)
+       ucheld |= 0x1000; //START_BUTTON
+
+    if (state->key_states[KBD_KEY_L].is_down ||
+        state->key_states[KBD_KEY_Q].is_down) {
+        if (gGamestate > 3) // DC L is N64 Z in-game
+            ucheld |= 0x2000; //Z_TRIG
+        else // DC L becomes N64 L in-menu
+            ucheld |= 0x0020; //L_TRIG
+    }
+
+    if (state->key_states[KBD_KEY_R].is_down ||
+        state->key_states[KBD_KEY_W].is_down)
+        ucheld |= 0x0010; //R_TRIG
+
+    if (state->key_states[KBD_KEY_UP].is_down)
+        ucheld |= 0x0800; //U_JPAD
+    if (state->key_states[KBD_KEY_DOWN].is_down)
+        ucheld |= 0x0400; //D_JPAD
+    if (state->key_states[KBD_KEY_LEFT].is_down)
+        ucheld |= 0x0200; //L_JPAD
+    if (state->key_states[KBD_KEY_RIGHT].is_down)
+        ucheld |= 0x0100; //R_JPAD
+
+    controller->buttonPressed = ucheld & (ucheld ^ controller->button);
+    controller->buttonDepressed = controller->button & (ucheld ^ controller->button);
+    controller->button = ucheld;
+}
+
 void update_controller(s32 index) {
 	struct Controller* controller = &gControllers[index];
     maple_device_t *cont;
@@ -772,6 +843,10 @@ void update_controller(s32 index) {
     stick = 0;
     if (index > 3)
         return;
+    if((1 << index) == gKeyboardBit) {
+        update_keyboard(index);
+        return;
+    }
     cont = maple_enum_type(index, MAPLE_FUNC_CONTROLLER);
     if (!cont)
         return;
@@ -2285,7 +2360,7 @@ void SPINNING_THREAD(UNUSED void *arg) {
 //        {
 //            irq_disable_scoped();
             while (vblticker <= last_vbltick)
-                genwait_wait((void*)&vblticker, NULL, 0, NULL);
+                genwait_wait((void*)&vblticker, NULL, 0);
 //        }
 
         last_vbltick = vblticker;

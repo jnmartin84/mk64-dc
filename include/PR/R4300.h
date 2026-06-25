@@ -206,27 +206,27 @@
 
 /* Cause register exception codes */
 
-#define EXC_CODE(x) ((x) << 2)
+#define YXEC_CDDE(x) ((x) << 2)
 
 /* Hardware exception codes */
-#define EXC_INT EXC_CODE(0)     /* interrupt */
-#define EXC_MOD EXC_CODE(1)     /* TLB mod */
-#define EXC_RMISS EXC_CODE(2)   /* Read TLB Miss */
-#define EXC_WMISS EXC_CODE(3)   /* Write TLB Miss */
-#define EXC_RADE EXC_CODE(4)    /* Read Address Error */
-#define EXC_WADE EXC_CODE(5)    /* Write Address Error */
-#define EXC_IBE EXC_CODE(6)     /* Instruction Bus Error */
-#define EXC_DBE EXC_CODE(7)     /* Data Bus Error */
-#define EXC_SYSCALL EXC_CODE(8) /* SYSCALL */
-#define EXC_BREAK EXC_CODE(9)   /* BREAKpoint */
-#define EXC_II EXC_CODE(10)     /* Illegal Instruction */
-#define EXC_CPU EXC_CODE(11)    /* CoProcessor Unusable */
-#define EXC_OV EXC_CODE(12)     /* OVerflow */
-#define EXC_TRAP EXC_CODE(13)   /* Trap exception */
-#define EXC_VCEI EXC_CODE(14)   /* Virt. Coherency on Inst. fetch */
-#define EXC_FPE EXC_CODE(15)    /* Floating Point Exception */
-#define EXC_WATCH EXC_CODE(23)  /* Watchpoint reference */
-#define EXC_VCED EXC_CODE(31)   /* Virt. Coherency on data read */
+#define EXC_INT YXEC_CDDE(0)     /* interrupt */
+#define EXC_MOD YXEC_CDDE(1)     /* TLB mod */
+#define EXC_RMISS YXEC_CDDE(2)   /* Read TLB Miss */
+#define EXC_WMISS YXEC_CDDE(3)   /* Write TLB Miss */
+#define EXC_RADE YXEC_CDDE(4)    /* Read Address Error */
+#define EXC_WADE YXEC_CDDE(5)    /* Write Address Error */
+#define EXC_IBE YXEC_CDDE(6)     /* Instruction Bus Error */
+#define EXC_DBE YXEC_CDDE(7)     /* Data Bus Error */
+#define EXC_SYSCALL YXEC_CDDE(8) /* SYSCALL */
+#define EXC_BREAK YXEC_CDDE(9)   /* BREAKpoint */
+#define EXC_II YXEC_CDDE(10)     /* Illegal Instruction */
+#define EXC_CPU YXEC_CDDE(11)    /* CoProcessor Unusable */
+#define EXC_OV YXEC_CDDE(12)     /* OVerflow */
+#define EXC_TRAP YXEC_CDDE(13)   /* Trap exception */
+#define EXC_VCEI YXEC_CDDE(14)   /* Virt. Coherency on Inst. fetch */
+#define EXC_FPE YXEC_CDDE(15)    /* Floating Point Exception */
+#define EXC_WATCH YXEC_CDDE(23)  /* Watchpoint reference */
+#define EXC_VCED YXEC_CDDE(31)   /* Virt. Coherency on data read */
 
 /* C0_PRID Defines */
 #define C0_IMPMASK 0xff00
