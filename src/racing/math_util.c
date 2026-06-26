@@ -906,7 +906,7 @@ f32 sins(u16 arg0) {
 #if 0
     return gSineTable[arg0 >> 4];
 #else
-    float farg0 = (float)arg0 * TRIG_ARG_SCALE;
+    float farg0 = (float)(arg0 & 0xfff0) * TRIG_ARG_SCALE;
     return sinf(farg0);
 #endif
 }
@@ -915,7 +915,7 @@ f32 coss(u16 arg0) {
 #if 0
     return gCosineTable[arg0 >> 4];
 #else
-    float farg0 = (float)arg0 * TRIG_ARG_SCALE;
+    float farg0 = (float)(arg0 & 0xfff0) * TRIG_ARG_SCALE;
     return cosf(farg0);
 #endif
 }
