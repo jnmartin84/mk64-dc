@@ -462,15 +462,15 @@ void func_8008D170(Player* player, s8 arg1) {
     var_v1 = player->unk_0B4;
     var_a3 = player->unk_0AC;
     var_v1++;
-    temp_f16 = (var_v1 * var_f0) - (0.1 * (var_v1 * var_v1));
+    temp_f16 = (var_v1 * var_f0) - (0.1f * (var_v1 * var_v1));
     if ((var_v1 != 0) && (temp_f16 < 0)) {
         var_v1 = 0;
         var_a3 = -var_a3;
-        var_f0 *= 0.9;
+        var_f0 *= 0.9f;
         if (((player->effects & 1) == 1) || !(player->unk_044 & 0x20)) {
             player->effects |= 0x40000;
         }
-        if (var_f0 <= 1.3) {
+        if (var_f0 <= 1.3f) {
             player->unk_044 &= ~EARLY_START_SPINOUT_EFFECT;
             if ((player->effects & 0x40000) != 0x40000) {
                 func_8008C73C(player, arg1);
@@ -1265,7 +1265,7 @@ void func_8008F1B8(Player* player, s8 arg1) {
             if (temp == 180) {
                 player->effects &= ~EARLY_START_SPINOUT_EFFECT;
                 player->type &= ~0x80;
-                player->currentSpeed /= 3.0f;
+                player->currentSpeed *= 0.33333333f;
             }
         } else {
 
@@ -1275,7 +1275,7 @@ void func_8008F1B8(Player* player, s8 arg1) {
             if (temp == 180) {
                 player->effects &= ~EARLY_START_SPINOUT_EFFECT;
                 player->type &= ~0x80;
-                player->currentSpeed /= 3.0f;
+                player->currentSpeed *= 0.33333333f;
             }
         }
     } else {
@@ -1577,8 +1577,8 @@ void func_8008FE84(Player* player, UNUSED s8 arg1) {
     player->effects &= ~0x10;
     if ((player->effects & 8) != 8) {
         player->effects &= ~UNKNOWN_EFFECT_0x10000000;
-        player->currentSpeed /= 2;
-        player->unk_08C /= 2;
+        player->currentSpeed *= 0.5f;
+        player->unk_08C *= 0.5f;
     }
 }
 

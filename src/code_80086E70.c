@@ -142,28 +142,6 @@ void func_800873F4(s32 objectIndex) {
         func_800417B4(gObjectList[objectIndex].direction_angle[1], get_y_direction_angle(objectIndex));
 }
 
-#if 0
-UNUSED void func_800873A4(s32 objectIndex) {
-    gObjectList[objectIndex].direction_angle[0] =
-        func_800417B4(gObjectList[objectIndex].direction_angle[0], get_x_direction_angle(objectIndex));
-}
-
-UNUSED void func_80087444(s32 objectIndex) {
-    gObjectList[objectIndex].velocity[0] =
-        gObjectList[objectIndex].unk_034 * sins(gObjectList[objectIndex].direction_angle[1]);
-}
-
-UNUSED void func_8008748C(s32 objectIndex) {
-    gObjectList[objectIndex].velocity[1] =
-        gObjectList[objectIndex].unk_034 * coss(gObjectList[objectIndex].direction_angle[0]);
-}
-
-UNUSED void func_800874D4(s32 objectIndex) {
-    gObjectList[objectIndex].velocity[2] =
-        gObjectList[objectIndex].unk_034 * coss(gObjectList[objectIndex].direction_angle[1]);
-}
-        #endif
-
 void func_8008751C(s32 objectIndex) {
     float ts1,tc1;
     scaled_sincoss(gObjectList[objectIndex].direction_angle[1], &ts1, &tc1, gObjectList[objectIndex].unk_034);
@@ -1099,7 +1077,7 @@ void func_80089538(s32 objectIndex, s32 playerId, f32 arg2, f32 arg3, u32 soundB
     Player* player;
 
     player = &gPlayerOne[playerId];
-    if ((func_8008933C(player, objectIndex, arg2, arg3) >= 4.0) && ((player->type & PLAYER_CPU) != PLAYER_CPU)) {
+    if ((func_8008933C(player, objectIndex, arg2, arg3) >= 4.0f) && ((player->type & PLAYER_CPU) != PLAYER_CPU)) {
         func_800C9060((u8) playerId, soundBits);
     }
 }

@@ -404,21 +404,10 @@ void func_8028E678(void) {
     }
 }
 
-UNUSED void func_8028EC38(s32 arg0) {
-    gGotoMode = arg0;
-    D_800DC510 = 6;
-    func_800CA330(25);
-    func_800CA388(25);
-    D_800DC5B4 = 1;
-    D_800DC5B0 = 1;
-    D_800DC5B8 = 0;
-    gDemoTimer = 5;
-}
-
 void func_8028EC98(s32 arg0) {
 
     if (gScreenModeSelection == SCREEN_MODE_3P_4P_SPLITSCREEN) {
-//        return;
+        return;
     }
 
     func_800029B0();

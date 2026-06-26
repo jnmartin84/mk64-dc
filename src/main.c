@@ -786,8 +786,12 @@ void update_controller(s32 index) {
         //state->ltrig && state->rtrig) {
             //profiler_stop();
             //profiler_clean_up();
+            // stop the AICA voice driver cleanly before teardown (the audio
+            // thread is still running AicaSynth_Update on the sound RAM here)
+            extern void AicaSynth_Shutdown(void);
+            AicaSynth_Shutdown();
             // give vmu a chance to write and close
-            __osPfsCloseAllFiles();   
+            __osPfsCloseAllFiles();
             exit(0);
         }
     }

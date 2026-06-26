@@ -85,24 +85,6 @@ void func_80282040(void) {
 void func_80282048(void) {
 }
 
-UNUSED void rotate_y_vec3f(Vec3f dest, Vec3f src, s16 angle) {
-    Vec3f sp2C;
-
-    vec3f_copy_return_dupe(sp2C, src);
-    dest[0] = (sp2C[2] * sins(angle)) + (sp2C[0] * coss(angle));
-    dest[1] = sp2C[1];
-    dest[2] = (sp2C[2] * coss(angle)) - (sp2C[0] * sins(angle));
-}
-
-UNUSED void rotate_x_vec3f(Vec3f dest, Vec3f src, s16 angle) {
-    Vec3f sp2C;
-
-    vec3f_copy_return_dupe(sp2C, src);
-    dest[2] = (sp2C[2] * coss(angle)) - (sp2C[1] * sins(angle));
-    dest[1] = (sp2C[2] * sins(angle)) + (sp2C[1] * coss(angle));
-    dest[0] = sp2C[0];
-}
-
 /**
  * Target f32 at given rate.
  * Used for targeting playerTwo and playerThree.
@@ -119,24 +101,6 @@ s32 f32_lerp(f32* dest, f32 src, f32 lerp) {
         return 0;
     }
     return 1;
-}
-
-UNUSED bool ease_out_transition(s16* var, s16 dest, s16 speed_factor) {
-    s16 temp_v0 = *var;
-
-    if (speed_factor == 0) {
-        *var = dest;
-    } else {
-        temp_v0 -= dest;
-        temp_v0 -= (temp_v0 / speed_factor);
-        temp_v0 += dest;
-        *var = temp_v0;
-    }
-
-    if (dest == *var) {
-        return false;
-    }
-    return true;
 }
 
 // Calculates fade in/out

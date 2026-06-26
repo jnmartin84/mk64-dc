@@ -60,6 +60,11 @@ extern int blend_fuck;
 static struct ShaderProgram shader_program_pool[64];
 static uint8_t shader_program_pool_size;
 static struct ShaderProgram* cur_shader = NULL;
+/* Last shader whose per-shader GL state (alpha-test + texenv) was applied. That
+   state is GLOBAL fixed-function state, not bound to a program, so it must be
+   re-applied whenever the active shader changes -- but NOT every draw. Reset at
+   frame start as insurance against any per-frame GL state reset. */
+static struct ShaderProgram* applied_shader = NULL;
 
 static struct SamplerState tmu_state[2];
 
@@ -67,7 +72,7 @@ static const dc_fast_t* cur_buf = NULL;
 static uint8_t gl_blend = 0;
 static uint8_t gl_depth = 0;
 
-static void resample_32bit(const uint16_t* in, int inwidth, int inheight, uint16_t* out, int outwidth, int outheight ) {
+UNUSED static void resample_32bit(const uint16_t* in, int inwidth, int inheight, uint16_t* out, int outwidth, int outheight ) {
     int i, j;
     uint32_t* out32 = (uint32_t*)out;
     int fracstep = (inwidth << 16) / outwidth;
@@ -218,6 +223,19 @@ typedef enum {
 } COURSES;
 extern s16 gCurrentCourseId;
 #include <kos.h>
+
+/* Software shadow of the GL_TEXTURE_ENV_MODE. GLdc has no glGetTexEnviv, so we
+   can't read it back -- route every texenv set through here and the value is
+   always known. Lets one_minus_env_plus_prim_setup_pre/post save & restore it so
+   that multi-pass effect can't leave a stale mode behind. */
+static GLint cur_texenv_mode = GL_MODULATE;
+static GLint saved_texenv_mode = GL_MODULATE;
+
+static inline void set_texenv_mode(GLint mode) {
+    cur_texenv_mode = mode;
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, mode);
+}
+
 static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
     // vertices are always there
     glVertexPointer(3, GL_FLOAT, sizeof(dc_fast_t), &cur_buf[0].vert);
@@ -259,10 +277,12 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
         glDisable(GL_FOG);
     }
 
-    if (1) { //!prg->enabled) {
-        // we only need to do this once
-        // ^-- uhhh yeah no I think that's wrong and a bug
-               // prg->enabled = 1;
+    /* Re-apply the global alpha-test + texenv state only when the active shader
+       actually changes (not once-ever -- that leaked between shaders -- and not
+       every draw, which the old `if(1)` did to brute-force correctness). Safe now
+       that texenv is shadowed and the one_minus_env multi-pass restores it. */
+    if (1) { //(prg != applied_shader) {
+        applied_shader = prg;
 #if 1
         if (prg->shader_id & SHADER_OPT_TEXTURE_EDGE) {
             glEnable(GL_ALPHA_TEST);
@@ -287,7 +307,7 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
                 mode = texenv_set_color(prg);
                 break;
         }
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, mode);
+        set_texenv_mode(mode);
     }
 }
 
@@ -398,6 +418,45 @@ static void gfx_opengl_select_texture(int tile, uint32_t texture_id) {
 /* Used for rescaling textures into pow2 dims */
 static uint8_t __attribute__((aligned(32))) scaled[64 * 64 * 8];
 
+/* Per-texture UV scale (real size / padded-to-PoT size), keyed by GL texture id.
+   Set at upload time, consumed by the triangle code via get_current_u/v_scale().
+   Ported from the SF64 renderer: we PAD non-power-of-two textures to PoT (exact
+   pixels preserved) instead of resampling/stretching them, and correct the UVs
+   by this ratio so the padding is never sampled. */
+static struct __attribute__((aligned(32))) {
+    float u_scale[1024];
+    float v_scale[1024];
+} tex_scaler;
+
+void n64_memcpy(void* dst, const void* src, size_t size);
+
+/* Pad-copy with CLAMP-TO-EDGE: place the real inwidth x inheight image at the
+   top-left of a wider/taller outwidth x outheight buffer, exact pixels, no stretch,
+   and fill the pad region by replicating the edge row/column. Bilinear filtering at
+   a texture edge then samples a duplicate of the real edge instead of stale/zero
+   data -- which is what was drawing faint horizontal seams between the background's
+   stacked strips (each strip is its own PoT-padded texture, and the pad rows below
+   it were left uninitialized). */
+static void resample_tex(const uint16_t* in, int inwidth, int inheight, uint16_t* out, int outwidth, int outheight) {
+    int y;
+    for (y = 0; y < inheight; y++) {
+        uint16_t* orow = out + (y * outwidth);
+        n64_memcpy(orow, in + (y * inwidth), inwidth * 2);
+        /* replicate the last real column across the pad columns */
+        uint16_t edge = (inwidth > 0) ? in[(y * inwidth) + inwidth - 1] : 0;
+        for (int x = inwidth; x < outwidth; x++) {
+            orow[x] = edge;
+        }
+    }
+    /* replicate the last real row (already edge-extended above) down the pad rows */
+    if (inheight > 0) {
+        const uint16_t* last = out + ((inheight - 1) * outwidth);
+        for (; y < outheight; y++) {
+            n64_memcpy(out + (y * outwidth), last, outwidth * 2);
+        }
+    }
+}
+
 #define LET_GLDC_TWIDDLE 0
 
 static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int height, unsigned int type) {
@@ -417,67 +476,63 @@ static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, int width, int 
     }
 #endif
 
-    // we don't support non power of two textures, scale to next power of two if necessary
-    if ((!is_pot(width) || !is_pot(height)) || (width < 8) || (height < 8)) {
-#if 1
+    // we don't support non power of two textures, *PAD* to next power of two if
+    // necessary (exact pixels, no resample/stretch) and record the UV scale.
+    int is_wp2 = is_pot(width);
+    int is_hp2 = is_pot(height);
+    int is_wl8 = width < 8;
+    int is_hl8 = height < 8;
+
+    if ((!is_wp2 || !is_hp2) || is_wl8 || is_hl8) {
         uint32_t final_w = width;
         uint32_t final_h = height;
 
-        if (final_w < 8)
+        if (is_wl8)
             final_w = 8;
-        if (final_h < 8)
+        else if (!is_wp2)
+            final_w = next_pot(final_w);
+
+        if (is_hl8)
             final_h = 8;
-        if (!is_pot(final_w)) {
-            uint32_t prev_w = prev_pot(final_w);
-            uint32_t next_w = next_pot(final_w);
-            uint32_t avg = (next_w + prev_w) >> 1;
-            //printf("prev %d next %d avg %d actual %d\n", prev_w, next_w, avg, final_w);
-            if (final_w < avg) {
-                final_w = prev_w;
-            } else {
-                final_w = next_w;
+        else if (!is_hp2)
+            final_h = next_pot(final_h);
+
+        int scale_index = tmu_state[0].tex;
+        tex_scaler.u_scale[scale_index] = (float) width / (float) final_w;
+        tex_scaler.v_scale[scale_index] = (float) height / (float) final_h;
+
+        if (!(is_wp2 && (!is_wl8) && ((!is_hp2) || is_hl8))) {
+            // not pow2 (or < 8) in width: must pad into the wider scaled buffer
+            resample_tex((const uint16_t*) rgba32_buf, width, height, (uint16_t*) scaled, final_w, final_h);
+            rgba32_buf = (uint8_t*) scaled;
+        } else {
+            // pow2 width, >= 8 tall, only height needs padding: upload in place and
+            // clamp-to-edge replicate the last content row down the pad rows, so
+            // bilinear at the bottom edge samples real data instead of stale/black.
+            uint16_t* base = (uint16_t*) rgba32_buf;
+            const uint16_t* last = base + ((height - 1) * width);
+            for (uint32_t y = height; y < final_h; y++) {
+                n64_memcpy(base + (y * width), last, width * 2);
             }
-            //printf("width %d -> %d\n", width, final_w);
         }
 
-        if (!is_pot(final_h)) {
-            uint32_t prev_h = prev_pot(final_h);
-            uint32_t next_h = next_pot(final_h);
-            uint32_t avg = (next_h + prev_h) >> 1;
-            if (final_h < avg) {
-                final_h = prev_h;
-            } else {
-                final_h = next_h;
-            }
-            //printf("height %d -> %d\n", height, final_h);
-        }
-
-        //resample_16bit
-        resample_32bit((const uint16_t*) rgba32_buf, width, height, (uint16_t*) scaled, final_w, final_h);
-        rgba32_buf = (uint8_t*) scaled;
         width = final_w;
         height = final_h;
-#else
-        int pwidth = next_pot(width);
-        int pheight = next_pot(height);
-
-        /* Need texture min sizes */
-        if (pwidth < 8) {
-            pwidth = 8;
-        }
-        if (pheight < 8) {
-            pheight = 8;
-        }
-
-        //resample_16bit
-        resample_32bit((const uint16_t*) rgba32_buf, width, height, (uint16_t*) scaled, pwidth, pheight);
-        rgba32_buf = (uint8_t*) scaled;
-        width = pwidth;
-        height = pheight;
-#endif
+    } else {
+        int scale_index = tmu_state[0].tex;
+        tex_scaler.u_scale[scale_index] = 1.0f;
+        tex_scaler.v_scale[scale_index] = 1.0f;
     }
 
     glTexImage2D(GL_TEXTURE_2D, 0, intFormat, width, height, 0, GL_BGRA, type, rgba32_buf);
+}
+
+float get_current_u_scale(void) {
+    return tex_scaler.u_scale[tmu_state[0].tex];
+}
+
+float get_current_v_scale(void) {
+    return tex_scaler.v_scale[tmu_state[0].tex];
 }
 
 static inline GLenum gfx_cm_to_opengl(uint32_t val) {
@@ -753,9 +808,9 @@ static void one_minus_env_plus_prim_setup_pre(void* vbo, size_t num_tris) {
     // turn filtering off until final blend
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    // modulate texture
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
+    // modulate texture (save the active mode so _post can restore it)
+    saved_texenv_mode = cur_texenv_mode;
+    set_texenv_mode(GL_MODULATE);
 
     glEnable(GL_BLEND);
     glDisable(GL_TEXTURE_2D);
@@ -804,7 +859,7 @@ static void one_minus_env_plus_prim_setup_pre(void* vbo, size_t num_tris) {
 
     // restore the original vertex colors for final pass
     for (size_t i = 0; i < 3 * num_tris; i++) {
-        tris[i].color.packed = backups[i];
+        tris[i].color.packed = (backups[i] & 0x00FFFFFF) | (pa << 24);
     }
     // turn texture back on
     glEnable(GL_TEXTURE_2D);
@@ -817,6 +872,8 @@ static void one_minus_env_plus_prim_setup_pre(void* vbo, size_t num_tris) {
 }
 
 static void one_minus_env_plus_prim_setup_post(void) {
+    // restore the texenv mode this multi-pass effect overrode in _pre
+    set_texenv_mode(saved_texenv_mode);
     // restore default blend and depth funcs
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDepthFunc(GL_LESS);
@@ -1153,6 +1210,9 @@ static void gfx_opengl_start_frame(void) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_SCISSOR_TEST);
     newest_texture = 0;
+    /* force the per-shader alpha-test/texenv state to re-apply on the frame's
+       first textured draw, in case anything reset GL state between frames */
+    applied_shader = NULL;
 }
 
 static void gfx_opengl_end_frame(void) {

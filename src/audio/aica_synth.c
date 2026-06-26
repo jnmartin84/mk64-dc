@@ -19,6 +19,7 @@
 #include <dc/sound/sound.h>
 #include <dc/spu.h>
 #include <dc/sound/aica_comm.h>
+#include <kos/thread.h>
 
 extern int snd_sh4_to_aica(void* packet, uint32_t size);
 
@@ -27,6 +28,15 @@ extern int snd_sh4_to_aica(void* packet, uint32_t size);
 /* Resident AICA-ADPCM pool base. Loaded by setup_audio_data() in main.c. */
 const unsigned char* gAicaAdpcmPoolBase = NULL;
 static u8* sTblBase = NULL;        /* shared audiotables blob base (gAlTbl->seqArray[0].offset) */
+
+/* Driver lifecycle (the N64 original never shut down -- you powered the console
+   off). On DC the game exits via exit(0) on the A+B+X+Y+Start combo while the
+   audio thread is still running AicaSynth_Update, so we need a clean teardown.
+   sRunning gates Update; sInUpdate lets Shutdown wait for an in-flight Update on
+   the audio thread before it frees ARAM out from under it. */
+static volatile int sRunning = 0;
+static volatile int sInUpdate = 0;
+static int sAtexitDone = 0;
 
 #define NUM_AICA_CHANNELS 64
 #define MAX_VOICES 64
@@ -253,8 +263,46 @@ static void voice_stop(s32 i) {
     v->channel = -1; v->active = 0; v->entry = NULL; v->sampleKey = KEY_EMPTY;
 }
 
+/* Release every ARAM allocation the driver owns (cached ADPCM samples + the per-
+   waveform wavetable blocks; sWaveAram[w][0] is each block's base). Caller must
+   ensure no AicaSynth_Update is in flight. */
+static void aica_free_aram(void) {
+    s32 i; u32 w, h;
+    for (i = 0; i < ARAM_CACHE_ENTRIES; i++) {
+        if (sCache[i].key != KEY_EMPTY && sCache[i].aram) snd_mem_free(sCache[i].aram);
+        sCache[i].key = KEY_EMPTY; sCache[i].aram = 0; sCache[i].refs = 0; sCache[i].len = 0;
+    }
+    for (w = 0; w < NUM_WAVEFORMS; w++) {
+        if (sWaveAram[w][0]) snd_mem_free(sWaveAram[w][0]);
+        for (h = 0; h < NUM_HARMONICS; h++) sWaveAram[w][h] = 0;
+    }
+}
+
+/* Stop the driver cleanly: make Update a no-op, wait for any in-flight Update on
+   the audio thread to drain, silence the AICA voices, then free ARAM. Safe (and
+   a no-op) to call more than once. Registered via atexit() and also called from
+   the game's exit path. */
+void AicaSynth_Shutdown(void) {
+    s32 i, spin;
+    if (!sRunning) return;
+    sRunning = 0;                                  /* Update bails from here on */
+    __asm__ __volatile__("" ::: "memory");
+    /* Drain: wait out a concurrent Update so we don't free ARAM under it. Bounded
+       so a wedged audio thread can't hang exit. */
+    for (spin = 0; sInUpdate && spin < 100000; spin++)
+        thd_pass();
+    for (i = 0; i < MAX_VOICES; i++)
+        if (sVoices[i].active) voice_stop(i);
+    aica_free_aram();
+}
+
 void AicaSynth_Init(void) {
     s32 i, ch; u32 w, h;
+
+    /* Re-init (e.g. course reload): tear the previous instance down first so we
+       don't leak its ARAM. Drains any in-flight Update via AicaSynth_Shutdown. */
+    if (sRunning) AicaSynth_Shutdown();
+
     for (i = 0; i < ARAM_CACHE_ENTRIES; i++) { sCache[i].key = KEY_EMPTY; sCache[i].aram = 0; sCache[i].refs = 0; }
     for (i = 0; i < MAX_VOICES; i++) { sVoices[i].channel = -1; sVoices[i].active = 0; sVoices[i].entry = NULL; sVoices[i].sampleKey = KEY_EMPTY; }
     sChanFreeTop = 0;
@@ -270,13 +318,25 @@ void AicaSynth_Init(void) {
         for (h = 0; h < NUM_HARMONICS; h++)
             sWaveAram[w][h] = aram + h * WAVE_SAMPLE_COUNT * sizeof(s16);
     }
+
+    sRunning = 1;
+    if (!sAtexitDone) { atexit(AicaSynth_Shutdown); sAtexitDone = 1; }
 }
 
 void AicaSynth_Update(void) {
     s32 numNotes = gMaxSimultaneousNotes;
     s32 base, i;
 
+    if (!sRunning) return;                                      /* shutting down / not inited */
     if (gAicaAdpcmPoolBase == NULL && sTblBase == NULL) return; /* not initialized yet */
+
+    /* Mark in-flight, then re-check sRunning so AicaSynth_Shutdown either waits for
+       us here or we see its flag and bail before touching snd_mem (single-core
+       handshake; the barrier orders the store before the re-load). */
+    sInUpdate = 1;
+    __asm__ __volatile__("" ::: "memory");
+    if (!sRunning) { sInUpdate = 0; return; }
+
     sTick++;
     if (numNotes > MAX_VOICES) numNotes = MAX_VOICES;
     base = gMaxSimultaneousNotes * (gAudioBufferParameters.updatesPerFrame - 1);
@@ -358,9 +418,13 @@ void AicaSynth_Update(void) {
                (long)nStarted, (unsigned long)dbgVolMin, (unsigned long)dbgVolMax);
     }
 #endif
+
+    __asm__ __volatile__("" ::: "memory");
+    sInUpdate = 0;
 }
 
 #else
 void AicaSynth_Init(void) {}
 void AicaSynth_Update(void) {}
+void AicaSynth_Shutdown(void) {}
 #endif

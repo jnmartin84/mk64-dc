@@ -1,16 +1,3 @@
-/* ---- CPU AI rubber-band trace (comment the #define to disable) ---- */
-#define MK64_CPU_AI_LOG 0
-#if MK64_CPU_AI_LOG
-static s16 sPrevDecision[12];   /* last D_801634C0[] decision code seen */
-static s8  sPrevFlag[12];       /* last CPU_FAST_EFFECT state seen      */
-static u16 sHeartbeat[12];      /* per-kart throttle for fallen-back heartbeat */
-static u32 sCpuLogCount;        /* global cap so it can never flood the serial */
-static f32 sPrevSpeed[12];      /* last frame's player->speed (scrub edge detect) */
-static u8  sScrubbing[12];      /* was this kart below the scrub threshold last frame */
-static u16 sScrubHb[12];        /* per-kart throttle for sustained-scrub heartbeat */
-static u32 sScrubLogCount;      /* global cap for scrub log */
-#endif
-
 void func_80007D04(s32 playerId, Player* player) {
     s16 temp_t1;
     s16 temp_t2;
@@ -238,57 +225,4 @@ void regulate_cpu_speed(s32 playerId, f32 targetSpeed, Player* player) {
             }
         }
     }
-#if MK64_CPU_AI_LOG
-    if ((player->type & PLAYER_HUMAN) != PLAYER_HUMAN) {
-        /* deficit = my path progress - leader's.  NEGATIVE = I'm behind. */
-        s32 deficit = (s32)gNumPathPointsTraversed[playerId]
-                    - (s32)gNumPathPointsTraversed[gBestRankedHumanPlayer];
-        s32 flag    = (player->effects & CPU_FAST_EFFECT) ? 1 : 0;
-        s32 code    = D_801634C0[playerId];
-        s32 transition  = (code != sPrevDecision[playerId]) || (flag != sPrevFlag[playerId]);
-        s32 fallingBack = (deficit < -300);   /* tune: trailing leader by >300 path pts */
-        if (++sHeartbeat[playerId] >= 30) sHeartbeat[playerId] = 0;  /* ~twice/sec @30fps */
-        if ((transition || (fallingBack && sHeartbeat[playerId] == 0)) && sCpuLogCount < 4000) {
-            u16 ppid2 = gNearestPathPointByPlayerId[playerId];
-            TrackPathPoint* pp2 = &gTrackPaths[gPathIndexByPlayerId[playerId]][ppid2];
-            f32 dx2 = player->pos[0] - (f32)pp2->posX;   /* line-holding error */
-            f32 dz2 = player->pos[2] - (f32)pp2->posZ;
-            f32 lineErr2 = sqrtf((dx2 * dx2) + (dz2 * dz2));
-            sCpuLogCount++;
-            /* lineErr = how far off its racing line; turn = unk_104 turn-speed-reduction
-             * (final speed *= 1-turn), so high turn in a corner = bleeding speed steering hard. */
-            printf("CPUAI p%d def=%d rank=%d FAST=%d code=%d boost=%.1f spd=%.2f beh=%d lineErr=%.0f sect=%d turn=%.2f\n",
-                   playerId, deficit, (s32)gGPCurrentRaceRankByPlayerId[playerId],
-                   flag, code, player->unk_0E8, player->speed,
-                   (s32)gSpeedCPUBehaviour[playerId],
-                   lineErr2, (s32)pp2->trackSectionId, player->unk_104);
-        }
-        sPrevDecision[playerId] = code;
-        sPrevFlag[playerId]     = flag;
-    }
-    /* ---- WHY does the kart scrub speed? cause of each speed collapse ---- */
-    if ((player->type & PLAYER_HUMAN) != PLAYER_HUMAN) {
-        f32 sp   = player->speed;
-        s32 low  = (sp < 3.3f);                       /* scrubbing threshold (matches analysis) */
-        s32 edge = low && !sScrubbing[playerId];      /* the frame it dropped into a scrub */
-        if (++sScrubHb[playerId] >= 30) sScrubHb[playerId] = 0;
-        if ((edge || (low && sScrubHb[playerId] == 0)) && sScrubLogCount < 4000) {
-            u16 ppid = gNearestPathPointByPlayerId[playerId];
-            TrackPathPoint* pp = &gTrackPaths[gPathIndexByPlayerId[playerId]][ppid];
-            f32 dx = player->pos[0] - (f32)pp->posX;  /* offset from nearest racing-line point */
-            f32 dz = player->pos[2] - (f32)pp->posZ;
-            f32 lineErr = sqrtf((dx * dx) + (dz * dz));
-            sScrubLogCount++;
-            /* surf: 1=ASPHALT 2=DIRT(on-course Luigi); 8=GRASS(off-course); 0=AIRBORNE.
-             * lineErr high => off the racing line (heading for a wall); dSpd very negative => hard bonk. */
-            printf("CPUSCRUB p%d %s surf=%d lineErr=%.0f ppid=%d sect=%d spd=%.2f dSpd=%.2f FAST=%d\n",
-                   playerId, edge ? "EDGE" : "hold", (s32)player->surfaceType,
-                   lineErr, (s32)ppid, (s32)pp->trackSectionId,
-                   sp, sp - sPrevSpeed[playerId],
-                   (player->effects & CPU_FAST_EFFECT) ? 1 : 0);
-        }
-        sScrubbing[playerId] = (u8)low;
-        sPrevSpeed[playerId] = sp;
-    }
-#endif
 }

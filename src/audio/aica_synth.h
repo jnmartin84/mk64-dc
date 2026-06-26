@@ -14,6 +14,10 @@
 
 void AicaSynth_Init(void);
 void AicaSynth_Update(void);
+/* Clean teardown: stop voices, drain a concurrent Update, free ARAM. Idempotent.
+   Auto-registered via atexit() by AicaSynth_Init(); also safe to call directly
+   from the game's exit path (before exit()/snd teardown). */
+void AicaSynth_Shutdown(void);
 
 /* Base of the resident AICA-ADPCM sample pool; set by setup_audio_data(). */
 extern const unsigned char* gAicaAdpcmPoolBase;

@@ -102,6 +102,12 @@ struct __attribute__((aligned(32))) LoadedVertex {
 	uint8_t scissor_oc;
 	// 47
 	uint8_t scissor_gen;
+	// 48 — set when this vertex was loaded by the lighting path (gfx_sp_vertex_light).
+	// gfx_sp_tri1 uses it to decide whether to modulate the material colour by the
+	// per-vertex shade (Star Fox-style light×colour mix). OLD packed this as bit 0x80
+	// of a side clip_rej[] byte because its LoadedVertex was crammed to exactly 32
+	// bytes; CURRENT's cell has room, so it gets its own field (no clip-path masking).
+	uint8_t lit;
 };
 
 static inline uint64_t pack_key(uint32_t a, uint16_t b, uint16_t c, uint8_t d, uint8_t e) {
@@ -535,6 +541,12 @@ void gfx_opengl_replace_texture(const uint8_t* rgba32_buf, int width, int height
 
 extern void gfx_opengl_set_tile_addr(int tile, GLuint addr);
 
+/* Per-texture UV correction for the PoT padding done in gfx_opengl_upload_texture
+   (real size / padded size). Multiplied into the texel->[0,1] normalization so the
+   padded region is never sampled. */
+extern float get_current_u_scale(void);
+extern float get_current_v_scale(void);
+
 static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, struct TextureHashmapNode** n, const uint8_t* orig_addr,
 										uint32_t tmem, uint32_t fmt, uint32_t siz, uint16_t uls, uint16_t ult) {
 	void* segaddr = segmented_to_virtual((void *)orig_addr);
@@ -542,6 +554,16 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 	hash = (hash >> 5) & 0x3ff;
 
 	uint64_t newkey = pack_key(segaddr,uls,ult,fmt,siz);
+
+	/* The key omits the tile SIZE (lrs/lrt/line/size_bytes). Menu squish/scale
+	   effects reshape the SAME source address every frame, so on a key hit they'd
+	   otherwise get the stale upload. Fold the dimensions into a separate
+	   discriminator; on a hit where it changed we re-upload into the SAME texture_id
+	   (return 2) rather than spawning a new cache node / VRAM texture per scale. */
+	uint32_t dimkey = ((uint32_t) rdp.texture_tile.lrs)
+	                ^ ((uint32_t) rdp.texture_tile.lrt << 12)
+	                ^ ((uint32_t) rdp.texture_tile.line_size_bytes << 20)
+	                ^ ((uint32_t) rdp.loaded_texture[tile].size_bytes * 2654435761u);
 
 	struct TextureHashmapNode** node = &gfx_texture_cache.hashmap[hash];
 	if ((uintptr_t)rdp.loaded_texture[tile].addr < 0x8c010000u) {
@@ -561,8 +583,11 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 			gfx_rapi->select_texture(tile, (*node)->texture_id);
 			gfx_opengl_set_tile_addr(tile, segaddr);
 
-			if ((*node)->dirty) {
+			/* dirty (explicit invalidate) OR the dims changed (squish/scale) ->
+			   re-upload into this same texture_id. */
+			if ((*node)->dirty || (*node)->pad2 != dimkey) {
 				(*node)->dirty = 0;
+				(*node)->pad2 = dimkey;
 				return 2;
 			} else {
 				*n = *node;
@@ -599,6 +624,7 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 	(*node)->ult = ult;
 #endif
 	(*node)->key = pack_key(segaddr,uls,ult,fmt,siz);
+	(*node)->pad2 = dimkey;
 
 	(*node)->dirty = 0;
 
@@ -634,30 +660,68 @@ static void import_texture_rgba16(int tile) {
 			rgba16_buf[i] = ((col16 & 1) << 15) | (col16 >> 1);
 		}
 	} else {
-		u32 src_width = last_set_texture_image_width + 1;
-		uint32_t somewidth = src_width;
-		if (width <= ((src_width >> 1) + 4)) {
-			somewidth = width;
+		/* Decode is bounded by the STAGED data: `height` stays the original
+		   size_bytes/line_size_bytes (down-rounded), and columns are capped to the
+		   real source stride -- so this can never over-read the source (that read
+		   bound is exactly what the shipped code relied on, and what my earlier
+		   tile-rect-height/width version violated -> arch abort on the bottom bg
+		   strip). Only the UPLOAD width takes the tri code's up-rounded tile-rect
+		   value so the UV normalization matches (fixes OK/OPTION/DATA). Any extra
+		   column is zero-padded. */
+		uint32_t src_stride = last_set_texture_image_width + 1;
+		uint32_t up_w = (rdp.texture_tile.lrs - rdp.texture_tile.uls + 4) >> 2;
+		uint32_t up_h = (rdp.texture_tile.lrt - rdp.texture_tile.ult + 4) >> 2;
+		uint32_t cols;
+		if (up_w <= src_stride + 1) {
+			/* normal (sub)tile: up_w is within the +4 rounding of the source row.
+			   Cap reads to the source row so we never over-read (that was the bottom-
+			   bg-strip abort); zero-pad the rounding column. */
+			cols = up_w < src_stride ? up_w : src_stride;
+			/* A HORIZONTAL sub-tile (up_w < src_stride) loads part of the width but
+			   the full height -- e.g. the pulsing "OK?" prompt, drawn as a left+right
+			   pair by func_80097E58. Its two halves have different widths, so the
+			   per-half size_bytes/line_size_bytes height rounds differently and the
+			   left half ends up a row short of the right (the visible compression).
+			   up_h is derived from the shared vertical extent, so it's identical for
+			   both halves -> they align (this is what v1 did). The bottom bg strip is
+			   full-width (up_w ~= src_stride), so it stays on the read-safe size/line
+			   height and the over-read can't happen. */
+			if (up_w < src_stride) {
+				height = up_h;
+			}
+		} else if (up_w * up_h <= 8192) {
+			/* legit wide reshape: the texture really IS up_w wide, built by reading
+			   overlapping rows from a narrower source stride. Use the tile-rect dims.
+			   The 8192 cap keeps padded(up_w*up_h) inside scaled (16384 u16). */
+			cols = up_w;
+			height = up_h;
 		} else {
-			if (width == 20 && last_set_texture_image_width == 30) { 
-				somewidth = width - 4;
-			}
+			/* pathological wrap coverage (tile rect >> source, e.g. 253-of-64): would
+			   overrun the staging buffers and be wrong anyway. Fall back to the source
+			   width; WRAP tiles it at draw time. */
+			up_w = src_stride;
+			cols = src_stride;
 		}
 
-		uint16_t* start = (uint16_t*) &rdp.loaded_texture[tile]
-					.addr[(((rdp.texture_tile.uls >> G_TEXTURE_IMAGE_FRAC)) << 1) +
-						((((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC)) * (src_width)) << 1)];
+		uint16_t* start = (uint16_t*) rdp.loaded_texture[tile].addr
+			+ ((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) * src_stride)
+			+ (rdp.texture_tile.uls >> G_TEXTURE_IMAGE_FRAC);
 
-		uint16_t *tex16 = rgba16_buf;
+		uint16_t* dst = rgba16_buf;
 		for (i = 0; i < height; i++) {
-			for (uint32_t x = 0; x < somewidth; x++) {
+			uint32_t x = 0;
+			for (; x < cols; x++) {
 				uint16_t col16 = __builtin_bswap16(start[x]);
-				*tex16++ = ((col16 & 1) << 15) | (col16 >> 1);
+				dst[x] = ((col16 & 1) << 15) | (col16 >> 1);
 			}
-			start += src_width;
+			for (; x < up_w; x++) {
+				dst[x] = 0;
+			}
+			start += src_stride;
+			dst += up_w;
 		}
 
-		width = somewidth;
+		width = up_w;
 	}
 
 	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_1_5_5_5_REV);
@@ -699,36 +763,34 @@ static void import_texture_ia4(int tile) {
 			rgba16_buf[i] = col16;
 		}
 	} else {
-		memset(xform_buf, 0, 8192);
-		uint8_t* start =
-			(uint8_t*) &rdp.loaded_texture[tile]
-				.addr[(((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) >> 1) * (last_set_texture_image_width + 1)) +
-					  ((rdp.texture_tile.uls >> G_TEXTURE_IMAGE_FRAC) >> 1)];
-		uint8_t *tex8 = xform_buf;
-		for (uint32_t i = 0; i < height; i++) {
-			for (uint32_t x = 0; x < (last_set_texture_image_width + 1) * 2; x += 2) {
-				uint32_t sidx = x>>1;
-				if (i & 1) {
-					tex8[(x)] = (start[(sidx)] & 0xf);
-					tex8[(x) + 1] = (start[(sidx)] >> 4) & 0xf;
+		/* LoadTile path: upload at the tri code's tex dims (see import_texture_i4).
+		   NOTE: the only IA4 tile loader (func_80044AB8) is UNUSED, so this is
+		   currently dead; kept consistent with the proven i4 path. Row-major
+		   decode, no odd-row swap (source is plain row-major in DRAM). */
+		width  = (rdp.texture_tile.lrs - rdp.texture_tile.uls + 4) >> 2;
+		height = (rdp.texture_tile.lrt - rdp.texture_tile.ult + 4) >> 2;
 
-				} else {
-					tex8[(x)] = (start[(sidx)] >> 4) & 0xf;
-					tex8[(x) + 1] = (start[(sidx)] & 0xf);
+		uint32_t src_stride = last_set_texture_image_width + 1; /* source row, bytes */
+		uint8_t* start = (uint8_t*) &rdp.loaded_texture[tile]
+			.addr[((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) * src_stride) +
+				  ((rdp.texture_tile.uls >> G_TEXTURE_IMAGE_FRAC) >> 1)];
+
+		memset(rgba16_buf, 0, width * height * 2);
+		uint16_t* dst = rgba16_buf;
+		for (uint32_t y = 0; y < height; y++) {
+			for (uint32_t x = 0; x < width; x++) {
+				uint32_t b = x >> 1;
+				if (b >= src_stride) {
+					continue;
 				}
+				uint8_t byte = start[b];
+				uint8_t part = (x & 1) ? (byte & 0xf) : ((byte >> 4) & 0xf);
+				uint8_t intensity = (SCALE_3_8(part >> 1) >> 3) & 0x1f;
+				uint8_t alpha = part & 1;
+				dst[x] = (alpha << 15) | (intensity << 10) | (intensity << 5) | intensity;
 			}
-			start += (last_set_texture_image_width + 1);
-			tex8 += (last_set_texture_image_width + 1);
-		}
-		for (uint32_t i = 0; i < rdp.loaded_texture[tile].size_bytes * 2; i++) {
-			uint8_t byte = xform_buf[i];
-			uint8_t intensity = (SCALE_3_8(byte >> 1) >> 3) & 0x1f;
-			uint8_t alpha = byte & 1;
-			uint8_t r = intensity;
-			uint8_t g = intensity;
-			uint8_t b = intensity;
-			uint16_t col16 = (alpha << 15) | (r << 10) | (g << 5) | (b);
-			rgba16_buf[i] = col16;
+			start += src_stride;
+			dst += width;
 		}
 	}
 
@@ -770,34 +832,63 @@ static void import_texture_ia16(int tile) {
 	uint32_t i;
 	uint32_t width = rdp.texture_tile.line_size_bytes >> 1;
 	uint32_t height = rdp.loaded_texture[tile].size_bytes / rdp.texture_tile.line_size_bytes;
-	u32 src_width;
-	if (last_set_texture_image_width) {
-		src_width = last_set_texture_image_width + 1;
-	} else {
-		src_width = width;
-	}
 
-	uint16_t* start = rdp.loaded_texture[tile].addr;
-	if (last_set_texture_image_width) {
-		start =
-			(uint16_t*) &rdp.loaded_texture[tile]
-				.addr[((((rdp.texture_tile.uls >> G_TEXTURE_IMAGE_FRAC))) << 1) +
-					  (((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC)) * ((src_width) << 1))];
-	}
-
-	uint16_t *tex16 = rgba16_buf;
-	for (i = 0; i < height; i++) {
-		for (uint32_t x = 0; x < src_width; x++) {
-			uint16_t np = start[x];//++;
-			uint8_t al = (np >> 12)&0xf;
-			uint8_t in = (np >>  4)&0xf;
-			tex16[x] = (al << 12) | (in << 8) | (in << 4) | in;
+	if (last_set_texture_image_width == 0) {
+		uint16_t* start = (uint16_t*) rdp.loaded_texture[tile].addr;
+		uint32_t count = width * height;
+		for (i = 0; i < count; i++) {
+			uint16_t np = start[i];
+			uint8_t al = (np >> 12) & 0xf;
+			uint8_t in = (np >>  4) & 0xf;
+			rgba16_buf[i] = (al << 12) | (in << 8) | (in << 4) | in;
 		}
-		start += src_width;
-		tex16 += src_width;
+	} else {
+		/* Bounded sub-rect decode; upload width = tri tile rect. See the detailed
+		   rationale in import_texture_rgba16. Old code uploaded src_width (the full
+		   source row width), wrong for sub-tile loads. */
+		uint32_t src_stride = last_set_texture_image_width + 1;
+		uint32_t up_w = (rdp.texture_tile.lrs - rdp.texture_tile.uls + 4) >> 2;
+		uint32_t up_h = (rdp.texture_tile.lrt - rdp.texture_tile.ult + 4) >> 2;
+		uint32_t cols;
+		if (up_w <= src_stride + 1) {
+			cols = up_w < src_stride ? up_w : src_stride;
+			/* horizontal sub-tile (e.g. OK's left/right halves): use the shared
+			   tile-rect height so both halves align; see rgba16 for details. */
+			if (up_w < src_stride) {
+				height = up_h;
+			}
+		} else if (up_w * up_h <= 8192) {
+			cols = up_w;                       /* legit wide reshape; see rgba16 */
+			height = up_h;
+		} else {
+			up_w = src_stride;                 /* wrap coverage; fall back */
+			cols = src_stride;
+		}
+
+		uint16_t* start = (uint16_t*) rdp.loaded_texture[tile].addr
+			+ ((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) * src_stride)
+			+ (rdp.texture_tile.uls >> G_TEXTURE_IMAGE_FRAC);
+
+		uint16_t* dst = rgba16_buf;
+		for (i = 0; i < height; i++) {
+			uint32_t x = 0;
+			for (; x < cols; x++) {
+				uint16_t np = start[x];
+				uint8_t al = (np >> 12) & 0xf;
+				uint8_t in = (np >>  4) & 0xf;
+				dst[x] = (al << 12) | (in << 8) | (in << 4) | in;
+			}
+			for (; x < up_w; x++) {
+				dst[x] = 0;
+			}
+			start += src_stride;
+			dst += up_w;
+		}
+
+		width = up_w;
 	}
 
-	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, src_width, height, GL_UNSIGNED_SHORT_4_4_4_4_REV);
+	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_4_4_4_4_REV);
 }
 
 static void import_texture_i4(int tile) {
@@ -819,21 +910,36 @@ static void import_texture_i4(int tile) {
 			rgba16_buf[idx+1] = (part2 << 12) | (part2 << 8) | (part2 << 4) | part2;
 		}
 	} else {
-		memset(rgba16_buf, 0, 8192);
-		uint8_t* start =
-			(uint8_t*) &rdp.loaded_texture[tile]
-				.addr[(((((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC)-1)/2) * (width)/2)) +
-					  (((rdp.texture_tile.uls >> G_TEXTURE_IMAGE_FRAC)-1)/2)];
-		for (uint32_t i = 0; i < height; i++) {
-			uint32_t iw = i * width;
-			for (uint32_t x = 0; x < (last_set_texture_image_width + 1)*2; x += 2) {
-				uint8_t startin = start[(x >> 1)];
-				uint8_t in = (startin >> 4) & 0xf;
-				rgba16_buf[iw + x] = (in << 12) | (in << 8) | (in << 4) | in;
-				in = startin & 0xf;
-				rgba16_buf[iw + x + 1] = (in << 12) | (in << 8) | (in << 4) | in;
+		/* LoadTile path (e.g. gDPLoadTextureTile_4b menu fonts). The uploaded
+		   texture MUST match the dimensions the triangle code uses to normalize
+		   UVs -- tex_width/tex_height = (lr - ul + 4) >> 2 -- or the glyph is
+		   sampled at the wrong scale and renders squished ("tall and skinny").
+		   The old code uploaded line_size_bytes*2 (the TMEM word-rounded stride,
+		   e.g. 32 for a 26px glyph) which disagrees with that formula, so the
+		   right columns sampled blank padding. Decode row-by-row into a buffer
+		   packed at exactly `width`, reading the source at its real byte stride. */
+		width  = (rdp.texture_tile.lrs - rdp.texture_tile.uls + 4) >> 2;
+		height = (rdp.texture_tile.lrt - rdp.texture_tile.ult + 4) >> 2;
+
+		uint32_t src_stride = last_set_texture_image_width + 1; /* source row, bytes */
+		uint8_t* start = (uint8_t*) &rdp.loaded_texture[tile]
+			.addr[((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) * src_stride) +
+				  ((rdp.texture_tile.uls >> G_TEXTURE_IMAGE_FRAC) >> 1)];
+
+		memset(rgba16_buf, 0, width * height * 2);
+		uint16_t* dst = rgba16_buf;
+		for (uint32_t y = 0; y < height; y++) {
+			for (uint32_t x = 0; x < width; x++) {
+				uint32_t b = x >> 1;
+				if (b >= src_stride) {
+					continue; /* trailing pad column from the +4 rect rounding */
+				}
+				uint8_t byte = start[b];
+				uint8_t in = (x & 1) ? (byte & 0xf) : ((byte >> 4) & 0xf);
+				dst[x] = (in << 12) | (in << 8) | (in << 4) | in;
 			}
-			start += (last_set_texture_image_width + 1);
+			start += src_stride;
+			dst += width;
 		}
 	}
 
@@ -869,52 +975,6 @@ static void import_texture_i8(int tile) {
 	}
 
 	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_4_4_4_4_REV);
-}
-
-static void import_texture_ci4(int tile) {
-	uint32_t width = rdp.texture_tile.line_size_bytes * 2;
-	uint32_t height = rdp.loaded_texture[tile].size_bytes / rdp.texture_tile.line_size_bytes;
-	uint32_t i;
-
-	if (last_set_texture_image_width == 0) {
-		for (i = 0; i < rdp.loaded_texture[tile].size_bytes * 2; i++) {
-			uint8_t byte = rdp.loaded_texture[tile].addr[i / 2];
-			uint8_t part;
-			if (!(i & 1)) {
-				part = (byte >> 4) & 0xf;
-			} else {
-				part = byte & 0xf;
-			}
-			rgba16_buf[i] = tlut[part];
-		}
-	} else {
-		memset(xform_buf, 0, width * height * 2);
-		uint8_t* start =
-			(uint8_t*) &rdp.loaded_texture[tile]
-				.addr[(((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) / 2) * (last_set_texture_image_width + 1)) +
-					  ((rdp.texture_tile.uls >> G_TEXTURE_IMAGE_FRAC) / 2)];
-		for (uint32_t i = 0; i < height; i++) {
-			for (uint32_t x = 0; x < (last_set_texture_image_width + 1) * 2; x += 2) {
-				if (i & 1) {
-					xform_buf[(i * (width / 2)) + (x)] = (start[(x / 2)] & 0xf);
-					xform_buf[((i * (width / 2)) + (x)) + 1] = (start[(x / 2)] >> 4) & 0xf;
-
-				} else {
-					xform_buf[(i * (width / 2)) + (x)] = (start[(x / 2)] >> 4) & 0xf;
-					xform_buf[((i * (width / 2)) + (x)) + 1] = (start[(x / 2)] & 0xf);
-				}
-			}
-			start += (last_set_texture_image_width + 1);
-		}
-		for (uint32_t i = 0; i < rdp.loaded_texture[tile].size_bytes * 2; i+=4) {
-			rgba16_buf[i] = tlut[xform_buf[i+1]];
-			rgba16_buf[i+1] = tlut[xform_buf[i+2]];
-			rgba16_buf[i+2] = tlut[xform_buf[i+3]];
-			rgba16_buf[i+3] = tlut[xform_buf[i+4]];
-		}
-	}
-
-	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_1_5_5_5_REV);
 }
 
 static __attribute__((noinline)) void import_texture_ci8(int tile) {
@@ -981,35 +1041,26 @@ static __attribute__((noinline)) void import_texture_ci8(int tile) {
 			}
 		}
 	} else {
-		u32 src_width;
-		if (last_set_texture_image_width) {
-			src_width = last_set_texture_image_width + 1;
-		} else {
-			src_width = width;
-		}
+		/* LoadTile path: upload at the tri code's tex dims (see import_texture_i4).
+		   NOTE: the only CI8 tile loader (func_80045614) is UNUSED, so this is
+		   currently dead -- the live CI8 path is the block load above. Row-major
+		   decode at the real source byte stride (CI8 = 1 byte/texel). */
+		width  = (rdp.texture_tile.lrs - rdp.texture_tile.uls + 4) >> 2;
+		height = (rdp.texture_tile.lrt - rdp.texture_tile.ult + 4) >> 2;
 
-		uint8_t* start = (uint8_t *)(&rdp.loaded_texture[tile]
-							.addr[((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) * last_set_texture_image_width) +
-									(rdp.texture_tile.uls >> G_TEXTURE_IMAGE_FRAC)]);
-//		uint32_t *start32;
-		uint16_t *tex16 = rgba16_buf;
-		for (uint32_t h = 0; h < height; h ++) {
-			//uint16_t *tx16 = tex16;
-			uint16_t *tx32 = tex16;
-			for (uint32_t w = 0; w < src_width; w += 4) {
-				uint16_t t1,t2,t3,t4;
-				t1 = tlut[*start++];
-				t2 = tlut[*start++];
-				t3 = tlut[*start++];
-				t4 = tlut[*start++];
+		uint32_t src_stride = last_set_texture_image_width + 1; /* source row, bytes */
+		uint8_t* start = (uint8_t*) &rdp.loaded_texture[tile]
+			.addr[((rdp.texture_tile.ult >> G_TEXTURE_IMAGE_FRAC) * src_stride) +
+				  (rdp.texture_tile.uls >> G_TEXTURE_IMAGE_FRAC)];
 
-				*tx32++ = (t2 << 16) | t1;
-				*tx32++ = (t4 << 16) | t3;
-				//				*tx16++ = t2;
-//				*tx16++ = t3;
-//				*tx16++ = t4;
+		memset(rgba16_buf, 0, width * height * 2);
+		uint16_t* dst = rgba16_buf;
+		for (uint32_t h = 0; h < height; h++) {
+			for (uint32_t w = 0; w < width; w++) {
+				dst[w] = (w < src_stride) ? tlut[start[w]] : 0;
 			}
-			tex16 += width;
+			start += src_stride;
+			dst += width;
 		}
 	}
 
@@ -1048,9 +1099,7 @@ static void __attribute__((noinline)) import_texture(int tile) {
 //			abort();
 		}
 	} else if (fmt == G_IM_FMT_CI) {
-		if (siz == G_IM_SIZ_4b) {
-			import_texture_ci4(tile);
-		} else if (siz == G_IM_SIZ_8b) {
+		if (siz == G_IM_SIZ_8b) {
 			import_texture_ci8(tile);
 		} else {
 //			abort();
@@ -1295,6 +1344,8 @@ static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, siz
         // nothing and each used vertex is classified once per scissor generation.
         d->scissor_gen = 0;
 
+        d->lit = 1; // lit path: eligible for the light×colour mix in gfx_sp_tri1
+
 		d->x = v->ob[0];
         d->y = v->ob[1];
         d->z = v->ob[2];
@@ -1342,6 +1393,8 @@ static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t
         // Invalidate the scissor outcode (gen 0 = "not computed"); gfx_sp_tri1
         // computes it lazily on first use (see the lit path for the rationale).
         d->scissor_gen = 0;
+
+        d->lit = 0; // unlit path: shade is the raw vertex colour, no light mix
     }
 }
 
@@ -1430,6 +1483,7 @@ static inline void clip_lerp_vertex(struct LoadedVertex* o, const struct LoadedV
 	o->color.a = (uint8_t) (a->color.a + t * ((float) b->color.a - (float) a->color.a));
 	o->clip_rej = 0x3f;
 	o->wlt0 = 0;
+	o->lit = a->lit; // inherit lit state from the source edge vertex
 }
 
 // Fill the active 5 clip planes (eye + 4 scissor) as {A,B,C,D,E}:
@@ -1688,6 +1742,9 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     uint8_t use_texture = used_textures[0] || used_textures[1];
     uint32_t tex_width = (rdp.texture_tile.lrs - rdp.texture_tile.uls + 4) >> 2;
     uint32_t tex_height = (rdp.texture_tile.lrt - rdp.texture_tile.ult + 4) >> 2;
+    // Fold the PoT-padding correction into the texel->[0,1] reciprocal (once per draw).
+    float recip_tex_width = shz_inverse_posf((float) tex_width) * get_current_u_scale();
+    float recip_tex_height = shz_inverse_posf((float) tex_height) * get_current_v_scale();
 
     // Software scissor, classified from the three per-vertex scissor outcodes
     // (cheap byte ops, à la clip_rej). Refresh any outcode that went stale since
@@ -1728,6 +1785,97 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         v_arr[1] = fan_tris[ti][1];
         v_arr[2] = fan_tris[ti][2];
 
+        // ---- Per-primitive material colour ------------------------------------
+        // The combiner's PRIM/ENV/TEX "material" (and the CC_LOD fade, which keys off
+        // v1->w) depend only on render state + vertex 0 — never on the individual
+        // vertex — so compute it ONCE per (sub-)triangle here. The per-vertex loop
+        // below only folds in the shade and the speedometer needle hack. (Was redone
+        // per vertex; this is the hoist.)
+        uint32_t mat_packed = 0xffffffff; // material colour, pre-shade
+        int use_shade = 0;                // combiner takes CC_SHADE
+        int allow_speedo = 0;             // speedometer hack only on the non-ENV-blend path
+        {
+            int j, k;
+            uint32_t color_r = 0, color_g = 0, color_b = 0, color_a = 0;
+            if (num_inputs == 2) {
+                int i0 = comb->shader_input_mapping[0][1] == CC_PRIM;
+                int i2 = comb->shader_input_mapping[0][0] == CC_ENV;
+                int i3 = comb->shader_input_mapping[0][0] == CC_PRIM;
+                int i4 = comb->shader_input_mapping[0][1] == CC_ENV;
+                if (i0 && i2) {
+                    color_r = 255 - rdp.env_color.r;
+                    color_g = 255 - rdp.env_color.g;
+                    color_b = 255 - rdp.env_color.b;
+                    color_a = rdp.prim_color.a;
+                    mat_packed = PACK_ARGB8888(color_r, color_g, color_b, color_a);
+                } else if (i3 && i4) {
+                    color_r = rdp.prim_color.r;
+                    color_g = rdp.prim_color.g;
+                    color_b = rdp.prim_color.b;
+                    color_a = rdp.prim_color.a;
+                    color_r *= ((rdp.env_color.r + 255));
+                    color_g *= ((rdp.env_color.g + 255));
+                    color_b *= ((rdp.env_color.b + 255));
+                    color_a *= (rdp.env_color.a);
+                    color_r >>= 8;
+                    color_g >>= 8;
+                    color_b >>= 8;
+                    color_a >>= 8;
+                    uint32_t max_c = 255;
+                    if (color_r > max_c) max_c = color_r;
+                    if (color_g > max_c) max_c = color_g;
+                    if (color_b > max_c) max_c = color_b;
+                    if (color_a > max_c) max_c = color_a;
+                    float rn = (float) color_r, gn = (float) color_g, bn = (float) color_b, an = (float) color_a;
+                    float maxc = 255.0f * shz_inverse_posf((float) max_c);
+                    rn *= maxc; gn *= maxc; bn *= maxc; an *= maxc;
+                    color_r = (uint32_t) rn;
+                    color_g = (uint32_t) gn;
+                    color_b = (uint32_t) bn;
+                    color_a = (uint32_t) an;
+                    mat_packed = PACK_ARGB8888(color_r, color_g, color_b, color_a);
+                } else {
+                    goto thenextthing;
+                }
+            } else {
+            thenextthing:
+                allow_speedo = 1;
+                for (j = 0; j < num_inputs; j++) {
+                    /*@Note: use_alpha ? 1 : 0 */
+                    for (k = 0; k < 1 + (use_alpha ? 0 : 0); k++) {
+                        switch (comb->shader_input_mapping[k][j]) {
+                            case CC_PRIM:
+                                mat_packed = PACK_ARGB8888(rdp.prim_color.r, rdp.prim_color.g, rdp.prim_color.b, rdp.prim_color.a);
+                                break;
+                            case CC_SHADE:
+                                // deferred — folded in per-vertex below so it can
+                                // modulate the material on lit geometry (Star Fox mix)
+                                use_shade = 1;
+                                break;
+                            case CC_ENV:
+                                mat_packed = PACK_ARGB8888(rdp.env_color.r, rdp.env_color.g, rdp.env_color.b, rdp.env_color.a);
+                                break;
+                            case CC_LOD: {
+                                float distance_frac = (v1->w - 3000.0f) / 3000.0f;
+                                if (distance_frac < 0.0f) distance_frac = 0.0f;
+                                if (distance_frac > 1.0f) distance_frac = 1.0f;
+                                const uint8_t frac = (uint8_t) (distance_frac * 255.0f);
+                                mat_packed = PACK_ARGB8888(frac, frac, frac, frac);
+                                break;
+                            }
+                            default:
+                                mat_packed = PACK_ARGB8888(0xff, 0xff, 0xff, 0xff);
+                                // fix the alpha on the Nintendo logo model
+                                if (in_intro) {
+                                    mat_packed = (rdp.env_color.a << 24) | (mat_packed & 0x00FFFFFF);
+                                }
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+
     for (i = 0; i < 3; i++) {
         buf_vbo[buf_num_vert].vert.x = v_arr[i]->x;
         buf_vbo[buf_num_vert].vert.y = v_arr[i]->y;
@@ -1743,130 +1891,35 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
                 u += 0.5f;
                 v += 0.5f;
             }
-            buf_vbo[buf_num_vert].texture.u = u * shz_inverse_posf((float) tex_width);
-            buf_vbo[buf_num_vert].texture.v = v * shz_inverse_posf((float) tex_height);
+            buf_vbo[buf_num_vert].texture.u = u * recip_tex_width;
+            buf_vbo[buf_num_vert].texture.v = v * recip_tex_height;
         }
 
-        int j, k;
-        buf_vbo[buf_num_vert].color.packed = 0xffffffff;
-        uint32_t color_r = 0;
-        uint32_t color_g = 0;
-        uint32_t color_b = 0;
-        uint32_t color_a = 0;
-{
-		{
-        if (num_inputs == 2) {
-            int i0 = comb->shader_input_mapping[0][1] == CC_PRIM;
-            int i2 = comb->shader_input_mapping[0][0] == CC_ENV;
-
-            int i3 = comb->shader_input_mapping[0][0] == CC_PRIM;
-            int i4 = comb->shader_input_mapping[0][1] == CC_ENV;
-
-            if (i0 && i2) {
-                color_r = 255 - rdp.env_color.r;
-                color_g = 255 - rdp.env_color.g;
-                color_b = 255 - rdp.env_color.b;
-		color_a = rdp.prim_color.a;
-
-                buf_vbo[buf_num_vert].color.packed = PACK_ARGB8888(color_r, color_g, color_b, color_a);
-            } else if (i3 && i4) {
-                color_r = rdp.prim_color.r;
-                color_g = rdp.prim_color.g;
-                color_b = rdp.prim_color.b;
-                color_a = rdp.prim_color.a;
-
-                color_r *= ((rdp.env_color.r + 255));
-                color_g *= ((rdp.env_color.g + 255));
-                color_b *= ((rdp.env_color.b + 255));
-                color_a *= (rdp.env_color.a);
-
-                color_r >>= 8;
-                color_g >>= 8;
-                color_b >>= 8;
-                color_a >>= 8;
-
-                uint32_t max_c = 255;
-                if (color_r > max_c)
-                    max_c = color_r;
-                if (color_g > max_c)
-                    max_c = color_g;
-                if (color_b > max_c)
-                    max_c = color_b;
-                if (color_a > max_c)
-                    max_c = color_a;
-
-                float rn, gn, bn, an;
-                rn = (float) color_r;
-                gn = (float) color_g;
-                bn = (float) color_b;
-                an = (float) color_a;
-                float maxc = 255.0f * shz_inverse_posf((float) max_c);
-                rn *= maxc;
-                gn *= maxc;
-                bn *= maxc;
-                an *= maxc;
-
-                color_r = (uint32_t) rn;
-                color_g = (uint32_t) gn;
-                color_b = (uint32_t) bn;
-                color_a = (uint32_t) an;
-
-                buf_vbo[buf_num_vert].color.packed = PACK_ARGB8888(color_r, color_g, color_b, color_a);
-            } else {
-                goto thenextthing;
-            }
+        // ---- Fold per-vertex shade into the per-primitive material -------------
+        // mat_packed / use_shade / allow_speedo were computed once above the loop.
+        // Precedence is identical to the old per-vertex code:
+        //   speedometer red  >  lit light×colour mix  >  raw shade  >  plain material.
+        if (allow_speedo && (!in_intro) &&
+            (v_arr[i]->color.a == 255) && (v_arr[i]->color.b == 0) &&
+            (v_arr[i]->color.g == 0) && (v_arr[i]->color.a == 255)) {
+            // speedometer needle hack: emit the raw (red) vertex colour
+            buf_vbo[buf_num_vert].color.packed =
+                PACK_ARGB8888(v_arr[i]->color.r, v_arr[i]->color.g, v_arr[i]->color.b, v_arr[i]->color.a);
+        } else if ((!in_intro) && v_arr[0]->lit) {
+            // lit: modulate the material by this vertex's shade (the checkered-flag fix)
+            uint32_t mr = (mat_packed >> 16) & 0xff, mg = (mat_packed >> 8) & 0xff,
+                     mb = mat_packed & 0xff, ma = (mat_packed >> 24) & 0xff;
+            mr = (mr * v_arr[i]->color.r) >> 8;
+            mg = (mg * v_arr[i]->color.g) >> 8;
+            mb = (mb * v_arr[i]->color.b) >> 8;
+            buf_vbo[buf_num_vert].color.packed = PACK_ARGB8888(mr, mg, mb, ma);
+        } else if (use_shade) {
+            // unlit CC_SHADE input: raw vertex colour
+            buf_vbo[buf_num_vert].color.packed =
+                PACK_ARGB8888(v_arr[i]->color.r, v_arr[i]->color.g, v_arr[i]->color.b, v_arr[i]->color.a);
         } else {
-        thenextthing:
-		// this is a hack to fix the speedometer needle color
-		if (!in_intro) {
-			if ((v_arr[i]->color.a == 255) && (v_arr[i]->color.b == 0) &&
-			(v_arr[i]->color.g == 0) && (v_arr[i]->color.a == 255)) {
-				buf_vbo[buf_num_vert].color.packed = PACK_ARGB8888(v_arr[i]->color.r, v_arr[i]->color.g,
-                                                                      v_arr[i]->color.b, v_arr[i]->color.a);
-				goto nextvert;
-			}
-		}
-            for (j = 0; j < num_inputs; j++) {
-                /*@Note: use_alpha ? 1 : 0 */
-                for (k = 0; k < 1 + (use_alpha ? 0 : 0); k++) {
-                    switch (comb->shader_input_mapping[k][j]) {
-                        case CC_PRIM:
-                            buf_vbo[buf_num_vert].color.packed =
-                                PACK_ARGB8888(rdp.prim_color.r, rdp.prim_color.g, rdp.prim_color.b, rdp.prim_color.a);
-                            break;
-                        case CC_SHADE:
-                            buf_vbo[buf_num_vert].color.packed = PACK_ARGB8888(v_arr[i]->color.r, v_arr[i]->color.g,
-                                                                               v_arr[i]->color.b, v_arr[i]->color.a);
-                            break;
-                        case CC_ENV:
-                            buf_vbo[buf_num_vert].color.packed =
-                                PACK_ARGB8888(rdp.env_color.r, rdp.env_color.g, rdp.env_color.b, rdp.env_color.a);
-                            break;
-                        case CC_LOD: {
-                            float distance_frac = (v1->w - 3000.0f) / 3000.0f;
-                            if (distance_frac < 0.0f)
-                                distance_frac = 0.0f;
-                            if (distance_frac > 1.0f)
-                                distance_frac = 1.0f;
-                            const uint8_t frac = (uint8_t) (distance_frac * 255.0f);
-                            buf_vbo[buf_num_vert].color.packed = PACK_ARGB8888(frac, frac, frac, frac);
-                            break;
-                        }
-                        default:
-                            buf_vbo[buf_num_vert].color.packed = PACK_ARGB8888(0xff, 0xff, 0xff, 0xff);
-                            // fix the alpha on the Nintendo logo model
-                            if (in_intro) {
-                                buf_vbo[buf_num_vert].color.packed =
-                                    (rdp.env_color.a << 24) | (buf_vbo[buf_num_vert].color.packed & 0x00FFFFFF);
-                            }
-                            break;
-                    }
-                }
-            }
+            buf_vbo[buf_num_vert].color.packed = mat_packed;
         }
-	}
-}
-nextvert:
         buf_num_vert++;
         buf_vbo_len += sizeof(dc_fast_t);
     }
@@ -1996,6 +2049,9 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 	uint8_t use_texture = used_textures[0] || used_textures[1];
 	uint32_t tex_width = (rdp.texture_tile.lrs - rdp.texture_tile.uls + 4) / 4;
 	uint32_t tex_height = (rdp.texture_tile.lrt - rdp.texture_tile.ult + 4) / 4;
+	// Fold the PoT-padding correction into the texel->[0,1] reciprocal (once per draw).
+	float recip_tex_width = shz_inverse_posf((float) tex_width) * get_current_u_scale();
+	float recip_tex_height = shz_inverse_posf((float) tex_height) * get_current_v_scale();
 
 	int tri_num_vert = 0;
 	for (tri_num_vert = 0; tri_num_vert < 6; tri_num_vert++) {
@@ -2011,8 +2067,8 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 				u += 0.5f;
 				v += 0.5f;
 			}
-			quad_vbo[tri_num_vert].texture.u = u * shz_inverse_posf(tex_width);
-			quad_vbo[tri_num_vert].texture.v = v * shz_inverse_posf(tex_height);
+			quad_vbo[tri_num_vert].texture.u = u * recip_tex_width;
+			quad_vbo[tri_num_vert].texture.v = v * recip_tex_height;
 		}
 
 		struct RGBA white = (struct RGBA) { 0xff, 0xff, 0xff, 0xff };
@@ -2146,6 +2202,32 @@ static void  gfx_sp_movemem(uint8_t index, UNUSED uint8_t offset, const void* da
 		case G_MV_L2:
 			// NOTE: reads out of bounds if it is an ambient light
 			n64_memcpy(rsp.current_lights + (index - G_MV_L0) / 2, data, sizeof(Light_t));
+#if LIGHT_DEBUG
+			// Dump the RAW source bytes for the egg's directional light: settles
+			// source-has-no-dir vs copy-drops-dir. col@0-2, colc@4-6, dir@8-10.
+			// Gate on the egg's exact diffuse (255,254,254) -- NOT just col[0]==255,
+			// which the title screen's white lights also hit -- and dedup distinct
+			// 12-byte patterns so a per-frame-repeating light can't exhaust the cap
+			// before the egg loads.
+			{
+				const uint8_t* lb = (const uint8_t*) data;
+				if (index == G_MV_L0 && lb[0] == 255 && lb[1] == 254 && lb[2] == 254) {
+					static uint8_t seen[16][12];
+					static int seen_n = 0;
+					int found = 0;
+					for (int q = 0; q < seen_n; q++) {
+						if (memcmp(seen[q], lb, 12) == 0) { found = 1; break; }
+					}
+					if (!found && seen_n < 16) {
+						memcpy(seen[seen_n++], lb, 12);
+						printf("LIGHTSRC idx=%d src=%p raw16=[%02x %02x %02x %02x %02x %02x %02x %02x "
+						       "%02x %02x %02x %02x %02x %02x %02x %02x] sizeofLight=%d\n",
+						       index, (void*) data, lb[0], lb[1], lb[2], lb[3], lb[4], lb[5], lb[6], lb[7],
+						       lb[8], lb[9], lb[10], lb[11], lb[12], lb[13], lb[14], lb[15], (int) sizeof(Light));
+					}
+				}
+			}
+#endif
 			break;
 		default:
 			break;

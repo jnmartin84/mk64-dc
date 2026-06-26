@@ -1283,10 +1283,12 @@ void move_s32_towards(s32* startingValue, s32 targetValue, f32 somePercent) {
   * in a small range around it. Why they only do this for 0 is anyone's guess though
 **/
 void move_f32_towards(f32* startingValue, f32 targetValue, f32 somePercent) {
-    *startingValue -= ((*startingValue - targetValue) * somePercent);
-    if ((*startingValue < 0.001) && (-0.001 < *startingValue)) {
-        *startingValue = 0.0f;
+    f32 sv = *startingValue;
+    sv -= ((sv - targetValue) * somePercent);
+    if ((sv < 0.001f) && (-0.001f < sv)) {
+        sv = 0.0f;
     }
+    *startingValue = sv;
 }
 
 void move_s16_towards(s16* startingValue, s16 targetValue, f32 somePercent) {
@@ -1758,7 +1760,7 @@ void render_player_shadow(Player* player, s8 playerId, s8 screenId) {
         ((player->unk_0CA & 2) == 2) || ((player->effects & HIT_BY_ITEM_EFFECT) == HIT_BY_ITEM_EFFECT) ||
         ((player->effects & UNKNOWN_EFFECT_0x10000) == UNKNOWN_EFFECT_0x10000) || ((player->effects & 8) == 8)) {
 
-        var_f2 = (f32) (1.0 - ((f64) player->collision.surfaceDistance[2] * 0.02));
+        var_f2 = (f32) (1.0f - ((f64) player->collision.surfaceDistance[2] * 0.02f));
         if (var_f2 < 0.0f) {
             var_f2 = 0.0f;
         }
@@ -1894,7 +1896,7 @@ void render_kart(Player* player, s8 playerId, s8 screenId, s8 arg3) {
         if ((player->effects & 8) == 8) {
             orientation[0] = cameras[screenId].rot[0] - 0x4000;
         } else {
-            orientation[0] = -temp_v1 * 0.8;
+            orientation[0] = -temp_v1 * 0.8f;
         }
         orientation[1] = player->unk_048[screenId];
         orientation[2] = player->unk_050[screenId];
@@ -2063,7 +2065,7 @@ void render_boosted_kart(Player* player, s8 playerId, s8 screenId, s8 arg3) {
     scaled_sincoss(-player->rotation[1], &ts1, &tc1, -1.5f);
 
     sp9C[0] = player->pos[0] + (ts1);
-    sp9C[1] = ((player->pos[1] - player->boundingBoxSize) + player->unk_108) + 0.1;
+    sp9C[1] = ((player->pos[1] - player->boundingBoxSize) + player->unk_108) + 0.1f;
     sp9C[2] = player->pos[2] + (tc1);
     sp94[0] = -0x00B6;
     sp94[1] = player->unk_048[screenId];
@@ -2187,11 +2189,11 @@ void func_80026A48(Player* player, s8 arg1) {
         return;
     }
 
-    temp_f0 = ((player->speed * (1.0f + player->unk_104)) / 18.0f) * 216.0f;
+    temp_f0 = ((player->speed * (1.0f + player->unk_104)) * 12.0f); // / 18.0f) * 216.0f;
     if ((temp_f0 <= 1.0f) || (gIsPlayerTripleBButtonCombo[arg1] == 1)) {
         player->unk_240 = 0;
     } else {
-        player->unk_240 += D_800DDE74[(s32) (temp_f0 / 12.0f)];
+        player->unk_240 += D_800DDE74[(s32) (temp_f0 * 0.08333333f)]; // / 12.0f)];
     }
     if (player->unk_240 >= 0x400) {
         player->unk_240 = 0;
