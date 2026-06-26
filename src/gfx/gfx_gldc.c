@@ -60,11 +60,6 @@ extern int blend_fuck;
 static struct ShaderProgram shader_program_pool[64];
 static uint8_t shader_program_pool_size;
 static struct ShaderProgram* cur_shader = NULL;
-/* Last shader whose per-shader GL state (alpha-test + texenv) was applied. That
-   state is GLOBAL fixed-function state, not bound to a program, so it must be
-   re-applied whenever the active shader changes -- but NOT every draw. Reset at
-   frame start as insurance against any per-frame GL state reset. */
-static struct ShaderProgram* applied_shader = NULL;
 
 static struct SamplerState tmu_state[2];
 
@@ -281,16 +276,14 @@ static void gfx_opengl_apply_shader(struct ShaderProgram* prg) {
        actually changes (not once-ever -- that leaked between shaders -- and not
        every draw, which the old `if(1)` did to brute-force correctness). Safe now
        that texenv is shadowed and the one_minus_env multi-pass restores it. */
-    if (1) { //(prg != applied_shader) {
-        applied_shader = prg;
-#if 1
+    if (1) {
         if (prg->shader_id & SHADER_OPT_TEXTURE_EDGE) {
             glEnable(GL_ALPHA_TEST);
             glAlphaFunc(GL_GREATER, 0.0333f);
         } else {
             glDisable(GL_ALPHA_TEST);
         }
-#endif
+
         // configure texenv
         GLenum mode;
         switch (prg->mix) {
@@ -1118,14 +1111,14 @@ static void gfx_opengl_init(void) {
     glKosInitConfig(&config);
     config.autosort_enabled = GL_TRUE;
     config.fsaa_enabled = GL_FALSE;
-    /*@Note: These should be adjusted at some point */
+
     config.initial_op_capacity = 128;
     config.initial_pt_capacity = 32;
     config.initial_tr_capacity = 256;
     config.initial_immediate_capacity = 0;
     glKosInitEx(&config);
-    // glKosInit();
-#if 1
+
+    #if 1
 #ifdef __DREAMCAST__
     if (vid_check_cable() != CT_VGA)
     {
@@ -1137,7 +1130,6 @@ static void gfx_opengl_init(void) {
     }
 #endif
 #endif
-    //    getRamStatus();
     fflush(stdout);
 
     // check GL version
@@ -1165,8 +1157,6 @@ static void gfx_opengl_init(void) {
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
-
-
     
     glViewport(0, 0, 640, 480);
     glMatrixMode(GL_PROJECTION);
@@ -1204,15 +1194,10 @@ static void gfx_opengl_start_frame(void) {
     glDisable(GL_SCISSOR_TEST);
     glDepthMask(GL_TRUE); // Must be set to clear Z-buffer
 
-//    glClearColor((float)D_800DC5D0/255.0f, (float)D_800DC5D4/255.0f,
-  //  (float)D_800DC5D8/255.0f,1.0f);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_SCISSOR_TEST);
     newest_texture = 0;
-    /* force the per-shader alpha-test/texenv state to re-apply on the frame's
-       first textured draw, in case anything reset GL state between frames */
-    applied_shader = NULL;
 }
 
 static void gfx_opengl_end_frame(void) {
