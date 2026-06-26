@@ -904,7 +904,7 @@ void mtxf_set_matrix_transformation(Mat4 transformMatrix, Vec3f translationVecto
     shz_xmtrx_init_rotation(SHZ_ANGLE(rotationVector[0]), SHZ_ANGLE(rotationVector[1]), SHZ_ANGLE(rotationVector[2]));
     shz_xmtrx_apply_scale(scalingFactor, scalingFactor, scalingFactor);
     shz_xmtrx_set_translation(translationVector[0], translationVector[1], translationVector[2]);
-    shz_xmtrx_store_4x4((shz_matrix_4x4_t *)transformMatrix);
+    shz_xmtrx_store_4x4((shz_mat4x4_t *)transformMatrix);
 #endif
 }
 
@@ -1106,7 +1106,7 @@ void vec3f_rotate_x_y(Vec3f dest, Vec3f pos, Vec3s rot) {
 #else /* NOT A GAIN YET */
     shz_xmtrx_init_rotation_y(SHZ_ANGLE(rot[0]));
     shz_xmtrx_apply_rotation_x(SHZ_ANGLE(rot[1]));
-    shz_vec3_t out = shz_xmtrx_trans_vec3((shz_vec3_t) { .x = pos[0], .y = pos[1], .z = pos[2] });
+    shz_vec3_t out = shz_xmtrx_transform_vec3((shz_vec3_t) { .x = pos[0], .y = pos[1], .z = pos[2] });
     dest[0] = out.x;
     dest[1] = out.y;
     dest[2] = out.z;

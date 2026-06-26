@@ -66,7 +66,7 @@ void guLookAtF(float mf[4][4], float xEye, float yEye, float zEye, float xAt, fl
     mf[2][3] = 0;
     mf[3][3] = 1;
 #if 0 // I DO NOT UNDERSTAND WHY THIS DOESN'T WORK!!!
-    shz_vec3_t out = shz_matrix4x4_trans_vec3((SHZ_ALIASING const shz_matrix_4x4_t *)mf, (shz_vec3_t) { .x = xEye, .y = yEye, .z = zEye });
+    shz_vec3_t out = shz_mat4x4_transform_vec3((SHZ_ALIASING const shz_mat4x4_t *)mf, (shz_vec3_t) { .x = xEye, .y = yEye, .z = zEye });
     mf[3][0] = -out.x;
     mf[3][1] = -out.y;
     mf[3][2] = -out.z;

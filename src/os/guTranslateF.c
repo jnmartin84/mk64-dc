@@ -9,7 +9,7 @@ void guTranslateF(float m[4][4], float x, float y, float z) {
     m[3][2] = z;
 #else
     shz_xmtrx_init_translation(x, y, z);
-    shz_xmtrx_store_4x4_unaligned(m);
+    shz_xmtrx_store_unaligned_4x4(m);
 #endif
 }
 

@@ -45,8 +45,8 @@ void guMtxL2F(float mf[4][4], Mtx* m) {
 
 void guMtxF2L(float mf[4][4], Mtx* m) {
     //n64_memcpy(m, mf, sizeof(Mtx));
-    //shz_xmtrx_load_4x4_unaligned(mf);
-    //shz_xmtrx_store_4x4_unaligned(m);
+    //shz_xmtrx_load_unaligned_4x4(mf);
+    //shz_xmtrx_store_unaligned_4x4(m);
     //*m = *(Mtx*)mf;
     shz_memcpy4_16(m, mf);
 }
@@ -66,7 +66,7 @@ void guMtxIdentF(float mf[4][4]) {
     }
 #endif
         shz_xmtrx_init_identity();
-        shz_xmtrx_store_4x4_unaligned(mf);
+        shz_xmtrx_store_unaligned_4x4(mf);
 }
 
 void guMtxIdent(Mtx* m) {
