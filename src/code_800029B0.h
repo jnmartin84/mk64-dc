@@ -135,7 +135,5 @@ extern s16 sIsController1Unplugged;
 extern s32 D_801625EC;
 extern s32 D_801625F0;
 extern s32 D_801625F4;
-//extern s32 D_801625F8;
-//extern f32 D_801625FC;
 
 #endif

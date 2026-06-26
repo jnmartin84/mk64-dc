@@ -217,7 +217,7 @@ s16 find_closest_pathPoint_track_section(f32 posX, f32 posY, f32 posZ, u16 track
     s32 var_a1;
     s32 var_t1;
     s32 considerPathIndex;
-    s32 var_t4=0;
+    s32 var_t4;
     s16 nearestPathPointIndex;
 
     minimumSquaredDistance = 1000000.0f;
@@ -362,7 +362,7 @@ s16 update_path_index(f32 posX, f32 posY, f32 posZ, s16 pathPointIndex, s32 path
     minimumDistance = 400.0f * 400.0f;
     pathPathPointCount = gPathCountByPathIndex[pathIndex];
     pathPathPoints = gTrackPaths[pathIndex];
-    if (pathPathPointCount < 1) return -1;
+
     for (searchIndex = pathPointIndex - 3; searchIndex < pathPointIndex + 7; searchIndex++) {
         // Its possible for searchIndex to be less than 0 or greater than the number of path in a given path
         // This is done to ensure we access gTrackPaths at a valid index
@@ -378,7 +378,7 @@ s16 update_path_index(f32 posX, f32 posY, f32 posZ, s16 pathPointIndex, s32 path
             pathPointFound = 1;
         }
     }
-#if 0
+
     if (pathPointFound == 0) {
         for (searchIndex = pathPointIndex - 3; searchIndex < pathPointIndex + 7; searchIndex++) {
             considerIndex = ((searchIndex + pathPathPointCount) % pathPathPointCount);
@@ -391,7 +391,7 @@ s16 update_path_index(f32 posX, f32 posY, f32 posZ, s16 pathPointIndex, s32 path
             if (considerPathPoint && considerPathPoint) {};
         }
     }
-#endif
+
     return nearestPathPointIndex;
 }
 
@@ -651,8 +651,7 @@ void determine_ideal_cpu_position_offset(s32 playerId, u16 pathPoint) {
     if (lookAheadDistance < gCurrentPlayerLookAhead[playerId]) {
         gCurrentPlayerLookAhead[playerId]--;
     }
-    // jnmartin84 -- error handling... because...
-    if (gSelectedPathCount < 1) gSelectedPathCount = 1;
+
     pathPoint = (gCurrentPlayerLookAhead[playerId] + pathPoint) % gSelectedPathCount;
     set_track_offset_position(pathPoint, sp2C, gPlayerPathIndex);
     sp48 = gOffsetPosition[0];

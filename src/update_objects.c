@@ -2983,7 +2983,7 @@ void func_80079114(s32 objectIndex, s32 arg1, s32 arg2) {
 }
 
 void func_800791F0(s32 objectIndex, s32 playerId) {
-    Player* player = &gPlayers/* One */[playerId];
+    Player* player = &gPlayerOne[playerId];
 
     if ((gObjectList[objectIndex].unk_0D8 != 3) && (gObjectList[objectIndex].unk_0D8 != 7)) {
         func_800722CC(objectIndex, 1);
@@ -3143,7 +3143,7 @@ void func_800797AC(s32 playerId) {
     Player* player;
 
     objectIndex = gIndexLakituList[playerId];
-    player = &gPlayers/* One */[playerId];
+    player = &gPlayerOne[playerId];
     if ((gCurrentCourseId == COURSE_SHERBET_LAND) && (player->unk_0CA & 1)) {
         init_object(objectIndex, 7);
         player->unk_0CA |= 0x10;
@@ -3158,7 +3158,7 @@ void func_80079860(s32 playerId) {
     Player* player;
 
     objectIndex = gIndexLakituList[playerId];
-    player = &gPlayers/*One*/[playerId];
+    player = &gPlayerOne[playerId];
     if ((func_80072354(objectIndex, 1) != 0) &&
         (((func_802ABDF4(player->collision.meshIndexZX) != 0) && (player->collision.surfaceDistance[2] <= 3.0f)) ||
          (player->unk_0CA & 1) || ((player->surfaceType == OUT_OF_BOUNDS) && !(player->effects & 8)))) {
@@ -3215,7 +3215,7 @@ void func_80079A5C(s32 objectIndex, UNUSED Player* player) {
 }
 
 void update_object_lakitu_fishing(s32 objectIndex, s32 playerId) {
-    Player* player = &gPlayers/*One*/[playerId];
+    Player* player = &gPlayerOne[playerId];
 
     switch (gObjectList[objectIndex].state) { /* switch 1; irregular */
         case 0:                               /* switch 1 */
@@ -3269,7 +3269,7 @@ void update_object_lakitu_fishing(s32 objectIndex, s32 playerId) {
 }
 
 void update_object_lakitu_fishing2(s32 objectIndex, s32 playerId) {
-    Player* player = &gPlayers/*One*/[playerId];
+    Player* player = &gPlayerOne[playerId];
 
     switch (gObjectList[objectIndex].state) { /* switch 1; irregular */
         case 0:                               /* switch 1 */
@@ -3463,7 +3463,7 @@ void func_8007A3F0(s32 objectIndex, s32 arg1) {
 }
 
 void update_object_lakitu_reverse(s32 objectIndex, s32 playerId) {
-    Player* sp2C = &gPlayers/*One*/[playerId];
+    Player* sp2C = &gPlayerOne[playerId];
 
     switch (gObjectList[objectIndex].state) {
         case 0:
@@ -3543,7 +3543,7 @@ void func_8007A88C(s32 playerId) {
     Player* player;
 
     objectIndex = gIndexLakituList[playerId];
-    player = &gPlayers/*One*/[playerId];
+    player = &gPlayerOne[playerId];
 
     if ((gObjectList[objectIndex].state == 0) && (player->effects & 0x400000)) {
         func_800790E4(playerId);
@@ -3654,7 +3654,7 @@ void consume_item(s32 playerId) {
     s32 objectIndex;
     ItemWindowObjects* itemWindow;
 
-    player = &gPlayers/*One*/[playerId];
+    player = &gPlayerOne[playerId];
     objectIndex = gItemWindowObjectByPlayerId[playerId];
     itemWindow = (ItemWindowObjects*) &gObjectList[objectIndex];
     if (itemWindow->currentItem == ITEM_SUPER_MUSHROOM) {
@@ -3782,7 +3782,7 @@ s32 func_8007B040(s32 objectIndex, s32 playerId) {
             temp_v1 = sp50[var_v1];
             gObjectList[objectIndex].unk_0D1 = temp_v1;
             temp_a0 = gItemWindowObjectByPlayerId[temp_v1];
-            sp38 = &gPlayers/*One*/[temp_v1];
+            sp38 = &gPlayerOne[temp_v1];
             func_800722A4(temp_a0, 1);
             gObjectList[temp_a0].type = 0;
             sp38->currentItemCopy = 0;
@@ -3832,7 +3832,7 @@ void func_8007B34C(s32 playerId) {
     struct Controller* new_var;
 
     temp_s0 = gItemWindowObjectByPlayerId[playerId];
-    sp38 = &gPlayers/*One*/[playerId];
+    sp38 = &gPlayerOne[playerId];
     sp40 = 0;
     new_var = &gControllerOne[playerId];
     if (new_var->buttonPressed & 0x2000) {
@@ -4457,7 +4457,7 @@ void update_boos(void) {
         if (object->state != 0) {
             func_8007C684(objectIndex);
             func_8008B78C(objectIndex);
-            player = &gPlayers/*One*/[object->unk_0D1];
+            player = &gPlayerOne[object->unk_0D1];
             camera = &camera1[object->unk_0D1];
             temp_t4 = (0x8000 - camera->rot[1]);
             object->pos[0] = player->pos[0] + (coss(temp_t4) * (object->origin_pos[0] + object->offset[0])) -
@@ -5048,7 +5048,7 @@ s32 func_8007E59C(s32 objectIndex) {
     s32 someIndex;
 
     temp_v0 = 0;
-    player = gPlayers/*One*/;;
+    player = gPlayerOne;
     camera = camera1;
     for (someIndex = 0; someIndex < gPlayerCountSelection1; someIndex++) {
         temp_v0 = func_8007E50C(objectIndex, player++, camera++);
@@ -5486,7 +5486,7 @@ void func_8007F660(s32 objectIndex, s32 arg1, s32 arg2) {
 void func_8007F6C4(s32 objectIndex, s32 playerId) {
     Player* player;
 
-    player = &gPlayers/*One*/[playerId];
+    player = &gPlayerOne[playerId];
     func_800722A4(objectIndex, 8);
     func_80086E70(objectIndex);
     gObjectList[objectIndex].unk_0DD = 2;
@@ -5532,7 +5532,7 @@ void func_8007F8D8(void) {
     s32 var_s4;
     Object* object;
 
-    player = gPlayers/*One*/;;
+    player = gPlayerOne;
     var_s4 = 1;
     for (someIndex = 0; someIndex < gNumActiveThwomps; someIndex++) {
         objectIndex = indexObjectList1[someIndex];
@@ -5590,7 +5590,7 @@ void func_8007FB48(s32 objectIndex) {
     UNUSED s32 stackPadding;
     Player* player;
 
-    player = &gPlayers/*One*/[gObjectList[objectIndex].unk_0D1];
+    player = &gPlayerOne[gObjectList[objectIndex].unk_0D1];
     switch (gObjectList[objectIndex].unk_0AE) {
         case 1:
             gObjectList[objectIndex].unk_0B0 = 0x00A0;
@@ -5972,7 +5972,7 @@ void func_80080A14(s32 objectIndex, Player* player) {
 
 void func_80080A4C(s32 objectIndex, s32 cameraPlayerId) {
     Camera* camera = &camera1[cameraPlayerId];
-    Player* player = &gPlayers/*One*/[cameraPlayerId];
+    Player* player = &gPlayerOne[cameraPlayerId];
 
     if (gScreenModeSelection != SCREEN_MODE_3P_4P_SPLITSCREEN) {
         if ((func_80072320(objectIndex, 0x00000010) != 0) &&
@@ -5988,7 +5988,7 @@ void func_80080B28(s32 objectIndex, s32 playerId) {
     f32 temp_f0;
     Player* temp_s0;
 
-    temp_s0 = &gPlayers/*One*/[playerId];
+    temp_s0 = &gPlayerOne[playerId];
     if (is_obj_flag_status_active(objectIndex, 0x00000200) != 0) {
         if (!(temp_s0->soundEffects & 0x100)) {
             temp_f0 = func_80088F54(objectIndex, temp_s0);
@@ -6035,7 +6035,7 @@ void func_80080DE4(s32 arg0) {
     Player* player;
     s32 var_v1;
 
-    player = gPlayers/*One*/;;
+    player = gPlayerOne;
     for (var_v1 = 0; var_v1 < NUM_PLAYERS; var_v1++, player++) {
         if (arg0 == player->unk_040) {
             player->soundEffects &= ~0x100;
@@ -6157,7 +6157,7 @@ void func_80081210(void) {
             }
         }
     }
-    player = gPlayers/*One*/;;
+    player = gPlayerOne;
     for (var_s4 = 0; var_s4 < NUM_PLAYERS; var_s4++, player++) {
         player->tyres[FRONT_LEFT].unk_14 &= ~3;
         player->unk_046 &= ~0x0006;
@@ -6392,7 +6392,7 @@ void func_80081D34(s32 objectIndex) {
     Object* object;
 
     var_s5 = 0;
-    player = gPlayers/*One*/;;
+    player = gPlayerOne;
     var_s4 = camera1;
     for (var_s2 = 0; var_s2 < D_8018D158; var_s2++, player++, var_s4++) {
         if ((is_obj_flag_status_active(objectIndex, 0x00000200) != 0) && !(player->effects & 0x80000000) &&
@@ -7133,7 +7133,7 @@ void func_80083FD0(s32 objectIndex, s32 arg1, s32 playerId) {
     Player* sp20;
 
     object = &gObjectList[objectIndex];
-    sp20 = &gPlayers/*One*/[playerId];
+    sp20 = &gPlayerOne[playerId];
     object->unk_084[7] = playerId;
     init_object(objectIndex, 0);
     object->activeTLUT = d_course_sherbet_land_ice;

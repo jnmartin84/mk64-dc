@@ -1,4 +1,5 @@
 #include <ultra64.h>
+#include <sincoss.h>
 #include <macros.h>
 #include <common_structs.h>
 #include <defines.h>
@@ -25,33 +26,7 @@
 #include "spawn_players.h"
 #include "sh4zam.h"
 
-static inline void sincoss(u16 arg0, f32* s, f32* c) {
-    register float __s __asm__("fr2");
-    register float __c __asm__("fr3");
 
-    asm("lds    %2,fpul\n\t"
-        "fsca    fpul,dr2\n\t"
-        : "=f"(__s), "=f"(__c)
-        : "r"(arg0)
-        : "fpul");
-
-    *s = __s;
-    *c = __c;
-}
-
-static inline void scaled_sincoss(u16 arg0, f32* s, f32* c, f32 scale) {
-    register float __s __asm__("fr2");
-    register float __c __asm__("fr3");
-
-    asm("lds    %2,fpul\n\t"
-        "fsca    fpul,dr2\n\t"
-        : "=f"(__s), "=f"(__c)
-        : "r"(arg0)
-        : "fpul");
-
-    *s = __s * scale;
-    *c = __c * scale;
-}
 
 s8 gRenderingFramebufferByPlayer[] = { 0x00, 0x02, 0x00, 0x01, 0x00, 0x01, 0x00, 0x02 };
 
@@ -1308,12 +1283,10 @@ void move_s32_towards(s32* startingValue, s32 targetValue, f32 somePercent) {
   * in a small range around it. Why they only do this for 0 is anyone's guess though
 **/
 void move_f32_towards(f32* startingValue, f32 targetValue, f32 somePercent) {
-    f32 sv = *startingValue;
-    sv -= ((sv - targetValue) * somePercent);
-    if ((sv < 0.001) && (-0.001 < sv)) {
-        sv = 0.0f;
+    *startingValue -= ((*startingValue - targetValue) * somePercent);
+    if ((*startingValue < 0.001) && (-0.001 < *startingValue)) {
+        *startingValue = 0.0f;
     }
-    *startingValue = sv;
 }
 
 void move_s16_towards(s16* startingValue, s16 targetValue, f32 somePercent) {
@@ -1785,7 +1758,7 @@ void render_player_shadow(Player* player, s8 playerId, s8 screenId) {
         ((player->unk_0CA & 2) == 2) || ((player->effects & HIT_BY_ITEM_EFFECT) == HIT_BY_ITEM_EFFECT) ||
         ((player->effects & UNKNOWN_EFFECT_0x10000) == UNKNOWN_EFFECT_0x10000) || ((player->effects & 8) == 8)) {
 
-        var_f2 = (f32) (1.0f - ((f64) player->collision.surfaceDistance[2] * 0.02f));
+        var_f2 = (f32) (1.0 - ((f64) player->collision.surfaceDistance[2] * 0.02));
         if (var_f2 < 0.0f) {
             var_f2 = 0.0f;
         }
@@ -1921,7 +1894,7 @@ void render_kart(Player* player, s8 playerId, s8 screenId, s8 arg3) {
         if ((player->effects & 8) == 8) {
             orientation[0] = cameras[screenId].rot[0] - 0x4000;
         } else {
-            orientation[0] = -temp_v1 * 0.8f;
+            orientation[0] = -temp_v1 * 0.8;
         }
         orientation[1] = player->unk_048[screenId];
         orientation[2] = player->unk_050[screenId];
@@ -2214,11 +2187,11 @@ void func_80026A48(Player* player, s8 arg1) {
         return;
     }
 
-    temp_f0 = ((player->speed * (1.0f + player->unk_104)) * 12.0f);// / 18.0f) * 216.0f;
+    temp_f0 = ((player->speed * (1.0f + player->unk_104)) / 18.0f) * 216.0f;
     if ((temp_f0 <= 1.0f) || (gIsPlayerTripleBButtonCombo[arg1] == 1)) {
         player->unk_240 = 0;
     } else {
-        player->unk_240 += D_800DDE74[(s32) (temp_f0 * 0.08333333f)];// / 12.0f)];
+        player->unk_240 += D_800DDE74[(s32) (temp_f0 / 12.0f)];
     }
     if (player->unk_240 >= 0x400) {
         player->unk_240 = 0;

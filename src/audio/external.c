@@ -168,34 +168,6 @@ extern volatile u8 gAudioResetStatus;
 extern u8 gAudioResetPresetIdToLoad;
 extern s32 gAudioResetFadeOutFramesLeft;
 
-void audio_reset_session_eu(OSMesg presetId) {
-//    OSMesg mesg;
-//    AosRecvMesg(D_800EA3B4, &mesg, 0);
-//    AosSendMesg(D_800EA3B0, presetId, 0);
-//    AosRecvMesg(D_800EA3B4, &mesg, 1);
-//    if (mesg != presetId) {
-//        AosRecvMesg(D_800EA3B4, &mesg, 1);
-//    }
-
-//    OSMesg mesg;
-//    AosRecvMesg(D_800EA3B4, &mesg, 0);
-    gPresetId = (s32)presetId;
-    gPresetSent = 1;
- 
-//    AosSendMesg(D_800EA3B0, presetId, 1);
-
-//    gAudioResetStatus = 5;
-//    thd_sleep(100);
- //  while(gPresetSent) {}
-////printf("d")
-    //  AosSendMesg(D_800EA3B0, presetId, 0);
-    //gPresetId;
-//    AosRecvMesg(D_800EA3B4, &mesg, 1);
-//    if (mesg != presetId) {
-//        AosRecvMesg(D_800EA3B4, &mesg, 1);
-//    }
-}
-
 f32 func_800C1480(u8 bank, u8 soundId) {
     f32 temp_f0 = 0.0f;
     f32 var_f2 = 0.0f;
@@ -925,23 +897,26 @@ void func_800C2A2C(u32 cmd) {
 }
 
 void func_800C3448(u32 arg0) {
-    D_80192CD0[D_800EA1E4++] = arg0;
+    D_80192CD0[D_800EA1E4] = arg0;
+    D_800EA1E4 += 1;
 }
 
 void func_800C3478(void) {
-    //for (D_800EA1E8; D_800EA1E4 != D_800EA1E8;) {
-    while(D_800EA1E4 != D_800EA1E8) {
+    for (D_800EA1E8; D_800EA1E4 != D_800EA1E8;) {
         func_800C2A2C(D_80192CD0[D_800EA1E8++]);
     }
 }
 
 u16 func_800C3508(u8 player) {
+    if (!gSequencePlayers[player].enabled) {
+        return -1;
+    }
     return D_801930D0[player].unk_248;
 }
 
 u8 func_800C357C(s32 arg0) {
-    u8 var_v1 = 0;
-    u16 i = 0;
+    u8 var_v1;
+    u16 i;
     i = D_800EA1E8;
     var_v1 = 1;
     for (i = D_800EA1E8; i < (s32) D_800EA1E4; i++) {
@@ -976,8 +951,8 @@ void func_800C35E8(u8 arg0) {
 }
 
 void func_800C3608(u8 arg0, u8 arg1) {
-    u8 var_v0 = 0;
-    u8 thing = 0;
+    u8 var_v0;
+    u8 thing;
 
     for (var_v0 = 0; var_v0 < D_801930D0[arg0].unk_041; var_v0++) {
         thing = (D_801930D0[arg0].unk_02C[var_v0] & 0xF00000) >> 0x14;
@@ -994,7 +969,7 @@ void func_800C36C4(u8 arg0, u8 arg1, u8 arg2, u8 arg3) {
 }
 
 void func_800C3724(void) {
-    u8 seqPlayerIndex = 0;
+    u8 seqPlayerIndex;
     f32 volume = 0.0f;
     u8 tempoOp = 0;
     u16 tempoTarget = 0;
@@ -1191,7 +1166,7 @@ void func_800C3724(void) {
 }
 
 void func_800C3F70(void) {
-    u8 var_v0 = 0;
+    u8 var_v0;
 
     for (var_v0 = 0; var_v0 < 3; var_v0++) {
         D_80192CC6[var_v0] = 0;
@@ -1214,7 +1189,7 @@ void func_800C3F70(void) {
 }
 
 void func_800C400C(void) {
-    u8 var_v0 = 0;
+    u8 var_v0;
 
     for (var_v0 = 0; var_v0 < 3; var_v0++) {
         D_80192CC6[var_v0] = 0;
@@ -1230,22 +1205,6 @@ void func_800C400C(void) {
     }
 }
 
-#if 0
-// Appears to be an unused combo of sound_banks_enable and sound_banks_disable
-void func_800C4084(u16 bankMask) {
-    u8 bank = 0;
-
-    for (bank = 0; bank < SOUND_BANK_COUNT; bank++) {
-        if (bankMask & 1) {
-            sSoundBankDisabled[bank] = 1;
-        } else {
-            sSoundBankDisabled[bank] = 0;
-        }
-        bankMask = bankMask >> 1;
-    }
-}
-#endif
-
 void func_800C40F0(u8 arg0) {
     D_800EA1C4 &= ((1 << (arg0)) ^ (u16) -1);
     if (!D_800EA1C4) {
@@ -1255,27 +1214,27 @@ void func_800C40F0(u8 arg0) {
 }
 
 void play_sound(u32 soundBits, Vec3f* position, u8 cameraId, f32* arg3, f32* arg4, s8* arg5) {
-    u8 bank = 0;
-    struct Sound* temp_v0 = NULL;
+    u8 bank;
+    struct Sound* temp_v0;
 
     bank = soundBits >> 0x1C;
 
     if (sSoundBankDisabled[bank] == 0) {
-    temp_v0 = &sSoundRequests[sSoundRequestCount];
-    temp_v0->soundBits = soundBits;
-    temp_v0->position = position;
-    temp_v0->cameraId = cameraId;
-    temp_v0->unk0C = arg3;
-    temp_v0->unk10 = arg4;
-    temp_v0->unk14 = arg5;
-    sSoundRequestCount += 1;
+        temp_v0 = &sSoundRequests[sSoundRequestCount];
+        temp_v0->soundBits = soundBits;
+        temp_v0->position = position;
+        temp_v0->cameraId = cameraId;
+        temp_v0->unk0C = arg3;
+        temp_v0->unk10 = arg4;
+        temp_v0->unk14 = arg5;
+        sSoundRequestCount += 1;
     }
 }
 
 void func_800C41CC(u8 arg0, struct SoundCharacteristics* arg1) {
-    s32 found = 0;
-    u8 soundId = 0;
-    struct Sound* sound = NULL;
+    s32 found;
+    u8 soundId;
+    struct Sound* sound;
 
     for (soundId = sNumProcessedSoundRequests; soundId != sSoundRequestCount; soundId++) {
         found = 0;
@@ -1323,9 +1282,9 @@ void func_800C41CC(u8 arg0, struct SoundCharacteristics* arg1) {
 }
 
 void func_800C4398(void) {
-    u8 bank = 0;
-    u8 soundIndex = 0;
-    u8 var_a3 = 0;
+    u8 bank;
+    u8 soundIndex;
+    u8 var_a3;
     UNUSED s32 maybepad = 0;
     struct Sound* var_a2 = NULL;
     UNUSED s32 pad = 0;
@@ -1408,7 +1367,7 @@ void func_800C4398(void) {
 }
 
 void delete_sound_from_bank(u8 bankId, u8 soundId) {
-    UNUSED s32 stackPadding = 0;
+    UNUSED s32 stackPadding;
     struct SoundCharacteristics* temp = &sSoundBanks[bankId][soundId];
     if (*temp->unk00 != D_800EA1C8) {
         *temp->unk04 = 100000.0f;
@@ -1436,20 +1395,20 @@ struct ActiveSfx {
 
 #define AUDIO_MK_CMD(b0,b1,b2,b3) ((((b0) & 0xFF) << 0x18) | (((b1) & 0xFF) << 0x10) | (((b2) & 0xFF) << 0x8) | (((b3) & 0xFF) << 0))
 void func_800C4888(u8 bankId) {
-    u8 j = 0;
-    u8 numChannels = 0;
-    u8 chosenEntryIndex = 0;
-    u8 i = 0;
-    u8 k = 0;
-    u8 numChosenSfx = 0;
-    u8 needNewSfx = 0;
-    u8 soundIndex = 0;
-    u8 requestedPriority = 0;
-    u8 temp_t8 = 0;
-    f32 var_f0 = 0;
-    struct ActiveSfx* activeSfx = NULL;
-    struct ActiveSfx chosenSfx[8] = { 0 };
-    struct SoundCharacteristics* entry = NULL;
+    u8 j;
+    u8 numChannels;
+    u8 chosenEntryIndex;
+    u8 i;
+    u8 k;
+    u8 numChosenSfx;
+    u8 needNewSfx;
+    u8 soundIndex;
+    u8 requestedPriority;
+    u8 temp_t8;
+    f32 var_f0;
+    struct ActiveSfx* activeSfx;
+    struct ActiveSfx chosenSfx[8];
+    struct SoundCharacteristics* entry;
 
     numChosenSfx = 0;
     for (i = 0; i < 8; i++) {
@@ -1590,11 +1549,11 @@ void func_800C4888(u8 bankId) {
 }
 
 void func_800C4FE4(u8 bankId) {
-    u8 soundId = 0;
-    u8 var_s4 = 0;
-    UNUSED u32 cmd = 0;
-    struct SoundCharacteristics* temp_s0 = NULL;
-    struct SequenceChannel* thing = NULL;
+    u8 soundId;
+    u8 var_s4;
+    UNUSED u32 cmd;
+    struct SoundCharacteristics* temp_s0;
+    struct SequenceChannel* thing;
 
     for (var_s4 = 0; var_s4 < D_800EA188[D_800EA1C0][bankId]; var_s4++) {
         soundId = D_80192AB8[bankId][var_s4][4];
@@ -1626,9 +1585,9 @@ void func_800C4FE4(u8 bankId) {
 
 // Seems somewhat similar to certain parts of `select_current_sounds` from SM64
 void func_800C5278(u8 bankId) {
-    UNUSED s32 stackPadding0 = 0;
-    u8 soundId = 0;
-    struct SoundCharacteristics sp60 = { 0 };
+    UNUSED s32 stackPadding0;
+    u8 soundId;
+    struct SoundCharacteristics sp60;
 
     soundId = sSoundBanks[bankId][0].next;
     while (soundId != 0xFF) {
@@ -1648,8 +1607,8 @@ void func_800C5278(u8 bankId) {
 }
 
 void func_800C5384(u8 arg0, Vec3f* arg1) {
-    u8 curr = 0;
-    u8 next = 0;
+    u8 curr;
+    u8 next;
 
     curr = 0;
     next = sSoundBanks[arg0][0].next;

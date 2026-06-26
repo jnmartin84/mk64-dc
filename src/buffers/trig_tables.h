@@ -13,7 +13,7 @@
  * exploits array sizes for range analysis-based optimizations as well).
  * Thus, for non-IDO compilers we use the standard-compliant version.
  */
-#if 0
+#if 1
 extern f32 gSineTable[];
 #ifdef AVOID_UB
 #define gCosineTable (gSineTable + 0x400)

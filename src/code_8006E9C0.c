@@ -532,7 +532,7 @@ void reset_all_kinds_of_stuff(void) {
     D_80165804 = 0;
     D_801657FC = 0;
     D_8018D174 = D_8018D17C = D_8018D16C = D_8018D184 = D_8018D18C = -1;
-    player = gPlayers;//One;
+    player = gPlayerOne;
     for (i = 0; i < NUM_PLAYERS; i++) {
         D_8018D0F0[i] = D_8018D050[i] = -32.0f;
         D_8018CE10[i].unk_04[0] = D_8018CE10[i].unk_04[1] = D_8018CE10[i].unk_04[2] = 0.0f;

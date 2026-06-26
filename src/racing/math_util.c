@@ -1,4 +1,5 @@
 #include <ultra64.h>
+#include <sincoss.h>
 #include <mk64.h>
 #include <macros.h>
 #include <math_util.h>
@@ -15,33 +16,7 @@ s32 D_802B91C0[2] = { 13, 13 };
 Vec3f D_802B91C8 = { 0.0f, 0.0f, 0.0f };
 
 
-static inline void sincoss(u16 arg0, f32* s, f32* c) {
-    register float __s __asm__("fr2");
-    register float __c __asm__("fr3");
 
-    asm("lds    %2,fpul\n\t"
-        "fsca    fpul,dr2\n\t"
-        : "=f"(__s), "=f"(__c)
-        : "r"(arg0)
-        : "fpul");
-
-    *s = __s;
-    *c = __c;
-}
-
-static inline void scaled_sincoss(u16 arg0, f32* s, f32* c, f32 scale) {
-    register float __s __asm__("fr2");
-    register float __c __asm__("fr3");
-
-    asm("lds    %2,fpul\n\t"
-        "fsca    fpul,dr2\n\t"
-        : "=f"(__s), "=f"(__c)
-        : "r"(arg0)
-        : "fpul");
-
-    *s = __s * scale;
-    *c = __c * scale;
-}
 
 /**
  * Inserts matrix into the rsp. Position, rotation and mode of where to render the next object and check number of
@@ -240,18 +215,14 @@ void mtxf_translate(Mat4 dest, Vec3f b) {
     //dest[3][1] = b[1];
     //dest[3][2] = b[2];
 }
-#define pi_over_180 0.017453292222222222f
-#define halfpi_over_180 0.00872665f
-#include <stdlib.h>
+
 // Note the use of `2` which generates diff asm than just using floats (2.0f).
 void func_802B5564(Mat4 arg0, u16* arg1, f32 arg2, f32 arg3, f32 arg4, f32 arg5, f32 arg6) {
     f32 temp;
     s32 i, j;
     mtxf_identity(arg0);
-    arg2 *= halfpi_over_180;
-    if (arg2 == 0.0f)
-        exit(-1);
-    temp = cosf(arg2) / sinf(arg2);
+    arg2 *= 0.017453292222222222;
+    temp = cosf(arg2 / 2) / sinf(arg2 / 2);
     arg0[0][0] = temp / arg3;
     arg0[1][1] = temp;
     arg0[2][2] = (arg4 + arg5) / (arg4 - arg5);
@@ -418,21 +389,18 @@ void mtxf_s16_rotate_z(Mat4 mat, s16 angle) {
 }
 
 void func_802B5B14(Vec3f b, Vec3s rotate) {
-#if 0
+#if 1
     Mat4 mtx;
     Vec3f copy;
 
-    f32 sx;// = sins(rotate[0]);
-    f32 cx;// = coss(rotate[0]);
-    sincoss(rotate[0], &sx, &cx);
+    f32 sx = sins(rotate[0]);
+    f32 cx = coss(rotate[0]);
 
-    f32 sy;// = sins(rotate[1]);
-    f32 cy;// = coss(rotate[1]);
-    sincoss(rotate[1], &sy, &cy);
+    f32 sy = sins(rotate[1]);
+    f32 cy = coss(rotate[1]);
 
-    f32 sz;// = sins(rotate[2]);
-    f32 cz;// = coss(rotate[2]);
-    sincoss(rotate[2], &sz, &cz);
+    f32 sz = sins(rotate[2]);
+    f32 cz = coss(rotate[2]);
 
     copy[0] = b[0];
     copy[1] = b[1];
@@ -462,13 +430,10 @@ void func_802B5B14(Vec3f b, Vec3s rotate) {
 }
 
 void func_802B5CAC(s16 arg0, s16 arg1, Vec3f arg2) {
-    f32 sp2C;// = sins(arg1);
-    f32 sp28;// = coss(arg1);
-    sincoss(arg1, &sp2C, &sp28);
-
-    f32 sp24;// = sins(arg0);
-    f32 temp_f10;// = coss(arg0);
-    sincoss(arg0, &sp24, &temp_f10);
+    f32 sp2C = sins(arg1);
+    f32 sp28 = coss(arg1);
+    f32 sp24 = sins(arg0);
+    f32 temp_f10 = coss(arg0);
 
     arg2[0] = sp28 * sp24;
     arg2[1] = sp2C;
@@ -500,14 +465,10 @@ void set_course_lighting(Lights1* addr, s16 arg1, s16 arg2, s32 arg3) {
     Lights1* var_s0;
 
     var_s0 = (Lights1*) segmented_to_virtual(addr);
-    
-    //sp48 = sins(arg2);
-    //sp44 = coss(arg2);
-    scaled_sincoss(arg2, &sp48, &sp44, 120.0f);
-
-    //sp40 = sins(arg1);
-    //temp_f10 = coss(arg1);
-    scaled_sincoss(arg1, &sp40, &temp_f10, sp44);
+    sp48 = sins(arg2);
+    sp44 = coss(arg2);
+    sp40 = sins(arg1);
+    temp_f10 = coss(arg1);
     
     sp2C[0] = sp40;
     sp2C[1] = sp48;
@@ -547,9 +508,13 @@ void mtxf_pos_rotation_xyz(Mat4 out, Vec3f pos, Vec3s orientation) {
     f32 cosine2;
     f32 sine3;
     f32 cosine3;
-    sincoss(orientation[0], &sine1,&cosine1);
-    sincoss(orientation[1], &sine2,&cosine2);
-    sincoss(orientation[2], &sine3,&cosine3);
+
+    sine1 = sins(orientation[0]);
+    cosine1 = coss(orientation[0]);
+    sine2 = sins(orientation[1]);
+    cosine2 = coss(orientation[1]);
+    sine3 = sins(orientation[2]);
+    cosine3 = coss(orientation[2]);
     out[0][0] = (cosine2 * cosine3) + ((sine1 * sine2) * sine3);
     out[1][0] = (-cosine2 * sine3) + ((sine1 * sine2) * cosine3);
     out[2][0] = cosine1 * sine2;
@@ -711,23 +676,20 @@ UNUSED void func_802B64B0(UNUSED s32 arg0, UNUSED s32 arg1, UNUSED s32 arg2, UNU
 }
 
 void func_802B64C4(Vec3f arg0, s16 arg1) {
-    f32 sp2C;// = sins(arg1);
-    f32 temp_f0;// = coss(arg1);
-
-
-    sincoss(arg1, &sp2C, &temp_f0);
+    f32 sp2C = sins(arg1);
+    f32 temp_f0 = coss(arg1);
 
     f32 temp1 = arg0[0];
-    f32 temp3 = arg0[2];
     f32 temp2 = arg0[1];
+    f32 temp3 = arg0[2];
 
     arg0[0] = temp_f0 * temp1 - (sp2C * temp3);
-    arg0[2] = sp2C * temp1 + (temp_f0 * temp3);
     arg0[1] = temp2;
+    arg0[2] = sp2C * temp1 + (temp_f0 * temp3);
 }
 
 void calculate_orientation_matrix(Mat3 dest, f32 arg1, f32 arg2, f32 arg3, s16 rotationAngle) {
-#if 0
+#if 1
     Mat3 mtx_rot_y;
     Mat3 matrix;
     s32 i, j;
@@ -739,9 +701,8 @@ void calculate_orientation_matrix(Mat3 dest, f32 arg1, f32 arg2, f32 arg3, s16 r
     f32 sinValue;
     f32 cossValue;
 
-    sincoss(rotationAngle,&sinValue,&cossValue);
-//    sinValue = sins(rotationAngle);
-//    cossValue = coss(rotationAngle);
+    sinValue = sins(rotationAngle);
+    cossValue = coss(rotationAngle);
     mtx_rot_y[0][0] = cossValue;
     mtx_rot_y[2][1] = 0;
     mtx_rot_y[1][2] = 0;
@@ -829,9 +790,8 @@ void calculate_rotation_matrix(Mat3 destMatrix, s16 rotationAngle, f32 rotationX
     f32 temp;
 //    UNUSED s32 pad[2];
 
-    sincoss((u16)rotationAngle,&sinValue,&cossValue);
-//    sinValue = sins((u16)rotationAngle);
-//    cossValue = coss((u16)rotationAngle);
+    sinValue = sins((u16)rotationAngle);
+    cossValue = coss((u16)rotationAngle);
 
     temp_f12 = 1.0f - cossValue;
 
@@ -861,9 +821,8 @@ void func_802B6BC0(Mat4 arg0, s16 arg1, f32 arg2, f32 arg3, f32 arg4) {
     f32 temp_f0;
     f32 temp_f12;
 
-//    sine = sins(arg1);
-//    cosine = coss(arg1);
-    sincoss(arg1,&sine,&cosine);
+    sine = sins(arg1);
+    cosine = coss(arg1);
     temp_f0 = sqrtf((arg2 * arg2) + (arg4 * arg4));
     if (temp_f0 != 0.0f) {
         temp_f12 = 1.0f / temp_f0;
@@ -896,10 +855,42 @@ void func_802B6BC0(Mat4 arg0, s16 arg1, f32 arg2, f32 arg3, f32 arg4) {
 
 // look like create a translation and rotation matrix with arg1 position and arg2 rotation
 void func_802B6D58(Mat4 arg0, Vec3f arg1, Vec3f arg2) {
+#if 1
+    f32 sine1;
+    f32 cosine1;
+    f32 sine2;
+    f32 cosine2;
+    f32 sine3;
+    f32 cosine3;
+
+    sine1 = sins(arg2[0]);
+    cosine1 = coss(arg2[0]);
+    sine2 = sins(arg2[1]);
+    cosine2 = coss(arg2[1]);
+    sine3 = sins(arg2[2]);
+    cosine3 = coss(arg2[2]);
+    arg0[0][0] = (cosine2 * cosine3) + ((sine1 * sine2) * sine3);
+    arg0[1][0] = (-cosine2 * sine3) + (sine1 * sine2) * cosine3;
+    arg0[2][0] = cosine1 * sine2;
+    arg0[3][0] = arg1[0];
+    arg0[0][1] = cosine1 * sine3;
+    arg0[1][1] = cosine1 * cosine3;
+    arg0[2][1] = -sine1;
+    arg0[3][1] = arg1[1];
+    arg0[0][2] = (-sine2 * cosine3) + ((sine1 * cosine2) * sine3);
+    arg0[1][2] = (sine2 * sine3) + ((sine1 * cosine2) * cosine3);
+    arg0[2][2] = cosine1 * cosine2;
+    arg0[3][2] = arg1[2];
+    arg0[0][3] = 0.0f;
+    arg0[1][3] = 0.0f;
+    arg0[2][3] = 0.0f;
+    arg0[3][3] = 1.0f;
+#else
     shz_dcache_alloc_line(arg0);
     shz_xmtrx_init_rotation(arg2[0], arg2[1], arg2[2]);
     shz_xmtrx_set_translation(arg1[0], arg1[1], arg1[2]);
     shz_xmtrx_store_4x4(arg0);
+#endif
 }
 
 // thanks @FalcoGirgis
@@ -925,7 +916,6 @@ void mtxf_to_mtx(Mtx* dest, Mat4 src) {
     __builtin_prefetch(dest);
     shz_xmtrx_load_4x4(src);
     shz_xmtrx_store_4x4_unaligned(dest);
-
 #else
 #ifdef AVOID_UB
     // Avoid type-casting which is technically UB by calling the equivalent
@@ -953,34 +943,8 @@ void mtxf_to_mtx(Mtx* dest, Mat4 src) {
  * Helper function for atan2s. Does a look up of the arctangent of y/x assuming
  * the resulting angle is in range [0, 0x2000] (1/8 of a circle).
  */
-#if 0
-// if 2pi is a full circle
-// the output range is [0, 2pi / 8 -> pi/4] is the range
-
-//
-// only works for positive x
-#define approx_recip(x) (1.0f / sqrtf((x)*(x)))
-#define scaleatanval 10430.37806022f
-#define qprecip 1.27323951f
-#define quarterpi_i754 0.785398185253143310546875f
-#define halfpi_i754 1.57079637050628662109375f
-#define pi_i754 3.1415927410125732421875f
-#define twopi_i754 6.283185482025146484375f
-static inline float bump_atan2f(const float y, const float x)
-{
-	float abs_y = fabsf(y) + 1e-10f;
-	float absy_plus_absx = abs_y + fabsf(x);
-	float inv_absy_plus_absx = approx_recip(absy_plus_absx);
-	float angle = halfpi_i754 - copysignf(quarterpi_i754, x);
-	float r = (x - copysignf(abs_y, x)) * inv_absy_plus_absx;
-	angle += (0.1963f * r * r - 0.9817f) * r;
-	return copysignf(angle, y) * scaleatanval;
-}
-#endif
-
 u16 atan2_lookup(f32 y, f32 x) {
     u16 ret;
-#if 1
     if (x == 0) {
         ret = gArctanTable[0];
     } else {
@@ -995,9 +959,6 @@ u16 atan2_lookup(f32 y, f32 x) {
         }
     }
     return ret;
-#else
-    return (u16)bump_atan2f(y,x); 
-#endif
 }
 
 /**
@@ -1086,14 +1047,9 @@ u16 random_u16(void) {
     return gRandomSeed16;
 }
 
-#define recip65535 0.00001526f
-
 u16 random_int(u16 arg0) {
-    return arg0 * (((f32) random_u16()) * recip65535);
+    return arg0 * (((f32) random_u16()) / 65535.0);
 }
-//u16 random_int(u16 arg0) {
-//    return arg0 * (((f32) random_u16()) / 65535.0);
-//}
 
 s16 func_802B7F34(f32 arg0, f32 arg1, f32 arg2, f32 arg3) {
     return atan2s(arg2 - arg0, arg3 - arg1);
@@ -1113,29 +1069,12 @@ void func_802B7F7C(Vec3f arg0, Vec3f arg1, Vec3s dest) {
     dest[2] = func_802B7F34(x1, y1, x2, y2);
 }
 
-// if you want to use instrinsics...
-//    float farg0 = ((float)(arg0 / 16.0f) / 1024.0f) * F_PI * 0.5f;
-//    return sinf(farg0);
-//    return cosf(farg0);
-
-//#define gCosineTable (gSineTable + 0x400)
-
 f32 sins(u16 arg0) {
-#if 0
     return gSineTable[arg0 >> 4];
-#else
-    float farg0 = (float)arg0 * TRIG_ARG_SCALE;
-    return sinf(farg0);
-#endif
 }
 
 f32 coss(u16 arg0) {
-#if 0
     return gCosineTable[arg0 >> 4];
-#else
-    float farg0 = (float)arg0 * TRIG_ARG_SCALE;
-    return cosf(farg0);
-#endif
 }
 
 s32 is_visible_between_angle(u16 arg0, u16 arg1, u16 arg2) {
@@ -1260,7 +1199,7 @@ UNUSED void func_802B8414(uintptr_t addr, Mat4 arg1, s16 arg2, s16 arg3, s32 arg
 }
 #endif
 
-void func_802B8614(Player* arg0) {
+UNUSED void func_802B8614(Player* arg0) {
 //    UNUSED f64 pad[4];
     f64 corner1PosX = arg0->tyres[FRONT_RIGHT].pos[0];
     f64 corner1PosY = arg0->tyres[FRONT_RIGHT].baseHeight;
@@ -1281,9 +1220,8 @@ void func_802B8614(Player* arg0) {
     f64 zValue = (corner0PosX - corner1PosX) * (corner3PosY - corner0PosY) -
                  (corner0PosY - corner1PosY) * (corner3PosX - corner0PosX);
 
-    f64 length = 1.0 / sqrtf((xValue * xValue) + (yValue * yValue) + (zValue * zValue));
+    f64 length = sqrtf((xValue * xValue) + (yValue * yValue) + (zValue * zValue));
 
-    // wtf?
     length = 0.0;
 
     if (length == 0.0) {

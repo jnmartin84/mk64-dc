@@ -2603,7 +2603,7 @@ void draw_minimap_character(s32 arg0, s32 playerId, s32 characterId) {
 
 // WTF is up with the gPlayerOne access in this function?
 void func_8004F3E4(s32 arg0) {
-    Player* player;
+    UNUSED Player* player;
     s32 playerId;
     s32 idx;
 
@@ -2612,21 +2612,21 @@ void func_8004F3E4(s32 arg0) {
             for (idx = D_8018D158 - 1; idx >= 0; idx--) {
                 playerId = gGPCurrentRacePlayerIdByRank[idx];
                 player = &gPlayers[playerId];
-                if (/* (gPlayerOne + playerId) */player->type & PLAYER_CPU) {
+                if ((gPlayerOne + playerId)->type & PLAYER_CPU) {
                     draw_minimap_character(arg0, playerId, 8);
                 }
             }
             for (idx = D_8018D158 - 1; idx >= 0; idx--) {
                 playerId = gGPCurrentRacePlayerIdByRank[idx];
                 player = &gPlayers[playerId];
-                if ((/* (gPlayerOne + playerId) */player->type & PLAYER_CPU) != PLAYER_CPU) {
-                    draw_minimap_character(arg0, playerId, /* (gPlayerOne + playerId) */player->characterId);
+                if (((gPlayerOne + playerId)->type & PLAYER_CPU) != PLAYER_CPU) {
+                    draw_minimap_character(arg0, playerId, (gPlayerOne + playerId)->characterId);
                 }
             }
             break;
         case TIME_TRIALS:
             for (idx = 0; idx < 8; idx++) {
-                if ((/* (gPlayerOne + idx)->type */gPlayers[idx].type & PLAYER_INVISIBLE_OR_BOMB) == PLAYER_INVISIBLE_OR_BOMB) {
+                if (((gPlayerOne + idx)->type & PLAYER_INVISIBLE_OR_BOMB) == PLAYER_INVISIBLE_OR_BOMB) {
                     draw_minimap_character(arg0, idx, 8);
                 }
             }
@@ -2635,14 +2635,13 @@ void func_8004F3E4(s32 arg0) {
         case VERSUS:
             for (idx = gPlayerCountSelection1 - 1; idx >= 0; idx--) {
                 playerId = gGPCurrentRacePlayerIdByRank[idx];
-                player = &gPlayers[playerId];
-                draw_minimap_character(arg0, playerId, /* (gPlayerOne + playerId) */player->characterId);
+                draw_minimap_character(arg0, playerId, (gPlayerOne + playerId)->characterId);
             }
             break;
         case BATTLE:
             for (idx = 0; idx < gPlayerCountSelection1; idx++) {
-                if (!(/* (gPlayerOne + idx)->type */gPlayers[idx].type & PLAYER_UNKNOWN_0x40)) {
-                    draw_minimap_character(arg0, idx, /* (gPlayerOne + idx)->type */gPlayers[idx].characterId);
+                if (!((gPlayerOne + idx)->type & PLAYER_UNKNOWN_0x40)) {
+                    draw_minimap_character(arg0, idx, (gPlayerOne + idx)->characterId);
                 }
             }
             break;
@@ -2872,7 +2871,7 @@ void func_80050320(void) {
                 }
                 temp_v0 = gGPCurrentRacePlayerIdByRank[var_s0];
                 // ????
-                characterId = /* (gPlayerOne + temp_v0)-> */gPlayers[temp_v0].characterId;
+                characterId = (gPlayerOne + temp_v0)->characterId;
                 lapCount = gLapCountByPlayerId[temp_v0];
                 if (temp_v0 == 0) {
                     func_8004FDB4(D_8018D028[var_s0], D_8018D050[var_s0], var_s0, lapCount, characterId, 0x000000FF, 1,
@@ -3063,14 +3062,14 @@ void func_80050E34(s32 playerId, s32 arg1) {
     s32 objectIndex;
     s32 spD0;
     s32 spCC;
-//    Player *dummy = &gPlayers/* One */[playerId];
+    Player *dummy = &gPlayerOne[playerId];
     s32 spC4;
     s32 lapCount;
     s32 characterId;
     s32 spB8;
     s32 temp_v0_2;
     Object* object;
-    Player *player = &gPlayers/* One */[playerId];
+    Player *player = &gPlayerOne[playerId];
 
     lapCount = gLapCountByPlayerId[playerId];
     characterId = player->characterId;
@@ -3157,7 +3156,7 @@ void func_800514BC(void) {
     }
     for (var_s0 = var_s3 - 1, var_s1 = 0; var_s1 < var_s3; var_s1++, var_s0--) {
         temp_a0 = gGPCurrentRacePlayerIdByRank[var_s0];
-        player = &gPlayers/* One */[temp_a0];
+        player = &gPlayerOne[temp_a0];
         if ((player->type & PLAYER_EXISTS) && ((temp_a0 != 0) || (gPlayerCountSelection1 != 1))) {
             func_80050E34(temp_a0, var_s0);
         }
@@ -3492,7 +3491,7 @@ void render_object_trash_bin(s32 cameraId) {
 void func_8005285C(s32 arg0) {
     Player* temp_v0;
 
-    temp_v0 = &gPlayers/* One */[arg0];
+    temp_v0 = &gPlayerOne[arg0];
     D_80183E40[0] = temp_v0->pos[0];
     D_80183E40[1] = temp_v0->pos[1];
     D_80183E40[2] = temp_v0->pos[2];
@@ -3572,7 +3571,7 @@ void func_80052D70(s32 playerId) {
     s32 test;
     Player* temp_v1;
 
-    temp_v1 = &gPlayers/* One */[playerId];
+    temp_v1 = &gPlayerOne[playerId];
     test = gIndexLakituList[playerId];
     if (func_80072320(test, 8) != 0) {
         D_80183E40[0] = temp_v1->pos[0];
@@ -3606,7 +3605,7 @@ void render_object_snowmans_list_2(s32 cameraId) {
     s32 someIndex;
     s32 objectIndex;
     Object* object;
-//return;
+
     sp44 = &camera1[cameraId];
     load_texture_and_tlut(d_course_frappe_snowland_snow_tlut, d_course_frappe_snowland_snow, 0x00000020, 0x00000020);
     for (someIndex = 0; someIndex < gObjectParticle2_SIZE; someIndex++) {
@@ -3871,7 +3870,7 @@ void render_object_thwomps(s32 cameraId) {
         }
     }
 
-    func_800534A4(0);//objectIndex);
+    func_800534A4(objectIndex);
     for (i = 0; i < gNumActiveThwomps; i++) {
         objectIndex = indexObjectList1[i];
         minusone = gObjectList[objectIndex].unk_0DF - 1;
@@ -4697,7 +4696,7 @@ void func_800568A0(s32 objectIndex, s32 playerId) {
     Mat4 sp30;
     Player* player;
 
-    player = &gPlayers/* One */[playerId];
+    player = &gPlayerOne[playerId];
     D_80183E50[0] = gObjectList[objectIndex].pos[0];
     D_80183E50[1] = gObjectList[objectIndex].surfaceHeight + 0.8;
     D_80183E50[2] = gObjectList[objectIndex].pos[2];
@@ -4740,7 +4739,7 @@ void render_object_bomb_kart(s32 cameraId) {
         object = &gObjectList[temp_s0];
         if (object->state != 0) {
             temp_s1 = object->primAlpha;
-            temp_v0 = &gPlayers/* One */[payerId];
+            temp_v0 = &gPlayerOne[payerId];
             object->pos[0] = temp_v0->pos[0];
             object->pos[1] = temp_v0->pos[1] - 2.0;
             object->pos[2] = temp_v0->pos[2];

@@ -2281,8 +2281,13 @@ void vblfunc(uint32_t c, void *d) {
 	(void)c;
 	(void)d;
     vblticker++;
+    /* Drive the game's vblank timing from the real 60Hz DC vblank.
+       On N64 these advanced in handle_vblank() (the VI interrupt handler),
+       which is dead on DC (#if 0 thread3_video), so they were stuck. */
+    gVBlankTimer += V_BlANK_TIMER_ITER;
+    sNumVBlanks++;
     genwait_wake_one((void *)&vblticker);
-}    
+}
 
 void thread5_game_loop(UNUSED void* arg) {
     setup_mesg_queues();

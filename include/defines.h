@@ -339,9 +339,10 @@ enum PLACE { FIRST_PLACE, SECOND_PLACE, THIRD_PLACE, FOURTH_PLACE };
 #define UNKNOWN_EFFECT_0x1000 0x1000         //
 #define STAR_EFFECT 0x200                    // being a star
 #define BOOST_EFFECT 0x2000                  // being boosted by trigger a mushroom
+#define EARLY_START_SPINOUT_EFFECT    0x4000 // spinning out by pressing a too early at the startline or after lakitu retrieves you
 #define UNKNOWN_EFFECT_0x10000 0x10000       //
 #define BOOST_RAMP_ASPHALT_EFFECT 0x100000   // being boosted by a boost pad
-#define UNKNOWN_EFFECT_0x200000 0x200000     //
+#define CPU_FAST_EFFECT 0x200000     //
 #define REVERSE_EFFECT 0x400000              // being in reverse of the course
 #define UNKNOWN_EFFECT_0x1000000 0x1000000   //
 #define HIT_BY_ITEM_EFFECT 0x2000000         // being hit by an item

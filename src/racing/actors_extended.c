@@ -298,7 +298,7 @@ void update_actor_banana_bunch(struct BananaBunchParent* banana_bunch) {
                 controller = &gControllers[banana_bunch->playerId];
                 if ((controller->buttonPressed & Z_TRIG) != 0) {
                     controller->buttonPressed &= ~Z_TRIG;
-                    func_800C9060(owner - gPlayers/* One */, SOUND_ARG_LOAD(0x19, 0x00, 0x80, 0x12));
+                    func_800C9060(owner - gPlayerOne, SOUND_ARG_LOAD(0x19, 0x00, 0x80, 0x12));
                     if ((controller->rawStickY >= 0x1F) &&
                         ((controller->rawStickX < 0x28) && (controller->rawStickX >= -0x27))) {
                         func_802B0788(controller->rawStickY, banana_bunch, owner);
@@ -524,7 +524,7 @@ s32 use_banana_bunch_item(Player* player) {
     }
     bananaBunch = (struct BananaBunchParent*) &gActorList[actorIndex];
     bananaBunch->state = 0;
-    bananaBunch->playerId = player - gPlayers/*One*/;
+    bananaBunch->playerId = player - gPlayerOne;
     player->soundEffects |= HOLD_BANANA_SOUND_EFFECT;
     return actorIndex;
 }
@@ -545,7 +545,7 @@ s32 use_triple_shell_item(Player* player, s16 tripleShellType) {
     parent->state = 0;
     parent->rotVelocity = 0x05B0;
     parent->rotAngle = -0x8000;
-    parent->playerId = player - gPlayers/*One*/;
+    parent->playerId = player - gPlayerOne;
     parent->shellsAvailable = 0;
     parent->unk_08 = 0.0f;
     return actorIndex;
@@ -590,7 +590,7 @@ s32 init_triple_shell(TripleShellParent* parent, Player* player, s16 shellType, 
     }
     shell->rotVelocity = 0;
     shell->rotAngle = -0x8000;
-    shell->playerId = player - gPlayers/*One*/;
+    shell->playerId = player - gPlayerOne;
     shell->parentIndex = (struct Actor*) parent - gActorList;
     shell->shellId = shellId;
     parent->shellIndices[shellId] = (struct Actor*) shell - gActorList;
@@ -633,7 +633,7 @@ s32 use_green_shell_item(Player* player) {
     shell->state = HELD_SHELL;
     shell->rotVelocity = 0;
     shell->rotAngle = -0x8000;
-    shell->playerId = player - gPlayers/*One*/;
+    shell->playerId = player - gPlayerOne;
     return actorIndex;
 }
 
@@ -673,7 +673,7 @@ s32 use_red_shell_item(Player* player) {
     shell->state = HELD_SHELL;
     shell->rotVelocity = 0;
     shell->rotAngle = player->rotation[1] - 0x8000;
-    shell->playerId = player - gPlayers/*One*/;
+    shell->playerId = player - gPlayerOne;
     return actorIndex;
 }
 
@@ -719,7 +719,7 @@ void func_802B2914(struct BananaBunchParent* banana_bunch, Player* player, s16 b
                                 newBanana->pos[1], newBanana->pos[2], startingPos[0], startingPos[1], startingPos[2]);
         func_802B4E30((struct Actor*) newBanana);
         newBanana->flags = 0x9000;
-        newBanana->playerId = player - gPlayers/*One*/;
+        newBanana->playerId = player - gPlayerOne;
         newBanana->parentIndex = (struct Actor*) banana_bunch - gActorList;
         newBanana->youngerIndex = -1;
         newBanana->unk_04 = 0x0014;
@@ -760,7 +760,7 @@ void func_802B2914(struct BananaBunchParent* banana_bunch, Player* player, s16 b
                 break;
         }
         if ((player->type & PLAYER_HUMAN) != 0) {
-            func_800C9060(player - gPlayers/*One*/, SOUND_ARG_LOAD(0x19, 0x00, 0x80, 0x12));
+            func_800C9060(player - gPlayerOne, SOUND_ARG_LOAD(0x19, 0x00, 0x80, 0x12));
         }
     }
 }
@@ -801,7 +801,7 @@ s32 use_fake_itembox_item(Player* player) {
         return actorIndex;
     }
     itemBox = (struct FakeItemBox*) &gActorList[actorIndex];
-    itemBox->playerId = (player - gPlayers/*One*/);
+    itemBox->playerId = (player - gPlayerOne);
     itemBox->state = HELD_FAKE_ITEM_BOX;
     player->soundEffects |= HOLD_BANANA_SOUND_EFFECT;
     return actorIndex;
@@ -816,7 +816,7 @@ s32 use_banana_item(Player* player) {
     Vec3s startingRot;
     Vec3f startingPos;
 
-    playerId = player - gPlayers/*One*/;
+    playerId = player - gPlayerOne;
     if (playerId >= 8) {
         return -1;
     }
@@ -866,7 +866,7 @@ void use_thunder_item(Player* player) {
     func_8009E5BC();
     if ((player->type & PLAYER_HUMAN) != 0) {
         // Play sound.
-        func_800CAB4C(player - gPlayers/*One*/);
+        func_800CAB4C(player - gPlayerOne);
     }
 
     for (index = 0; index < NUM_PLAYERS; index++) {
@@ -879,7 +879,7 @@ void use_thunder_item(Player* player) {
 
 // Handles item use?
 void player_use_item(Player* player) {
-    s32 playerId = player - gPlayers/*One*/;
+    s32 playerId = player - gPlayerOne;
 
     switch (player->currentItemCopy) {
         case ITEM_GREEN_SHELL:
@@ -948,7 +948,7 @@ void check_player_use_item(void) {
                 } else if ((player - gPlayerThree) == 0) {
                     controller = gControllerSeven;
                 } else {
-                    if ((player - gPlayers/*One*/) == 0) {
+                    if ((player - gPlayerOne) == 0) {
                         controller = gControllerEight;
                     }
                 }
