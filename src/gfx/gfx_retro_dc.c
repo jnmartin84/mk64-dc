@@ -225,6 +225,12 @@ static struct RDP {
 
 	uint32_t other_mode_l, other_mode_h;
 	uint32_t combine_mode;
+#ifdef GFX_BACKEND_PVR
+	// Raw G_SETCOMBINE words, kept for the PVR combiner evaluator: the compressed
+	// combine_mode (cc_id) drops the N64 G_CCMUX_1 constant + the true alpha mux, so
+	// the faithful (a-b)*c+d eval reads these instead. (See pvr_eval_combiner.)
+	uint32_t combine_w0, combine_w1;
+#endif
 
 	struct RGBA env_color, prim_color, fog_color, fill_color;
 	struct XYWidthHeight viewport, scissor;
@@ -289,6 +295,28 @@ static uint8_t cur_scissor_gen = 1;
 // the rdp fields. Init to a full 640x480 screen.
 static float vpf_x = 0.0f,   vpf_y = 0.0f,   vpf_w = 640.0f, vpf_h = 480.0f;
 static float scf_x = 0.0f,   scf_y = 0.0f,   scf_w = 640.0f, scf_h = 480.0f;
+
+#ifdef GFX_BACKEND_PVR
+// NDC -> PVR window (pixel) mapping coefficients. The raw-PVR backend does NO
+// transform, so gfx_retro_dc owns the full object->screen path: MVP at vertex-load
+// (clip-space _x/_y/_z/_w), then perspective divide + viewport map at emit:
+//   screen_x = sm_xscale*(_x/_w) + sm_xbias
+//   screen_y = sm_yscale*(_y/_w) + sm_ybias   (yscale<0: N64 NDC y-up -> PVR y-down)
+//   screen_z = 1/_w                            (PVR inverse-depth)
+// Top-left origin pixels, matching the 2D path. (GLdc build: none of this exists.)
+static float sm_xscale = 320.0f, sm_xbias = 320.0f;
+static float sm_yscale = -240.0f, sm_ybias = 240.0f;
+
+static void gfx_recompute_screen_map(void) {
+	float vw = vpf_w <= 0.0f ? 1.0f : vpf_w;
+	float vh = vpf_h <= 0.0f ? 1.0f : vpf_h;
+	float fb_h = (float) gfx_current_dimensions.height;
+	sm_xscale = vw * 0.5f;
+	sm_xbias  = vpf_x + vw * 0.5f;
+	sm_yscale = -(vh * 0.5f);
+	sm_ybias  = fb_h - vpf_y - vh * 0.5f;
+}
+#endif
 
 // Recompute the scissor NDC bounds from the current viewport + scissor rects.
 // Called whenever either changes (both live in the same lower-left window space).
@@ -546,6 +574,16 @@ extern void gfx_opengl_set_tile_addr(int tile, GLuint addr);
    padded region is never sampled. */
 extern float get_current_u_scale(void);
 extern float get_current_v_scale(void);
+#ifdef GFX_BACKEND_PVR
+extern float gfx_pvr_get_u_scale(void);
+extern float gfx_pvr_get_v_scale(void);
+#define get_current_u_scale gfx_pvr_get_u_scale
+#define get_current_v_scale gfx_pvr_get_v_scale
+extern void gfx_pvr_set_blend(uint8_t needs_tr);
+// Tracks the last TR/PT classification sent to the backend so we flush on change.
+// Persists across frames in lockstep with the backend's sNeedsTR (neither resets).
+static uint8_t pvr_cur_tr = 0;
+#endif
 
 static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, struct TextureHashmapNode** n, const uint8_t* orig_addr,
 										uint32_t tmem, uint32_t fmt, uint32_t siz, uint16_t uls, uint16_t ult) {
@@ -1399,6 +1437,7 @@ static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t
 }
 
 static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
+#ifndef GFX_BACKEND_PVR
     if (matrix_dirty) {
         glMatrixMode(GL_PROJECTION);
         glLoadMatrixf((const float*) rsp.P_matrix);
@@ -1406,7 +1445,8 @@ static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t de
         glLoadMatrixf((const float*) rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1]);
         matrix_dirty = 0;
     }
-    shz_xmtrx_load_4x4(&rsp.MP_matrix);
+#endif
+	shz_xmtrx_load_4x4(&rsp.MP_matrix);
     total_verts += n_vertices;
     if (rsp.geometry_mode & G_LIGHTING) {
         if (rsp.lights_changed) {
@@ -1569,6 +1609,89 @@ static int gfx_build_clipped_fan(const struct LoadedVertex* a, const struct Load
 	return nt;
 }
 
+#ifdef GFX_BACKEND_PVR
+// ---- Raw-PVR colour combiner evaluator (OoT-style, raw N64 mux) -------------
+// Evaluate cycle-0 (a-b)*c+d for colour AND alpha from the RAW G_SETCOMBINE words
+// (rdp.combine_w0/w1) — NOT the compressed cc_id, which drops G_CCMUX_1 and the true
+// alpha mux (that's why the kart combiner (1-ENV)*TEXEL0+PRIM blacked out). TEXEL*
+// substitute to 1.0 (the PVR does the real texture modulate), so argb is the modulate
+// colour. A constant additive 'd' (PRIM/ENV) is routed to the vertex oargb (added
+// post-modulate via the always-on specular bit) instead of argb (which multiplies) ->
+// e.g. texel*(1-ENV) + PRIM, no blowout. Replaces mat_packed on the PVR path.
+// Per-slot N64 mux encodings differ (a/b/d 4-bit, c 5-bit); idx 6 == G_CCMUX_1 == 1.0.
+static inline float pvr_cc4(int mux, int ch, const float prim[4], const float env[4], const float shade[4]) {
+	switch (mux) {
+		case 1: case 2: return 1.0f;             // TEXEL0/TEXEL1 -> PVR modulates
+		case 3: return prim[ch];
+		case 4: return shade[ch];
+		case 5: return env[ch];
+		case 6: return 1.0f;                      // G_CCMUX_1
+		default: return 0.0f;                     // 0 / COMBINED(none in cycle0) / unsupported
+	}
+}
+static inline float pvr_cc5(int mux, int ch, const float prim[4], const float env[4], const float shade[4]) {
+	switch (mux) {
+		case 1: case 2: case 8: case 9: return 1.0f; // TEXEL/TEXELa
+		case 3: return prim[ch];
+		case 4: return shade[ch];
+		case 5: return env[ch];
+		case 6: return 1.0f;
+		case 10: return prim[3];
+		case 11: return shade[3];
+		case 12: return env[3];
+		default: return 0.0f;
+	}
+}
+static inline float pvr_ca(int mux, const float prim[4], const float env[4], const float shade[4]) {
+	switch (mux) {
+		case 1: case 2: return 1.0f;
+		case 3: return prim[3];
+		case 4: return shade[3];
+		case 5: return env[3];
+		case 6: return 1.0f;
+		default: return 0.0f;
+	}
+}
+
+static inline void pvr_eval_combiner(uint32_t w0, uint32_t w1, const struct RGBA* sh,
+                                     uint32_t* out_argb, uint32_t* out_oargb) {
+	const float prim[4]  = { rdp.prim_color.r*recip255, rdp.prim_color.g*recip255, rdp.prim_color.b*recip255, rdp.prim_color.a*recip255 };
+	const float env[4]   = { rdp.env_color.r*recip255,  rdp.env_color.g*recip255,  rdp.env_color.b*recip255,  rdp.env_color.a*recip255 };
+	const float shade[4] = { sh->r*recip255, sh->g*recip255, sh->b*recip255, sh->a*recip255 };
+
+	// cycle-0 colour mux (a 4b, b 4b, c 5b, d 3b) and alpha mux (all 3b) — bit layout
+	// matches OoT parse_combiner / MK64's color_comb extraction.
+	int a = (w0 >> 20) & 0xF, b = (w1 >> 28) & 0xF, c = (w0 >> 15) & 0x1F, d = (w1 >> 15) & 0x7;
+	int aa = (w0 >> 12) & 0x7, ab = (w1 >> 12) & 0x7, ac = (w0 >> 9) & 0x7, ad = (w1 >> 9) & 0x7;
+
+	// Constant additive offset (colour d == PRIM/ENV) -> oargb, excluded from argb.
+	int offset = (d == 3 || d == 5);   // G_CCMUX d: 3=PRIM, 5=ENV
+	if (offset) {
+		const float* o = (d == 3) ? prim : env;
+		*out_oargb = PACK_ARGB8888((uint32_t)(o[0]*255.0f), (uint32_t)(o[1]*255.0f), (uint32_t)(o[2]*255.0f), 0);
+	} else {
+		*out_oargb = 0;
+	}
+
+	uint32_t col[4];
+	for (int ch = 0; ch < 3; ch++) {
+		float va = pvr_cc4(a, ch, prim, env, shade);
+		float vb = pvr_cc4(b, ch, prim, env, shade);
+		float vc = pvr_cc5(c, ch, prim, env, shade);
+		float vd = offset ? 0.0f : pvr_cc4(d, ch, prim, env, shade);
+		float v = (va - vb) * vc + vd;
+		v = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+		col[ch] = (uint32_t)(v * 255.0f);
+	}
+	float av = (pvr_ca(aa, prim, env, shade) - pvr_ca(ab, prim, env, shade)) * pvr_ca(ac, prim, env, shade)
+	           + pvr_ca(ad, prim, env, shade);
+	av = av < 0.0f ? 0.0f : (av > 1.0f ? 1.0f : av);
+	col[3] = (uint32_t)(av * 255.0f);
+
+	*out_argb = PACK_ARGB8888(col[0], col[1], col[2], col[3]);
+}
+#endif
+
 static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx) {
     struct LoadedVertex* v1 = &rsp.loaded_vertices[vtx1_idx];
     struct LoadedVertex* v2 = &rsp.loaded_vertices[vtx2_idx];
@@ -1705,6 +1828,24 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         rendering_state.alpha_blend = use_alpha;
     }
 
+#ifdef GFX_BACKEND_PVR
+    // Classify PT vs TR for the raw-PVR backend. genuine framebuffer alpha-blend ->
+    // deferred TR list; alpha-test cutout -> live PT. CVG_X_ALPHA (texture_edge) is NOT
+    // a reliable cutout signal: a true cutout (tree leaves) is ZMODE_OPA + CVG_X_ALPHA,
+    // but the item box is ZMODE_XLU + CVG_X_ALPHA (a real src-over translucent surface).
+    // So the Z-mode decides: XLU/INTER => TR even when CVG_X_ALPHA is set.
+    {
+        uint32_t zmode = rdp.other_mode_l & (ZMODE_XLU | ZMODE_INTER);  // 0xC00 field mask
+        uint8_t is_xlu = (zmode == ZMODE_XLU) || (zmode == ZMODE_INTER);
+        uint8_t needs_tr = use_alpha && (!texture_edge || is_xlu);
+        if (needs_tr != pvr_cur_tr) {
+            gfx_flush();
+            gfx_pvr_set_blend(needs_tr);
+            pvr_cur_tr = needs_tr;
+        }
+    }
+#endif
+
     uint8_t num_inputs;
     uint8_t used_textures[2];
     gfx_rapi->shader_get_info(prg, &num_inputs, used_textures);
@@ -1735,8 +1876,10 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     if (use_fog) {
         float fog_color[4] = { rdp.fog_color.r * recip255, rdp.fog_color.g * recip255,
                                rdp.fog_color.b * recip255, (float) (rdp.fog_color.a * recip255) * 0.75f };
-        glFogfv(GL_FOG_COLOR, fog_color);
-    }
+#ifndef GFX_BACKEND_PVR
+		glFogfv(GL_FOG_COLOR, fog_color);
+#endif
+	}
 #endif
 
     uint8_t use_texture = used_textures[0] || used_textures[1];
@@ -1754,8 +1897,19 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     static struct LoadedVertex* fan_tris[6][3];
     int n_tris;
     if (sc_is_fullscreen) {
+#ifdef GFX_BACKEND_PVR
+        // PVR backend does no near-clipping, so the full-screen fast path must
+        // reject/clip eye-plane straddles itself or 1/_w at emit explodes.
+        if (v1->_w > SCISSOR_W_EPS && v2->_w > SCISSOR_W_EPS && v3->_w > SCISSOR_W_EPS) {
+            fan_tris[0][0] = v1; fan_tris[0][1] = v2; fan_tris[0][2] = v3;
+            n_tris = 1;
+        } else {
+            n_tris = gfx_build_clipped_fan(v1, v2, v3, fan_tris, SC_FORCE);
+        }
+#else
         fan_tris[0][0] = v1; fan_tris[0][1] = v2; fan_tris[0][2] = v3;
         n_tris = 1;
+#endif
     } else {
         if (v1->scissor_gen != cur_scissor_gen) { v1->scissor_oc = compute_scissor_outcode(v1->_x, v1->_y, v1->_w); v1->scissor_gen = cur_scissor_gen; }
         if (v2->scissor_gen != cur_scissor_gen) { v2->scissor_oc = compute_scissor_outcode(v2->_x, v2->_y, v2->_w); v2->scissor_gen = cur_scissor_gen; }
@@ -1877,9 +2031,22 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         }
 
     for (i = 0; i < 3; i++) {
+#ifdef GFX_BACKEND_PVR
+        // Raw-PVR backend: bake final screen coords + inverse-w here (post-clip;
+        // the divide can't be carried across a clip edge). _w > eps guaranteed.
+        float invw = shz_inverse_posf(v_arr[i]->_w);
+        buf_vbo[buf_num_vert].vert.x = sm_xscale * (v_arr[i]->_x * invw) + sm_xbias;
+        buf_vbo[buf_num_vert].vert.y = sm_yscale * (v_arr[i]->_y * invw) + sm_ybias;
+        // Z-buffer-disabled geometry (e.g. the ortho screen-space skybox, w=1 -> 1/w=1.0
+        // which on PVR is NEAR) must not occlude the perspective scene. Pin it to the
+        // far plane (tiny 1/w) so the depth-tested course always wins. (1e-5 sits behind
+        // the course far-plane ~1/30000; tunable if any course geometry is farther.)
+        buf_vbo[buf_num_vert].vert.z = depth_test ? invw : 0.00001f;
+#else
         buf_vbo[buf_num_vert].vert.x = v_arr[i]->x;
         buf_vbo[buf_num_vert].vert.y = v_arr[i]->y;
         buf_vbo[buf_num_vert].vert.z = v_arr[i]->z;
+#endif
 
         if (use_texture) {
             float u = (v_arr[i]->u - (float)(rdp.texture_tile.uls << 3)) * 0.03125f;
@@ -1895,9 +2062,19 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
             buf_vbo[buf_num_vert].texture.v = v * recip_tex_height;
         }
 
-        // ---- Fold per-vertex shade into the per-primitive material -------------
+        // ---- Per-vertex colour -------------------------------------------------
+#ifdef GFX_BACKEND_PVR
+        // Raw-PVR: evaluate the N64 colour+alpha combiner directly (replaces the
+        // mat_packed approximation), producing the modulate argb + additive oargb.
+        {
+            uint32_t _argb, _oargb;
+            pvr_eval_combiner(rdp.combine_w0, rdp.combine_w1, &v_arr[i]->color, &_argb, &_oargb);
+            buf_vbo[buf_num_vert].color.packed = _argb;
+            buf_vbo[buf_num_vert].pad0.vertindex = _oargb;
+        }
+#else
+        // GLdc: fold per-vertex shade into the per-primitive material.
         // mat_packed / use_shade / allow_speedo were computed once above the loop.
-        // Precedence is identical to the old per-vertex code:
         //   speedometer red  >  lit light×colour mix  >  raw shade  >  plain material.
         if (allow_speedo && (!in_intro) &&
             (v_arr[i]->color.a == 255) && (v_arr[i]->color.b == 0) &&
@@ -1920,6 +2097,7 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         } else {
             buf_vbo[buf_num_vert].color.packed = mat_packed;
         }
+#endif
         buf_num_vert++;
         buf_vbo_len += sizeof(dc_fast_t);
     }
@@ -1935,6 +2113,9 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
 extern int first_2d;
 extern void gfx_opengl_reset_frame(int r, int g, int b);
 extern void gfx_opengl_draw_triangles_2d(void* buf_vbo, size_t buf_vbo_len, size_t buf_vbo_num_tris);
+#ifdef GFX_BACKEND_PVR
+extern void gfx_pvr_draw_triangles_2d(void* buf_vbo, size_t buf_vbo_len, size_t buf_vbo_num_tris);
+#endif
 static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, uint8_t vtx1_idx2, uint8_t vtx2_idx2,
 						   uint8_t vtx3_idx2) {
 	gfx_flush();
@@ -2071,6 +2252,18 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 			quad_vbo[tri_num_vert].texture.v = v * recip_tex_height;
 		}
 
+#ifdef GFX_BACKEND_PVR
+		// 2D uses the SAME raw-mux combiner evaluator as 3D — replacing the old
+		// white-defaulting material hack. The portrait DECAL background now resolves to
+		// the combiner's real colour (e.g. black) instead of white, so no vertex-colour
+		// force is needed. TEXEL substituted=1; the PVR does the real texture combine.
+		{
+			uint32_t _argb, _oargb;
+			pvr_eval_combiner(rdp.combine_w0, rdp.combine_w1, &v_arr[tri_num_vert]->color, &_argb, &_oargb);
+			quad_vbo[tri_num_vert].color.packed = _argb;
+			quad_vbo[tri_num_vert].pad0.vertindex = _oargb;
+		}
+#else
 		struct RGBA white = (struct RGBA) { 0xff, 0xff, 0xff, 0xff };
 		struct RGBA* color = &white;
 		int j, k;
@@ -2147,9 +2340,18 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 			quad_vbo[tri_num_vert].color.array.b = color->b;
 			quad_vbo[tri_num_vert].color.array.a = color->a;
 		}
+#endif
 	}
 
+#ifdef GFX_BACKEND_PVR
+	// Classify the 2D quad for PT-vs-TR like the 3D path: real alpha-blend (fades,
+	// transition overlays) -> TR; opaque/cutout HUD -> live PT. gfx_sp_quad_2d already
+	// gfx_flush()'d, so just set the routing for this quad's draw_triangles_2d.
+	gfx_pvr_set_blend(use_alpha && !texture_edge);
+	gfx_pvr_draw_triangles_2d((void*) quad_vbo, 0, use_texture);
+#else
 	gfx_opengl_draw_triangles_2d((void*) quad_vbo, 0, use_texture);
+#endif
 }
 #endif
 
@@ -2186,7 +2388,11 @@ static void gfx_calc_and_set_viewport(const Vp_t* viewport) {
 	vpf_h = height;
 
 	// GLdc applies this viewport via glViewport; recompute the software-scissor NDC
-	// bounds, which are expressed relative to the viewport mapping.
+	// bounds, which are expressed relative to the viewport mapping. The PVR backend
+	// additionally maps NDC->pixels itself, so refresh those coefficients too.
+#ifdef GFX_BACKEND_PVR
+	gfx_recompute_screen_map();
+#endif
 	gfx_recompute_scissor_planes();
 
 	rdp.viewport_or_scissor_changed = 1;
@@ -2503,18 +2709,22 @@ static void  gfx_dp_set_fill_color(uint32_t packed_color) {
 
 #if 1
 void  __attribute__((noinline)) gfx_opengl_2d_projection(void) {
+#ifndef GFX_BACKEND_PVR
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(0, 640, 480, 0, -1, 1);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+#endif
 }
 
 void  __attribute__((noinline)) gfx_opengl_reset_projection(void) {
+#ifndef GFX_BACKEND_PVR
 	glMatrixMode(GL_PROJECTION);
 	glLoadMatrixf((const float*) rsp.P_matrix);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixf((const float*) rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1]);
+#endif
 }
 #endif
 
@@ -2898,6 +3108,10 @@ static void  __attribute__((noinline)) gfx_run_dl(Gfx* cmd) {
 				break;
 
 			case G_SETCOMBINE:
+#ifdef GFX_BACKEND_PVR
+				rdp.combine_w0 = cmd->words.w0;   // raw mux for the faithful PVR eval
+				rdp.combine_w1 = cmd->words.w1;
+#endif
 				gfx_dp_set_combine_mode(color_comb(C0(20, 4), C1(28, 4), C0(15, 5), C1(15, 3)),
 										color_comb(C0(12, 3), C1(12, 3), C0(9, 3), C1(9, 3)));
 				/*color_comb(C0(5, 4), C1(24, 4), C0(0, 5), C1(6, 3)),

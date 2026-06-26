@@ -373,6 +373,13 @@ static void gfx_opengl_shader_get_info(struct ShaderProgram* prg, uint8_t* num_i
 GLuint newest_texture;
 
 static void gfx_clear_all_textures(void) {
+#ifdef GFX_BACKEND_PVR
+    // Same point GLdc reclaims its texture VRAM (nuke_everything @ course/memory
+    // resets): free all the raw-PVR backend's cached texture VRAM.
+    extern void gfx_pvr_clear_all_textures(void);
+    gfx_pvr_clear_all_textures();
+    return;
+#endif
     GLuint index = 0;
     if (newest_texture != 0) {
         for (index = 1; index <= newest_texture; index++) {

@@ -97,7 +97,10 @@ static void gfx_dc_swap_buffers_end(void) {
     }
 
     /* Lets us yield to other threads*/
+#ifndef GFX_BACKEND_PVR
     glKosSwapBuffers();
+#endif
+    /* PVR backend (gfx_pvr.c) flips inside pvr_scene_finish (finish_render). */
 }
 
 /* Idk what this is for? */
