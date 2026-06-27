@@ -220,6 +220,8 @@ void init_z_buffer(void) {
     gDPFillRectangle(gDisplayListHead++, 0, 0, 319, 239);
     gDPPipeSync(gDisplayListHead++);
 #endif
+    gDPPipeSync(gDisplayListHead++);
+    gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH,
                      VIRTUAL_TO_PHYSICAL(gPhysicalFramebuffers[sRenderingFramebuffer]));
     gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);

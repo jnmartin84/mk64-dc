@@ -598,10 +598,40 @@ extern float gfx_pvr_get_u_scale(void);
 extern float gfx_pvr_get_v_scale(void);
 #define get_current_u_scale gfx_pvr_get_u_scale
 #define get_current_v_scale gfx_pvr_get_v_scale
-extern void gfx_pvr_set_blend(uint8_t needs_tr);
-// Tracks the last TR/PT classification sent to the backend so we flush on change.
-// Persists across frames in lockstep with the backend's sNeedsTR (neither resets).
-static uint8_t pvr_cur_tr = 0;
+extern void gfx_pvr_set_blend(uint8_t kind);   // 0=OP, 1=PT, 2=TR
+// Tracks the last OP/PT/TR classification sent to the backend so we flush on change.
+// Persists across frames in lockstep with the backend's sListKind (neither resets).
+static uint8_t pvr_cur_kind = 0;
+
+extern void gfx_pvr_set_blend_factors(uint8_t src, uint8_t dst);   // gfx_blend_factor codes
+// Last TR blend factors pushed to the backend (abstract gfx_blend_factor codes).
+static uint8_t pvr_cur_bsrc = GFX_BLENDF_SRCALPHA, pvr_cur_bdst = GFX_BLENDF_INVSRCALPHA;
+
+// Derive PVR blend factors from the N64 blender (the final cycle in other_mode_l). The
+// blender computes (P*A + M*B); for the standard "incoming over framebuffer" arrangement
+// (P=CLR_IN, M=CLR_MEM) that is exactly src*src_factor + dst*dst_factor, with A (the
+// incoming-color alpha mux) -> src factor and B (the framebuffer-color alpha mux) -> dst
+// factor. Layout: P=[base+6], M=[base+4], A=[base+2], B=[base+0]; cycle-1 base 24, cycle-2
+// base 16. Fully game-agnostic — additive/premultiplied/alpha all fall out of the muxes.
+static void pvr_derive_blend(uint32_t oml, uint32_t omh, uint8_t *src, uint8_t *dst) {
+    int base = ((omh & (3U << G_MDSFT_CYCLETYPE)) == G_CYC_2CYCLE) ? 16 : 24;
+    int p = (oml >> (base + 6)) & 3;     // P color select
+    int m = (oml >> (base + 4)) & 3;     // M color select
+    int a = (oml >> (base + 2)) & 3;     // A: incoming-color alpha (m1b)
+    int b = (oml >> (base + 0)) & 3;     // B: framebuffer-color alpha (m2b)
+    if (p != G_BL_CLR_IN || m != G_BL_CLR_MEM) {   // non-standard arrangement -> safe default
+        *src = GFX_BLENDF_SRCALPHA; *dst = GFX_BLENDF_INVSRCALPHA;
+        return;
+    }
+    // A (m1b): 0=A_IN, 1=A_FOG, 2=A_SHADE, 3=zero. PVR src alpha is the post-combine fragment
+    // alpha, so A_IN/FOG/SHADE all collapse to SRC_ALPHA; only an explicit zero -> ZERO.
+    *src = (a == G_BL_0) ? GFX_BLENDF_ZERO : GFX_BLENDF_SRCALPHA;
+    // B (m2b): 0=1-A -> INV_SRC_ALPHA, 1=mem alpha -> DST_ALPHA, 2=one -> ONE, 3=zero -> ZERO.
+    *dst = (b == G_BL_1MA)   ? GFX_BLENDF_INVSRCALPHA
+         : (b == G_BL_A_MEM) ? GFX_BLENDF_DSTALPHA
+         : (b == G_BL_1)     ? GFX_BLENDF_ONE
+         :                     GFX_BLENDF_ZERO;
+}
 #endif
 
 static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, struct TextureHashmapNode** n, const uint8_t* orig_addr,
@@ -1865,26 +1895,40 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     }
 
 #ifdef GFX_BACKEND_PVR
-    // Classify OP vs TR for the raw-PVR backend. Only geometry we can GUARANTEE is fully
-    // opaque goes to the live OP list (full per-pixel hidden-surface depth). EVERYTHING
-    // else — real alpha-blend AND alpha-test cutouts — goes to the deferred TR list.
-    // use_alpha reflects only the BLENDER, so it's not a complete opacity guarantee:
-    // the I4 menu glyphs have use_alpha==false yet get their cutout from the TEXTURE
-    // (combiner ALPHA output reads TEXEL). On the old PT list that was alpha-tested away;
-    // on OP there's no test/blend, so the intensity-0 background renders as OPAQUE BLACK
-    // (each glyph's black cell clips the previous letter). So also route to TR whenever
-    // the alpha combiner references a texel — that alpha isn't guaranteed opaque.
-    // Alpha mux (3 bits each, same extraction as pvr_eval_combiner): 1=TEXEL0, 2=TEXEL1.
+    // 3-way list routing for the raw-PVR backend (0=OP live, 1=PT bucket, 2=TR bucket):
+    //   * FORCE_BL set (real translucent blend) -> TR (autosorted, composited last)
+    //   * else alpha-test CUTOUT                -> PT (hard-edged, opaque pixels, depth-written)
+    //   * else fully opaque                     -> OP (live)
+    // A cutout is a coverage edge (texture_edge / CVG_X_ALPHA) OR a combiner whose ALPHA reads
+    // a texel (the I4 menu glyphs: use_alpha==false but shape comes from the TEXTURE alpha — on
+    // OP that intensity-0 background would be OPAQUE BLACK; PT alpha-tests it away with a hard
+    // edge + correct depth). Alpha mux (3 bits each, as pvr_eval_combiner): 1=TEXEL0, 2=TEXEL1.
     {
         int aa = (rdp.combine_w0 >> 12) & 7, ab = (rdp.combine_w1 >> 12) & 7;
         int ac = (rdp.combine_w0 >>  9) & 7, ad = (rdp.combine_w1 >>  9) & 7;
         uint8_t alpha_uses_texel = (aa == 1 || aa == 2 || ab == 1 || ab == 2 ||
                                     ac == 1 || ac == 2 || ad == 1 || ad == 2);
-        uint8_t needs_tr = use_alpha || alpha_uses_texel;
-        if (needs_tr != pvr_cur_tr) {
+        // FORCE_BL = the N64 "blend this surface against the framebuffer" flag: set on real
+        // translucency (item-box glass, clouds, XLU), clear on coverage cutouts (TEX_EDGE).
+        // It separates the two even when BOTH carry CVG_X_ALPHA, which the old
+        // (G_BL_A_MEM<<18) heuristic could not — that misread sent cutouts to TR and, with the
+        // texture_edge-first hack, alpha-tested translucent CVG_X_ALPHA glass to nothing on PT.
+        uint8_t real_blend = (rdp.other_mode_l & FORCE_BL) != 0;
+        uint8_t cutout     = texture_edge || alpha_uses_texel;
+        uint8_t kind = real_blend ? 2 : (cutout ? 1 : 0);   // TR : PT : OP
+        if (kind != pvr_cur_kind) {
             gfx_flush();
-            gfx_pvr_set_blend(needs_tr);
-            pvr_cur_tr = needs_tr;
+            gfx_pvr_set_blend(kind);
+            pvr_cur_kind = kind;
+        }
+        if (kind == 2) {   // TR: derive + push blend factors from the N64 blender (flush on change)
+            uint8_t bs, bd;
+            pvr_derive_blend(rdp.other_mode_l, rdp.other_mode_h, &bs, &bd);
+            if (bs != pvr_cur_bsrc || bd != pvr_cur_bdst) {
+                gfx_flush();
+                gfx_pvr_set_blend_factors(bs, bd);
+                pvr_cur_bsrc = bs; pvr_cur_bdst = bd;
+            }
         }
     }
 #endif
@@ -2216,9 +2260,10 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 	}
 #endif
 	uint8_t depth_test = (rsp.geometry_mode & G_ZBUFFER) == G_ZBUFFER;
-#ifdef GFX_BACKEND_PVR
-	if (opaque_2d) depth_test = 1;   // GEQUAL: occlude farther TR geometry behind the overlay
-#endif
+	// NOTE: do NOT force depth_test for opaque_2d here. Forcing GEQUAL made opaque 2D *test*
+	// depth and get rejected by nearer world geometry (split-screen HUD obscured; intro fade
+	// failed at some pixels). The depth WRITE below is what the fade needs; the test stays
+	// ALWAYS (for Z-off 2D) so the overlay always draws. [UNVERIFIED — revisit next session.]
 	if (depth_test != rendering_state.depth_test) {
 		gfx_flush();
 		gfx_rapi->set_depth_test(depth_test);
@@ -2436,24 +2481,33 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 	}
 
 #ifdef GFX_BACKEND_PVR
-	// Classify the 2D quad like the 3D path: guaranteed-opaque -> live OP; everything
-	// with alpha -> deferred TR. As in 3D, "guaranteed opaque" also excludes a combiner
-	// whose ALPHA output reads a texel (texture-driven cutout) — else it'd render as an
-	// opaque black quad on OP. Alpha mux (3b each): 1=TEXEL0, 2=TEXEL1.
+	// Classify the 2D quad with the same 3-way split as the 3D path (0=OP,1=PT,2=TR):
+	// FORCE_BL (real translucent) -> TR; else alpha-test CUTOUT (coverage edge or texture-
+	// driven alpha, e.g. glyphs) -> PT; else fully opaque -> OP. Alpha mux (3b): 1=TEXEL0,2=TEXEL1.
 	{
 		int aa = (rdp.combine_w0 >> 12) & 7, ab = (rdp.combine_w1 >> 12) & 7;
 		int ac = (rdp.combine_w0 >>  9) & 7, ad = (rdp.combine_w1 >>  9) & 7;
 		uint8_t alpha_uses_texel = (aa == 1 || aa == 2 || ab == 1 || ab == 2 ||
 		                            ac == 1 || ac == 2 || ad == 1 || ad == 2);
-		uint8_t q_tr = use_alpha || alpha_uses_texel;
-		gfx_pvr_set_blend(q_tr);
-		// CRITICAL: keep the 3D classifier's tracker in sync. The 2D and 3D paths share
-		// the backend's sNeedsTR, but only the 3D path (gfx_sp_tri1) gates its set_blend on
-		// pvr_cur_tr. An opaque 2D quad here sets sNeedsTR=0 yet would leave pvr_cur_tr=1,
-		// so the next 3D glyph sees needs_tr==pvr_cur_tr, skips set_blend, and emits with
-		// the stale sNeedsTR=0 -> lands on OP (opaque) instead of TR. (This is why the
-		// records-box glyphs rendered as opaque overlapping cells.)
-		pvr_cur_tr = q_tr;
+		// FORCE_BL = authoritative translucent flag (see gfx_sp_tri1): real blend -> TR,
+		// coverage/texture cutout -> PT, else opaque -> OP.
+		uint8_t real_blend = (rdp.other_mode_l & FORCE_BL) != 0;
+		uint8_t cutout     = texture_edge || alpha_uses_texel;
+		uint8_t q_kind = real_blend ? 2 : (cutout ? 1 : 0);   // TR : PT : OP
+		gfx_pvr_set_blend(q_kind);
+		if (q_kind == 2) {   // TR: derive + push blend factors from the N64 blender
+			uint8_t bs, bd;
+			pvr_derive_blend(rdp.other_mode_l, rdp.other_mode_h, &bs, &bd);
+			gfx_pvr_set_blend_factors(bs, bd);
+			pvr_cur_bsrc = bs; pvr_cur_bdst = bd;
+		}
+		// CRITICAL: keep the 3D classifier's tracker in sync. The 2D and 3D paths share the
+		// backend's sListKind, but only the 3D path (gfx_sp_tri1) gates its set_blend on
+		// pvr_cur_kind. A 2D quad here sets sListKind directly yet would leave pvr_cur_kind
+		// stale, so the next 3D primitive could see kind==pvr_cur_kind, skip set_blend, and
+		// emit with the wrong list. (This is why the records-box glyphs once rendered as
+		// opaque overlapping cells.)
+		pvr_cur_kind = q_kind;
 	}
 	gfx_pvr_draw_triangles_2d((void*) quad_vbo, 0, use_texture);
 #else

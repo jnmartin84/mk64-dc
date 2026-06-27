@@ -110,18 +110,16 @@ static uint32_t sTexCount = 0;   // high-water id allocator
 static uint32_t sBoundTex[2] = { 0, 0 }; // per-tile binding (header uses tile 0)
 static uint32_t sCurBound = 0;   // last select_texture id == upload target
 
-// --- OP live + TR deferred --------------------------------------------------
-// Each PVR list need only be opened/closed once per frame (order-independent), so
-// the OP (opaque) list stays open and LIVE the whole frame — only geometry we can
-// GUARANTEE is fully opaque is submitted straight to the DR stream as it arrives.
-// The OP list is the one with reliable per-pixel hidden-surface depth (PT's was not
-// trustworthy for general opaque — that drove a class of depth-ordering bugs). Every-
-// thing with alpha — real alpha-BLEND *and* alpha-test cutouts — is classified by the
-// front-end (gfx_pvr_set_blend) into a small TR bucket and flushed after OP closes
-// (end_frame), since two lists can't be open at once. TR is depth-tested against OP and
-// autosorted per-pixel (enabled in pvr_init). PT list is unused (bin size 0).
-// NOTE: the live-path helpers/flags below are still named *_pt / sPtDirty for historical
-// reasons but now drive the OP list (rename is a pending cleanup).
+// --- OP live + PT/TR deferred -----------------------------------------------
+// Only ONE list can be open on the DR path at a time, so the OP (opaque) list stays
+// open and LIVE the whole frame — geometry the front-end can GUARANTEE is fully opaque
+// (pvr_submit_op) streams straight out as it arrives. The other two kinds are buffered
+// into per-kind buckets and replayed at end_frame, each into its own list opened once:
+//   * PT (sPunch): alpha-TEST cutouts (hard-edged fences/foliage/glyphs). Opaque pixels,
+//     depth-tested AND depth-written, alpha-tested by the hardware. Flushed FIRST.
+//   * TR (sTR): real alpha-BLEND surfaces. Depth-tested, autosorted per-pixel (pvr_init),
+//     composited over OP+PT. Flushed SECOND, so it blends over the cutouts.
+// The front-end classifies each primitive (gfx_pvr_set_blend -> sListKind) into OP/PT/TR.
 #define TR_MAX_VERTS    8192
 #define TR_MAX_BATCH     512
 
@@ -137,20 +135,37 @@ static pvr_vertex_t sTrVerts[TR_MAX_VERTS] __attribute__((aligned(32)));
 static PvrBatch     sTrBatch[TR_MAX_BATCH];
 static PvrBucket sTR = { sTrVerts, sTrBatch, 0, TR_MAX_VERTS, 0, TR_MAX_BATCH, -1, 1 };
 
-static uint8_t sNeedsTR = 0;   // current primitive needs real alpha blending -> TR
-static uint8_t sPtDirty = 1;   // live PT header needs re-emit (depth/texture changed)
+// Deferred PUNCH-THROUGH bucket: alpha-test cutouts (hard-edged, opaque pixels, write
+// depth). Flushed at end_frame BEFORE TR.
+static pvr_vertex_t sPunchVerts[TR_MAX_VERTS] __attribute__((aligned(32)));
+static PvrBatch     sPunchBatch[TR_MAX_BATCH];
+static PvrBucket sPunch = { sPunchVerts, sPunchBatch, 0, TR_MAX_VERTS, 0, TR_MAX_BATCH, -1, 1 };
+
+// Routing for the current primitive: 0 = OP (live), 1 = PT (sPunch bucket), 2 = TR (sTR).
+#define PVR_KIND_OP 0
+#define PVR_KIND_PT 1
+#define PVR_KIND_TR 2
+static uint8_t sListKind = PVR_KIND_OP;
+static uint8_t sOpDirty = 1;   // live OP header needs re-emit (depth/texture changed)
+
+// TR blend factors, derived by the front-end from the N64 blender and pushed via
+// gfx_pvr_set_blend_factors. Default = standard alpha-over (SRC_ALPHA / INV_SRC_ALPHA).
+static int sBlendSrc = PVR_BLEND_SRCALPHA;
+static int sBlendDst = PVR_BLEND_INVSRCALPHA;
 
 // Capped, greppable overflow logging — never drop silently.
 static int sDropV = 0, sDropB = 0;
 
-// A depth/texture/shader state change affects both the live PT header and the next
-// TR batch. (gfx_pvr_set_blend only routes PT<->TR, so it does NOT dirty headers.)
-static void pvr_mark_dirty(void) { sPtDirty = 1; sTR.dirty = 1; }
+// A depth/texture/shader state change affects the live OP header and the next PT and TR
+// batches. (gfx_pvr_set_blend only routes OP/PT/TR, so it does NOT dirty headers.)
+static void pvr_mark_dirty(void) { sOpDirty = 1; sTR.dirty = 1; sPunch.dirty = 1; }
 
 // Compile a poly header for the current depth/texture state on the given list.
-static void pvr_compile_header(pvr_poly_hdr_t *out, int is_tr) {
+static void pvr_compile_header(pvr_poly_hdr_t *out, int kind) {
     pvr_poly_cxt_t cxt;
-    int list = is_tr ? PVR_LIST_TR_POLY : PVR_LIST_OP_POLY;
+    int list = (kind == PVR_KIND_TR) ? PVR_LIST_TR_POLY
+             : (kind == PVR_KIND_PT) ? PVR_LIST_PT_POLY
+             :                         PVR_LIST_OP_POLY;
     int textured = cur_shader && cur_shader->texture_used[0] &&
                    sBoundTex[0] && sTextures[sBoundTex[0]].addr;
     if (textured) {
@@ -188,39 +203,29 @@ static void pvr_compile_header(pvr_poly_hdr_t *out, int is_tr) {
     // z = 1/w (larger == nearer): GEQUAL keeps the nearer fragment; ALWAYS == test off.
     cxt.depth.comparison = sDepthTest ? PVR_DEPTHCMP_GEQUAL : PVR_DEPTHCMP_ALWAYS;
     cxt.depth.write = sDepthWrite ? PVR_DEPTHWRITE_ENABLE : PVR_DEPTHWRITE_DISABLE;
-#if 0
-    // Per-shader blend overrides for the TR list — replicating GLdc's shader_id-keyed
-    // special cases (gfx_gldc.c draw_triangles). The pvr_poly_cxt TR default is
-    // SRC_ALPHA / INV_SRC_ALPHA (standard alpha-over); these effects need ADDITIVE or
-    // premultiplied blending instead, which is why they looked muddy/opaque before.
-    if (is_tr && cur_shader) {
-        switch (cur_shader->shader_id) {
-            case 0x01045551:  // particle_blend: additive (GL_ONE, GL_ONE)
-                cxt.blend.src = PVR_BLEND_ONE;       cxt.blend.dst = PVR_BLEND_ONE;          break;
-            case 0x09045551:  // star_effect particle: src-alpha additive (GL_SRC_ALPHA, GL_ONE)
-                cxt.blend.src = PVR_BLEND_SRCALPHA;  cxt.blend.dst = PVR_BLEND_ONE;          break;
-            case 0x01a00200:  // over_skybox cloud: premultiplied over (GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
-                cxt.blend.src = PVR_BLEND_ONE;       cxt.blend.dst = PVR_BLEND_INVSRCALPHA;  break;
-            default: break;   // keep TR default SRC_ALPHA / INV_SRC_ALPHA
-        }
+    // Only TR blends against the framebuffer (OP/PT are opaque). The blend factors are
+    // DERIVED from the N64 blender by the front-end (gfx_pvr_set_blend_factors) — no shader-id
+    // keying — so additive/premultiplied/standard-alpha effects all fall out of the same path.
+    if (kind == PVR_KIND_TR) {
+        cxt.blend.src = sBlendSrc;
+        cxt.blend.dst = sBlendDst;
     }
-#endif
     // Autosort (enabled in pvr_init) sorts the TR list per-pixel.
     pvr_poly_compile(out, &cxt);
 }
 
 // Append n vertices (n/3 tris) of already-screen-baked dc_fast_t to a bucket,
 // starting a new batch when the bucket's header state has changed.
-static void pvr_append(PvrBucket *b, int is_tr, const dc_fast_t *tris, size_t n) {
+static void pvr_append(PvrBucket *b, int kind, const dc_fast_t *tris, size_t n) {
     if (b->dirty || b->cur < 0) {
-        if (b->nbatch >= b->max_batch) { if (sDropB++ < 8) printf("PVR_DROP batch %d\n", is_tr); return; }
+        if (b->nbatch >= b->max_batch) { if (sDropB++ < 8) printf("PVR_DROP batch %d\n", kind); return; }
         b->cur = b->nbatch++;
-        pvr_compile_header(&b->batch[b->cur].hdr, is_tr);
+        pvr_compile_header(&b->batch[b->cur].hdr, kind);
         b->batch[b->cur].start = b->nverts;
         b->batch[b->cur].count = 0;
         b->dirty = 0;
     }
-    if (b->nverts + n > b->max_verts) { if (sDropV++ < 8) printf("PVR_DROP verts %d\n", is_tr); return; }
+    if (b->nverts + n > b->max_verts) { if (sDropV++ < 8) printf("PVR_DROP verts %d\n", kind); return; }
     for (size_t i = 0; i < n; i++) {
         pvr_vertex_t *v = &b->verts[b->nverts++];
         *v = *(const pvr_vertex_t *) &tris[i];
@@ -276,10 +281,13 @@ static void pvr_pad16(const uint16_t *in, int iw, int ih, uint16_t *out, int ow,
 
 // Mirror of OoT's known-good params for this toolchain:
 //   {OP, OP_MOD, TR, TR_MOD, PT} bin sizes, vtxbuf, dma, fsaa, autosort_disabled, overflow
-// Live list is now OP (guaranteed-opaque geometry); everything with alpha (blends AND
-// alpha-test cutouts) goes to TR. PT is unused -> bin size 0 to reclaim tile memory.
+// Live list is OP (guaranteed-opaque geometry). Alpha-TEST CUTOUTS (hard-edged fences/
+// foliage/glyphs — texture_edge or texture-driven alpha) go to the deferred PT bucket;
+// real alpha-BLEND surfaces go to the deferred TR bucket. At end_frame PT is flushed first
+// (writes depth, alpha-tested opaque), then TR composites over it. All three lists' bins
+// are live -> {OP, OP_MOD, TR, TR_MOD, PT}.
 static pvr_init_params_t sPvrParams = {
-    { PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_0 },
+    { PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_32 },
     512 * 1024,
     1,  // dma
     0,  // fsaa
@@ -452,33 +460,57 @@ static void gfx_pvr_set_zmode_decal(uint8_t zmode_decal) {
 }
 static void gfx_pvr_set_viewport(UNUSED int x, UNUSED int y, UNUSED int w, UNUSED int h) { /* P4 */ }
 static void gfx_pvr_set_scissor(UNUSED int x, UNUSED int y, UNUSED int w, UNUSED int h)  { /* P4 */ }
-static void gfx_pvr_set_use_alpha(UNUSED uint8_t use_alpha)        { /* TR routing comes via gfx_pvr_set_blend */ }
+static void gfx_pvr_set_use_alpha(UNUSED uint8_t use_alpha)        { /* OP/PT/TR routing comes via gfx_pvr_set_blend */ }
 
-// Front-end blend classifier, called directly (not via rapi) from gfx_sp_tri1 with
-// (use_alpha && !texture_edge): genuine alpha-blend surfaces -> deferred TR list;
-// opaque/cutout -> live PT. Routing only — does NOT dirty headers (each list's header
-// is its own identity + depth/texture state). Persists across frames in lockstep with
-// the front-end's tracker, so start_frame does not reset it.
-void gfx_pvr_set_blend(uint8_t needs_tr) {
-    sNeedsTR = needs_tr ? 1 : 0;
+// Front-end list classifier, called directly (not via rapi) from gfx_sp_tri1/gfx_sp_quad_2d:
+// kind 0 = OP (fully opaque -> live list), 1 = PT (alpha-test cutout -> sPunch bucket),
+// 2 = TR (real alpha-blend -> sTR bucket). Routing only — does NOT dirty headers (each
+// list's header is its own identity + depth/texture state). Persists across frames in
+// lockstep with the front-end's tracker, so start_frame does not reset it.
+void gfx_pvr_set_blend(uint8_t kind) {
+    sListKind = kind;   // 0=OP (live), 1=PT (sPunch bucket), 2=TR (sTR bucket)
 }
 
-// (Re)emit the live PT header to the open PT list when depth/texture state changed.
-static inline void pvr_emit_pt_header(void) {
-    if (!sPtDirty) return;
+// Map the front-end's abstract gfx_blend_factor codes to PVR blend modes for the TR list.
+// Only TR blends, so a change dirties only the TR header (not OP/PT). No shader-id keying.
+void gfx_pvr_set_blend_factors(uint8_t src_code, uint8_t dst_code) {
+    static const int kMap[] = {
+        [GFX_BLENDF_ZERO]        = PVR_BLEND_ZERO,
+        [GFX_BLENDF_ONE]         = PVR_BLEND_ONE,
+        [GFX_BLENDF_SRCALPHA]    = PVR_BLEND_SRCALPHA,
+        [GFX_BLENDF_INVSRCALPHA] = PVR_BLEND_INVSRCALPHA,
+        [GFX_BLENDF_DSTALPHA]    = PVR_BLEND_DESTALPHA,
+        [GFX_BLENDF_INVDSTALPHA] = PVR_BLEND_INVDESTALPHA,
+    };
+    int s = kMap[src_code], d = kMap[dst_code];
+    if (s != sBlendSrc || d != sBlendDst) {
+        sBlendSrc = s; sBlendDst = d;
+        sTR.dirty = 1;   // blend state lives only in the TR header
+#ifdef PVR_BLEND_DEBUG
+        static int n = 0;
+        if (n++ < 48)
+            printf("BLENDDBG sid=%08lx src=%d dst=%d\n",
+                   (unsigned long)(cur_shader ? cur_shader->shader_id : 0), s, d);
+#endif
+    }
+}
+
+// (Re)emit the live OP header to the open OP list when depth/texture state changed.
+static inline void pvr_emit_op_header(void) {
+    if (!sOpDirty) return;
     pvr_poly_hdr_t __attribute__((aligned(32))) hdr;
-    pvr_compile_header(&hdr, 0);
+    pvr_compile_header(&hdr, PVR_KIND_OP);
     pvr_poly_hdr_t *hp = (pvr_poly_hdr_t *) pvr_dr_target(sDrState);
     *hp = hdr;
     pvr_dr_commit(hp);
-    sPtDirty = 0;
+    sOpDirty = 0;
 }
 
 // Submit n already-screen-baked dc_fast_t verts live to the open PT list. The
 // vertex's oargb (additive offset, from the combiner evaluator) is carried through
 // in dc_fast_t.pad0 — do NOT zero it here.
-static inline void pvr_submit_pt(const dc_fast_t *tris, size_t n) {
-    pvr_emit_pt_header();
+static inline void pvr_submit_op(const dc_fast_t *tris, size_t n) {
+    pvr_emit_op_header();
     for (size_t i = 0; i < n; i++) {
         pvr_vertex_t *v = (pvr_vertex_t *) pvr_dr_target(sDrState);
         *v = *(const pvr_vertex_t *) &tris[i];
@@ -495,20 +527,22 @@ static void gfx_pvr_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len,
                                    size_t buf_vbo_num_tris) {
     // dc_fast_t shares pvr_vertex_t's exact 32-byte layout (flags,x,y,z,u,v,argb,oargb)
     // and color.packed is already 0xAARRGGBB, so each vertex is a near-direct copy.
-    // Blend geometry is deferred to the TR bucket (flushed in end_frame); everything
-    // else goes straight to the live PT list.
+    // Cutout/blend geometry is deferred to the PT/TR buckets (flushed in end_frame);
+    // fully-opaque geometry goes straight to the live OP list.
     const dc_fast_t *tris = (const dc_fast_t *) buf_vbo;
     const size_t n = buf_vbo_num_tris * 3;
-    if (sNeedsTR)
-        pvr_append(&sTR, 1, tris, n);
+    if (sListKind == PVR_KIND_TR)
+        pvr_append(&sTR, PVR_KIND_TR, tris, n);
+    else if (sListKind == PVR_KIND_PT)
+        pvr_append(&sPunch, PVR_KIND_PT, tris, n);
     else
-        pvr_submit_pt(tris, n);
+        pvr_submit_op(tris, n);   // OP, live
 }
 
 // 2D path. The front-end (gfx_sp_quad_2d) builds 6 screen-space dc_fast_t verts (a
 // quad = 2 tris) and calls this directly, bypassing the rapi table, after setting the
-// PT/TR routing via gfx_pvr_set_blend. Opaque/cutout HUD -> live PT; real alpha-blend
-// (fades, transition overlays) -> deferred TR. 2D has no combiner offset, so zero oargb.
+// OP/PT/TR routing via gfx_pvr_set_blend: opaque HUD -> live OP; alpha-test cutout (glyphs)
+// -> PT bucket; real alpha-blend (fades, transition overlays) -> TR bucket.
 extern int in_intro;
 void gfx_pvr_draw_triangles_2d(void *buf_vbo, UNUSED size_t buf_vbo_len, UNUSED size_t use_texture) {
     // 2D now runs the combiner evaluator (gfx_sp_quad_2d), which bakes argb + oargb into
@@ -525,10 +559,12 @@ void gfx_pvr_draw_triangles_2d(void *buf_vbo, UNUSED size_t buf_vbo_len, UNUSED 
                 v[i].color.packed = 0xFF000000;
     }
 
-    if (sNeedsTR) {
-        pvr_append(&sTR, 1, v, 6);
+    if (sListKind == PVR_KIND_TR) {
+        pvr_append(&sTR, PVR_KIND_TR, v, 6);
+    } else if (sListKind == PVR_KIND_PT) {
+        pvr_append(&sPunch, PVR_KIND_PT, v, 6);
     } else {
-        pvr_submit_pt(v, 6);
+        pvr_submit_op(v, 6);   // OP, live
     }
 }
 
@@ -544,7 +580,7 @@ static void gfx_pvr_init(void) {
     // PT alpha-test reference: punch-through discards texels with alpha <= this, giving
     // N64 cutout/texture-edge transparency. 0x80 matches OoT. (ARGB1555 alpha is 0/255,
     // so this cleanly drops the transparent bit; ARGB4444 keeps alpha >= ~8.)
-    *(volatile uint32_t *) 0xA05F811C = 0x80;
+    *(volatile uint32_t *) 0xA05F811C = 0x80 + 0x40;
 
     // Distinctive non-black clear so the backend is visibly live (GLdc clears to
     // black). Geometry that draws over it confirms the P1 pipeline.
@@ -572,17 +608,18 @@ static void gfx_pvr_start_frame(void) {
     // the depth buffer's resolution (a high base, e.g. 100, crushes them -> fill-rect
     // priority/ordering breaks). The black-rect issue this was once bumped for turned
     // out to be the 0x01200A00 shader, not depth, so 1.0 is the right base.
-    screen_2d_z = 0.0000001f;//1.0f;
+    screen_2d_z = 1.0f;
 
     // Disable the PVR near/far z-clip. The front-end already near-clips in software
     // (gfx_build_clipped_fan), and our far-plane background (the ortho skybox baked to
     // 1/w≈0.00001) sits below the default clip threshold and would otherwise be culled.
     pvr_set_zclip(0.0f);
 
-    // Reset the deferred TR bucket and force the live PT header to re-emit for the new
-    // scene. sDepth*/sNeedsTR persist in lockstep with the front-end's trackers.
-    sTR.nverts = 0; sTR.nbatch = 0; sTR.cur = -1; sTR.dirty = 1;
-    sPtDirty = 1;
+    // Reset the deferred PT + TR buckets and force the live OP header to re-emit for the
+    // new scene. sDepth*/sListKind persist in lockstep with the front-end's trackers.
+    sTR.nverts    = 0; sTR.nbatch    = 0; sTR.cur    = -1; sTR.dirty    = 1;
+    sPunch.nverts = 0; sPunch.nbatch = 0; sPunch.cur = -1; sPunch.dirty = 1;
+    sOpDirty = 1;
 
     // Latch "did the last frame have a 3D (perspective) scene" so gfx_sp_tri1 can tell a
     // Z-off ortho BACKGROUND (over-skybox clouds, in a race) from a Z-off ortho OVERLAY
@@ -598,8 +635,15 @@ static void gfx_pvr_start_frame(void) {
 static void gfx_pvr_end_frame(void) {
     pvr_list_finish();   // close the OP list (opened once this frame)
 
-    // Now flush the deferred alpha geometry (blends + cutouts) to the TR list (opened
-    // once, after OP). The PVR composits TR over the opaque geometry, depth-tested.
+    // Flush the deferred buckets, each into its own list opened once. PT FIRST: alpha-test
+    // cutouts are opaque pixels that write depth, so they must be down before TR composites.
+    if (sPunch.nbatch > 0) {
+        pvr_list_begin(PVR_LIST_PT_POLY);
+        pvr_dr_init(&sDrState);
+        pvr_flush_bucket(&sPunch);
+        pvr_list_finish();
+    }
+    // TR SECOND: real alpha-blend surfaces, autosorted, composited over OP + PT (depth-tested).
     if (sTR.nbatch > 0) {
         pvr_list_begin(PVR_LIST_TR_POLY);
         pvr_dr_init(&sDrState);

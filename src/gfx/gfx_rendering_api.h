@@ -5,6 +5,18 @@
 #include <stdint.h>
 //#include <stduint8_t.h>
 
+// Abstract blend factors. The front-end derives these from the N64 blender (other_mode_l,
+// game-agnostic) and the backend maps them onto its own blend API. Keeps N64 knowledge in
+// the front-end and GPU knowledge in the backend — portable across games and backends.
+enum gfx_blend_factor {
+    GFX_BLENDF_ZERO = 0,
+    GFX_BLENDF_ONE,
+    GFX_BLENDF_SRCALPHA,
+    GFX_BLENDF_INVSRCALPHA,
+    GFX_BLENDF_DSTALPHA,
+    GFX_BLENDF_INVDSTALPHA,
+};
+
 struct ShaderProgram;
 
 struct GfxRenderingAPI {
