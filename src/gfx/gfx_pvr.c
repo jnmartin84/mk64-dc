@@ -76,7 +76,7 @@ static struct ShaderProgram *cur_shader = NULL;
 // PVR state
 // ---------------------------------------------------------------------------
 static pvr_dr_state_t sDrState;
-static int sCurrentList = PVR_LIST_PT_POLY;
+static int sCurrentList = PVR_LIST_OP_POLY;
 
 // Per-primitive depth state, driven by the front-end (set_depth_test/mask/zmode_decal)
 // straight from the RDP other_mode bits — NOT magic shader ids. PVR bakes depth state
@@ -110,15 +110,18 @@ static uint32_t sTexCount = 0;   // high-water id allocator
 static uint32_t sBoundTex[2] = { 0, 0 }; // per-tile binding (header uses tile 0)
 static uint32_t sCurBound = 0;   // last select_texture id == upload target
 
-// --- PT live + TR deferred --------------------------------------------------
+// --- OP live + TR deferred --------------------------------------------------
 // Each PVR list need only be opened/closed once per frame (order-independent), so
-// the PT list stays open and LIVE the whole frame — opaque/alpha-cutout geometry
-// is submitted straight to the DR stream as it arrives (the working P2 path,
-// unchanged). Only genuine alpha-BLEND geometry (classified by the front-end via
-// gfx_pvr_set_blend) is queued into a small TR bucket and flushed after PT closes
-// (end_frame), since PT and TR can't both be the open list at once. The PVR
-// composits TR over the opaque geometry regardless of submission order; autosort
-// (enabled in pvr_init) sorts the TR list per-pixel.
+// the OP (opaque) list stays open and LIVE the whole frame — only geometry we can
+// GUARANTEE is fully opaque is submitted straight to the DR stream as it arrives.
+// The OP list is the one with reliable per-pixel hidden-surface depth (PT's was not
+// trustworthy for general opaque — that drove a class of depth-ordering bugs). Every-
+// thing with alpha — real alpha-BLEND *and* alpha-test cutouts — is classified by the
+// front-end (gfx_pvr_set_blend) into a small TR bucket and flushed after OP closes
+// (end_frame), since two lists can't be open at once. TR is depth-tested against OP and
+// autosorted per-pixel (enabled in pvr_init). PT list is unused (bin size 0).
+// NOTE: the live-path helpers/flags below are still named *_pt / sPtDirty for historical
+// reasons but now drive the OP list (rename is a pending cleanup).
 #define TR_MAX_VERTS    8192
 #define TR_MAX_BATCH     512
 
@@ -147,7 +150,7 @@ static void pvr_mark_dirty(void) { sPtDirty = 1; sTR.dirty = 1; }
 // Compile a poly header for the current depth/texture state on the given list.
 static void pvr_compile_header(pvr_poly_hdr_t *out, int is_tr) {
     pvr_poly_cxt_t cxt;
-    int list = is_tr ? PVR_LIST_TR_POLY : PVR_LIST_PT_POLY;
+    int list = is_tr ? PVR_LIST_TR_POLY : PVR_LIST_OP_POLY;
     int textured = cur_shader && cur_shader->texture_used[0] &&
                    sBoundTex[0] && sTextures[sBoundTex[0]].addr;
     if (textured) {
@@ -273,9 +276,10 @@ static void pvr_pad16(const uint16_t *in, int iw, int ih, uint16_t *out, int ow,
 
 // Mirror of OoT's known-good params for this toolchain:
 //   {OP, OP_MOD, TR, TR_MOD, PT} bin sizes, vtxbuf, dma, fsaa, autosort_disabled, overflow
-// PT enabled (32) since MK64 routes everything to PT by default.
+// Live list is now OP (guaranteed-opaque geometry); everything with alpha (blends AND
+// alpha-test cutouts) goes to TR. PT is unused -> bin size 0 to reclaim tile memory.
 static pvr_init_params_t sPvrParams = {
-    { PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_32 },
+    { PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_0 },
     512 * 1024,
     1,  // dma
     0,  // fsaa
@@ -483,6 +487,10 @@ static inline void pvr_submit_pt(const dc_fast_t *tris, size_t n) {
     }
 }
 
+// 2D quad depth counter owned by the front-end (gfx_draw_rectangle increments it).
+// GLdc's start_frame reset it each frame; the PVR backend must too, or it grows
+// unbounded. Positive base because PVR z is inverse-depth (negative would clip).
+extern float screen_2d_z;
 static void gfx_pvr_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len,
                                    size_t buf_vbo_num_tris) {
     // dc_fast_t shares pvr_vertex_t's exact 32-byte layout (flags,x,y,z,u,v,argb,oargb)
@@ -550,25 +558,21 @@ static void gfx_pvr_init(void) {
 
 static void gfx_pvr_on_resize(void) { }
 
-// 2D quad depth counter owned by the front-end (gfx_draw_rectangle increments it).
-// GLdc's start_frame reset it each frame; the PVR backend must too, or it grows
-// unbounded. Positive base because PVR z is inverse-depth (negative would clip).
-extern float screen_2d_z;
-
 static void gfx_pvr_start_frame(void) {
     pvr_wait_ready();
     pvr_scene_begin();
-    // PT list open + live for the whole frame (opaque + alpha-cutout geometry).
-    pvr_list_begin(PVR_LIST_PT_POLY);
+    // OP list open + live for the whole frame (guaranteed-opaque geometry only).
+    // Anything with alpha (blend or alpha-test cutout) is deferred to the TR bucket.
+    pvr_list_begin(PVR_LIST_OP_POLY);
     pvr_dr_init(&sDrState);
-    sCurrentList = PVR_LIST_PT_POLY;
+    sCurrentList = PVR_LIST_OP_POLY;
     // 2D depth base: PVR z is 1/w, larger == nearer. The per-rect +0.0005 increment
     // (gfx_draw_rectangle) encodes 2D paint order into z, so the PT list resolves
     // 2D-among-2D layering correctly. Base 1.0 keeps those small increments well within
     // the depth buffer's resolution (a high base, e.g. 100, crushes them -> fill-rect
     // priority/ordering breaks). The black-rect issue this was once bumped for turned
     // out to be the 0x01200A00 shader, not depth, so 1.0 is the right base.
-    screen_2d_z = 1.0f;
+    screen_2d_z = 0.0000001f;//1.0f;
 
     // Disable the PVR near/far z-clip. The front-end already near-clips in software
     // (gfx_build_clipped_fan), and our far-plane background (the ortho skybox baked to
@@ -579,13 +583,23 @@ static void gfx_pvr_start_frame(void) {
     // scene. sDepth*/sNeedsTR persist in lockstep with the front-end's trackers.
     sTR.nverts = 0; sTR.nbatch = 0; sTR.cur = -1; sTR.dirty = 1;
     sPtDirty = 1;
+
+    // Latch "did the last frame have a 3D (perspective) scene" so gfx_sp_tri1 can tell a
+    // Z-off ortho BACKGROUND (over-skybox clouds, in a race) from a Z-off ortho OVERLAY
+    // (menu glyph text). Prev-frame value avoids draw-order races within the frame.
+    {
+        extern int cur_frame_persp, prev_frame_had_persp, has_done_3d;
+        prev_frame_had_persp = cur_frame_persp;
+        cur_frame_persp = 0;
+        has_done_3d = 0;   // reset: no 3D drawn yet this frame (title bg -> far until flag)
+    }
 }
 
 static void gfx_pvr_end_frame(void) {
-    pvr_list_finish();   // close the PT list (opened once this frame)
+    pvr_list_finish();   // close the OP list (opened once this frame)
 
-    // Now flush the deferred alpha-blend geometry to the TR list (opened once, after
-    // PT). The PVR composits TR over the opaque geometry regardless of this ordering.
+    // Now flush the deferred alpha geometry (blends + cutouts) to the TR list (opened
+    // once, after OP). The PVR composits TR over the opaque geometry, depth-tested.
     if (sTR.nbatch > 0) {
         pvr_list_begin(PVR_LIST_TR_POLY);
         pvr_dr_init(&sDrState);

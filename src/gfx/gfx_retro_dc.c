@@ -65,6 +65,25 @@ void* segmented_to_virtual(void* addr);
 
 int blend_fuck=0;
 
+// Set when a G_MTX_PROJECTION load is an ORTHO matrix (guOrtho: [3][3]==1; guPerspective:
+// [3][3]==0). Ortho geometry is "2D drawn as triangles" (constant _w), so on the PVR
+// backend gfx_sp_tri1 routes its z into the 2D screen_2d_z scheme instead of 1/w — that's
+// how the pause-menu glyph text sorts ABOVE the 2D dimming quad (same idea as SF64's
+// render-on-top, but keyed off the ortho projection rather than a custom DL command).
+int proj_is_ortho = 0;
+// Whether a PERSPECTIVE projection loaded this frame (=> a 3D scene exists). Latched into
+// prev_frame_had_persp at start_frame and read by gfx_sp_tri1: it separates a Z-off
+// overlay-ortho BACKGROUND (the over-skybox clouds, drawn in a race) from a Z-off
+// overlay-ortho OVERLAY (menu glyph text, drawn with no 3D scene) — otherwise identical.
+int cur_frame_persp = 0;
+int prev_frame_had_persp = 0;
+// Set when a PERSPECTIVE (real 3D) triangle has been emitted this frame; reset in
+// start_frame. Used by gfx_draw_rectangle: a 2D quad drawn BEFORE any 3D, in a frame that
+// has a 3D scene, is a BACKGROUND (title bg strips) -> far-pin; once 3D has drawn, 2D is a
+// foreground overlay (the logo) -> normal near screen_2d_z.
+int has_done_3d = 0;
+extern float screen_2d_z;   // defined later in this file; needed up here by gfx_sp_tri1
+
 struct ShaderProgram {
 	uint8_t enabled;
 	uint32_t shader_id;
@@ -1241,6 +1260,16 @@ static __attribute__((noinline)) void gfx_sp_matrix(uint8_t parameters, const in
 
 	if (parameters & G_MTX_PROJECTION) {
 		if (parameters & G_MTX_LOAD) {
+			// guOrtho leaves [3][3]==1 (w passthrough); guPerspective sets it to 0
+			// (w <- -z). Only meaningful on a fresh LOAD; a lookat MUL just composes
+			// onto the perspective without changing its ortho/perspective character.
+			// FURTHER: distinguish a 2D OVERLAY ortho (menu/HUD) from the SKYBOX ortho.
+			// Both are ortho, but the menu uses a symmetric z-range guOrtho(...,-100,100)
+			// -> [3][2] = -(f+n)/(f-n) = 0, while the skybox uses guOrtho(...,0,5) ->
+			// [3][2] = -1. Only overlay ortho gets lifted into the 2D screen_2d_z scheme;
+			// the skybox must keep its far-plane pin (else it occludes the 3D scene).
+			proj_is_ortho = (matrix[3][3] > 0.5f) && (matrix[3][2] > -0.5f);
+			if (matrix[3][3] <= 0.5f) cur_frame_persp = 1;   // a perspective scene this frame
 			shz_matrix_4x4_copy(rsp.P_matrix, matrix);
 		} else {
 			gfx_matrix_mul(rsp.P_matrix, (const float (*)[4]) matrix, (const float (*)[4]) rsp.P_matrix);
@@ -1665,7 +1694,14 @@ static inline void pvr_eval_combiner(uint32_t w0, uint32_t w1, const struct RGBA
 	int aa = (w0 >> 12) & 0x7, ab = (w1 >> 12) & 0x7, ac = (w0 >> 9) & 0x7, ad = (w1 >> 9) & 0x7;
 
 	// Constant additive offset (colour d == PRIM/ENV) -> oargb, excluded from argb.
-	int offset = (d == 3 || d == 5);   // G_CCMUX d: 3=PRIM, 5=ENV
+	// BUT only when d sits on top of a modulated TEXTURE base. With no texel in the
+	// combiner the (a-b)*c term is the whole non-d colour and d IS the base colour, not
+	// an additive overlay — splitting it into oargb then leaves argb black. e.g. the
+	// white intro fade is G_CC_PRIMITIVE ((0-0)*0 + PRIM): no texel, so PRIM must stay in
+	// argb or the fade renders BLACK instead of white.
+	int has_texel = (a == 1 || a == 2 || b == 1 || b == 2 ||
+	                 c == 1 || c == 2 || c == 8 || c == 9);
+	int offset = (d == 3 || d == 5) && has_texel;   // G_CCMUX d: 3=PRIM, 5=ENV
 	if (offset) {
 		const float* o = (d == 3) ? prim : env;
 		*out_oargb = PACK_ARGB8888((uint32_t)(o[0]*255.0f), (uint32_t)(o[1]*255.0f), (uint32_t)(o[2]*255.0f), 0);
@@ -1829,15 +1865,22 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     }
 
 #ifdef GFX_BACKEND_PVR
-    // Classify PT vs TR for the raw-PVR backend. genuine framebuffer alpha-blend ->
-    // deferred TR list; alpha-test cutout -> live PT. CVG_X_ALPHA (texture_edge) is NOT
-    // a reliable cutout signal: a true cutout (tree leaves) is ZMODE_OPA + CVG_X_ALPHA,
-    // but the item box is ZMODE_XLU + CVG_X_ALPHA (a real src-over translucent surface).
-    // So the Z-mode decides: XLU/INTER => TR even when CVG_X_ALPHA is set.
+    // Classify OP vs TR for the raw-PVR backend. Only geometry we can GUARANTEE is fully
+    // opaque goes to the live OP list (full per-pixel hidden-surface depth). EVERYTHING
+    // else — real alpha-blend AND alpha-test cutouts — goes to the deferred TR list.
+    // use_alpha reflects only the BLENDER, so it's not a complete opacity guarantee:
+    // the I4 menu glyphs have use_alpha==false yet get their cutout from the TEXTURE
+    // (combiner ALPHA output reads TEXEL). On the old PT list that was alpha-tested away;
+    // on OP there's no test/blend, so the intensity-0 background renders as OPAQUE BLACK
+    // (each glyph's black cell clips the previous letter). So also route to TR whenever
+    // the alpha combiner references a texel — that alpha isn't guaranteed opaque.
+    // Alpha mux (3 bits each, same extraction as pvr_eval_combiner): 1=TEXEL0, 2=TEXEL1.
     {
-        uint32_t zmode = rdp.other_mode_l & (ZMODE_XLU | ZMODE_INTER);  // 0xC00 field mask
-        uint8_t is_xlu = (zmode == ZMODE_XLU) || (zmode == ZMODE_INTER);
-        uint8_t needs_tr = use_alpha && (!texture_edge || is_xlu);
+        int aa = (rdp.combine_w0 >> 12) & 7, ab = (rdp.combine_w1 >> 12) & 7;
+        int ac = (rdp.combine_w0 >>  9) & 7, ad = (rdp.combine_w1 >>  9) & 7;
+        uint8_t alpha_uses_texel = (aa == 1 || aa == 2 || ab == 1 || ab == 2 ||
+                                    ac == 1 || ac == 2 || ad == 1 || ad == 2);
+        uint8_t needs_tr = use_alpha || alpha_uses_texel;
         if (needs_tr != pvr_cur_tr) {
             gfx_flush();
             gfx_pvr_set_blend(needs_tr);
@@ -1933,6 +1976,23 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         }
     }
 
+#ifdef GFX_BACKEND_PVR
+    // Ortho (2D-as-triangles) + Z-on geometry — e.g. the pause-menu glyph text — has
+    // constant _w (1/w==1.0), so it would land in the 2D depth slot and get buried by the
+    // dimming quad. Lift it into the 2D screen_2d_z scheme instead, advancing the same
+    // counter the 2D quad path uses so text and fill quads interleave by submission order.
+    // (Z-off ortho, i.e. the skybox, never reaches here — it takes the far-pin branch.)
+    // Overlay-ortho is lifted to the 2D z scheme ONLY when it's a foreground overlay:
+    // either Z-on (HUD/pause/menu text inheriting G_ZBUFFER), OR there's no 3D scene this
+    // frame (pure menu). A Z-OFF overlay-ortho IN A 3D-scene frame is a BACKGROUND (the
+    // over-skybox clouds) -> it must keep the far-pin, not be lifted near.
+    int ortho_overlay = proj_is_ortho && (depth_test || !prev_frame_had_persp);
+    float z2d = 0.0f;
+    if (ortho_overlay && n_tris > 0) {
+        screen_2d_z += 0.0005f;
+        z2d = screen_2d_z;
+    }
+#endif
     for (int ti = 0; ti < n_tris; ti++) {
         v1 = fan_tris[ti][0];
         v_arr[0] = fan_tris[ti][0];
@@ -2041,7 +2101,9 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         // which on PVR is NEAR) must not occlude the perspective scene. Pin it to the
         // far plane (tiny 1/w) so the depth-tested course always wins. (1e-5 sits behind
         // the course far-plane ~1/30000; tunable if any course geometry is farther.)
-        buf_vbo[buf_num_vert].vert.z = depth_test ? invw : 0.00001f;
+        // Overlay-ortho -> 2D z scheme (near). Otherwise perspective 1/w, or far-pin when
+        // Z is off (skybox AND the over-skybox clouds, which are Z-off ortho in a 3D frame).
+        buf_vbo[buf_num_vert].vert.z = ortho_overlay ? z2d : (depth_test ? invw : 0.00001f);
 #else
         buf_vbo[buf_num_vert].vert.x = v_arr[i]->x;
         buf_vbo[buf_num_vert].vert.y = v_arr[i]->y;
@@ -2107,6 +2169,12 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         gfx_flush();
     }
     } // for (ti) clipped-fan triangles
+#ifdef GFX_BACKEND_PVR
+    // A real 3D (perspective) triangle has now drawn this frame -> subsequent 2D quads are
+    // foreground overlays (near), not background. (Ortho 2D-as-tris like glyphs don't count.)
+    if (n_tris > 0 && !proj_is_ortho)
+        has_done_3d = 1;
+#endif
 }
 
 #if 1
@@ -2129,7 +2197,28 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 
 	dc_fast_t* v_arr[6] = { v1, v2, v3, v12, v22, v32 };
 
+#ifdef GFX_BACKEND_PVR
+	// Guaranteed-opaque 2D (same test as the q_tr classifier below) lands on the live OP
+	// list, which renders BEFORE TR. For an opaque 2D overlay to cover TR geometry it must
+	// WRITE DEPTH at its near screen z — otherwise TR paints right over it. Concretely: the
+	// intro white fade is translucent (TR, autosorts over the logo) until its alpha hits 255,
+	// at which point it's opaque -> OP -> and, being fill-mode Z-off, wrote no depth, so the
+	// perspective Nintendo logo (TR) drew over it and the fade "disappeared". So force depth
+	// test (GEQUAL) + write for opaque 2D; translucent 2D stays on TR and needs no force.
+	uint8_t opaque_2d;
+	{
+		uint8_t ua = (rdp.other_mode_l & (G_BL_A_MEM << 18)) == 0;
+		if ((rdp.other_mode_l & CVG_X_ALPHA) == CVG_X_ALPHA) ua = 1;
+		int aa = (rdp.combine_w0 >> 12) & 7, ab = (rdp.combine_w1 >> 12) & 7,
+		    ac = (rdp.combine_w0 >>  9) & 7, ad = (rdp.combine_w1 >>  9) & 7;
+		uint8_t aut = (aa==1||aa==2||ab==1||ab==2||ac==1||ac==2||ad==1||ad==2);
+		opaque_2d = !(ua || aut);
+	}
+#endif
 	uint8_t depth_test = (rsp.geometry_mode & G_ZBUFFER) == G_ZBUFFER;
+#ifdef GFX_BACKEND_PVR
+	if (opaque_2d) depth_test = 1;   // GEQUAL: occlude farther TR geometry behind the overlay
+#endif
 	if (depth_test != rendering_state.depth_test) {
 		gfx_flush();
 		gfx_rapi->set_depth_test(depth_test);
@@ -2137,6 +2226,9 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 	}
 
 	uint8_t z_upd = (rdp.other_mode_l & Z_UPD) == Z_UPD;
+#ifdef GFX_BACKEND_PVR
+	if (opaque_2d) z_upd = 1;        // write depth at the near 2D z so TR can't paint over it
+#endif
 	if (z_upd != rendering_state.depth_mask) {
 		gfx_flush();
 		gfx_rapi->set_depth_mask(z_upd);
@@ -2344,10 +2436,25 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 	}
 
 #ifdef GFX_BACKEND_PVR
-	// Classify the 2D quad for PT-vs-TR like the 3D path: real alpha-blend (fades,
-	// transition overlays) -> TR; opaque/cutout HUD -> live PT. gfx_sp_quad_2d already
-	// gfx_flush()'d, so just set the routing for this quad's draw_triangles_2d.
-	gfx_pvr_set_blend(use_alpha && !texture_edge);
+	// Classify the 2D quad like the 3D path: guaranteed-opaque -> live OP; everything
+	// with alpha -> deferred TR. As in 3D, "guaranteed opaque" also excludes a combiner
+	// whose ALPHA output reads a texel (texture-driven cutout) — else it'd render as an
+	// opaque black quad on OP. Alpha mux (3b each): 1=TEXEL0, 2=TEXEL1.
+	{
+		int aa = (rdp.combine_w0 >> 12) & 7, ab = (rdp.combine_w1 >> 12) & 7;
+		int ac = (rdp.combine_w0 >>  9) & 7, ad = (rdp.combine_w1 >>  9) & 7;
+		uint8_t alpha_uses_texel = (aa == 1 || aa == 2 || ab == 1 || ab == 2 ||
+		                            ac == 1 || ac == 2 || ad == 1 || ad == 2);
+		uint8_t q_tr = use_alpha || alpha_uses_texel;
+		gfx_pvr_set_blend(q_tr);
+		// CRITICAL: keep the 3D classifier's tracker in sync. The 2D and 3D paths share
+		// the backend's sNeedsTR, but only the 3D path (gfx_sp_tri1) gates its set_blend on
+		// pvr_cur_tr. An opaque 2D quad here sets sNeedsTR=0 yet would leave pvr_cur_tr=1,
+		// so the next 3D glyph sees needs_tr==pvr_cur_tr, skips set_blend, and emits with
+		// the stale sNeedsTR=0 -> lands on OP (opaque) instead of TR. (This is why the
+		// records-box glyphs rendered as opaque overlapping cells.)
+		pvr_cur_tr = q_tr;
+	}
 	gfx_pvr_draw_triangles_2d((void*) quad_vbo, 0, use_texture);
 #else
 	gfx_opengl_draw_triangles_2d((void*) quad_vbo, 0, use_texture);
@@ -2763,21 +2870,32 @@ static void  __attribute__((noinline)) gfx_draw_rectangle(int32_t ulx, int32_t u
 	dc_fast_t* lr = &rsp.loaded_vertices_2D[2];
 	dc_fast_t* ur = &rsp.loaded_vertices_2D[3];
 	screen_2d_z += 0.0005f;
+	float rz = screen_2d_z;
+#ifdef GFX_BACKEND_PVR
+	// A TEXTURED 2D quad drawn BEFORE any 3D, in a frame that HAS a 3D scene, is a backdrop
+	// (the title bg strips behind the perspective checkered flag) -> far-pin it. Excludes
+	// FILLRECTS (do_fill_rect): a solid-colour fill drawn before 3D is an OVERLAY/effect (the
+	// intro white fade over the spinning logo), which must stay near. Once 3D has drawn, or
+	// there's no 3D scene (pure menu, prev_frame_had_persp false), 2D stays near (the logo).
+	if (prev_frame_had_persp && !has_done_3d && !do_fill_rect)
+		rz = 0.00001f;
+	do_fill_rect = 0;   // consume per-rect (it isn't reliably reset elsewhere)
+#endif
 	ul->vert.x = ulxf;
 	ul->vert.y = ulyf;
-	ul->vert.z = screen_2d_z;
+	ul->vert.z = rz;
 
 	ll->vert.x = ulxf;
 	ll->vert.y = lryf;
-	ll->vert.z = screen_2d_z;
+	ll->vert.z = rz;
 
 	lr->vert.x = lrxf;
 	lr->vert.y = lryf;
-	lr->vert.z = screen_2d_z;
+	lr->vert.z = rz;
 
 	ur->vert.x = lrxf;
 	ur->vert.y = ulyf;
-	ur->vert.z = screen_2d_z;
+	ur->vert.z = rz;
 
 	// The coordinates for texture rectangle shall bypass the viewport setting
 	struct XYWidthHeight default_viewport = { 0, 0, gfx_current_dimensions.width, gfx_current_dimensions.height };
