@@ -112,6 +112,7 @@ OSMesg gSIEventMesgBuf[3];
 OSContStatus gControllerStatuses[4];
 OSContPad gControllerPads[4];
 u8 gControllerBits;
+u8 gKeyboardBit;
 // Contains a 32x32 grid of indices into gCollisionIndices containing indices into gCollisionMesh
 CollisionGrid gCollisionGrid[1024];
 u16 gNumActors;
@@ -664,14 +665,26 @@ int sd_x,sd_y;
 
 void init_controllers(void) {
     gControllerBits = 0;
+    gKeyboardBit = 0;
 
     maple_device_t *cont;
+    int detected = 0;
     for (int i=0;i<4;i++) {
         cont = NULL;
         cont = maple_enum_type(i, MAPLE_FUNC_CONTROLLER);
-        if (cont)
+        if (cont) {
             gControllerBits |= (1 << i);
+            ++detected;
+        }
     }
+
+    if(detected < 4) {
+        cont = maple_enum_type(0, MAPLE_FUNC_KEYBOARD);
+        if(cont) {
+            gControllerBits |= gKeyboardBit = (1 << detected);
+        }
+    }
+
     if ((gControllerBits & 1) == 0) {
         sIsController1Unplugged = 1;
     } else {
@@ -769,14 +782,102 @@ void init_controllers(void) {
 extern void __osPfsCloseAllFiles(void);
 u16 ucheld;
 u16 stick;
-void update_controller(s32 index) {
+
+
+void update_keyboard(s32 index) {
 	struct Controller* controller = &gControllers[index];
+    maple_device_t *kbd;
+    kbd_state_t *state;
+    ucheld = 0;
+    stick = 0;
+    controller->rawStickX = 0;
+    controller->rawStickY = 0;
+
+    kbd = maple_enum_type(0, MAPLE_FUNC_KEYBOARD);
+    if(!kbd) return;
+
+    state = maple_dev_status(kbd);
+
+    if (strcmp("/pc", fnpre) == 0)
+        if(state->key_states[KBD_KEY_ESCAPE].is_down) {
+            __osPfsCloseAllFiles();
+            exit(0);
+        }
+
+    if (state->key_states[KBD_KEY_SPACE].is_down)
+        ucheld |= 0x8000; //A_BUTTON
+
+    if (state->key_states[KBD_KEY_B].is_down ||
+        state->key_states[KBD_KEY_C].is_down)
+        ucheld |= 0x4000; //B_BUTTON
+
+    if (state->key_states[KBD_KEY_ENTER].is_down)
+       ucheld |= 0x1000; //START_BUTTON
+
+    if (state->key_states[KBD_KEY_Q].is_down)
+        ucheld |= 0x0020; //L_TRIG
+    if (state->key_states[KBD_KEY_Z].is_down)
+        ucheld |= 0x2000; //Z_TRIG
+    if (state->key_states[KBD_KEY_E].is_down ||
+        state->key_states[KBD_KEY_X].is_down)
+        ucheld |= 0x0010; //R_TRIG
+
+    if (state->key_states[KBD_KEY_UP].is_down) {
+        controller->rawStickY = 60;
+        ucheld |= U_JPAD;
+    }
+    if (state->key_states[KBD_KEY_DOWN].is_down) {
+        controller->rawStickY = -60;
+        ucheld |= D_JPAD;
+    }
+    if (state->key_states[KBD_KEY_LEFT].is_down) {
+        controller->rawStickX = -60;
+        ucheld |= L_JPAD;
+    }
+    if (state->key_states[KBD_KEY_RIGHT].is_down) {
+        controller->rawStickX = 60;
+        ucheld |= R_JPAD;
+    }
+
+    controller->buttonPressed = ucheld & (ucheld ^ controller->button);
+    controller->buttonDepressed = controller->button & (ucheld ^ controller->button);
+    controller->button = ucheld;
+
+    if (state->key_states[KBD_KEY_A].is_down) {
+        controller->rawStickX = -60;
+        stick |= L_JPAD;
+    }
+    if (state->key_states[KBD_KEY_D].is_down) {
+        controller->rawStickX = 60;
+        stick |= R_JPAD;
+    }
+    if (state->key_states[KBD_KEY_S].is_down) {
+        stick |= D_JPAD;
+        controller->rawStickY = 60;
+    }
+    if (state->key_states[KBD_KEY_W].is_down) {
+        stick |= U_JPAD;
+        controller->rawStickY = 60;
+    }
+
+    controller->stickPressed = stick & (stick ^ controller->stickDirection);
+    controller->stickDepressed = controller->stickDirection & (stick ^ controller->stickDirection);
+    controller->stickDirection = stick;
+}
+
+void update_controller(s32 index) {
+    struct Controller* controller = &gControllers[index];
     maple_device_t *cont;
     cont_state_t *state;
     ucheld = 0;
     stick = 0;
+
     if (index > 3)
         return;
+    if((1 << index) == gKeyboardBit) {
+        update_keyboard(index);
+        return;
+    }
     cont = maple_enum_type(index, MAPLE_FUNC_CONTROLLER);
     if (!cont)
         return;
