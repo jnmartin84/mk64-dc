@@ -87,6 +87,7 @@ static int sCurrentList = PVR_LIST_OP_POLY;
 static uint8_t sDepthTest  = 1;   // PVR_DEPTHCMP_GEQUAL vs ALWAYS
 static uint8_t sDepthWrite = 1;   // PVR_DEPTHWRITE_ENABLE vs DISABLE
 static uint8_t sDecal      = 0;   // zmode decal (coplanar) — folded in P3
+static uint8_t sFogEnabled = 0;   // PVR_FOG_VERTEX vs PVR_FOG_DISABLE (G_FOG geometry mode)
 
 // --- Texture table ---------------------------------------------------------
 // The front-end hands upload_texture data ALREADY in PVR 16-bit format (ARGB1555
@@ -159,7 +160,6 @@ static int sDropV = 0, sDropB = 0;
 // A depth/texture/shader state change affects the live OP header and the next PT and TR
 // batches. (gfx_pvr_set_blend only routes OP/PT/TR, so it does NOT dirty headers.)
 static void pvr_mark_dirty(void) { sOpDirty = 1; sTR.dirty = 1; sPunch.dirty = 1; }
-
 // Compile a poly header for the current depth/texture state on the given list.
 static void pvr_compile_header(pvr_poly_hdr_t *out, int kind) {
     pvr_poly_cxt_t cxt;
@@ -200,6 +200,11 @@ static void pvr_compile_header(pvr_poly_hdr_t *out, int kind) {
     // (e.g. d==ENV) into per-vertex oargb (added post-modulate); non-additive verts get
     // oargb=0 (a no-op add), so leaving this enabled is free.
     cxt.gen.specular = PVR_SPECULAR_ENABLE;
+    // PVR hardware VERTEX fog: blends each fragment toward the fog-colour register by the
+    // per-vertex fog density carried in the offset-colour (oargb) ALPHA — which the front-end
+    // packs from the N64 per-vertex fog coefficient. Off (DISABLE) when the draw isn't fogged
+    // (G_FOG clear); then oargb.alpha is 0 anyway, so even a stale VERTEX header wouldn't fog.
+    cxt.gen.fog_type = sFogEnabled ? PVR_FOG_VERTEX : PVR_FOG_DISABLE;
     // z = 1/w (larger == nearer): GEQUAL keeps the nearer fragment; ALWAYS == test off.
     cxt.depth.comparison = sDepthTest ? PVR_DEPTHCMP_GEQUAL : PVR_DEPTHCMP_ALWAYS;
     cxt.depth.write = sDepthWrite ? PVR_DEPTHWRITE_ENABLE : PVR_DEPTHWRITE_DISABLE;
@@ -457,6 +462,20 @@ static void gfx_pvr_set_depth_mask(uint8_t z_upd) {
 }
 static void gfx_pvr_set_zmode_decal(uint8_t zmode_decal) {
     if (sDecal != zmode_decal) { sDecal = zmode_decal; pvr_mark_dirty(); }
+}
+
+// PVR vertex fog enable/disable — baked into the poly header, so a change dirties all lists.
+void gfx_pvr_set_fog(uint8_t enabled) {
+    enabled = enabled ? 1 : 0;
+    if (sFogEnabled != enabled) { sFogEnabled = enabled; pvr_mark_dirty(); }
+}
+
+// Vertex fog colour register (0x00b4). Global, read at render time — write it directly
+// (KOS's pvr_fog_vertex_color is a stub). Not part of the poly header, so no dirty needed.
+void gfx_pvr_set_fog_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+    PVR_SET(PVR_FOG_VERTEX_COLOR,
+            PVR_PACK_COLOR(a * (1.0f / 255.0f), r * (1.0f / 255.0f),
+                           g * (1.0f / 255.0f), b * (1.0f / 255.0f)));
 }
 static void gfx_pvr_set_viewport(UNUSED int x, UNUSED int y, UNUSED int w, UNUSED int h) { /* P4 */ }
 static void gfx_pvr_set_scissor(UNUSED int x, UNUSED int y, UNUSED int w, UNUSED int h)  { /* P4 */ }

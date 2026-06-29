@@ -4,7 +4,6 @@
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
-
 #ifndef _LANGUAGE_C
 #define _LANGUAGE_C
 #endif
@@ -127,6 +126,10 @@ struct __attribute__((aligned(32))) LoadedVertex {
 	// of a side clip_rej[] byte because its LoadedVertex was crammed to exactly 32
 	// bytes; CURRENT's cell has room, so it gets its own field (no clip-path masking).
 	uint8_t lit;
+	// 49 — per-vertex N64 fog coefficient (0..255), computed at vertex-load from the clip
+	// z/w and the RSP fog mul/offset (G_FOG geometry mode). Emitted into the PVR vertex's
+	// offset-colour (oargb) ALPHA, which PVR hardware VERTEX fog reads as the fog density.
+	uint8_t fog;
 };
 
 static inline uint64_t pack_key(uint32_t a, uint16_t b, uint16_t c, uint8_t d, uint8_t e) {
@@ -268,6 +271,8 @@ struct RenderingState {
 	uint8_t depth_mask;
 	uint8_t decal_mode;
 	uint8_t alpha_blend;
+	uint8_t fog_enabled;      // PVR vertex fog on (G_FOG geometry mode)
+	uint32_t fog_color;       // last fog colour pushed to the PVR fog register (0xAARRGGBB)
 	// 12
 	struct XYWidthHeight viewport;
 	// 20
@@ -290,6 +295,12 @@ static uint8_t dropped_frame;
 static float sc_ndc_xmin = -1.0f, sc_ndc_xmax = 1.0f;
 static float sc_ndc_ymin = -1.0f, sc_ndc_ymax = 1.0f;
 static int sc_is_fullscreen = 1;
+// Which scissor edges actually need the homogeneous CLIP pass (SC_LEFT/RIGHT/BOTTOM/TOP).
+// An edge whose clip boundary lands on the framebuffer border is redundant: geometry past
+// it maps OFF-SCREEN, where the PVR's guard band drops it (exactly the single-player
+// sc_is_fullscreen case) — only edges that border a NEIGHBOURING split-screen pane can let
+// overhang bleed in, so only those get clipped. Trivial-reject still uses all four edges.
+static uint8_t sc_active_mask = 0x0F;   // == SC_EDGE_MASK (defined below)
 // Eye-plane guard so the homogeneous scissor planes always divide by w > 0.
 #define SCISSOR_W_EPS 0.00001f
 
@@ -382,6 +393,24 @@ static void gfx_recompute_scissor_planes(void) {
 	int scissor_covers_vp = (sc_ndc_xmin <= -0.999f && sc_ndc_xmax >= 0.999f &&
 	                         sc_ndc_ymin <= -0.999f && sc_ndc_ymax >= 0.999f);
 	sc_is_fullscreen = (vp_is_full && scissor_covers_vp);
+
+	// Per-edge clip skip: map each clip boundary back to framebuffer space (NDC -1 -> v.xy,
+	// +1 -> v.xy+v.wh) and drop the edge from the CLIP pass when it sits on the framebuffer
+	// border (nothing to bleed into there — the PVR guard band discards the off-screen
+	// overhang). Edges that fall on an interior split line stay active. Half-pixel slop
+	// matches vp_is_full. (Trivial-reject in gfx_sp_tri1 still consults all four edges.)
+	{
+		float bx_min = vx + (sc_ndc_xmin + 1.0f) * 0.5f * vw;
+		float bx_max = vx + (sc_ndc_xmax + 1.0f) * 0.5f * vw;
+		float by_min = vy + (sc_ndc_ymin + 1.0f) * 0.5f * vh;
+		float by_max = vy + (sc_ndc_ymax + 1.0f) * 0.5f * vh;
+		uint8_t m = 0;
+		if (bx_min >  0.5f)       m |= SC_LEFT;
+		if (bx_max <  fbw - 0.5f) m |= SC_RIGHT;
+		if (by_min >  0.5f)       m |= SC_BOTTOM;
+		if (by_max <  fbh - 0.5f) m |= SC_TOP;
+		sc_active_mask = m;
+	}
 
 	// Invalidate cached per-vertex scissor outcodes (they were computed against the
 	// old planes). 0 is reserved as "never computed", so skip it on wrap.
@@ -606,6 +635,10 @@ static uint8_t pvr_cur_kind = 0;
 extern void gfx_pvr_set_blend_factors(uint8_t src, uint8_t dst);   // gfx_blend_factor codes
 // Last TR blend factors pushed to the backend (abstract gfx_blend_factor codes).
 static uint8_t pvr_cur_bsrc = GFX_BLENDF_SRCALPHA, pvr_cur_bdst = GFX_BLENDF_INVSRCALPHA;
+
+// PVR hardware vertex fog (ported from the OoT raw-PVR renderer).
+extern void gfx_pvr_set_fog(uint8_t enabled);
+extern void gfx_pvr_set_fog_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
 
 // Derive PVR blend factors from the N64 blender (the final cycle in other_mode_l). The
 // blender computes (P*A + M*B); for the standard "incoming over framebuffer" arrangement
@@ -1345,6 +1378,18 @@ static void  __attribute__((noinline)) gfx_sp_pop_matrix(uint32_t count) {
 int nearz_clip_verts = 0;
 int total_verts = 0;
 
+// N64 per-vertex fog coefficient from clip z/w (matches OoT's raw-PVR path and the RSP
+// G_MWO_FOG math): fog = clamp(fog_mul*(z/w) + fog_offset, 0..255). Returns 0 when fog is
+// off (G_FOG clear) or the vertex is behind the near plane, so non-fogged frames pay nothing.
+static inline uint8_t gfx_calc_fog(float z, float w) {
+    if (!(rsp.geometry_mode & G_FOG)) return 0;
+    if (z < -w) return 0;
+    float f = (float)rsp.fog_mul * (z / w) + (float)rsp.fog_offset;
+    if (f > 255.0f) f = 255.0f;
+    else if (f < 0.0f) f = 0.0f;
+    return (uint8_t)f;
+}
+
 static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
     for (size_t i = 0; i < n_vertices; i++, dest_index++) {
         const Vtx_t* v = &vertices[i].v;
@@ -1452,6 +1497,8 @@ static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, siz
         d->_y = y;
         d->_z = z;
         d->_w = w;
+
+        d->fog = gfx_calc_fog(z, w);
     }
 }
 
@@ -1492,6 +1539,8 @@ static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t
         d->scissor_gen = 0;
 
         d->lit = 0; // unlit path: shade is the raw vertex colour, no light mix
+
+        d->fog = gfx_calc_fog(d->_z, d->_w);
     }
 }
 
@@ -1583,6 +1632,7 @@ static inline void clip_lerp_vertex(struct LoadedVertex* o, const struct LoadedV
 	o->clip_rej = 0x3f;
 	o->wlt0 = 0;
 	o->lit = a->lit; // inherit lit state from the source edge vertex
+	o->fog = (uint8_t) (a->fog + t * ((float) b->fog - (float) a->fog));
 }
 
 // Fill the active 5 clip planes (eye + 4 scissor) as {A,B,C,D,E}:
@@ -1713,7 +1763,7 @@ static inline float pvr_ca(int mux, const float prim[4], const float env[4], con
 }
 
 static inline void pvr_eval_combiner(uint32_t w0, uint32_t w1, const struct RGBA* sh,
-                                     uint32_t* out_argb, uint32_t* out_oargb) {
+                                     int textured, uint32_t* out_argb, uint32_t* out_oargb) {
 	const float prim[4]  = { rdp.prim_color.r*recip255, rdp.prim_color.g*recip255, rdp.prim_color.b*recip255, rdp.prim_color.a*recip255 };
 	const float env[4]   = { rdp.env_color.r*recip255,  rdp.env_color.g*recip255,  rdp.env_color.b*recip255,  rdp.env_color.a*recip255 };
 	const float shade[4] = { sh->r*recip255, sh->g*recip255, sh->b*recip255, sh->a*recip255 };
@@ -1723,32 +1773,66 @@ static inline void pvr_eval_combiner(uint32_t w0, uint32_t w1, const struct RGBA
 	int a = (w0 >> 20) & 0xF, b = (w1 >> 28) & 0xF, c = (w0 >> 15) & 0x1F, d = (w1 >> 15) & 0x7;
 	int aa = (w0 >> 12) & 0x7, ab = (w1 >> 12) & 0x7, ac = (w0 >> 9) & 0x7, ad = (w1 >> 9) & 0x7;
 
-	// Constant additive offset (colour d == PRIM/ENV) -> oargb, excluded from argb.
-	// BUT only when d sits on top of a modulated TEXTURE base. With no texel in the
-	// combiner the (a-b)*c term is the whole non-d colour and d IS the base colour, not
-	// an additive overlay — splitting it into oargb then leaves argb black. e.g. the
-	// white intro fade is G_CC_PRIMITIVE ((0-0)*0 + PRIM): no texel, so PRIM must stay in
-	// argb or the fade renders BLACK instead of white.
+	// "Colour samples the texture" — check ALL four colour slots. The d slot matters:
+	// G_CC_DECALRGB is (0,0,0,TEXEL0), i.e. colour == TEXEL0 carried in d. Missing it here
+	// mis-classified every decal-textured surface as colour-constant and blew it out white.
 	int has_texel = (a == 1 || a == 2 || b == 1 || b == 2 ||
-	                 c == 1 || c == 2 || c == 8 || c == 9);
-	int offset = (d == 3 || d == 5) && has_texel;   // G_CCMUX d: 3=PRIM, 5=ENV
-	if (offset) {
+	                 c == 1 || c == 2 || c == 8 || c == 9 ||
+	                 d == 1 || d == 2);
+
+	// The PVR MODULATE texenv ALWAYS multiplies tex.rgb into argb when the poly is
+	// textured. So argb.rgb is a MULTIPLIER on the texture, and any colour the N64
+	// combiner produces that is NOT meant to be modulated by tex.rgb has to be routed to
+	// the additive oargb (added post-modulate) with argb.rgb forced so MODULATE yields 0.
+	// Two such cases:
+	//  (1) colour mux has NO texel but the poly is textured (texture bound for ALPHA only):
+	//      e.g. the over-skybox cloud (colour = PRIM, alpha = TEXEL0). MODULATE would
+	//      darken the constant colour by the texture's intensity ramp -> grey halo. Route
+	//      the WHOLE colour to oargb, argb.rgb = 0.
+	//  (2) additive PRIM/ENV 'd' sitting on top of a TEXEL base -> route just 'd' to oargb,
+	//      exclude it from the modulated argb.
+	// Otherwise the colour stays in argb (e.g. the untextured white intro fade
+	// G_CC_PRIMITIVE ((0-0)*0 + PRIM): no texture to modulate, so PRIM must stay in argb or
+	// the fade renders BLACK).
+	//
+	// CRITICAL: this evaluator only decodes CYCLE 0. In a 2-cycle combiner the texel
+	// modulate frequently lives in cycle 1, so cycle 0 reads "no texel" even though the
+	// surface is genuinely texture-modulated — and the mandatory MODULATE is what applies
+	// it. So case (1) is only trustworthy in 1-CYCLE mode; gating on it keeps every 2-cycle
+	// textured surface on the old (keep-in-argb, let-MODULATE-apply-texture) path.
+	int two_cycle = ((rdp.other_mode_h & (3U << G_MDSFT_CYCLETYPE)) == G_CYC_2CYCLE);
+	int color_const_textured = textured && !has_texel && !two_cycle;
+	int offset = !color_const_textured && (d == 3 || d == 5) && has_texel; // G_CCMUX d: 3=PRIM, 5=ENV
+
+	uint32_t col[4];
+	uint32_t oarr[3] = { 0, 0, 0 };
+	for (int ch = 0; ch < 3; ch++) {
+		float va = pvr_cc4(a, ch, prim, env, shade);
+		float vb = pvr_cc4(b, ch, prim, env, shade);
+		float vc = pvr_cc5(c, ch, prim, env, shade);
+		if (color_const_textured) {
+			// whole texture-independent colour -> additive offset; modulate multiplier = 0
+			float v = (va - vb) * vc + pvr_cc4(d, ch, prim, env, shade);
+			v = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+			oarr[ch] = (uint32_t)(v * 255.0f);
+			col[ch]  = 0;
+		} else {
+			float vd = offset ? 0.0f : pvr_cc4(d, ch, prim, env, shade);
+			float v = (va - vb) * vc + vd;
+			v = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+			col[ch] = (uint32_t)(v * 255.0f);
+		}
+	}
+
+	if (color_const_textured) {
+		*out_oargb = PACK_ARGB8888(oarr[0], oarr[1], oarr[2], 0);
+	} else if (offset) {
 		const float* o = (d == 3) ? prim : env;
 		*out_oargb = PACK_ARGB8888((uint32_t)(o[0]*255.0f), (uint32_t)(o[1]*255.0f), (uint32_t)(o[2]*255.0f), 0);
 	} else {
 		*out_oargb = 0;
 	}
 
-	uint32_t col[4];
-	for (int ch = 0; ch < 3; ch++) {
-		float va = pvr_cc4(a, ch, prim, env, shade);
-		float vb = pvr_cc4(b, ch, prim, env, shade);
-		float vc = pvr_cc5(c, ch, prim, env, shade);
-		float vd = offset ? 0.0f : pvr_cc4(d, ch, prim, env, shade);
-		float v = (va - vb) * vc + vd;
-		v = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
-		col[ch] = (uint32_t)(v * 255.0f);
-	}
 	float av = (pvr_ca(aa, prim, env, shade) - pvr_ca(ab, prim, env, shade)) * pvr_ca(ac, prim, env, shade)
 	           + pvr_ca(ad, prim, env, shade);
 	av = av < 0.0f ? 0.0f : (av > 1.0f ? 1.0f : av);
@@ -1838,6 +1922,27 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         rendering_state.decal_mode = zmode_decal;
     }
 
+#ifdef GFX_BACKEND_PVR
+    // PVR hardware vertex fog: on when the RSP G_FOG geometry mode is set (the same signal
+    // that makes gfx_calc_fog produce per-vertex coefficients). The fog-colour register is
+    // global/per-frame (like OoT), so per-object fog colours can't differ within a frame —
+    // fine for MK64's per-course fog. Toggling fog_type dirties the header, so flush; the
+    // colour register is read at render time, so it needs no flush.
+    uint8_t fog_on = (rsp.geometry_mode & G_FOG) != 0;
+    if (fog_on != rendering_state.fog_enabled) {
+        gfx_flush();
+        gfx_pvr_set_fog(fog_on);
+        rendering_state.fog_enabled = fog_on;
+    }
+    if (fog_on) {
+        uint32_t fc = PACK_ARGB8888(rdp.fog_color.r, rdp.fog_color.g, rdp.fog_color.b, rdp.fog_color.a);
+        if (fc != rendering_state.fog_color) {
+            gfx_pvr_set_fog_color(rdp.fog_color.r, rdp.fog_color.g, rdp.fog_color.b, rdp.fog_color.a);
+            rendering_state.fog_color = fc;
+        }
+    }
+#endif
+
     if (rdp.viewport_or_scissor_changed) {
         if (memcmp(&rdp.viewport, &rendering_state.viewport, sizeof(rdp.viewport)) != 0) {
             gfx_flush();
@@ -1908,13 +2013,21 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         int ac = (rdp.combine_w0 >>  9) & 7, ad = (rdp.combine_w1 >>  9) & 7;
         uint8_t alpha_uses_texel = (aa == 1 || aa == 2 || ab == 1 || ab == 2 ||
                                     ac == 1 || ac == 2 || ad == 1 || ad == 2);
+        // The combiner reading a texel for alpha only matters as a CUTOUT signal when the
+        // hardware actually alpha-TESTS — i.e. alpha compare is enabled (G_AC_THRESHOLD/DITHER,
+        // other_mode_l[1:0]). An OPAQUE surface (G_RM_*_OPA_SURF, G_AC_NONE) ignores alpha as
+        // full coverage even if MODULATEIA computes a texel alpha; sending it to PT would
+        // alpha-test it away when the texture's alpha bit is 0 (the Koopa Beach palm-trunk
+        // RGBA16 model -> whole trunk invisible). Real PT cutouts (HUD G_AC_THRESHOLD glyphs,
+        // TEX_EDGE foliage) keep their signal.
+        uint8_t alpha_compare_on = (rdp.other_mode_l & 3) != 0;
         // FORCE_BL = the N64 "blend this surface against the framebuffer" flag: set on real
         // translucency (item-box glass, clouds, XLU), clear on coverage cutouts (TEX_EDGE).
         // It separates the two even when BOTH carry CVG_X_ALPHA, which the old
         // (G_BL_A_MEM<<18) heuristic could not — that misread sent cutouts to TR and, with the
         // texture_edge-first hack, alpha-tested translucent CVG_X_ALPHA glass to nothing on PT.
         uint8_t real_blend = (rdp.other_mode_l & FORCE_BL) != 0;
-        uint8_t cutout     = texture_edge || alpha_uses_texel;
+        uint8_t cutout     = texture_edge || (alpha_uses_texel && alpha_compare_on);
         uint8_t kind = real_blend ? 2 : (cutout ? 1 : 0);   // TR : PT : OP
         if (kind != pvr_cur_kind) {
             gfx_flush();
@@ -2010,13 +2123,23 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
             fan_tris[0][0] = v1; fan_tris[0][1] = v2; fan_tris[0][2] = v3;
             n_tris = 1;
         } else if (oc_and & SC_EDGE_MASK) {
-            // all three share an outside edge -> whole triangle is off-pane
+            // all three share an outside edge -> whole triangle is off-pane (incl.
+            // off-screen past a redundant border edge: still a correct trivial reject)
             n_tris = 0;
         } else {
             // A behind-eye vertex's edge bits are meaningless, so when SC_FORCE is
-            // present clip every plane; otherwise clip only the edges crossed.
-            uint8_t clip_mask = (oc_or & SC_FORCE) ? (SC_FORCE | SC_EDGE_MASK) : oc_or;
-            n_tris = gfx_build_clipped_fan(v1, v2, v3, fan_tris, clip_mask);
+            // present clip every plane; otherwise clip only the CROSSED, NON-REDUNDANT
+            // edges (sc_active_mask drops screen-border edges — their overhang goes
+            // off-screen and the PVR clips it, so the SH pass would be wasted work).
+            uint8_t clip_mask = (oc_or & SC_FORCE) ? (SC_FORCE | SC_EDGE_MASK)
+                                                   : (oc_or & sc_active_mask);
+            if (clip_mask == 0) {
+                // only redundant border edges were crossed -> emit as-is, PVR guard-bands it
+                fan_tris[0][0] = v1; fan_tris[0][1] = v2; fan_tris[0][2] = v3;
+                n_tris = 1;
+            } else {
+                n_tris = gfx_build_clipped_fan(v1, v2, v3, fan_tris, clip_mask);
+            }
         }
     }
 
@@ -2174,7 +2297,11 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         // mat_packed approximation), producing the modulate argb + additive oargb.
         {
             uint32_t _argb, _oargb;
-            pvr_eval_combiner(rdp.combine_w0, rdp.combine_w1, &v_arr[i]->color, &_argb, &_oargb);
+            pvr_eval_combiner(rdp.combine_w0, rdp.combine_w1, &v_arr[i]->color, use_texture, &_argb, &_oargb);
+            // PVR vertex fog reads the fog density from the offset-colour (oargb) ALPHA. The
+            // combiner evaluator leaves that alpha 0 (only RGB carries the additive offset), so
+            // OR in this vertex's fog coefficient; the two share oargb without conflict.
+            _oargb |= (uint32_t)v_arr[i]->fog << 24;
             buf_vbo[buf_num_vert].color.packed = _argb;
             buf_vbo[buf_num_vert].pad0.vertindex = _oargb;
         }
@@ -2396,7 +2523,7 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 		// force is needed. TEXEL substituted=1; the PVR does the real texture combine.
 		{
 			uint32_t _argb, _oargb;
-			pvr_eval_combiner(rdp.combine_w0, rdp.combine_w1, &v_arr[tri_num_vert]->color, &_argb, &_oargb);
+			pvr_eval_combiner(rdp.combine_w0, rdp.combine_w1, &v_arr[tri_num_vert]->color, use_texture, &_argb, &_oargb);
 			quad_vbo[tri_num_vert].color.packed = _argb;
 			quad_vbo[tri_num_vert].pad0.vertindex = _oargb;
 		}
@@ -2489,10 +2616,14 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 		int ac = (rdp.combine_w0 >>  9) & 7, ad = (rdp.combine_w1 >>  9) & 7;
 		uint8_t alpha_uses_texel = (aa == 1 || aa == 2 || ab == 1 || ab == 2 ||
 		                            ac == 1 || ac == 2 || ad == 1 || ad == 2);
+		// alpha-from-texel is only a CUTOUT signal when alpha compare is actually on
+		// (G_AC_THRESHOLD/DITHER) — see gfx_sp_tri1. HUD cutouts set it; opaque textured
+		// surfaces (G_AC_NONE) stay OP instead of being alpha-tested to nothing.
+		uint8_t alpha_compare_on = (rdp.other_mode_l & 3) != 0;
 		// FORCE_BL = authoritative translucent flag (see gfx_sp_tri1): real blend -> TR,
 		// coverage/texture cutout -> PT, else opaque -> OP.
 		uint8_t real_blend = (rdp.other_mode_l & FORCE_BL) != 0;
-		uint8_t cutout     = texture_edge || alpha_uses_texel;
+		uint8_t cutout     = texture_edge || (alpha_uses_texel && alpha_compare_on);
 		uint8_t q_kind = real_blend ? 2 : (cutout ? 1 : 0);   // TR : PT : OP
 		gfx_pvr_set_blend(q_kind);
 		if (q_kind == 2) {   // TR: derive + push blend factors from the N64 blender
