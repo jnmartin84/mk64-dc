@@ -505,6 +505,42 @@ void func_802A487C(Vtx* arg0, UNUSED struct UnkStruct_800DC5EC* arg1, UNUSED s32
     }
 }
 
+#ifdef GFX_BACKEND_PVR
+// Lightning-item flash (raw-PVR): instead of a full-screen overlay box — which can't be cheaply
+// occluded by the course and has no unique render-state marker — tint the actual SKYBOX vertices
+// toward the flash colour. The skybox is real geometry already correctly depth-occluded by the
+// track, so only the visible sky flashes (no overlay, no depth tricks, no custom GBI flag). The
+// per-camera colours are reset by course_set_skybox_colours right before this call, so split-screen
+// views flash independently. func_8009E2F0 still advances the per-camera flash timer; here we just
+// read it. (The overlay draw_box is compiled out under PVR — see func_8009E2F0.)
+extern s8 D_8018E838[];        // per-camera flash active flag (1 == flashing)
+extern s32 D_8018E840[];       // per-camera flash timer (0..38)
+extern const s8 D_800F0B28[];  // flash curve: timer -> colour index
+extern RGBA16 D_800E7AC8[];    // flash colours (RGBA, 0..255; index 0 == off/transparent)
+static void apply_skybox_lightning_flash(Vtx* skybox, s32 cameraId) {
+    if (D_8018E838[cameraId] != 1) {
+        return;
+    }
+    s32 timer = D_8018E840[cameraId];
+    RGBA16* fc = &D_800E7AC8[D_800F0B28[timer]];
+    s32 a = fc->alpha;                              // 0 on the strobe's off-frames (colour 0)
+    if ((u32) timer >= 0x1B) {                      // tail fade, matching func_8009E2F0
+        a = (s32) (a * ((38 - timer) / 11.0f));
+    }
+    if (a <= 0) {
+        return;
+    }
+    if (a > 255) {
+        a = 255;
+    }
+    for (s32 i = 0; i < 8; i++) {                   // lerp each vert's colour toward the flash
+        skybox[i].v.cn[0] += ((s32) fc->red   - skybox[i].v.cn[0]) * a / 255;
+        skybox[i].v.cn[1] += ((s32) fc->green - skybox[i].v.cn[1]) * a / 255;
+        skybox[i].v.cn[2] += ((s32) fc->blue  - skybox[i].v.cn[2]) * a / 255;
+    }
+}
+#endif
+
 void func_802A4A0C(Vtx* vtx, struct UnkStruct_800DC5EC* arg1, UNUSED s32 arg2, UNUSED s32 arg3, UNUSED f32* arg4) {
     // jnmartin84 - possible bug-fix from Spaghetti dudes
     s32 id = arg1 - D_8015F480;
@@ -522,6 +558,9 @@ void func_802A4A0C(Vtx* vtx, struct UnkStruct_800DC5EC* arg1, UNUSED s32 arg2, U
     f32 sp58;
 
     course_set_skybox_colours(vtx);
+#ifdef GFX_BACKEND_PVR
+    apply_skybox_lightning_flash(vtx, id);   // tint the sky during a lightning-item flash
+#endif
     sp5C[0] = 0.0f;
     sp5C[1] = 0.0f;
     sp5C[2] = 30000.0f;

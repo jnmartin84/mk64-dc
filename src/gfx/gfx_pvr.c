@@ -86,8 +86,9 @@ static int sCurrentList = PVR_LIST_OP_POLY;
 // longer buries the track. (P3 will cache headers + fold in blend/texture state.)
 static uint8_t sDepthTest  = 1;   // PVR_DEPTHCMP_GEQUAL vs ALWAYS
 static uint8_t sDepthWrite = 1;   // PVR_DEPTHWRITE_ENABLE vs DISABLE
-static uint8_t sDecal      = 0;   // zmode decal (coplanar) — folded in P3
 static uint8_t sFogEnabled = 0;   // PVR_FOG_VERTEX vs PVR_FOG_DISABLE (G_FOG geometry mode)
+static uint8_t sTexEnv = PVR_TXRENV_MODULATE;  // texel<->vtx combine, derived from N64 combiner
+                                               // (enum gfx_tex_env order == pvr_txr_shading_mode)
 
 // --- Texture table ---------------------------------------------------------
 // The front-end hands upload_texture data ALREADY in PVR 16-bit format (ARGB1555
@@ -95,7 +96,11 @@ static uint8_t sFogEnabled = 0;   // PVR_FOG_VERTEX vs PVR_FOG_DISABLE (G_FOG ge
 // so there is no pixel conversion: we POT-PAD (never resample — see memory), copy
 // into VRAM, and the front-end's get_*_scale UV correction addresses the used
 // sub-region. Ids are 1-based table indices; 0 == none.
-#define PVR_TEX_MAX 2048
+// MUST match the front-end texture cache size (gfx_retro_dc.c gfx_texture_cache pool[]/hashmap[],
+// 1024): the front-end allocates a backend id per cached texture and hard-stops when its pool
+// fills, so the two tables track 1:1. A larger backend table just lets ids run past where the
+// front-end can manage them (stale slots / VRAM the cache no longer tracks).
+#define PVR_TEX_MAX 1024
 struct PvrTex {
     pvr_ptr_t addr;        // VRAM, NULL if unallocated
     uint32_t  alloc_size;  // bytes currently allocated (reused if a re-upload fits)
@@ -149,6 +154,14 @@ static PvrBucket sPunch = { sPunchVerts, sPunchBatch, 0, TR_MAX_VERTS, 0, TR_MAX
 static uint8_t sListKind = PVR_KIND_OP;
 static uint8_t sOpDirty = 1;   // live OP header needs re-emit (depth/texture changed)
 
+// 2x3 base-header cache: pvr_poly_compile is EXPENSIVE (full context encode). Compile each of the
+// SIX bases ([textured][PVR_KIND_*]) ONCE, then per draw copy the matching base and bit-patch only
+// the fields that vary (texture/texenv/depth/fog/TR-blend) — no per-draw recompile (OoT/SM64
+// technique). The bases hold ONLY invariant per-list state (list type, alpha/txralpha + blend
+// defaults, culling, specular), so they never need invalidation.
+static pvr_poly_hdr_t __attribute__((aligned(32))) sBaseHdr[2][3];   // [textured][PVR_KIND_*]
+static uint8_t sBaseHdrValid[2][3];
+
 // TR blend factors, derived by the front-end from the N64 blender and pushed via
 // gfx_pvr_set_blend_factors. Default = standard alpha-over (SRC_ALPHA / INV_SRC_ALPHA).
 static int sBlendSrc = PVR_BLEND_SRCALPHA;
@@ -160,63 +173,67 @@ static int sDropV = 0, sDropB = 0;
 // A depth/texture/shader state change affects the live OP header and the next PT and TR
 // batches. (gfx_pvr_set_blend only routes OP/PT/TR, so it does NOT dirty headers.)
 static void pvr_mark_dirty(void) { sOpDirty = 1; sTR.dirty = 1; sPunch.dirty = 1; }
-// Compile a poly header for the current depth/texture state on the given list.
-static void pvr_compile_header(pvr_poly_hdr_t *out, int kind) {
+// Compile ONE of the six base headers ONCE via the official pvr_poly_cxt+pvr_poly_compile, so every
+// PER-LIST field (list_type / alpha / txralpha / blend defaults) is correct for this list. Textured
+// bases seed from whatever texture is bound on first use; the texture-specific + per-draw fields all
+// get overwritten per draw (see pvr_compile_header), so the seed texture is irrelevant.
+static void pvr_ensure_base(int textured, int kind, int list) {
+    if (sBaseHdrValid[textured][kind]) return;
     pvr_poly_cxt_t cxt;
+    if (textured) {
+        struct PvrTex *t = &sTextures[sBoundTex[0]];
+        pvr_poly_cxt_txr(&cxt, list, t->fmt, t->w, t->h, t->addr,
+                         t->filter ? PVR_FILTER_BILINEAR : PVR_FILTER_NONE);
+    } else {
+        pvr_poly_cxt_col(&cxt, list);
+    }
+    cxt.gen.culling  = PVR_CULLING_SMALL;     // front-end culls winding; SMALL also drops degens
+    cxt.gen.specular = PVR_SPECULAR_ENABLE;   // combiner routes additive offsets into oargb
+    pvr_poly_compile(&sBaseHdr[textured][kind], &cxt);
+    sBaseHdrValid[textured][kind] = 1;
+}
+
+// Build a poly header for the current state. pvr_poly_compile runs only ONCE per base (6 total);
+// per draw this copies the matching base and bit-patches the texture fields + per-draw state in
+// place (OoT technique) — no per-draw recompile. Per-list state stays from the base.
+static void pvr_compile_header(pvr_poly_hdr_t *out, int kind) {
     int list = (kind == PVR_KIND_TR) ? PVR_LIST_TR_POLY
              : (kind == PVR_KIND_PT) ? PVR_LIST_PT_POLY
              :                         PVR_LIST_OP_POLY;
     int textured = cur_shader && cur_shader->texture_used[0] &&
                    sBoundTex[0] && sTextures[sBoundTex[0]].addr;
+    pvr_ensure_base(textured, kind, list);
+    *out = sBaseHdr[textured][kind];
+
     if (textured) {
         struct PvrTex *t = &sTextures[sBoundTex[0]];
-        pvr_poly_cxt_txr(&cxt, list, t->fmt, t->w, t->h, t->addr,
-                         t->filter ? PVR_FILTER_BILINEAR : PVR_FILTER_NONE);
-        cxt.txr.uv_clamp = (t->clampu ? PVR_UVCLAMP_U : 0) | (t->clampv ? PVR_UVCLAMP_V : 0);
-        cxt.txr.uv_flip  = (t->flipu  ? PVR_UVFLIP_U  : 0) | (t->flipv  ? PVR_UVFLIP_V  : 0);
-        // Per-shader texture env, matching GLdc texenv_set_texture_color. DECAL
-        // (== GL_DECAL: texel.rgb*texel.a + vtx.rgb*(1-texel.a)) shows the vertex colour
-        // through transparent texels. Real DECAL users: the Sherbet Land penguins
-        // (body/face), and the menu portrait BACKGROUND 0x01200A00 — which ALSO needs the
-        // black vertex-colour force in gfx_pvr_draw_triangles_2d to make that bg black.
-        // REPLACE for goddard. Modulate (pvr_poly_cxt_txr default) otherwise.
-        switch (cur_shader->shader_id) {
-            case 0x0000038D:
-            case 0x01045A00:
-            case 0x01200A00:
-                cxt.txr.env = PVR_TXRENV_DECAL;
-                break;
-            case 0x00000551:
-                cxt.txr.env = PVR_TXRENV_REPLACE;
-                break;
-            default:
-                break;
-        }
-    } else {
-        pvr_poly_cxt_col(&cxt, list);
+        // Texture fields, encoded exactly as KOS pvr_poly_compile (pvr_prim.c): mode3 =
+        // format | ((addr & 0x00fffff8) >> 3); mode2 USIZE/VSIZE = ctz(dim)-3; filter/clamp/flip.
+        out->mode3 = (uint32_t) t->fmt |
+                     ((((uint32_t)(uintptr_t) t->addr) & 0x00fffff8u) >> 3);
+        out->m2.u_size      = (pvr_uv_size_t)(__builtin_ctz(t->w) - 3);
+        out->m2.v_size      = (pvr_uv_size_t)(__builtin_ctz(t->h) - 3);
+        out->m2.filter_mode = t->filter ? PVR_FILTER_BILINEAR : PVR_FILTER_NONE;
+        out->m2.u_clamp     = t->clampu;
+        out->m2.v_clamp     = t->clampv;
+        out->m2.u_flip      = t->flipu;
+        out->m2.v_flip      = t->flipv;
+        // texenv DERIVED from the N64 combiner (REPLACE/MODULATE/DECAL/MODULATEALPHA) — DECAL shows
+        // the vertex colour through transparent texels (e.g. the Sherbet Land penguins).
+        out->m2.shading     = (pvr_txr_shading_mode_t) sTexEnv;
     }
-    cxt.gen.culling = PVR_CULLING_NONE;   // front-end already culls
-    // Specular/offset colour always on: the combiner evaluator routes additive offsets
-    // (e.g. d==ENV) into per-vertex oargb (added post-modulate); non-additive verts get
-    // oargb=0 (a no-op add), so leaving this enabled is free.
-    cxt.gen.specular = PVR_SPECULAR_ENABLE;
-    // PVR hardware VERTEX fog: blends each fragment toward the fog-colour register by the
-    // per-vertex fog density carried in the offset-colour (oargb) ALPHA — which the front-end
-    // packs from the N64 per-vertex fog coefficient. Off (DISABLE) when the draw isn't fogged
-    // (G_FOG clear); then oargb.alpha is 0 anyway, so even a stale VERTEX header wouldn't fog.
-    cxt.gen.fog_type = sFogEnabled ? PVR_FOG_VERTEX : PVR_FOG_DISABLE;
+    // Per-draw state (per-list alpha/txralpha/blend defaults stay from the base):
     // z = 1/w (larger == nearer): GEQUAL keeps the nearer fragment; ALWAYS == test off.
-    cxt.depth.comparison = sDepthTest ? PVR_DEPTHCMP_GEQUAL : PVR_DEPTHCMP_ALWAYS;
-    cxt.depth.write = sDepthWrite ? PVR_DEPTHWRITE_ENABLE : PVR_DEPTHWRITE_DISABLE;
-    // Only TR blends against the framebuffer (OP/PT are opaque). The blend factors are
-    // DERIVED from the N64 blender by the front-end (gfx_pvr_set_blend_factors) — no shader-id
-    // keying — so additive/premultiplied/standard-alpha effects all fall out of the same path.
+    out->m1.depth_cmp       = sDepthTest  ? PVR_DEPTHCMP_GEQUAL : PVR_DEPTHCMP_ALWAYS;
+    out->m1.depth_write_dis = sDepthWrite ? 0 : 1;
+    // PVR vertex fog reads density from per-vertex oargb ALPHA (front-end packs it); off clears.
+    out->m2.fog_type        = sFogEnabled ? PVR_FOG_VERTEX : PVR_FOG_DISABLE;
     if (kind == PVR_KIND_TR) {
-        cxt.blend.src = sBlendSrc;
-        cxt.blend.dst = sBlendDst;
+        // Only TR overrides blend (factors DERIVED from the N64 blender). OP/PT keep the base's
+        // per-list defaults.
+        out->m2.blend_src = (pvr_blend_mode_t) sBlendSrc;
+        out->m2.blend_dst = (pvr_blend_mode_t) sBlendDst;
     }
-    // Autosort (enabled in pvr_init) sorts the TR list per-pixel.
-    pvr_poly_compile(out, &cxt);
 }
 
 // Append n vertices (n/3 tris) of already-screen-baked dc_fast_t to a bucket,
@@ -240,6 +257,31 @@ static void pvr_append(PvrBucket *b, int kind, const dc_fast_t *tris, size_t n) 
     b->batch[b->cur].count += n;
 }
 
+// Reserve n verts in the deferred bucket for `kind` (1=PT/sPunch, 2=TR/sTR) and return a write
+// pointer into b->verts so the FRONT-END bakes vertices straight into the bucket — no buf_vbo, no
+// copy. Starts a new batch (header compiled from current state) when the bucket is dirty, exactly
+// like pvr_append. Vertex flags are stamped at flush time (pvr_flush_bucket). NULL on overflow.
+dc_fast_t *pvr_reserve(int kind, size_t n) {
+    PvrBucket *b = (kind == PVR_KIND_TR) ? &sTR : &sPunch;
+    if (b->dirty || b->cur < 0) {
+        if (b->nbatch >= b->max_batch) { if (sDropB++ < 8) printf("PVR_DROP batch %d\n", kind); return NULL; }
+        b->cur = b->nbatch++;
+        pvr_compile_header(&b->batch[b->cur].hdr, kind);
+        b->batch[b->cur].start = b->nverts;
+        b->batch[b->cur].count = 0;
+        b->dirty = 0;
+    }
+    if (b->nverts + n > b->max_verts) { if (sDropV++ < 8) printf("PVR_DROP verts %d\n", kind); return NULL; }
+    dc_fast_t *out = (dc_fast_t *) &b->verts[b->nverts];
+    b->nverts += n;
+    b->batch[b->cur].count += n;
+    // Stamp strip flags now: the front-end bakes vert/uv/colour into this slice but never flags. These
+    // are TRIANGLES (n == n_tris*3), so EOL on every 3rd vertex. (2D quads set their own flags.)
+    for (size_t i = 0; i < n; i++)
+        out[i].flags = ((i % 3) == 2) ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX;
+    return out;
+}
+
 // Replay a bucket's batches (header + its verts) to the open list via the DR path.
 static void pvr_flush_bucket(PvrBucket *b) {
     for (int i = 0; i < b->nbatch; i++) {
@@ -251,6 +293,8 @@ static void pvr_flush_bucket(PvrBucket *b) {
         for (uint32_t v = 0; v < bt->count; v++) {
             pvr_vertex_t *vp = (pvr_vertex_t *) pvr_dr_target(sDrState);
             *vp = b->verts[bt->start + v];
+            // Flags are already set in the bucket: 3-vert tris by pvr_reserve, 2D quads by the 2D path.
+            // Do NOT re-stamp here — a blanket (v%3) would corrupt any non-3-aligned (e.g. 4-vert) quad.
             pvr_dr_commit(vp);
         }
     }
@@ -297,7 +341,7 @@ static pvr_init_params_t sPvrParams = {
     1,  // dma
     0,  // fsaa
     0,  // autosort_disabled (0 = autosort on; needed for TR in P3)
-    3,  // overflow buffers
+    2,  // overflow buffers
     0,  // vbuf_doublebuf_disabled (0 = double-buffering on)
 };
 
@@ -367,7 +411,15 @@ static void gfx_pvr_shader_get_info(struct ShaderProgram *prg, uint8_t *num_inpu
 
 static uint32_t gfx_pvr_new_texture(void) {
     uint32_t id = ++sTexCount;
-    if (id >= PVR_TEX_MAX) { id = PVR_TEX_MAX - 1; }  // clamp; shouldn't happen in MK64
+    // Clamp guards the array, but a clamp means the id space is exhausted THIS reset cycle:
+    // every further texture aliases slot 1023 -> "same texture everywhere". sTexCount resets in
+    // gfx_pvr_clear_all_textures, so this should not fire; if it does, a single course needs
+    // >PVR_TEX_MAX live textures. Don't fail silently.
+    if (id >= PVR_TEX_MAX) {
+        static int sTexIdClampLog = 0;
+        if (sTexIdClampLog++ < 8) printf("PVR_TEXID_CLAMP sTexCount=%u >= PVR_TEX_MAX=%u\n", (unsigned)id, (unsigned)PVR_TEX_MAX);
+        id = PVR_TEX_MAX - 1;
+    }
     memset(&sTextures[id], 0, sizeof(sTextures[id]));
     return id;
 }
@@ -380,6 +432,29 @@ static void gfx_pvr_select_texture(int tile, uint32_t texture_id) {
 
 // GL_UNSIGNED_SHORT_1_5_5_5_REV == 0x8366 (front-end's 1555 tag); anything else is 4444.
 #define PVR_TYPE_ARGB1555 0x8366
+
+// Stable-allocation floor (in padded PVR bytes), set by the front-end per import to the FULL loaded
+// texture's size. Menu squish effects re-upload the SAME texture at varying (often growing) tile
+// dims every frame; without a floor, each growth does free+bigger-malloc, fragmenting VRAM until
+// pvr_mem_malloc can't find a contiguous block (the menu OOM). Sizing the buffer to the full extent
+// once means re-uploads reshape into a fixed buffer (the PVR samples t->w x t->h from its start
+// regardless of buffer size). 0 == no hint (fall back to exact size). Consumed per upload.
+static uint32_t sAllocFloor = 0;
+
+// VRAM watchdog. The texture cache only frees on nuke_everything (course/memory resets), so deep
+// MENU navigation accumulates textures until VRAM runs out (the menu OOM). Set when an upload's
+// pvr_mem_malloc fails; start_frame also checks free VRAM against a one-frame budget. Either way,
+// the cache is dropped at the NEXT frame start (a safe point) and the frame re-uploads what it
+// needs — bounding VRAM to "what fits between flushes" for a one-frame hitch.
+static int sCacheFlushPending = 0;
+void gfx_pvr_request_cache_flush(void) { sCacheFlushPending = 1; }
+
+void gfx_pvr_set_alloc_floor(uint32_t full_w, uint32_t full_h) {
+    uint32_t pw = (full_w < 8) ? 8 : (pvr_is_pot(full_w) ? full_w : pvr_next_pot(full_w));
+    uint32_t ph = (full_h < 8) ? 8 : (pvr_is_pot(full_h) ? full_h : pvr_next_pot(full_h));
+    uint32_t f = pw * ph * 2;
+    sAllocFloor = (f <= 256u * 256u * 2u) ? f : 0;   // ignore implausibly large hints
+}
 
 static void gfx_pvr_upload_texture(const uint8_t *buf16, int width, int height, unsigned int type) {
     struct PvrTex *t = &sTextures[sCurBound];
@@ -411,12 +486,19 @@ static void gfx_pvr_upload_texture(const uint8_t *buf16, int width, int height, 
     }
 
     uint32_t size = fw * fh * 2;
-    // Mirror glTexImage2D: reuse the existing VRAM allocation when the new upload fits,
-    // only (re)allocate when it's bigger. The whole texture VRAM set is freed at the
-    // glDeleteTextures point (gfx_pvr_clear_all_textures, via nuke_everything).
-    if (t->addr && size > t->alloc_size) { pvr_mem_free(t->addr); t->addr = NULL; }
-    if (!t->addr) { t->addr = pvr_mem_malloc(size); t->alloc_size = t->addr ? size : 0; }
+    // Allocate to the STABLE floor (full loaded texture) when the front-end set one, else exact.
+    // Reuse the existing VRAM when the upload fits (only (re)allocate when bigger) — so a squish's
+    // smaller/larger reshapes all land in the same buffer with no realloc churn. The whole texture
+    // VRAM set is freed at the glDeleteTextures point (gfx_pvr_clear_all_textures, via nuke).
+    uint32_t asize = (size > sAllocFloor) ? size : sAllocFloor;
+    if (t->addr && asize > t->alloc_size) { pvr_mem_free(t->addr); t->addr = NULL; }
+    if (!t->addr) {
+        t->addr = pvr_mem_malloc(asize);
+        t->alloc_size = t->addr ? asize : 0;
+        if (!t->addr) sCacheFlushPending = 1;   // VRAM exhausted -> drop the cache next frame start
+    }
     if (t->addr) pvr_txr_load((void *) src, t->addr, size);
+    sAllocFloor = 0;   // consume per upload
 
     t->w = fw; t->h = fh; t->fmt = fmt;
     t->u_scale = us; t->v_scale = vs;
@@ -438,7 +520,15 @@ static void gfx_pvr_set_sampler_parameters(int tile, uint8_t linear_filter, uint
 // Free ALL cached texture VRAM. Mirrors GLdc's glDeleteTextures sweep in
 // gfx_clear_all_textures (called from nuke_everything at course/memory resets) — the
 // point where the texture cache's VRAM (including reuse bloat) is reclaimed. The cache
-// then re-uploads on demand (addr==NULL -> fresh pvr_mem_malloc). Ids/table are kept.
+// then re-uploads on demand (addr==NULL -> fresh pvr_mem_malloc).
+//
+// CRITICAL: also RESET the id allocator. nuke_everything calls this and then
+// reset_texcache() (front-end cache wipe), after which the front-end re-requests a fresh
+// id (new_texture -> ++sTexCount) for every texture it re-encounters. If sTexCount is NOT
+// reset here, it climbs monotonically across course/memory resets; once cumulative unique
+// textures exceed PVR_TEX_MAX, new_texture clamps EVERY further id to slot 1023 and the
+// whole scene draws with the last-uploaded texture (the "same texture everywhere" wedge,
+// never recovers without restart). GLdc never hit this — its id space isn't capped.
 void gfx_pvr_clear_all_textures(void) {
     for (uint32_t i = 0; i <= sTexCount && i < PVR_TEX_MAX; i++) {
         if (sTextures[i].addr) {
@@ -447,6 +537,10 @@ void gfx_pvr_clear_all_textures(void) {
             sTextures[i].alloc_size = 0;
         }
     }
+    sTexCount = 0;        // realign with reset_texcache() (front-end), which runs right after
+    sBoundTex[0] = 0;
+    sBoundTex[1] = 0;
+    sCurBound = 0;
 }
 
 // PoT-padding UV correction (real/padded), consumed by the front-end's recip_tex_*
@@ -460,8 +554,15 @@ static void gfx_pvr_set_depth_test(uint8_t depth_test) {
 static void gfx_pvr_set_depth_mask(uint8_t z_upd) {
     if (sDepthWrite != z_upd) { sDepthWrite = z_upd; pvr_mark_dirty(); }
 }
-static void gfx_pvr_set_zmode_decal(uint8_t zmode_decal) {
-    if (sDecal != zmode_decal) { sDecal = zmode_decal; pvr_mark_dirty(); }
+static void gfx_pvr_set_zmode_decal(UNUSED uint8_t zmode_decal) {
+    // N64 ZMODE_DEC decal z-fighting is handled entirely in the front-end bake (gfx_sp_tri1): a
+    // decal vert's z (1/w) is nudged nearer by PVR_DECAL_ZBIAS so it wins the GEQUAL depth test
+    // against its coplanar base. No PVR poly-header change is needed, so this is a no-op — which
+    // also avoids recompiling the header every time decal mode toggles (frequent).
+}
+static void gfx_pvr_set_tex_env(uint32_t mode) {
+    // enum gfx_tex_env (front-end) == pvr_txr_shading_mode order, so store straight through.
+    if (sTexEnv != (uint8_t) mode) { sTexEnv = (uint8_t) mode; pvr_mark_dirty(); }
 }
 
 // PVR vertex fog enable/disable — baked into the poly header, so a change dirties all lists.
@@ -528,7 +629,10 @@ static inline void pvr_emit_op_header(void) {
 // Submit n already-screen-baked dc_fast_t verts live to the open PT list. The
 // vertex's oargb (additive offset, from the combiner evaluator) is carried through
 // in dc_fast_t.pad0 — do NOT zero it here.
-static inline void pvr_submit_op(const dc_fast_t *tris, size_t n) {
+// Stream OP geometry straight to the live OP list via DR. Called per source-triangle from the
+// front-end (no buf_vbo accumulation) AND internally. The header is re-emitted only on state change
+// (sOpDirty), so a same-state run streams headerless after the first. External (no wrapper needed).
+void pvr_submit_op(const dc_fast_t *tris, size_t n) {
     pvr_emit_op_header();
     for (size_t i = 0; i < n; i++) {
         pvr_vertex_t *v = (pvr_vertex_t *) pvr_dr_target(sDrState);
@@ -615,6 +719,18 @@ static void gfx_pvr_on_resize(void) { }
 
 static void gfx_pvr_start_frame(void) {
     pvr_wait_ready();
+    // VRAM watchdog (see sCacheFlushPending): a previous upload's pvr_mem_malloc failed, or the
+    // front-end node pool filled. SAFE to drop the cache here — the previous frame's render finished
+    // (pvr_wait_ready above) and this frame's DL walk hasn't imported textures yet, so it just
+    // forces a re-upload of what this frame actually uses. Reactive (NOT a free-VRAM threshold) on
+    // purpose: a threshold would false-trigger and flush every frame on a course that legitimately
+    // runs VRAM tight, tanking gameplay; an actual alloc failure only happens when truly out.
+    if (sCacheFlushPending) {
+        extern void reset_texcache(void);
+        gfx_pvr_clear_all_textures();   // free all texture VRAM + reset the id allocator
+        reset_texcache();               // reset the front-end hashmap/pool
+        sCacheFlushPending = 0;
+    }
     pvr_scene_begin();
     // OP list open + live for the whole frame (guaranteed-opaque geometry only).
     // Anything with alpha (blend or alpha-test cutout) is deferred to the TR bucket.
@@ -691,6 +807,7 @@ struct GfxRenderingAPI gfx_pvr_api = {
     gfx_pvr_set_depth_test,
     gfx_pvr_set_depth_mask,
     gfx_pvr_set_zmode_decal,
+    gfx_pvr_set_tex_env,
     gfx_pvr_set_viewport,
     gfx_pvr_set_scissor,
     gfx_pvr_set_use_alpha,

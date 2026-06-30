@@ -587,6 +587,12 @@ static void gfx_opengl_set_zmode_decal(uint8_t zmode_decal) {
     }
 }
 
+// Texel<->vertex-color combine (enum gfx_tex_env), derived by the front-end from the N64
+// combiner. The raw-PVR backend folds it into the poly header; GLdc keys texenv off shader
+// ids itself (texenv_set_texture_color), so this is a no-op here.
+static void gfx_opengl_set_tex_env(UNUSED uint32_t mode) {
+}
+
 static void gfx_opengl_set_viewport(int x, int y, int width, int height) {
     glViewport(x, y, width, height);
 }
@@ -1221,7 +1227,8 @@ struct GfxRenderingAPI gfx_opengl_api = { gfx_opengl_z_is_from_0_to_1, gfx_openg
                                           gfx_opengl_new_texture,      gfx_opengl_select_texture,
                                           gfx_opengl_upload_texture,   gfx_opengl_set_sampler_parameters,
                                           gfx_opengl_set_depth_test,   gfx_opengl_set_depth_mask,
-                                          gfx_opengl_set_zmode_decal,  gfx_opengl_set_viewport,
+                                          gfx_opengl_set_zmode_decal,  gfx_opengl_set_tex_env,
+                                          gfx_opengl_set_viewport,
                                           gfx_opengl_set_scissor,      gfx_opengl_set_use_alpha,
                                           gfx_opengl_draw_triangles,   gfx_opengl_init,
                                           gfx_opengl_on_resize,        gfx_opengl_start_frame,

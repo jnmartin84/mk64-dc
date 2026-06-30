@@ -17,6 +17,16 @@ enum gfx_blend_factor {
     GFX_BLENDF_INVDSTALPHA,
 };
 
+// Abstract texture-environment mode, derived in the front-end from the N64 color combiner and
+// mapped onto the backend's texel<->vertex-color combine. Values intentionally match the PVR
+// pvr_txr_shading_mode enum order so the raw-PVR backend maps 1:1. (See texenv derivation notes.)
+enum gfx_tex_env {
+    GFX_TEXENV_REPLACE = 0,        // px = tex                       (DECALRGBA)
+    GFX_TEXENV_MODULATE,           // rgb = col*tex, a = tex.a       (MODULATEIDECALA, texel-free+oargb)
+    GFX_TEXENV_DECAL,              // rgb = lerp(col,tex,tex.a), a=col.a  (DECALRGB, BLENDRGBFADEA)
+    GFX_TEXENV_MODULATEALPHA,      // rgb = col*tex, a = col.a*tex.a  (MODULATEI/IA)
+};
+
 struct ShaderProgram;
 
 struct GfxRenderingAPI {
@@ -37,6 +47,9 @@ struct GfxRenderingAPI {
     void (*set_depth_test)(uint8_t depth_test);
     void (*set_depth_mask)(uint8_t z_upd);
     void (*set_zmode_decal)(uint8_t zmode_decal);
+    // Texel<->vertex-color combine (enum gfx_tex_env), derived from the N64 combiner. Raw-PVR
+    // folds it into the poly header; GLdc no-ops (it keys texenv off shader ids itself).
+    void (*set_tex_env)(uint32_t mode);
     void (*set_viewport)(int x, int y, int width, int height);
     void (*set_scissor)(int x, int y, int width, int height);
     void (*set_use_alpha)(uint8_t use_alpha);

@@ -242,6 +242,7 @@ static struct RDP {
 		uint8_t cms, cmt;
 		uint16_t uls, ult, lrs, lrt; // U10.2
 		uint32_t line_size_bytes;
+		uint32_t tmem;   // render tile's tmem address; selects the loaded_texture slot (tmem>>8)
 	} texture_tile;
 	uint8_t textures_changed[2];
 
@@ -272,6 +273,7 @@ struct RenderingState {
 	uint8_t decal_mode;
 	uint8_t alpha_blend;
 	uint8_t fog_enabled;      // PVR vertex fog on (G_FOG geometry mode)
+	uint8_t tex_env;          // PVR texel<->colour combine (enum gfx_tex_env), derived from combiner
 	uint32_t fog_color;       // last fog colour pushed to the PVR fog register (0xAARRGGBB)
 	// 12
 	struct XYWidthHeight viewport;
@@ -281,7 +283,9 @@ struct RenderingState {
 	uint32_t pad;
 };
 
-struct RenderingState rendering_state;
+// tex_env defaults to MODULATE to match the backend's sTexEnv default, so the first textured
+// draw doesn't desync (a first REPLACE draw would otherwise skip set_tex_env). All else zero.
+struct RenderingState rendering_state = { .tex_env = GFX_TEXENV_MODULATE };
 
 struct GfxDimensions gfx_current_dimensions;
 
@@ -463,11 +467,23 @@ static inline uint8_t compute_scissor_outcode(float x, float y, float w) {
 	return oc;
 }
 
-static dc_fast_t __attribute__((aligned(32))) buf_vbo[MAX_BUFFERED * 3]; // 3 vertices in a triangle
-static dc_fast_t __attribute__((aligned(32))) quad_vbo[2 * 3];           // 2 tris make a quad
+#ifndef GFX_BACKEND_PVR
+static dc_fast_t __attribute__((aligned(32))) buf_vbo[MAX_BUFFERED * 3]; // 3 vertices in a triangle (GLdc batch)
 static size_t buf_vbo_len = 0;
 static size_t buf_num_vert = 0;
 static size_t buf_vbo_num_tris = 0;
+#endif
+static dc_fast_t __attribute__((aligned(32))) quad_vbo[2 * 3];           // 2 tris make a quad (2D path, both backends)
+
+#ifdef GFX_BACKEND_PVR
+// PVR streams ALL 3D geometry with NO buf_vbo: OP (kind 0) bakes into op_emit then DR-submits per
+// source-triangle (pvr_submit_op); PT/TR (kind 1/2) bake DIRECTLY into their deferred bucket
+// (pvr_reserve). op_emit holds ONE source triangle's worst-case clipped fan: 3 verts + 5 clip planes
+// (near + 4 scissor) = 8-vert polygon = 6 tris = 18 verts, never more.
+static dc_fast_t __attribute__((aligned(32))) op_emit[6 * 3];
+extern void pvr_submit_op(const dc_fast_t *tris, size_t n);
+extern dc_fast_t *pvr_reserve(int kind, size_t n);
+#endif
 
 static struct GfxWindowManagerAPI* gfx_wapi;
 static struct GfxRenderingAPI* gfx_rapi;
@@ -479,12 +495,16 @@ int do_fill_rect = 0;
 extern s16 gCurrentCourseId;
 
 static  __attribute__((noinline)) void gfx_flush(void) {
+#ifndef GFX_BACKEND_PVR
 	if (buf_vbo_len) {
 		gfx_rapi->draw_triangles((void*) buf_vbo, buf_vbo_len, buf_vbo_num_tris);
 		buf_vbo_len = 0;
 		buf_num_vert = 0;
 		buf_vbo_num_tris = 0;
 	}
+#endif
+	// PVR: all 3D geometry streams as it's built (OP via DR, PT/TR direct into their buckets) — there
+	// is no buffered batch to flush. The state-change callers still invoke gfx_flush(); it's a no-op.
 }
 
 static  __attribute__((noinline)) struct ShaderProgram* gfx_lookup_or_create_shader_program(uint32_t shader_id) {
@@ -636,6 +656,13 @@ extern void gfx_pvr_set_blend_factors(uint8_t src, uint8_t dst);   // gfx_blend_
 // Last TR blend factors pushed to the backend (abstract gfx_blend_factor codes).
 static uint8_t pvr_cur_bsrc = GFX_BLENDF_SRCALPHA, pvr_cur_bdst = GFX_BLENDF_INVSRCALPHA;
 
+
+// Stable-allocation hint: size the backend's VRAM buffer to the FULL loaded texture so menu squish
+// re-uploads don't realloc/fragment VRAM. Padded + applied in the backend (gfx_pvr.c).
+extern void gfx_pvr_set_alloc_floor(uint32_t full_w, uint32_t full_h);
+// Ask the backend to drop the whole texture cache at the next frame start (VRAM/pool watchdog).
+extern void gfx_pvr_request_cache_flush(void);
+
 // PVR hardware vertex fog (ported from the OoT raw-PVR renderer).
 extern void gfx_pvr_set_fog(uint8_t enabled);
 extern void gfx_pvr_set_fog_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
@@ -667,7 +694,10 @@ static void pvr_derive_blend(uint32_t oml, uint32_t omh, uint8_t *src, uint8_t *
 }
 #endif
 
-static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, struct TextureHashmapNode** n, const uint8_t* orig_addr,
+// `tile` = backend texture UNIT (0/1, drives select_texture + the cache node). `dslot` = the
+// loaded_texture DATA slot = render tile's tmem block (0/1); decoupled so a render tile re-pointed
+// to tmem 0x0100 samples the texture loaded there instead of always slot 0.
+static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, int dslot, struct TextureHashmapNode** n, const uint8_t* orig_addr,
 										uint32_t tmem, uint32_t fmt, uint32_t siz, uint16_t uls, uint16_t ult) {
 	void* segaddr = segmented_to_virtual((void *)orig_addr);
 	size_t hash = (uintptr_t) segaddr;
@@ -683,10 +713,10 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 	uint32_t dimkey = ((uint32_t) rdp.texture_tile.lrs)
 	                ^ ((uint32_t) rdp.texture_tile.lrt << 12)
 	                ^ ((uint32_t) rdp.texture_tile.line_size_bytes << 20)
-	                ^ ((uint32_t) rdp.loaded_texture[tile].size_bytes * 2654435761u);
+	                ^ ((uint32_t) rdp.loaded_texture[dslot].size_bytes * 2654435761u);
 
 	struct TextureHashmapNode** node = &gfx_texture_cache.hashmap[hash];
-	if ((uintptr_t)rdp.loaded_texture[tile].addr < 0x8c010000u) {
+	if ((uintptr_t)rdp.loaded_texture[dslot].addr < 0x8c010000u) {
 		gfx_rapi->select_texture(tile, oops_texture_id);
 		*node = &oops_node;
 		return 1;
@@ -718,10 +748,12 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, str
 	}
 
 	if (gfx_texture_cache.pool_pos == sizeof(gfx_texture_cache.pool) / sizeof(struct TextureHashmapNode)) {
-// jnmartin84
-		printf("FUCK\n");
-		exit(-1);
-		// Pool is full. We have a backup texture that is empty for this...
+		// Front-end node pool is full (1024 distinct textures since the last flush). Rather than
+		// crash, draw this one frame with the placeholder and ask the backend to drop the whole
+		// cache at the next frame start (VRAM/pool watchdog) — it rebuilds from scratch.
+#ifdef GFX_BACKEND_PVR
+		gfx_pvr_request_cache_flush();
+#endif
 		gfx_rapi->select_texture(tile, oops_texture_id);
 		*node = &oops_node;
 		return 1;
@@ -1191,44 +1223,66 @@ static void __attribute__((noinline)) import_texture(int tile) {
 	uint8_t fmt = rdp.texture_tile.fmt;
 	uint8_t siz = rdp.texture_tile.siz;
 
-	uint32_t tmem = rdp.texture_to_load.tmem;
+	// DATA slot follows the RENDER tile's tmem block (tmem>>8 == 0/1, the two tmem halves); the
+	// backend UNIT stays `tile`. This is what lets a render tile re-pointed to tmem 0x0100 (Moo Moo
+	// Farm's grass<->dirt segments) sample the texture loaded there instead of always slot 0.
+	int dslot = (tile == 0) ? (int)(rdp.texture_tile.tmem >> 8) : tile;
+	uint32_t tmem = rdp.texture_tile.tmem;
 
-	int cl_rv = gfx_texture_cache_lookup(tile, &rendering_state.textures[tile], rdp.loaded_texture[tile].addr, tmem,
+	int cl_rv = gfx_texture_cache_lookup(tile, dslot, &rendering_state.textures[tile], rdp.loaded_texture[dslot].addr, tmem,
 										 fmt, siz, rdp.texture_tile.uls, rdp.texture_tile.ult);
 	if (cl_rv == 1) {
 		return;
 	}
 
 	last_cl_rv = cl_rv;
+#ifdef GFX_BACKEND_PVR
+	// Size the VRAM buffer to the FULL loaded texture (from the LOAD: line_size_bytes/size_bytes),
+	// not the possibly-squished tile, so menu squish re-uploads reshape into a fixed buffer instead
+	// of free/bigger-malloc churn (which fragments VRAM -> OOM). The full dims are stable while the
+	// squish only varies lrs/lrt. The backend still samples the current (squished) t->w x t->h.
+	{
+		uint32_t lsb = rdp.texture_tile.line_size_bytes;
+		if (lsb) {
+			uint32_t full_w = (siz == G_IM_SIZ_4b)  ? (lsb << 1)
+			                : (siz == G_IM_SIZ_8b)  ? lsb
+			                : (siz == G_IM_SIZ_16b) ? (lsb >> 1)
+			                :                         (lsb >> 2);
+			uint32_t full_h = rdp.loaded_texture[dslot].size_bytes / lsb;
+			gfx_pvr_set_alloc_floor(full_w, full_h);
+		}
+	}
+#endif
+	// Importers read rdp.loaded_texture[<arg>] for the source data -> pass the DATA slot (dslot).
 	if (fmt == G_IM_FMT_RGBA) {
 		if (siz == G_IM_SIZ_16b) {
-			import_texture_rgba16(tile);
+			import_texture_rgba16(dslot);
 		} else if (siz == G_IM_SIZ_32b) {
-			import_texture_rgba32(tile);
+			import_texture_rgba32(dslot);
 		} else {
 //			abort();
 		}
 	} else if (fmt == G_IM_FMT_IA) {
 		if (siz == G_IM_SIZ_4b) {
-			import_texture_ia4(tile);
+			import_texture_ia4(dslot);
 		} else if (siz == G_IM_SIZ_8b) {
-			import_texture_ia8(tile);
+			import_texture_ia8(dslot);
 		} else if (siz == G_IM_SIZ_16b) {
-			import_texture_ia16(tile);
+			import_texture_ia16(dslot);
 		} else {
 //			abort();
 		}
 	} else if (fmt == G_IM_FMT_CI) {
 		if (siz == G_IM_SIZ_8b) {
-			import_texture_ci8(tile);
+			import_texture_ci8(dslot);
 		} else {
 //			abort();
 		}
 	} else if (fmt == G_IM_FMT_I) {
 		if (siz == G_IM_SIZ_4b) {
-			import_texture_i4(tile);
+			import_texture_i4(dslot);
 		} else if (siz == G_IM_SIZ_8b) {
-			import_texture_i8(tile);
+			import_texture_i8(dslot);
 		} else {
 //			abort();
 		}
@@ -1728,9 +1782,59 @@ static int gfx_build_clipped_fan(const struct LoadedVertex* a, const struct Load
 // post-modulate via the always-on specular bit) instead of argb (which multiplies) ->
 // e.g. texel*(1-ENV) + PRIM, no blowout. Replaces mat_packed on the PVR path.
 // Per-slot N64 mux encodings differ (a/b/d 4-bit, c 5-bit); idx 6 == G_CCMUX_1 == 1.0.
-static inline float pvr_cc4(int mux, int ch, const float prim[4], const float env[4], const float shade[4]) {
+// Derive the PVR texenv mode from the N64 1-cycle combiner (compact cc_id = rdp.combine_mode, the
+// CC_ enum). Maps the combiner's texel<->colour relationship onto REPLACE/MODULATE/DECAL/
+// MODULATEALPHA — replaces the per-shader-id texenv switch in the backend. 2-cycle stays on
+// MODULATE for now. Ported from sm64-dc; see [[reference_pvr_texenv_derivation]].
+static uint32_t derive_pvr_texenv(uint32_t cc_id) {
+	int ca = (cc_id >> 0) & 7, cb = (cc_id >> 3) & 7, cc = (cc_id >> 6) & 7, cd = (cc_id >> 9) & 7;
+	int aa = (cc_id >> 12) & 7, ab = (cc_id >> 15) & 7, ac = (cc_id >> 18) & 7, ad = (cc_id >> 21) & 7;
+	#define CC_ISTEX(v)  ((v) == CC_TEXEL0 || (v) == CC_TEXEL1)
+	#define CC_ISTEXA(v) ((v) == CC_TEXEL0A)
+	int color_has_tex = CC_ISTEX(ca) || CC_ISTEX(cb) || CC_ISTEX(cc) || CC_ISTEX(cd) ||
+	                    CC_ISTEXA(ca) || CC_ISTEXA(cb) || CC_ISTEXA(cc) || CC_ISTEXA(cd);
+	if (!color_has_tex) return GFX_TEXENV_MODULATE;     // texel-free colour: MODULATE + oargb routing
+
+	int color_single = (cc == CC_0) || (ca == cb);      // colour = cd
+	int color_mul    = (cb == CC_0) && (cd == CC_0);    // colour = ca * cc
+	int color_mix    = !color_single && (cb == cd);     // colour = lerp(cd, ca, cc)
+	int alpha_single_tex = ((ac == CC_0) || (aa == ab)) && CC_ISTEX(ad);   // alpha = ad, a texel
+	int alpha_uses_texel = CC_ISTEX(aa) || CC_ISTEX(ab) || CC_ISTEX(ac) || CC_ISTEX(ad);
+
+	// Default for a texel-modulated surface. When the ALPHA mux rides the texel WITH a non-texel
+	// factor (e.g. smoke: alpha = TEXEL0*PRIM), plain MODULATE (a = tex.a) drops that factor and
+	// the particle stops fading. MODULATEALPHA (a = tex.a * col.a) keeps it — and collapses to
+	// MODULATE when col.a == 1 (pure texel alpha), so it's a safe superset. This also matches the
+	// OLD behaviour: the prior code left non-special textures at KOS pvr_poly_cxt_txr's default,
+	// which is MODULATEALPHA for the TR (alpha) list.
+	uint32_t mode = alpha_uses_texel ? GFX_TEXENV_MODULATEALPHA : GFX_TEXENV_MODULATE;
+	if (color_mix && CC_ISTEX(ca) && CC_ISTEXA(cc)) {
+		// lerp(base, TEXEL0, TEXEL0A) — the penguins, BLEND*. BUT PVR DECAL forces the FINAL
+		// alpha to the face colour (col.a) and structurally can't carry a texel-based alpha, so
+		// a soft particle whose alpha rides the texel (I8 smoke: intensity == alpha) would go
+		// opaque. When the alpha mux is texel-driven, fall to MODULATEALPHA (a = col.a*tex.a) so
+		// the soft alpha survives; texel-independent alpha (the penguins/Boo) stays DECAL.
+		mode = alpha_uses_texel ? GFX_TEXENV_MODULATEALPHA : GFX_TEXENV_DECAL;
+	} else if (color_single && CC_ISTEX(cd)) {
+		// colour = TEXEL0; the ALPHA mux picks the mode:
+		//   alpha = TEXEL0          -> REPLACE        (DECALRGBA: rgb=tex, a=tex.a)
+		//   alpha = TEXEL0 * const  -> MODULATEALPHA  (DECALFADEA: a = tex.a*env.a; col.rgb==white)
+		//   alpha = const, no texel -> DECAL          (DECALRGB a=shade, DECALFADE a=env)
+		mode = alpha_single_tex ? GFX_TEXENV_REPLACE
+		     : alpha_uses_texel  ? GFX_TEXENV_MODULATEALPHA
+		                         : GFX_TEXENV_DECAL;
+	} else if (color_mul && (CC_ISTEX(ca) || CC_ISTEX(cc))) {
+		mode = alpha_single_tex ? GFX_TEXENV_MODULATE        // colour=TEXEL0*col, alpha=TEXEL0
+		                        : GFX_TEXENV_MODULATEALPHA;  // colour=TEXEL0*col, alpha=col(*tex)
+	}
+	#undef CC_ISTEX
+	#undef CC_ISTEXA
+	return mode;
+}
+
+static inline float pvr_cc4(int mux, int ch, float tex, const float prim[4], const float env[4], const float shade[4]) {
 	switch (mux) {
-		case 1: case 2: return 1.0f;             // TEXEL0/TEXEL1 -> PVR modulates
+		case 1: case 2: return tex;               // TEXEL0/TEXEL1 (substituted per texenv mode)
 		case 3: return prim[ch];
 		case 4: return shade[ch];
 		case 5: return env[ch];
@@ -1738,9 +1842,9 @@ static inline float pvr_cc4(int mux, int ch, const float prim[4], const float en
 		default: return 0.0f;                     // 0 / COMBINED(none in cycle0) / unsupported
 	}
 }
-static inline float pvr_cc5(int mux, int ch, const float prim[4], const float env[4], const float shade[4]) {
+static inline float pvr_cc5(int mux, int ch, float tex, const float prim[4], const float env[4], const float shade[4]) {
 	switch (mux) {
-		case 1: case 2: case 8: case 9: return 1.0f; // TEXEL/TEXELa
+		case 1: case 2: case 8: case 9: return tex;  // TEXEL0/1 colour or alpha placeholder
 		case 3: return prim[ch];
 		case 4: return shade[ch];
 		case 5: return env[ch];
@@ -1763,10 +1867,17 @@ static inline float pvr_ca(int mux, const float prim[4], const float env[4], con
 }
 
 static inline void pvr_eval_combiner(uint32_t w0, uint32_t w1, const struct RGBA* sh,
-                                     int textured, uint32_t* out_argb, uint32_t* out_oargb) {
+                                     int textured, uint32_t mode, uint32_t* out_argb, uint32_t* out_oargb) {
+	// REPLACE ignores the vertex colour (px = texel); oargb (added afterward) must be 0.
+	if (mode == GFX_TEXENV_REPLACE) { *out_argb = 0xFFFFFFFFu; *out_oargb = 0; return; }
+
 	const float prim[4]  = { rdp.prim_color.r*recip255, rdp.prim_color.g*recip255, rdp.prim_color.b*recip255, rdp.prim_color.a*recip255 };
 	const float env[4]   = { rdp.env_color.r*recip255,  rdp.env_color.g*recip255,  rdp.env_color.b*recip255,  rdp.env_color.a*recip255 };
 	const float shade[4] = { sh->r*recip255, sh->g*recip255, sh->b*recip255, sh->a*recip255 };
+	// DECAL: PVR lerps vtx<->texel by texel.a, so the FACE colour is the combiner with the texel
+	// terms ABSENT (texel->0). MODULATE/MODULATEALPHA factor the texel OUT (texel->1) to get the
+	// multiplier colour. This is the half that pairs with the backend's cxt.txr.env (sTexEnv).
+	const float texv = (mode == GFX_TEXENV_DECAL) ? 0.0f : 1.0f;
 
 	// cycle-0 colour mux (a 4b, b 4b, c 5b, d 3b) and alpha mux (all 3b) — bit layout
 	// matches OoT parse_combiner / MK64's color_comb extraction.
@@ -1802,22 +1913,23 @@ static inline void pvr_eval_combiner(uint32_t w0, uint32_t w1, const struct RGBA
 	// textured surface on the old (keep-in-argb, let-MODULATE-apply-texture) path.
 	int two_cycle = ((rdp.other_mode_h & (3U << G_MDSFT_CYCLETYPE)) == G_CYC_2CYCLE);
 	int color_const_textured = textured && !has_texel && !two_cycle;
-	int offset = !color_const_textured && (d == 3 || d == 5) && has_texel; // G_CCMUX d: 3=PRIM, 5=ENV
+	// DECAL keeps its additive base colour in argb (via texv=0), so don't ALSO route it to oargb.
+	int offset = (mode != GFX_TEXENV_DECAL) && !color_const_textured && (d == 3 || d == 5) && has_texel; // G_CCMUX d: 3=PRIM, 5=ENV
 
 	uint32_t col[4];
 	uint32_t oarr[3] = { 0, 0, 0 };
 	for (int ch = 0; ch < 3; ch++) {
-		float va = pvr_cc4(a, ch, prim, env, shade);
-		float vb = pvr_cc4(b, ch, prim, env, shade);
-		float vc = pvr_cc5(c, ch, prim, env, shade);
+		float va = pvr_cc4(a, ch, texv, prim, env, shade);
+		float vb = pvr_cc4(b, ch, texv, prim, env, shade);
+		float vc = pvr_cc5(c, ch, texv, prim, env, shade);
 		if (color_const_textured) {
 			// whole texture-independent colour -> additive offset; modulate multiplier = 0
-			float v = (va - vb) * vc + pvr_cc4(d, ch, prim, env, shade);
+			float v = (va - vb) * vc + pvr_cc4(d, ch, texv, prim, env, shade);
 			v = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
 			oarr[ch] = (uint32_t)(v * 255.0f);
 			col[ch]  = 0;
 		} else {
-			float vd = offset ? 0.0f : pvr_cc4(d, ch, prim, env, shade);
+			float vd = offset ? 0.0f : pvr_cc4(d, ch, texv, prim, env, shade);
 			float v = (va - vb) * vc + vd;
 			v = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
 			col[ch] = (uint32_t)(v * 255.0f);
@@ -1841,6 +1953,12 @@ static inline void pvr_eval_combiner(uint32_t w0, uint32_t w1, const struct RGBA
 	*out_argb = PACK_ARGB8888(col[0], col[1], col[2], col[3]);
 }
 #endif
+
+// Coplanar-decal depth bias (N64 ZMODE_DEC). PVR z = 1/w (GEQUAL, larger == nearer); a decal
+// shares its base surface's z and would z-fight on the tie. Scale 1/w slightly NEARER so the
+// decal wins. Multiplicative (proportional to depth) — a flat epsilon would over/under-bias near
+// vs far. Handled here in the front-end bake, so the backend's set_zmode_decal is a no-op. Tunable.
+#define PVR_DECAL_ZBIAS 1.003f
 
 static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx) {
     struct LoadedVertex* v1 = &rsp.loaded_vertices[vtx1_idx];
@@ -2089,6 +2207,19 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     float recip_tex_width = shz_inverse_posf((float) tex_width) * get_current_u_scale();
     float recip_tex_height = shz_inverse_posf((float) tex_height) * get_current_v_scale();
 
+#ifdef GFX_BACKEND_PVR
+    // Texel<->colour combine DERIVED from the N64 combiner (REPLACE/MODULATE/DECAL/MODULATEALPHA),
+    // replacing the backend's old per-shader-id switch. A change ends the current PVR batch (the
+    // poly header carries cxt.txr.env), so flush first; the per-vertex argb below is then evaluated
+    // by pvr_eval_combiner in the MATCHING mode (texv=0 for DECAL).
+    uint32_t texenv = use_texture ? derive_pvr_texenv(rdp.combine_mode) : GFX_TEXENV_MODULATE;
+    if (texenv != rendering_state.tex_env) {
+        gfx_flush();
+        gfx_rapi->set_tex_env(texenv);
+        rendering_state.tex_env = texenv;
+    }
+#endif
+
     // Software scissor, classified from the three per-vertex scissor outcodes
     // (cheap byte ops, à la clip_rej). Refresh any outcode that went stale since
     // its vertex was loaded under an older scissor. Then: none-outside -> emit as
@@ -2159,6 +2290,13 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         screen_2d_z += 0.0005f;
         z2d = screen_2d_z;
     }
+    // No buf_vbo on PVR. OP (kind 0) bakes this source-triangle's fan into the op_emit scratch and
+    // DR-submits it after the fan; PT/TR (kind 1/2) bake DIRECTLY into their deferred bucket, reserved
+    // here (n_tris*3 verts). `emit` is this fan's destination; op_n is the per-fan vertex counter.
+    const int op_stream = (pvr_cur_kind == 0);
+    size_t op_n = 0;
+    dc_fast_t *emit = op_stream ? op_emit : pvr_reserve(pvr_cur_kind, (size_t) n_tris * 3);
+    if (!emit) n_tris = 0;   // bucket overflow -> drop this source triangle (pvr_reserve already logged)
 #endif
     for (int ti = 0; ti < n_tris; ti++) {
         v1 = fan_tris[ti][0];
@@ -2166,7 +2304,10 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         v_arr[1] = fan_tris[ti][1];
         v_arr[2] = fan_tris[ti][2];
 
+#ifndef GFX_BACKEND_PVR
         // ---- Per-primitive material colour ------------------------------------
+        // (GLdc only: the raw-PVR path evaluates the combiner per-vertex via pvr_eval_combiner
+        // below, so this whole material/shade approximation is dead weight under PVR — gated out.)
         // The combiner's PRIM/ENV/TEX "material" (and the CC_LOD fade, which keys off
         // v1->w) depend only on render state + vertex 0 — never on the individual
         // vertex — so compute it ONCE per (sub-)triangle here. The per-vertex loop
@@ -2256,25 +2397,34 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
                 }
             }
         }
+#endif
 
     for (i = 0; i < 3; i++) {
+        dc_fast_t * const bv =
+#ifdef GFX_BACKEND_PVR
+            &emit[op_n];
+#else
+            &buf_vbo[buf_num_vert];
+#endif
 #ifdef GFX_BACKEND_PVR
         // Raw-PVR backend: bake final screen coords + inverse-w here (post-clip;
         // the divide can't be carried across a clip edge). _w > eps guaranteed.
         float invw = shz_inverse_posf(v_arr[i]->_w);
-        buf_vbo[buf_num_vert].vert.x = sm_xscale * (v_arr[i]->_x * invw) + sm_xbias;
-        buf_vbo[buf_num_vert].vert.y = sm_yscale * (v_arr[i]->_y * invw) + sm_ybias;
+        bv->vert.x = sm_xscale * (v_arr[i]->_x * invw) + sm_xbias;
+        bv->vert.y = sm_yscale * (v_arr[i]->_y * invw) + sm_ybias;
         // Z-buffer-disabled geometry (e.g. the ortho screen-space skybox, w=1 -> 1/w=1.0
         // which on PVR is NEAR) must not occlude the perspective scene. Pin it to the
         // far plane (tiny 1/w) so the depth-tested course always wins. (1e-5 sits behind
         // the course far-plane ~1/30000; tunable if any course geometry is farther.)
         // Overlay-ortho -> 2D z scheme (near). Otherwise perspective 1/w, or far-pin when
         // Z is off (skybox AND the over-skybox clouds, which are Z-off ortho in a 3D frame).
-        buf_vbo[buf_num_vert].vert.z = ortho_overlay ? z2d : (depth_test ? invw : 0.00001f);
+        bv->vert.z = ortho_overlay ? z2d
+                                     : depth_test    ? (zmode_decal ? invw * PVR_DECAL_ZBIAS : invw)
+                                     : 0.00001f;
 #else
-        buf_vbo[buf_num_vert].vert.x = v_arr[i]->x;
-        buf_vbo[buf_num_vert].vert.y = v_arr[i]->y;
-        buf_vbo[buf_num_vert].vert.z = v_arr[i]->z;
+        bv->vert.x = v_arr[i]->x;
+        bv->vert.y = v_arr[i]->y;
+        bv->vert.z = v_arr[i]->z;
 #endif
 
         if (use_texture) {
@@ -2287,8 +2437,8 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
                 u += 0.5f;
                 v += 0.5f;
             }
-            buf_vbo[buf_num_vert].texture.u = u * recip_tex_width;
-            buf_vbo[buf_num_vert].texture.v = v * recip_tex_height;
+            bv->texture.u = u * recip_tex_width;
+            bv->texture.v = v * recip_tex_height;
         }
 
         // ---- Per-vertex colour -------------------------------------------------
@@ -2297,13 +2447,13 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         // mat_packed approximation), producing the modulate argb + additive oargb.
         {
             uint32_t _argb, _oargb;
-            pvr_eval_combiner(rdp.combine_w0, rdp.combine_w1, &v_arr[i]->color, use_texture, &_argb, &_oargb);
+            pvr_eval_combiner(rdp.combine_w0, rdp.combine_w1, &v_arr[i]->color, use_texture, texenv, &_argb, &_oargb);
             // PVR vertex fog reads the fog density from the offset-colour (oargb) ALPHA. The
             // combiner evaluator leaves that alpha 0 (only RGB carries the additive offset), so
             // OR in this vertex's fog coefficient; the two share oargb without conflict.
             _oargb |= (uint32_t)v_arr[i]->fog << 24;
-            buf_vbo[buf_num_vert].color.packed = _argb;
-            buf_vbo[buf_num_vert].pad0.vertindex = _oargb;
+            bv->color.packed = _argb;
+            bv->pad0.vertindex = _oargb;
         }
 #else
         // GLdc: fold per-vertex shade into the per-primitive material.
@@ -2313,7 +2463,7 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
             (v_arr[i]->color.a == 255) && (v_arr[i]->color.b == 0) &&
             (v_arr[i]->color.g == 0) && (v_arr[i]->color.a == 255)) {
             // speedometer needle hack: emit the raw (red) vertex colour
-            buf_vbo[buf_num_vert].color.packed =
+            bv->color.packed =
                 PACK_ARGB8888(v_arr[i]->color.r, v_arr[i]->color.g, v_arr[i]->color.b, v_arr[i]->color.a);
         } else if ((!in_intro) && v_arr[0]->lit) {
             // lit: modulate the material by this vertex's shade (the checkered-flag fix)
@@ -2322,25 +2472,32 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
             mr = (mr * v_arr[i]->color.r) >> 8;
             mg = (mg * v_arr[i]->color.g) >> 8;
             mb = (mb * v_arr[i]->color.b) >> 8;
-            buf_vbo[buf_num_vert].color.packed = PACK_ARGB8888(mr, mg, mb, ma);
+            bv->color.packed = PACK_ARGB8888(mr, mg, mb, ma);
         } else if (use_shade) {
             // unlit CC_SHADE input: raw vertex colour
-            buf_vbo[buf_num_vert].color.packed =
+            bv->color.packed =
                 PACK_ARGB8888(v_arr[i]->color.r, v_arr[i]->color.g, v_arr[i]->color.b, v_arr[i]->color.a);
         } else {
-            buf_vbo[buf_num_vert].color.packed = mat_packed;
+            bv->color.packed = mat_packed;
         }
 #endif
-        buf_num_vert++;
-        buf_vbo_len += sizeof(dc_fast_t);
+#ifdef GFX_BACKEND_PVR
+        op_n += 1;
+#else
+        buf_num_vert++; buf_vbo_len += sizeof(dc_fast_t);
+#endif
     }
-    buf_vbo_num_tris += 1;
-
-	if (buf_vbo_num_tris == MAX_BUFFERED) {
-        gfx_flush();
-    }
+#ifndef GFX_BACKEND_PVR
+        buf_vbo_num_tris += 1;
+        if (buf_vbo_num_tris == MAX_BUFFERED) {
+            gfx_flush();
+        }
+#endif
     } // for (ti) clipped-fan triangles
 #ifdef GFX_BACKEND_PVR
+    // OP baked its whole fan into the scratch — stream it to the live OP list now (one DR submit per
+    // source triangle; pvr_emit_op_header re-emits only on state change, so same-state runs are headerless).
+    if (op_stream && op_n) pvr_submit_op(op_emit, op_n);
     // A real 3D (perspective) triangle has now drawn this frame -> subsequent 2D quads are
     // foreground overlays (near), not background. (Ortho 2D-as-tris like glyphs don't count.)
     if (n_tris > 0 && !proj_is_ortho)
@@ -2498,6 +2655,16 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 	float recip_tex_width = shz_inverse_posf((float) tex_width) * get_current_u_scale();
 	float recip_tex_height = shz_inverse_posf((float) tex_height) * get_current_v_scale();
 
+#ifdef GFX_BACKEND_PVR
+	// Same combiner-derived texel<->colour combine as the 3D path, for 2D texrects/quads.
+	uint32_t texenv = use_texture ? derive_pvr_texenv(rdp.combine_mode) : GFX_TEXENV_MODULATE;
+	if (texenv != rendering_state.tex_env) {
+		gfx_flush();
+		gfx_rapi->set_tex_env(texenv);
+		rendering_state.tex_env = texenv;
+	}
+#endif
+
 	int tri_num_vert = 0;
 	for (tri_num_vert = 0; tri_num_vert < 6; tri_num_vert++) {
 		quad_vbo[tri_num_vert].vert.x = v_arr[tri_num_vert]->vert.x;
@@ -2523,7 +2690,7 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 		// force is needed. TEXEL substituted=1; the PVR does the real texture combine.
 		{
 			uint32_t _argb, _oargb;
-			pvr_eval_combiner(rdp.combine_w0, rdp.combine_w1, &v_arr[tri_num_vert]->color, use_texture, &_argb, &_oargb);
+			pvr_eval_combiner(rdp.combine_w0, rdp.combine_w1, &v_arr[tri_num_vert]->color, use_texture, texenv, &_argb, &_oargb);
 			quad_vbo[tri_num_vert].color.packed = _argb;
 			quad_vbo[tri_num_vert].pad0.vertindex = _oargb;
 		}
@@ -2810,15 +2977,16 @@ static void  gfx_dp_set_tile(uint8_t fmt, uint32_t siz, uint32_t line, uint32_t 
 		rdp.texture_tile.cms = cms;
 		rdp.texture_tile.cmt = cmt;
 		rdp.texture_tile.line_size_bytes = line * 8;
+		rdp.texture_tile.tmem = tmem;   // render tile's tmem -> selects loaded_texture[tmem>>8]
 		rdp.textures_changed[0] = 1;
 		rdp.textures_changed[1] = 1;
 	}
 
-	if (tile == G_TX_LOADTILE) {
-		rdp.texture_to_load.tile_number = tmem >> 8;
-	} else {
-		rdp.texture_to_load.tile_number = tile;
-	}
+	// Index the loaded_texture table by TMEM BLOCK (tmem>>8) for ALL loads, not the tile index: a
+	// texture loaded via a non-loadtile (e.g. Moo Moo Farm's grass<->dirt 2nd texture at tmem 0x0100,
+	// loaded through tile 6) must land in the slot the render tile will read. tmem maxes at 0x1FF, so
+	// this is just 0 or 1 (the two tmem halves) — matching the two TEXEL units.
+	rdp.texture_to_load.tile_number = tmem >> 8;
 	rdp.texture_to_load.tmem = tmem;
 }
 
