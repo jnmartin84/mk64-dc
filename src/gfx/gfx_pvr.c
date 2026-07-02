@@ -110,9 +110,16 @@ struct PvrTex {
     uint8_t   clampu, clampv;   // G_TX_CLAMP -> PVR_UVCLAMP
     uint8_t   flipu, flipv;     // G_TX_MIRROR -> PVR_UVFLIP (mirror-repeat)
     float     u_scale, v_scale; // real/padded, consumed by gfx_pvr_get_*_scale
+    uint32_t  lru;              // use-clock at last select_texture (0 = never); LRU eviction key
 };
 static struct PvrTex sTextures[PVR_TEX_MAX];
 static uint32_t sTexCount = 0;   // high-water id allocator
+// LRU eviction clock. Bumped on every select_texture so `lru` reflects true last-use order.
+// sFrameStartClock latches the clock at frame start so eviction never frees a texture already
+// used THIS frame (which we'd only have to re-upload moments later) — it evicts stale
+// prior-screen textures first, and only falls back to a full flush if even that can't fit.
+static uint32_t sLruClock = 0;
+static uint32_t sFrameStartClock = 0;
 static uint32_t sBoundTex[2] = { 0, 0 }; // per-tile binding (header uses tile 0)
 static uint32_t sCurBound = 0;   // last select_texture id == upload target
 
@@ -427,7 +434,40 @@ static uint32_t gfx_pvr_new_texture(void) {
 static void gfx_pvr_select_texture(int tile, uint32_t texture_id) {
     sBoundTex[tile] = texture_id;
     sCurBound = texture_id;   // upload target follows the most recent bind (à la GLdc)
+    sTextures[texture_id].lru = ++sLruClock;   // mark most-recently-used for LRU eviction
     pvr_mark_dirty();
+}
+
+// Does this texture still have VRAM? The front-end calls this on a cache hit; if the backend
+// has evicted the block (LRU), it re-uploads instead of drawing a freed pointer.
+int gfx_pvr_texture_resident(uint32_t id) {
+    return id < PVR_TEX_MAX && sTextures[id].addr != NULL;
+}
+
+// Free the least-recently-used RESIDENT texture that was NOT used this frame, to make room for
+// a new allocation. Returns 1 if it freed something, 0 if nothing is evictable (genuine
+// over-budget for THIS frame's working set -> caller falls back to a full flush).
+static int gfx_pvr_evict_one_lru(void) {
+    uint32_t best = PVR_TEX_MAX;
+    uint32_t best_lru = 0xFFFFFFFFu;
+    for (uint32_t i = 1; i < PVR_TEX_MAX; i++) {   // skip slot 0 (oops/placeholder)
+        if (!sTextures[i].addr) continue;          // no VRAM to reclaim
+        if (sTextures[i].lru > sFrameStartClock) continue;  // used this frame -> protect
+        if (sTextures[i].lru < best_lru) { best_lru = sTextures[i].lru; best = i; }
+    }
+    if (best == PVR_TEX_MAX) return 0;
+    uint32_t freed = sTextures[best].alloc_size, victim_lru = sTextures[best].lru;
+    pvr_mem_free(sTextures[best].addr);
+    sTextures[best].addr = NULL;
+    sTextures[best].alloc_size = 0;
+    // Log the first burst of evictions, then only every 256th, so we can watch LRU work
+    // without drowning the console when the working set sits right at the VRAM limit.
+    static uint32_t sEvictCount = 0;
+    if (++sEvictCount <= 32 || (sEvictCount & 255) == 0)
+        printf("PVR_LRU_EVICT #%u id=%u lru=%u freed=%u free_now=%u\n",
+               (unsigned) sEvictCount, (unsigned) best, (unsigned) victim_lru,
+               (unsigned) freed, (unsigned) pvr_mem_available());
+    return 1;
 }
 
 // GL_UNSIGNED_SHORT_1_5_5_5_REV == 0x8366 (front-end's 1555 tag); anything else is 4444.
@@ -491,11 +531,46 @@ static void gfx_pvr_upload_texture(const uint8_t *buf16, int width, int height, 
     // smaller/larger reshapes all land in the same buffer with no realloc churn. The whole texture
     // VRAM set is freed at the glDeleteTextures point (gfx_pvr_clear_all_textures, via nuke).
     uint32_t asize = (size > sAllocFloor) ? size : sAllocFloor;
-    if (t->addr && asize > t->alloc_size) { pvr_mem_free(t->addr); t->addr = NULL; }
-    if (!t->addr) {
+    if (t->addr && asize > t->alloc_size) { pvr_mem_free(t->addr); t->addr = NULL; t->alloc_size = 0; }
+    // Skip all allocation once a full flush is already queued this frame: the heap is
+    // over-budget/fragmented, and more evict+malloc spinning only spams KOS OOM logs and scatters
+    // more small holes. This texture (and the frame's remaining ones) upload cleanly after the flush.
+    if (!t->addr && !sCacheFlushPending) {
+        // PROACTIVE eviction: free cold textures until there's headroom BEFORE malloc, so KOS
+        // doesn't log a (recoverable) out-of-memory error in the common case.
+        const uint32_t margin = 32 * 1024;
+        while (pvr_mem_available() < asize + margin && gfx_pvr_evict_one_lru())
+            ;
         t->addr = pvr_mem_malloc(asize);
-        t->alloc_size = t->addr ? asize : 0;
-        if (!t->addr) sCacheFlushPending = 1;   // VRAM exhausted -> drop the cache next frame start
+        // REACTIVE, BOUNDED: total free may be enough yet FRAGMENTED (holes smaller than asize).
+        // Incremental eviction frees scattered small blocks and can't synthesize a contiguous one,
+        // so retry only a few times; if that can't place it, queue a full flush (below) which
+        // DEFRAGMENTS by repacking just the next frame's live set. Spinning here can't win and
+        // floods KOS's OOM log (the menu-background-strips + per-glyph-texture case).
+        for (int tries = 0; !t->addr && tries < 16 && gfx_pvr_evict_one_lru(); tries++)
+            t->addr = pvr_mem_malloc(asize);
+        if (t->addr) {
+            t->alloc_size = asize;
+        } else {
+            t->alloc_size = 0;
+            sCacheFlushPending = 1;   // over-budget or fragmented -> defragmenting flush next frame
+            static int sOomLog = 0;
+            if (sOomLog++ < 12) {
+                // SIMULTANEOUS live footprint: resident textures/bytes vs those protected (drawn
+                // THIS frame, unevictable). protected ~= total -> on-screen set alone exceeds VRAM
+                // (real over-budget). protected << total -> fragmentation, which the flush fixes.
+                uint32_t nres = 0, bytes_res = 0, nprot = 0, bytes_prot = 0;
+                for (uint32_t i = 1; i < PVR_TEX_MAX; i++) {
+                    if (!sTextures[i].addr) continue;
+                    nres++; bytes_res += sTextures[i].alloc_size;
+                    if (sTextures[i].lru > sFrameStartClock) { nprot++; bytes_prot += sTextures[i].alloc_size; }
+                }
+                printf("PVR_VRAM_OOM want=%u free=%u | resident=%u (%uKB) protected_this_frame=%u (%uKB)\n",
+                       (unsigned) asize, (unsigned) pvr_mem_available(),
+                       (unsigned) nres, (unsigned) (bytes_res >> 10),
+                       (unsigned) nprot, (unsigned) (bytes_prot >> 10));
+            }
+        }
     }
     if (t->addr) pvr_txr_load((void *) src, t->addr, size);
     sAllocFloor = 0;   // consume per upload
@@ -530,7 +605,14 @@ static void gfx_pvr_set_sampler_parameters(int tile, uint8_t linear_filter, uint
 // whole scene draws with the last-uploaded texture (the "same texture everywhere" wedge,
 // never recovers without restart). GLdc never hit this — its id space isn't capped.
 void gfx_pvr_clear_all_textures(void) {
-    for (uint32_t i = 0; i <= sTexCount && i < PVR_TEX_MAX; i++) {
+    // Free by what is actually allocated, NOT `i <= sTexCount`. The front-end only calls
+    // new_texture() (which bumps sTexCount) the FIRST time each pool node is used; once every
+    // node has a non-zero key, new_texture is never called again, so sTexCount stops climbing
+    // and — after the first reset sets it to 0 — stays 0 forever. Bounding the free loop by it
+    // then frees only slot 0, leaking every other texture on every course load AND making the
+    // VRAM watchdog a no-op (it reclaims ~nothing -> OOM everywhere, blank/garbage textures).
+    // Sweep the whole table; the addr guard skips empty slots (trivial at reset time).
+    for (uint32_t i = 0; i < PVR_TEX_MAX; i++) {
         if (sTextures[i].addr) {
             pvr_mem_free(sTextures[i].addr);
             sTextures[i].addr = NULL;
@@ -712,6 +794,8 @@ static void gfx_pvr_init(void) {
     // Headers are compiled lazily per depth/texture/list state at draw time.
 
     printf("=== MK64 DC: raw-PVR backend (gfx_pvr.c) ===\n");
+    printf("PVR_TEXHEAP init free=%u bytes (total texture VRAM after TA reservation)\n",
+           (unsigned) pvr_mem_available());
     fflush(stdout);
 }
 
@@ -730,6 +814,12 @@ static void gfx_pvr_start_frame(void) {
         gfx_pvr_clear_all_textures();   // free all texture VRAM + reset the id allocator
         reset_texcache();               // reset the front-end hashmap/pool
         sCacheFlushPending = 0;
+        // Capped: how much a full flush actually reclaims. If this is multi-MB but PVR_VRAM_OOM
+        // still recurs, the per-frame working set ~= the whole heap (over-budget). If it stays
+        // tiny, the flush isn't really freeing (the heap is TA-reserved away from textures).
+        static int sFlushLog = 0;
+        if (sFlushLog++ < 12)
+            printf("PVR_CACHE_FLUSH recovered free=%u bytes\n", (unsigned) pvr_mem_available());
     }
     pvr_scene_begin();
     // OP list open + live for the whole frame (guaranteed-opaque geometry only).
@@ -755,6 +845,10 @@ static void gfx_pvr_start_frame(void) {
     sTR.nverts    = 0; sTR.nbatch    = 0; sTR.cur    = -1; sTR.dirty    = 1;
     sPunch.nverts = 0; sPunch.nbatch = 0; sPunch.cur = -1; sPunch.dirty = 1;
     sOpDirty = 1;
+
+    // Latch the LRU clock: textures selected from here on (this frame) are protected from
+    // eviction; only textures whose last use predates this point are candidates to free.
+    sFrameStartClock = sLruClock;
 
     // Latch "did the last frame have a 3D (perspective) scene" so gfx_sp_tri1 can tell a
     // Z-off ortho BACKGROUND (over-skybox clouds, in a race) from a Z-off ortho OVERLAY
