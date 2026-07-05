@@ -1705,7 +1705,7 @@ void func_80023BF0(Player* player, s8 playerId, s8 screenId, s8 arg3) {
 }
 
 Gfx rk_common_setting_render_character[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetAlphaCompare(G_AC_NONE),
     gsSPClearGeometryMode(G_LIGHTING),
     gsSPTexture(0x8000, 0x8000, 0, G_TX_RENDERTILE, G_ON),

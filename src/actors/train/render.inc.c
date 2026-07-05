@@ -6,7 +6,7 @@
 
 Gfx l_d_course_kalimari_desert_dl_22D70[] = {
     gsSPTexture(0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON),
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetCombineMode(G_CC_MODULATEIDECALA, G_CC_MODULATEIDECALA),
     gsDPSetRenderMode(G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2),
     gsSPVertex(d_course_kalimari_desert_unknown_model1, 4, 0),
@@ -16,7 +16,7 @@ Gfx l_d_course_kalimari_desert_dl_22D70[] = {
 
 Gfx l_d_course_kalimari_desert_dl_22DB8[] = {
     gsSPTexture(0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON),
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetCombineMode(G_CC_MODULATEIDECALA, G_CC_MODULATEIDECALA),
     gsDPSetRenderMode(G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_TEX_EDGE2),
     gsSPVertex(d_course_kalimari_desert_unknown_model2, 4, 0),

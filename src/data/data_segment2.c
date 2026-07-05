@@ -5,7 +5,7 @@
 #include <assets/startup_logo.h>
 
 Gfx D_02007650[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetCycleType(G_CYC_1CYCLE),
     gsDPSetRenderMode(G_RM_AA_OPA_SURF, G_RM_AA_OPA_SURF2),
     gsSPClearGeometryMode(G_ZBUFFER | G_SHADE | G_LIGHTING | G_SHADING_SMOOTH),
@@ -20,7 +20,7 @@ Gfx D_02007650[] = {
 };
 
 Gfx D_020076B0[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetRenderMode(G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2),
     gsDPSetCombineMode(G_CC_DECALRGB, G_CC_DECALRGB),
     gsDPSetTexturePersp(G_TP_PERSP),
@@ -29,7 +29,7 @@ Gfx D_020076B0[] = {
 };
 
 Gfx D_020076E0[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsSPClearGeometryMode(G_SHADE | G_SHADING_SMOOTH),
     gsDPSetRenderMode(G_RM_XLU_SURF, G_RM_XLU_SURF2),
     gsDPSetCombineMode(G_CC_DECALRGBA, G_CC_DECALRGBA),
@@ -37,42 +37,42 @@ Gfx D_020076E0[] = {
 };
 
 Gfx D_02007708[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetRenderMode(G_RM_OPA_SURF, G_RM_OPA_SURF2),
     gsDPSetCombineMode(G_CC_DECALRGBA, G_CC_DECALRGBA),
     gsSPEndDisplayList(),
 };
 
 Gfx D_02007728[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetRenderMode(G_RM_XLU_SURF, G_RM_XLU_SURF2),
     gsDPSetCombineMode(G_CC_DECALRGBA, G_CC_DECALRGBA),
     gsSPEndDisplayList(),
 };
 
 Gfx D_02007748[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetRenderMode(G_RM_XLU_SURF, G_RM_XLU_SURF2),
     gsDPSetCombineMode(G_CC_MODULATEI_PRIM, G_CC_MODULATEI_PRIM),
     gsSPEndDisplayList(),
 };
 
 Gfx D_02007768[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetRenderMode(G_RM_XLU_SURF, G_RM_XLU_SURF2),
     gsDPSetCombineMode(G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM),
     gsSPEndDisplayList(),
 };
 
 Gfx D_02007788[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetRenderMode(G_RM_XLU_SURF, G_RM_XLU_SURF2),
     gsDPSetCombineLERP(TEXEL0, 0, ENVIRONMENT, 0, 0, 0, 0, TEXEL0, TEXEL0, 0, ENVIRONMENT, 0, 0, 0, 0, TEXEL0),
     gsSPEndDisplayList(),
 };
 
 Gfx D_020077A8[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsSPTexture(0x8000, 0x8000, 0, G_TX_RENDERTILE, G_ON),
     gsSPSetGeometryMode(G_SHADE | G_SHADING_SMOOTH),
     gsSPClearGeometryMode(G_LIGHTING),
@@ -81,21 +81,21 @@ Gfx D_020077A8[] = {
 };
 
 Gfx D_020077D8[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsSPTexture(0x8000, 0x8000, 0, G_TX_RENDERTILE, G_OFF),
     gsDPSetTexturePersp(G_TP_NONE),
     gsSPEndDisplayList(),
 };
 
 Gfx D_020077F8[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetRenderMode(G_RM_XLU_SURF, G_RM_XLU_SURF2),
     gsDPSetCombineLERP(0, 0, 0, SHADE, TEXEL0, 0, SHADE, 0, 0, 0, 0, SHADE, TEXEL0, 0, SHADE, 0),
     gsSPEndDisplayList(),
 };
 
 Gfx D_02007818[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetRenderMode(G_RM_XLU_SURF, G_RM_XLU_SURF2),
     gsDPSetCombineLERP(0, 0, 0, SHADE, TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, SHADE, TEXEL0, 0, PRIMITIVE, 0),
     gsSPEndDisplayList(),
@@ -349,7 +349,7 @@ Vtx D_02007DF8[] = {
 };
 
 Gfx D_02007F18[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetTexturePersp(G_TP_NONE),
     gsDPSetTextureLUT(G_TT_NONE),
     gsDPSetTextureFilter(G_TF_BILERP),
@@ -358,7 +358,7 @@ Gfx D_02007F18[] = {
 };
 
 Gfx D_02007F48[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetTexturePersp(G_TP_PERSP),
     gsSPEndDisplayList(),
 };
@@ -374,14 +374,14 @@ Gfx D_02007F60[] = {
     gsDPSetCycleType(G_CYC_1CYCLE),
     gsDPSetCombineMode(G_CC_SHADE, G_CC_SHADE),
     gsSPSetGeometryMode(G_SHADE | G_CULL_BACK | G_LIGHTING | G_SHADING_SMOOTH),
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsSPDisplayList(startup_texture_dl3),
     gsSPEndDisplayList(),
 };
 
 Gfx D_02007FC8[] = {
     gsDPSetTexturePersp(G_TP_PERSP),
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsSPSetGeometryMode(G_ZBUFFER | G_CULL_BACK | G_LIGHTING),
     gsDPSetRenderMode(G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2),
     gsDPSetCycleType(G_CYC_1CYCLE),
@@ -391,7 +391,7 @@ Gfx D_02007FC8[] = {
 };
 
 Gfx D_02008008[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetCycleType(G_CYC_1CYCLE),
     gsDPSetRenderMode(G_RM_XLU_SURF, G_RM_XLU_SURF2),
     gsDPSetCombineMode(G_CC_PRIMITIVE, G_CC_PRIMITIVE),
@@ -399,7 +399,7 @@ Gfx D_02008008[] = {
 };
 
 Gfx D_02008030[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetCycleType(G_CYC_FILL),
     gsDPSetRenderMode(G_RM_OPA_SURF, G_RM_OPA_SURF2),
     gsDPSetCombineMode(G_CC_DECALRGBA, G_CC_DECALRGBA),
@@ -407,7 +407,7 @@ Gfx D_02008030[] = {
 };
 
 Gfx D_02008058[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetCycleType(G_CYC_1CYCLE),
     gsSPEndDisplayList(),
 };

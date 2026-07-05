@@ -187,17 +187,17 @@ void func_802A39E0(UNUSED struct UnkStruct_800DC5EC* arg0) {
         lry = uly + 2;
     }
 
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
     gDPSetDepthImage(gDisplayListHead++, gPhysicalZBuffer);
     gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH, gPhysicalZBuffer);
     gDPSetFillColor(gDisplayListHead++, 0xFFFCFFFC);
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, ulx, uly, lrx, lry);
 
     gDPFillRectangle(gDisplayListHead++, ulx, uly, lrx - 1, lry - 1);
 
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH,
                      VIRTUAL_TO_PHYSICAL(gPhysicalFramebuffers[sRenderingFramebuffer])); // 0x1FFFFFFF
     //gDPFillRectangle(gDisplayListHead++, ulx, uly, lrx - 1, lry - 1);
@@ -210,17 +210,17 @@ void func_802A39E0(UNUSED struct UnkStruct_800DC5EC* arg0) {
  */
 void init_z_buffer(void) {
 #if 0
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
     gDPSetDepthImage(gDisplayListHead++, gPhysicalZBuffer);
     gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH, gPhysicalZBuffer);
     gDPSetFillColor(gDisplayListHead++, 0xFFFCFFFC);
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     gDPFillRectangle(gDisplayListHead++, 0, 0, 319, 239);
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
 #endif
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH,
                      VIRTUAL_TO_PHYSICAL(gPhysicalFramebuffers[sRenderingFramebuffer]));
@@ -232,7 +232,7 @@ void init_z_buffer(void) {
  * Sets the initial RDP (Reality Display Processor) rendering settings.
  **/
 void init_rdp(void) {
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPPipelineMode(gDisplayListHead++, G_PM_1PRIMITIVE);
 // this happens mid-frame and breaks the correct scissoring behavior in multi-player
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -248,7 +248,7 @@ void init_rdp(void) {
     gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
     gDPSetBlendMask(gDisplayListHead++, 0xFF);
     gDPSetColorDither(gDisplayListHead++, G_CD_DISABLE);
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gSPClipRatio(gDisplayListHead++, FRUSTRATIO_1);
 }
 
@@ -291,17 +291,17 @@ void select_framebuffer(void) {
                      VIRTUAL_TO_PHYSICAL(gPhysicalFramebuffers[sRenderingFramebuffer]));
     gDPSetFillColor(gDisplayListHead++, GPACK_RGBA5551(D_800DC5D0, D_800DC5D4, D_800DC5D8, 1) << 0x10 |
                                             GPACK_RGBA5551(D_800DC5D0, D_800DC5D4, D_800DC5D8, 1));
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     gDPFillRectangle(gDisplayListHead++, 0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
 #else
     gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH,
                      VIRTUAL_TO_PHYSICAL(gPhysicalFramebuffers[sRenderingFramebuffer]));
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
 #endif
 }
@@ -314,7 +314,7 @@ void draw_splitscreen_separators(void) {
         return;
     }
 
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
     gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH,
                      VIRTUAL_TO_PHYSICAL(gPhysicalFramebuffers[sRenderingFramebuffer]));
@@ -324,7 +324,7 @@ void draw_splitscreen_separators(void) {
     gDPSetFillColor(gDisplayListHead++, 0x00010001);
     gSPViewport(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&D_802B8880));
     gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
 
     switch (gActiveScreenMode) {
         case SCREEN_MODE_2P_SPLITSCREEN_VERTICAL:
@@ -338,7 +338,7 @@ void draw_splitscreen_separators(void) {
             gDPFillRectangle(gDisplayListHead++, 0, 119, 319, 121);
             break;
     }
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
 }
 /**
@@ -356,12 +356,12 @@ struct Skybox {
 };
 
 UNUSED Gfx D_802B8A90[] = {
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetRenderMode(G_RM_OPA_SURF, G_RM_OPA_SURF2),
     gsDPSetCycleType(G_CYC_FILL),
     gsDPSetFillColor(0x00000000),
     gsDPFillRectangle(0, 0, 319, 239),
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsDPSetCycleType(G_CYC_1CYCLE),
     gsSPEndDisplayList(),
 };
@@ -845,16 +845,16 @@ void func_802A5760(void) {
 
     if (gPlayerCountSelection1 == 3) {
 
-        gDPPipeSync(gDisplayListHead++);
+        //gDPPipeSync(gDisplayListHead++);
         func_802A39E0(D_800DC5F8);
         gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
         gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH,
                          VIRTUAL_TO_PHYSICAL(gPhysicalFramebuffers[sRenderingFramebuffer]));
         gDPSetFillColor(gDisplayListHead++, 0x00010001);
-        gDPPipeSync(gDisplayListHead++);
+        //gDPPipeSync(gDisplayListHead++);
         gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 160, 120, SCREEN_WIDTH, SCREEN_HEIGHT);
         gDPFillRectangle(gDisplayListHead++, 160, 120, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
-        gDPPipeSync(gDisplayListHead++);
+        //gDPPipeSync(gDisplayListHead++);
         gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
 
         set_the_scissor(D_800DC5F8);

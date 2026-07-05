@@ -257,7 +257,7 @@ void func_80044924(u8* texture, s32 width, s32 height) {
     // The last argument to this macro really should be `CALC_DXT_4b(width)` but that creates a massive diff
     gDPLoadBlock(gDisplayListHead++, G_TX_LOADTILE, 0, 0, (((width * height) + 3) >> 2) - 1,
                  ((width / 16) + 2047) / (width / 16));
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetTile(gDisplayListHead++, G_IM_FMT_IA, G_IM_SIZ_4b, (((width >> 1) + 7) >> 3), G_TX_RENDERTILE,
                G_TX_RENDERTILE, 0, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOMIRROR | G_TX_CLAMP,
                G_TX_NOMASK, G_TX_NOLOD);
@@ -296,7 +296,7 @@ void func_80044DA0(u8* image, s32 width, s32 height) {
     // The last argument to this macro really should be `CALC_DXT_4b(width)` but that creates a massive diff
     gDPLoadBlock(gDisplayListHead++, G_TX_LOADTILE, 0, 0, (((width * height) + 3) >> 2) - 1,
                  ((width / 16) + 2047) / (width / 16));
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetTile(gDisplayListHead++, G_IM_FMT_I, G_IM_SIZ_4b, (((width >> 1) + 7) >> 3), G_TX_RENDERTILE, G_TX_RENDERTILE,
                0, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK,
                G_TX_NOLOD);
@@ -323,7 +323,7 @@ void func_80044F34(u8* image, s32 width, s32 height) {
     // The last argument to this macro really should be `CALC_DXT_4b(width)` but that creates a massive diff
     gDPLoadBlock(gDisplayListHead++, G_TX_LOADTILE, 0, 0, (((width * height) + 3) >> 2) - 1,
                  ((width / 16) + 2047) / (width / 16));
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetTile(gDisplayListHead++, G_IM_FMT_I, G_IM_SIZ_4b, (((width >> 1) + 7) >> 3), G_TX_RENDERTILE, G_TX_RENDERTILE,
                0, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK,
                G_TX_NOLOD);
@@ -349,7 +349,7 @@ void func_800450C8(u8* image, s32 width, s32 height) {
     // The last argument to this macro really should be `CALC_DXT_4b(width)` but that creates a massive diff
     gDPLoadBlock(gDisplayListHead++, G_TX_LOADTILE, 0, 0, (((width * height) + 3) >> 2) - 1,
                  ((width / 16) + 2047) / (width / 16));
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetTile(gDisplayListHead++, G_IM_FMT_I, G_IM_SIZ_4b, (((width >> 1) + 7) >> 3), G_TX_RENDERTILE, G_TX_RENDERTILE,
                0, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMASK, G_TX_NOLOD, G_TX_MIRROR | G_TX_WRAP, masks, G_TX_NOLOD);
     gDPSetTileSize(gDisplayListHead++, G_TX_RENDERTILE, 0, 0, (width - 1) << G_TEXTURE_IMAGE_FRAC,

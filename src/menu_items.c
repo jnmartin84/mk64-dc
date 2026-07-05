@@ -2208,7 +2208,7 @@ Gfx l_D_02007F60[] = {
     gsDPSetCycleType(G_CYC_1CYCLE),
     gsDPSetCombineMode(G_CC_SHADE, G_CC_SHADE),
     gsSPSetGeometryMode(G_SHADE | G_CULL_BACK | G_LIGHTING | G_SHADING_SMOOTH),
-    gsDPPipeSync(),
+    //gsDPPipeSync(),
     gsSPDisplayList(startup_texture_dl3),
     gsSPEndDisplayList(),
 };
@@ -2258,7 +2258,7 @@ void func_80094660(struct GfxPool* arg0, UNUSED s32 arg1) {
     //gSPPerspNormalize(gDisplayListHead++, perspNorm);
     guLookAt(&arg0->mtxLookAt[0], 0.0f, 0.0f, (f32) gIntroModelZEye, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
     func_800942D0();
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetTexturePersp(gDisplayListHead++, G_TP_NONE);
     gDPSetTextureFilter(gDisplayListHead++, G_TF_BILERP);
 }
@@ -2318,7 +2318,7 @@ void func_80094A64(struct GfxPool* pool) {
     }
     func_8009CA2C();
     gCycleFlashMenu += 1;
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gSPDisplayList(gDisplayListHead++, D_020076B0);
 }
 
@@ -3011,7 +3011,7 @@ Gfx* func_80096CD8(Gfx* displayListHead, s32 xPos, s32 yPos, u32 width, u32 heig
     displayListHead = draw_box(displayListHead, xPos, yPos, xPos + width, yPos + height, 0, 0, 0, rnd);
     rnd += 150;
 
-    gDPPipeSync(displayListHead++);
+    //gDPPipeSync(displayListHead++);
     gDPSetRenderMode(displayListHead++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
     gDPSetPrimColor(displayListHead++, 0, 0, rnd, rnd, rnd, rnd);
     gDPSetCombineMode(displayListHead++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
@@ -3057,7 +3057,7 @@ Gfx* func_80097274(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, s32 arg4, 
     s32 sp68 = 0;
     s32 sp64 = 0;
     s32 var_v0_2;
-    gDPPipeSync(displayListHead++);
+    //gDPPipeSync(displayListHead++);
     gDPSetCycleType(displayListHead++, G_CYC_2CYCLE);
     gDPSetTextureLOD(displayListHead++, G_TL_TILE);
     gDPSetPrimColor(displayListHead++, 0, 0, 0, 0, 0, gGlobalTimer % 256);
@@ -3130,18 +3130,18 @@ Gfx* func_80097274(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, s32 arg4, 
         arg8 = sp7C;
         arg9 += temp_lo;
     }
-    gDPPipeSync(displayListHead++);
+    //gDPPipeSync(displayListHead++);
     gDPSetCycleType(displayListHead++, G_CYC_1CYCLE);
     return displayListHead;
 }
 
 Gfx* func_80097A14(Gfx* displayListHead, s8 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, u8* arg8,
                    u32 arg9, u32 argA) {
-    gDPPipeSync(displayListHead++);
+    //gDPPipeSync(displayListHead++);
     gDPSetCycleType(displayListHead++, G_CYC_COPY);
     displayListHead = func_80095E10(displayListHead, arg1, 0x00001000, 0x00000400, arg2, arg3, arg4, arg5, arg6, arg7,
                                     arg8, arg9, argA);
-    gDPPipeSync(displayListHead++);
+    //gDPPipeSync(displayListHead++);
     gDPSetCycleType(displayListHead++, G_CYC_1CYCLE);
     return displayListHead;
 }
@@ -3385,7 +3385,7 @@ Gfx* draw_box(Gfx* displayListHead, s32 ulx, s32 uly, s32 lrx, s32 lry, u32 red,
     gSPDisplayList(displayListHead++, D_02008008);
     gDPSetPrimColor(displayListHead++, 0, 0, red, green, blue, alpha);
     gDPFillRectangle(displayListHead++, ulx, uly, lrx+1, lry+1);
-    gDPPipeSync(displayListHead++);
+    //gDPPipeSync(displayListHead++);
     return displayListHead;
 }
 
@@ -5096,7 +5096,7 @@ void func_8009DAA8(void) {
     if (D_8018E7D0[4] >= (D_8018E7B8[4] + 1)) {
         func_8009CE64(4);
     }
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     var_t0 = (D_8018E7D0[4] * 255) / D_8018E7B8[4];
     if ((s32) var_t0 >= 0x100) {
         var_t0 = 0x000000FF;
@@ -5138,7 +5138,7 @@ void func_8009DB8C(void) {
     }
 
 #if 0
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetRenderMode(gDisplayListHead++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
     gDPSetPrimColor(gDisplayListHead++, 0, 0, 0x00, 0x00, 0x00, 0xFF);
     gDPSetCombineMode(gDisplayListHead++, G_CC_PRIMITIVE, G_CC_PRIMITIVE);
@@ -5149,7 +5149,7 @@ void func_8009DB8C(void) {
             gDPFillRectangle(gDisplayListHead++, temp_t4, temp_t5, temp_t4 + 8, temp_t5 + 8);
         }
     }
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
 #endif
 
     var_v1 = (D_8018E7D0[4] * 255) / D_8018E7B8[4];
@@ -5863,7 +5863,7 @@ void render_menus(MenuItem* arg0) {
     UNUSED s32 pad3 = 0;
 
     if (arg0->visible) {
-        gDPPipeSync(gDisplayListHead++);
+        //gDPPipeSync(gDisplayListHead++);
         switch (arg0->type) {             /* switch 6; irregular */
             case MENU_ITEM_UI_LOGO_INTRO: /* switch 6 */
                 func_80094660(gGfxPool, arg0->param1);
@@ -8999,7 +8999,7 @@ void func_800A8270(s32 arg0, MenuItem* arg1) {
         var_s0 = arg1->row;
         var_s3 = temp_t1 + temp_t6;
         var_s4 = (temp_t1 - temp_t6) + 0x3F;
-        gDPPipeSync(gDisplayListHead++);
+        //gDPPipeSync(gDisplayListHead++);
         gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
         gDPSetCombineMode(gDisplayListHead++, G_CC_DECALRGBA, G_CC_DECALRGBA);
         if ((arg0 + 1) == gPlayerCount) {
@@ -9116,7 +9116,7 @@ void func_800A890C(s32 arg0, MenuItem* arg1) {
         temp_t7 = (arg1->param1 * 65) / 64;
         temp_t1 = arg1->column;
         temp_a2 = arg1->row;
-        gDPPipeSync(gDisplayListHead++);
+        //gDPPipeSync(gDisplayListHead++);
         gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
         gDPSetCombineMode(gDisplayListHead++, G_CC_DECALRGBA, G_CC_DECALRGBA);
         if (arg0 == gCupSelection) {
@@ -9141,7 +9141,7 @@ void func_800A8A98(MenuItem* arg0) {
 
     temp_s2 = arg0->column;
     temp_s3 = arg0->row;
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
     gDPSetCombineMode(gDisplayListHead++, G_CC_DECALRGBA, G_CC_DECALRGBA);
     for (someIndex = 0; someIndex < NUM_COURSES_PER_CUP; someIndex++) {
@@ -9175,7 +9175,7 @@ void func_800A8CA4(MenuItem* arg0) {
     temp_v0 = find_menu_items_dupe(MENU_ITEM_TYPE_064);
     temp_s2 = arg0->column;
     temp_s3 = arg0->row;
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
     gDPSetCombineMode(gDisplayListHead++, G_CC_DECALRGBA, G_CC_DECALRGBA);
     if (gModeSelection == GRAND_PRIX) {
@@ -9253,7 +9253,7 @@ void func_800A90D4(UNUSED s32 arg0, MenuItem* arg1) {
         temp_t7 = (arg1->param1 * 0x41) / 0x40;
         temp_t1 = arg1->column;
         temp_a2 = arg1->row;
-        gDPPipeSync(gDisplayListHead++);
+        //gDPPipeSync(gDisplayListHead++);
         gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
         gDPSetCombineMode(gDisplayListHead++, G_CC_DECALRGBA, G_CC_DECALRGBA);
         gDisplayListHead = draw_box_fill(gDisplayListHead, temp_t1 + temp_t7, temp_a2, (temp_t1 - temp_t7) + 0x40,

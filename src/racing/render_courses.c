@@ -256,7 +256,7 @@ void func_8029122C(struct UnkStruct_800DC5EC* arg0, s32 playerId) {
             gSPDisplayList(gDisplayListHead++, d_course_bowsers_castle_dl_9228);
             break;
         case COURSE_BANSHEE_BOARDWALK:
-            gDPPipeSync(gDisplayListHead++);
+            //gDPPipeSync(gDisplayListHead++);
             gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON);
             gSPClearGeometryMode(gDisplayListHead++, G_LIGHTING);
             gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_XLU_INTER, G_RM_NOOP2);
@@ -265,11 +265,11 @@ void func_8029122C(struct UnkStruct_800DC5EC* arg0, s32 playerId) {
             // d_course_banshee_boardwalk_packed_dl_878
             gSPDisplayList(gDisplayListHead++, d_course_banshee_boardwalk_packed_dl_878);
             gDPSetAlphaCompare(gDisplayListHead++, G_AC_NONE);
-            gDPPipeSync(gDisplayListHead++);
+            //gDPPipeSync(gDisplayListHead++);
             break;
         case COURSE_KOOPA_BEACH:
 
-            gDPPipeSync(gDisplayListHead++);
+            //gDPPipeSync(gDisplayListHead++);
             gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON);
             gSPClearGeometryMode(gDisplayListHead++, G_LIGHTING);
             gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_XLU_INTER, G_RM_NOOP2);
@@ -303,11 +303,11 @@ void func_8029122C(struct UnkStruct_800DC5EC* arg0, s32 playerId) {
             gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 1, 1, G_OFF);
             gSPSetGeometryMode(gDisplayListHead++, G_CULL_BACK);
             gDPSetAlphaCompare(gDisplayListHead++, G_AC_NONE);
-            gDPPipeSync(gDisplayListHead++);
+            //gDPPipeSync(gDisplayListHead++);
             break;
         case COURSE_SHERBET_LAND:
 
-            gDPPipeSync(gDisplayListHead++);
+            //gDPPipeSync(gDisplayListHead++);
             gSPClearGeometryMode(gDisplayListHead++, G_LIGHTING);
             gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON);
             gDPSetBlendMask(gDisplayListHead++, 0xFF);
@@ -327,20 +327,20 @@ void func_8029122C(struct UnkStruct_800DC5EC* arg0, s32 playerId) {
                 // d_course_sherbet_land_packed_dl_2B48
                 gSPDisplayList(gDisplayListHead++, d_course_sherbet_land_packed_dl_2B48);
             }
-            gDPPipeSync(gDisplayListHead++);
+            //gDPPipeSync(gDisplayListHead++);
             break;
         case COURSE_RAINBOW_ROAD:
-            gDPPipeSync(gDisplayListHead++);
+            //gDPPipeSync(gDisplayListHead++);
             mtxf_identity(matrix);
             render_set_position(matrix, 0);
             gSPClearGeometryMode(gDisplayListHead++, G_CULL_BACK);
             render_course_segments((uintptr_t) &d_course_rainbow_road_dl_list, arg0);
             gSPSetGeometryMode(gDisplayListHead++, G_CULL_BACK);
             gDPSetAlphaCompare(gDisplayListHead++, G_AC_NONE);
-            gDPPipeSync(gDisplayListHead++);
+            //gDPPipeSync(gDisplayListHead++);
             break;
         case COURSE_WARIO_STADIUM:
-            gDPPipeSync(gDisplayListHead++);
+            //gDPPipeSync(gDisplayListHead++);
             gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON);
             gSPClearGeometryMode(gDisplayListHead++, G_LIGHTING);
             gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_XLU_INTER, G_RM_NOOP2);
@@ -361,10 +361,10 @@ void func_8029122C(struct UnkStruct_800DC5EC* arg0, s32 playerId) {
             gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 1, 1, G_OFF);
             gSPSetGeometryMode(gDisplayListHead++, G_CULL_BACK);
             gDPSetAlphaCompare(gDisplayListHead++, G_AC_NONE);
-            gDPPipeSync(gDisplayListHead++);
+            //gDPPipeSync(gDisplayListHead++);
             break;
         case COURSE_DK_JUNGLE:
-            gDPPipeSync(gDisplayListHead++);
+            //gDPPipeSync(gDisplayListHead++);
             gSPClearGeometryMode(gDisplayListHead++, G_LIGHTING);
             gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON);
             gDPSetBlendMask(gDisplayListHead++, 0xFF);
@@ -514,7 +514,7 @@ void func_8029122C(struct UnkStruct_800DC5EC* arg0, s32 playerId) {
             }
             gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 1, 1, G_OFF);
             gDPSetAlphaCompare(gDisplayListHead++, G_AC_NONE);
-            gDPPipeSync(gDisplayListHead++);
+            //gDPPipeSync(gDisplayListHead++);
             break;
     }
 }
@@ -536,7 +536,7 @@ void render_mario_raceway(struct UnkStruct_800DC5EC* arg0) {
     gSPClearGeometryMode(gDisplayListHead++, G_LIGHTING);
     gDPSetCombineMode(gDisplayListHead++, G_CC_MODULATEIA, G_CC_MODULATEIA);
     gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON);
 
     switch (sp22) {
@@ -649,7 +649,7 @@ void render_choco_mountain(struct UnkStruct_800DC5EC* arg0) {
     gDPSetFogColor(gDisplayListHead++, D_801625EC, D_801625F4, D_801625F0, 0xFF);
     gSPFogPosition(gDisplayListHead++, D_802B87B0, D_802B87B4);
 
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gSPSetGeometryMode(gDisplayListHead++, G_FOG);
     gDPSetCombineMode(gDisplayListHead++, G_CC_MODULATERGB, G_CC_PASS2);
 
@@ -679,7 +679,7 @@ void render_choco_mountain(struct UnkStruct_800DC5EC* arg0) {
     gSPDisplayList(gDisplayListHead++, ((uintptr_t) d_course_choco_mountain_packed_dl_718));
     gSPClearGeometryMode(gDisplayListHead++, G_FOG);
     gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
 }
 
 void render_bowsers_castle(struct UnkStruct_800DC5EC* arg0) {
@@ -724,7 +724,7 @@ void render_banshee_boardwalk(struct UnkStruct_800DC5EC* arg0) {
 
     gSPFogPosition(gDisplayListHead++, D_802B87B0, D_802B87B4);
 
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
 
     gSPClearGeometryMode(gDisplayListHead++,
                          G_SHADE | G_CULL_BOTH | G_FOG | G_LIGHTING | G_TEXTURE_GEN | G_TEXTURE_GEN_LINEAR | G_LOD);
@@ -766,17 +766,17 @@ void render_banshee_boardwalk(struct UnkStruct_800DC5EC* arg0) {
     render_set_position(spCC, 0);
 
     gSPDisplayList(gDisplayListHead++, d_course_banshee_boardwalk_dl_B278);
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
 }
 
 void render_yoshi_valley(struct UnkStruct_800DC5EC* arg0) {
 
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gDPSetCombineMode(gDisplayListHead++, G_CC_MODULATEI, G_CC_MODULATEI);
     gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
     gSPClearGeometryMode(gDisplayListHead++, G_LIGHTING);
     render_course_segments((uintptr_t) d_course_yoshi_valley_dl_list, arg0);
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
 }
 
 void render_frappe_snowland(struct UnkStruct_800DC5EC* arg0) {
@@ -799,7 +799,7 @@ void render_frappe_snowland(struct UnkStruct_800DC5EC* arg0) {
 
 void render_koopa_troopa_beach(struct UnkStruct_800DC5EC* arg0) {
 
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
     gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON);
     gSPClearGeometryMode(gDisplayListHead++, G_LIGHTING);
     gSPSetGeometryMode(gDisplayListHead++, G_SHADING_SMOOTH);
@@ -821,7 +821,7 @@ void render_koopa_troopa_beach(struct UnkStruct_800DC5EC* arg0) {
     // d_course_koopa_troopa_beach_packed_dl_2C0
     gSPDisplayList(gDisplayListHead++, ((uintptr_t) d_course_koopa_troopa_beach_packed_dl_2C0));
     gSPSetGeometryMode(gDisplayListHead++, G_CULL_BACK);
-    gDPPipeSync(gDisplayListHead++);
+    //gDPPipeSync(gDisplayListHead++);
 }
 
 void render_royal_raceway(struct UnkStruct_800DC5EC* arg0) {
