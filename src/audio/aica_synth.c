@@ -42,9 +42,6 @@ static int sAtexitDone = 0;
 #define MAX_VOICES 64
 #define ARAM_CACHE_ENTRIES 192
 #define AICA_LEN_MAX 65534
-#define AICA_OCTAVE_LOG 0   /* log ADPCM samples pitched past +1 octave -> FORCE_PCM candidates */
-/* Headroom for full-scale synth waves summing on the AICA mix bus (no HW overflow
-   protection). Out of 256 (256 = unity); tune on HW. */
 #define SYNTH_VOL_SCALE 192
 #define WAVE_SAMPLE_COUNT 64
 #define NUM_WAVEFORMS 6
@@ -374,50 +371,11 @@ void AicaSynth_Update(void) {
             v->channel = chn; v->active = 1; v->sampleKey = key; v->entry = entry;
             chan_start(chn, &res, freq, vol, pan);
             nStarted++;
-#if AICA_OCTAVE_LOG
-            /* Flag real ADPCM samples pitched past +1 octave (ratio = resamplingRateFixedPoint
-               /32768, x2 if hasTwoAdpcmParts > 2.0). AICA ADPCM pitch-clamps there -> add `key`
-               to FORCE_PCM_KEYS. One print per sample per new high; capped. */
-            if (!sub->isSyntheticWave && res.type == AICA_SM_ADPCM) {
-                u32 rate = sub->resamplingRateFixedPoint;
-                if (sub->hasTwoAdpcmParts) rate <<= 1;
-                if (rate > 2u * 32768u) {
-                    static u32 oKey[128]; static u32 oMax[128]; static s32 oN = 0;
-                    s32 j, hit = -1;
-                    for (j = 0; j < oN; j++) if (oKey[j] == key) { hit = j; break; }
-                    if (hit < 0 && oN < 128) { hit = oN++; oKey[hit] = key; oMax[hit] = 0; }
-                    if (hit >= 0 && rate > oMax[hit]) {
-                        oMax[hit] = rate;
-                        printf("OCTAVE key=%lX ratio=%lu.%03lu\n", (unsigned long)key,
-                               (unsigned long)(rate >> 15), (unsigned long)(((rate & 0x7FFFu) * 1000u) >> 15));
-                    }
-                }
-            }
-#endif
-#if 0
-            {
-                static int dbgStarts = 0;
-                if (dbgStarts < 48) {
-                    printf("AICAstart key=%lX synth=%d vol=%lu pan=%lu freq=%lu len=%lu loop=%lu shift=%d\n",
-                           (unsigned long)key, sub->isSyntheticWave, (unsigned long)vol,
-                           (unsigned long)pan, (unsigned long)freq, (unsigned long)res.length,
-                           (unsigned long)res.loop, res.downsample_shift);
-                    dbgStarts++;
-                }
-            }
-#endif
         } else {
             if (entry) cache_release(entry);
             chan_update(v->channel, freq, vol, pan);
         }
     }
-#if 0
-    if ((++sDbgFrame & 0x3F) == 0 && nEnabled) {
-        printf("AICAdbg en=%ld synth=%ld res=%ld fail=%ld start=%ld vol[%lu..%lu]\n",
-               (long)nEnabled, (long)nSynth, (long)nResolved, (long)nFail,
-               (long)nStarted, (unsigned long)dbgVolMin, (unsigned long)dbgVolMax);
-    }
-#endif
 
     __asm__ __volatile__("" ::: "memory");
     sInUpdate = 0;

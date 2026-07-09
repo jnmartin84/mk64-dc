@@ -542,15 +542,7 @@ void reset_texcache(void) {
 
 static inline uint32_t unpack_A(uint64_t key) {
     // Extract 19-bit field
-    uint32_t a19 = (uint32_t)((key >> 42) & 0x7FFFF);
-
-    // Shift back to original position (restore the lost low 5 bits as 0s)
-//    uint32_t a = (a19 << 5);
-
-    // Restore the constant top 8 bits (0x8C per your earlier note)
-//    a |= 0x8C000000;
-
-    return a19;
+    return (uint32_t)((key >> 42) & 0x7FFFF);
 }
 
 static inline uint64_t hash64(uint64_t key) {
@@ -566,11 +558,14 @@ void gfx_texture_cache_invalidate(void* orig_addr) {
 	size_t hash = (uintptr_t) segaddr;
 	hash = (hash >> 5) & 0x3ff;
 
-
 	uintptr_t addrcomp = ((uintptr_t)segaddr>>5)&0x7FFFF;
+
 	struct TextureHashmapNode** node = &gfx_texture_cache.hashmap[hash];
+
 	__builtin_prefetch(*node);
+
 	uintptr_t last_node = &gfx_texture_cache.pool[gfx_texture_cache.pool_pos];
+
 	while (*node != NULL && ((uintptr_t)*node < last_node)) {
 		__builtin_prefetch((*node)->next);
 		uintptr_t unpaddr = (uintptr_t)unpack_A((*node)->key);
@@ -1335,9 +1330,6 @@ static void  __attribute__((noinline)) gfx_sp_pop_matrix(uint32_t count) {
 	}
 }
 
-int nearz_clip_verts = 0;
-int total_verts = 0;
-
 // N64 per-vertex fog coefficient from clip z/w (matches OoT's raw-PVR path and the RSP
 // G_MWO_FOG math): fog = clamp(fog_mul*(z/w) + fog_offset, 0..255). Returns 0 when fog is
 // off (G_FOG clear) or the vertex is behind the near plane, so non-fogged frames pay nothing.
@@ -1503,8 +1495,8 @@ static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t
 
 static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
 	shz_xmtrx_load_4x4(&rsp.MP_matrix);
-    total_verts += n_vertices;
-    if (rsp.geometry_mode & G_LIGHTING) {
+
+	if (rsp.geometry_mode & G_LIGHTING) {
         if (rsp.lights_changed) {
             if (rsp.current_num_lights == 2) {
                 calculate_normal_dir(&rsp.current_lights[0], rsp.current_lights_coeffs[0]);
@@ -1526,10 +1518,6 @@ extern s32 gIsMirrorMode;
 static inline float approx_recip_sign(float v) {
 	return shz_fast_invf(v);
 }
-
-int total_tri=0;
-int rej_tri=0;
-int nearz_tri = 0;
 
 // ---- Software scissor: homogeneous Sutherland-Hodgman clip -------------------
 // A triangle is clipped in (baked) clip space against the eye plane (w>eps) and
@@ -1841,10 +1829,9 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
     struct LoadedVertex* v2 = &rsp.loaded_vertices[vtx2_idx];
     struct LoadedVertex* v3 = &rsp.loaded_vertices[vtx3_idx];
     struct LoadedVertex* v_arr[3] = { v1, v2, v3 };
-	//total_tri++;
-    if ((v1->clip_rej | v2->clip_rej | v3->clip_rej) != 0x3f) {
+
+	if ((v1->clip_rej | v2->clip_rej | v3->clip_rej) != 0x3f) {
         // The whole triangle lies outside the visible area
-		//rej_tri++;
 		return;
     }
 
@@ -2895,7 +2882,7 @@ static void  __attribute__((noinline)) gfx_draw_rectangle(int32_t ulx, int32_t u
 	if (cycle_type == G_CYC_COPY) {
 		rdp.other_mode_h = (rdp.other_mode_h & ~(3U << G_MDSFT_TEXTFILT)) | G_TF_POINT;
 	}
-	//frame_quads++;
+
 	// U10.2 coordinates
 	float ulxf = ulx;
 	float ulyf = uly;
@@ -2906,9 +2893,6 @@ static void  __attribute__((noinline)) gfx_draw_rectangle(int32_t ulx, int32_t u
 	ulyf = (ulyf / (4.0f * HALF_SCREEN_HEIGHT)) - 1.0f;
 	lrxf = lrxf / (4.0f * HALF_SCREEN_WIDTH) - 1.0f;
 	lryf = (lryf / (4.0f * HALF_SCREEN_HEIGHT)) - 1.0f;
-
-	// ulxf = gfx_adjust_x_for_aspect_ratio(ulxf);
-	// lrxf = gfx_adjust_x_for_aspect_ratio(lrxf);
 
 	ulxf = (ulxf * 320) + 320;
 	lrxf = (lrxf * 320) + 320;
@@ -3048,12 +3032,9 @@ static void  __attribute__((noinline)) gfx_dp_fill_rectangle(int32_t ulx, int32_
 		v->color.array.r = rdp.fill_color.r;
 	}
 
-//	uint32_t saved_combine_mode = rdp.combine_mode;
-//	gfx_dp_set_combine_mode(color_comb(0, 0, 0, G_CCMUX_SHADE), color_comb(0, 0, 0, G_ACMUX_SHADE));
 	gfx_draw_rectangle(ulx, uly, lrx, lry);
-//	rdp.combine_mode = saved_combine_mode;
 
-//	do_fill_rect = 0;
+	do_fill_rect = 0;
 }
 
 static void gfx_dp_set_z_image(void* z_buf_address) {
@@ -3402,7 +3383,6 @@ struct GfxRenderingAPI* gfx_get_current_rendering_api(void) {
 }
 
 void gfx_start_frame(void) {
-	//frame_quads = frame_tris = frame_verts = 0;
 	gfx_wapi->handle_events();
 }
 
@@ -3424,10 +3404,6 @@ void gfx_run(Gfx* commands) {
 }
 
 void gfx_end_frame(void) {
-	//printf("total vert %d nearz %d\n", total_verts, nearz_clip_verts);
-//	printf("total tri %d rej %d nearz %d\n", total_tri, rej_tri, nearz_tri);
-	total_verts = nearz_clip_verts = total_tri = rej_tri = nearz_tri = 0;
-	//printf("verts %d tris %d quads %d\n", frame_verts, frame_tris, frame_quads);
 	if (!dropped_frame) {
 		gfx_rapi->finish_render();
 		gfx_wapi->swap_buffers_end();
