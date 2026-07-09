@@ -792,11 +792,6 @@ static void gfx_pvr_init(void) {
     pvr_set_bg_color(0.0f, 0.0f, 0.0f);
 
     // Headers are compiled lazily per depth/texture/list state at draw time.
-
-    printf("=== MK64 DC: raw-PVR backend (gfx_pvr.c) ===\n");
-    printf("PVR_TEXHEAP init free=%u bytes (total texture VRAM after TA reservation)\n",
-           (unsigned) pvr_mem_available());
-    fflush(stdout);
 }
 
 static void gfx_pvr_on_resize(void) { }

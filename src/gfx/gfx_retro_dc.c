@@ -148,16 +148,6 @@ struct TextureHashmapNode {
 	struct TextureHashmapNode* next;
 	// 4
 	uint32_t texture_id;
-#if 0
-	// 8
-	const uint8_t* texture_addr;
-	// 16
-	uint16_t uls;
-	// 18
-	uint16_t ult;
-	// 20
-	uint8_t fmt, siz;
-#endif
 	// 8
 	uint64_t key;
 	// 16
@@ -174,8 +164,6 @@ struct TextureHashmapNode {
 	uint32_t pad2;
 	// 28
 	uint32_t pad3;
-	// 28
-//	uint32_t pad3;
 };
 
 struct TextureHashmapNode oops_node;
@@ -729,18 +717,6 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, int
 	}
 
 	*node = &gfx_texture_cache.pool[gfx_texture_cache.pool_pos++];
-	// DIAG: a healthy cache climbs pool_pos to the scene's texture count and STOPS (repeat
-	// lookups hit). If pool_pos keeps climbing in a static scene, every lookup is missing ->
-	// the cache is thrashing (allocating a fresh node + VRAM for a texture it already holds).
-	// Log the newkey + the addr/uls/ult/fmt/siz it came from so we can see WHICH field varies.
-	{
-		static uint32_t sNewNodeLog = 0;
-		if ((gfx_texture_cache.pool_pos & 63) == 0 || gfx_texture_cache.pool_pos > 900)
-			printf("CACHE_GROW pool_pos=%u newkey=%llx addr=%p uls=%u ult=%u fmt=%u siz=%u\n",
-			       (unsigned) gfx_texture_cache.pool_pos, (unsigned long long) newkey,
-			       segaddr, (unsigned) uls, (unsigned) ult, (unsigned) fmt, (unsigned) siz);
-		(void) sNewNodeLog;
-	}
 	if ((*node)->key == 0) {
 		(*node)->texture_id = gfx_rapi->new_texture();
 	}
@@ -1368,7 +1344,7 @@ int total_verts = 0;
 static inline uint8_t gfx_calc_fog(float z, float w) {
     if (!(rsp.geometry_mode & G_FOG)) return 0;
     if (z < -w) return 0;
-    float f = (float)rsp.fog_mul * (z / w) + (float)rsp.fog_offset;
+    float f = (float)rsp.fog_mul * (z * shz_fast_invf(w)) + (float)rsp.fog_offset;
     if (f > 255.0f) f = 255.0f;
     else if (f < 0.0f) f = 0.0f;
     return (uint8_t)f;
