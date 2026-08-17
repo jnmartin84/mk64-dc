@@ -82,6 +82,9 @@ int prev_frame_had_persp = 0;
 // foreground overlay (the logo) -> normal near screen_2d_z.
 int has_done_3d = 0;
 extern float screen_2d_z;   // defined later in this file; needed up here by gfx_sp_tri1
+// Z-off far-pin base + per-primitive draw-order stagger (reset each frame in gfx_start_frame;
+// see the comment at its use in gfx_sp_tri1). Base 1e-5 = the historical far-pin constant.
+static float far_pin_z = 0.00001f;
 
 struct ShaderProgram {
 	uint8_t enabled;
@@ -2120,6 +2123,17 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         screen_2d_z += 0.0005f;
         z2d = screen_2d_z;
     }
+    // Far-pin DRAW-ORDER STAGGER (ported from SF64's backdrop_far_z; fixes the skybox triangle
+    // slivers, e.g. KTB's blue sky band cutting through clouds): all Z-off geometry shares the far
+    // slab, but an EXACT z tie between two backdrop layers (sky bands vs cloud billboards, both
+    // autosort-TR) is resolved arbitrarily per tile -> per-triangle slivers. Give each successive
+    // far-pinned primitive a tiny increment so the later-drawn layer (N64 painter order) wins
+    // deterministically. Reset per frame; capped well below the course far plane (~1/30000).
+    float rz_far = 0.0f;
+    if (!ortho_overlay && !depth_test && n_tris > 0) {
+        rz_far = far_pin_z;
+        if (far_pin_z < 0.000025f) far_pin_z += 0.00000005f;
+    }
     // No buf_vbo on PVR. OP (kind 0) bakes this source-triangle's fan into the op_emit scratch and
     // DR-submits it after the fan; PT/TR (kind 1/2) bake DIRECTLY into their deferred bucket, reserved
     // here (n_tris*3 verts). `emit` is this fan's destination; op_n is the per-fan vertex counter.
@@ -2149,7 +2163,7 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
 			// Z is off (skybox AND the over-skybox clouds, which are Z-off ortho in a 3D frame).
 			bv->vert.z = ortho_overlay ? z2d
 										: depth_test    ? (zmode_decal ? invw * PVR_DECAL_ZBIAS : invw)
-										: 0.00001f;
+										: rz_far;   // far slab, draw-order staggered (see above)
 
 			if (use_texture) {
 				float u = (v_arr[i]->u - (float)(rdp.texture_tile.uls << 3)) * 0.03125f;
@@ -3383,6 +3397,7 @@ struct GfxRenderingAPI* gfx_get_current_rendering_api(void) {
 }
 
 void gfx_start_frame(void) {
+    far_pin_z = 0.00001f;   // far-pin stagger is per-frame (see gfx_sp_tri1)
 	gfx_wapi->handle_events();
 }
 
