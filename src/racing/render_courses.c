@@ -320,13 +320,18 @@ void func_8029122C(struct UnkStruct_800DC5EC* arg0, s32 playerId) {
             render_course_segments((uintptr_t) sherbet_land_dls_2, arg0);
 
             gDPSetAlphaCompare(gDisplayListHead++, G_AC_NONE);
-            if ((func_80290C20(arg0->camera) == 1) && (func_802AAB4C(player) < player->pos[1])) {
-                gSPSetGeometryMode(gDisplayListHead++, G_ZBUFFER);
-                gDPSetCombineMode(gDisplayListHead++, G_CC_SHADE, G_CC_SHADE);
-                gDPSetRenderMode(gDisplayListHead++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
-                // d_course_sherbet_land_packed_dl_2B48
-                gSPDisplayList(gDisplayListHead++, d_course_sherbet_land_packed_dl_2B48);
-            }
+            // DC: the conditional 27A8 BLACK MASKING FLOOR is intentionally NOT drawn. Its gate
+            // reads the camera-collision probe (func_80290C20: unk34, surfaceDistance[0] < 3.0f),
+            // which on DC sits marginally (sd0 flickering 2..4 mid-race) and fired during normal
+            // racing, painting opaque black over water regions the (no-depth-write) water owns —
+            // this was the long-standing "dark shape in the ice" (root-caused 2026-08-17, NOT a
+            // renderer bug; see memory project_mk64_sherbet_ice_depth). The floor only masks
+            // seeing under the ice when the camera hugs the water; the DC renderer draws a sane
+            // image there without it (HW-checked incl. low-camera angles). If camera-collision
+            // parity is ever fixed, the original N64 condition was:
+            //   if ((func_80290C20(arg0->camera) == 1) && (func_802AAB4C(player) < player->pos[1]))
+            //       -> gSPSetGeometryMode G_ZBUFFER; G_CC_SHADE; G_RM_AA_ZB_OPA_SURF;
+            //          gSPDisplayList(d_course_sherbet_land_packed_dl_2B48);
             //gDPPipeSync(gDisplayListHead++);
             break;
         case COURSE_RAINBOW_ROAD:
