@@ -61,6 +61,13 @@ s16 gLastAnimGroupSelector[4][8];
 s16 D_80165150[4][8];
 s16 D_80165190[4][8];
 s16 D_801651D0[4][8];
+// Set when a kart's sprite double-buffer slot is queued for a NEW frame (the gPlayersToRender
+// queue is exactly the changed set); consumed by the draw sites, which only then invalidate the
+// renderer's texture cache. Unconditional per-draw invalidation forced a full CI8 decode +
+// 8KB VRAM upload for every visible kart every frame (~60-70% of all triangle-setup time) even
+// while the sprite was unchanged. Palettes are static per race (loaded at spawn); star-power
+// flashes are prim/env tints, which the renderer tracks separately.
+u8 sKartTexRefreshed[4][8];
 
 void func_8001F980(s32* arg0, s32* arg1) {
     if ((gDemoMode == 1) || (D_80164A28 != 0) || (D_8015F894 != 0)) {
@@ -288,6 +295,7 @@ void init_render_player(Player* player, Camera* camera, s8 playerId, s8 screenId
                 if (D_801651D0[screenId][playerId] == 2) {
                     D_801651D0[screenId][playerId] = 0;
                 }
+                sKartTexRefreshed[screenId][playerId] = 1;
             } else {
                 if ((check_player_camera_collision(player, camera, D_80165574 + sp4C, D_80165576) == 1) & 0xFFFF) {
                     if (/* (sRenderingFramebuffer == gRenderingFramebufferByPlayer[playerId]) || */
@@ -306,6 +314,7 @@ void init_render_player(Player* player, Camera* camera, s8 playerId, s8 screenId
                         if (D_801651D0[screenId][playerId] == 2) {
                             D_801651D0[screenId][playerId] = 0;
                         }
+                        sKartTexRefreshed[screenId][playerId] = 1;
                     }
                 } else {
                     if (((gLastAnimFrameSelector[screenId][playerId] - player->animFrameSelector[screenId]) > 0x13) ||
@@ -323,6 +332,7 @@ void init_render_player(Player* player, Camera* camera, s8 playerId, s8 screenId
                         if (D_801651D0[screenId][playerId] == 2) {
                             D_801651D0[screenId][playerId] = 0;
                         }
+                        sKartTexRefreshed[screenId][playerId] = 1;
                     }
                 }
             }
@@ -1922,7 +1932,10 @@ void render_kart(Player* player, s8 playerId, s8 screenId, s8 arg3) {
             &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId - 1][playerId - 4].pixel_index_array[0];
     }
 
-    gfx_texture_cache_invalidate(sKartTexture);
+    if (sKartTexRefreshed[screenId][playerId]) {
+        gfx_texture_cache_invalidate(sKartTexture);
+        sKartTexRefreshed[screenId][playerId] = 0;
+    }
 
     mtxf_translate_rotate(kart_matrix, result_pos, orientation);
     mtxf_scale2(kart_matrix, gCharacterSize[player->characterId] * player->size);
@@ -2027,7 +2040,10 @@ void render_ghost(Player* player, s8 playerId, s8 screenId, s8 arg3) {
             &D_802BFB80.arraySize8[D_801651D0[screenId][playerId]][screenId - 1][playerId - 4].pixel_index_array[0];
     }
 
-    gfx_texture_cache_invalidate(sKartTexture);
+    if (sKartTexRefreshed[screenId][playerId]) {
+        gfx_texture_cache_invalidate(sKartTexture);
+        sKartTexRefreshed[screenId][playerId] = 0;
+    }
 
     mtxf_translate_rotate(sp12C, spDC, spD4);
     mtxf_scale2(sp12C, gCharacterSize[player->characterId] * player->size);

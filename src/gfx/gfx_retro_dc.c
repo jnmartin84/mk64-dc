@@ -86,6 +86,110 @@ extern float screen_2d_z;   // defined later in this file; needed up here by gfx
 // see the comment at its use in gfx_sp_tri1). Base 1e-5 = the historical far-pin constant.
 static float far_pin_z = 0.00001f;
 
+// ---- GFXPROF: per-frame renderer profile to serial (ported from sf64-dc) --------------------
+// One greppable line per second (every 60 frames) plus any frame whose interpreter walk exceeds
+// GFX_PROF_SLOW_US. walk = DL interpretation incl. TA submission, flush = PT/TR bucket replay
+// (rapi->end_frame), finish = pvr_scene_finish (blocks while the GPU finishes the previous
+// frame -> GPU-bound signal). Timer = SH4 PRFC0 elapsed cycles (perf_cntr_timer_enable in
+// gfx_init) — NEVER timer_us_gettime64 in hot loops (~10ms/frame at 5 reads/tri on sf64).
+// PRFC1 rotates through pipeline-freeze (stall) modes, one delta per walk, all 5 in ~40 frames.
+#define GFX_PROF 1
+#define GFX_PROF_SLOW_US 22000
+
+// Contiguous hot-code section (ported from sf64-dc): the per-frame hot path pinned into one
+// block so it cannot alias ITSELF in the SH4's 8KB direct-mapped I-cache — with LTO +
+// -fno-toplevel-reorder, unpinned layout shifts on any size change swung sf64's icache stall
+// by +/-1.7ms with identical workloads. Section order = symbol CREATION (first declaration)
+// order; the attribute BLOCKS inlining, so never put it on small static-inline helpers.
+#define GFX_HOT __attribute__((section(".text.hot.gfx")))
+#if GFX_PROF
+#include <dc/perfctr.h>
+static uint32_t prof_tris = 0, prof_verts = 0, prof_mtx = 0, prof_texup = 0, prof_frame = 0;
+static uint64_t prof_t_walk = 0, prof_t_flush = 0, prof_t_finish = 0;
+static uint64_t prof_t_vtx = 0, prof_t_tri = 0, prof_t_tri_setup = 0;
+static uint64_t prof_t_clip = 0, prof_t_bake = 0, prof_t_submit = 0;
+static uint32_t prof_evals = 0, prof_hits = 0, prof_stamps = 0, prof_setups = 0;
+static uint64_t prof_t_quad = 0, prof_t_mtx = 0;
+static uint32_t prof_quads = 0;
+static uint32_t prof_op_verts = 0, prof_pt_verts = 0, prof_tr_verts = 0;
+static uint64_t prof_su[4];   // setup sections: 0 depth/fog/viewport, 1 combiner/shader/blend, 2 texture, 3 texenv/key/prepare
+static const struct { int mode; const char* name; } prof_stall_modes[] = {
+    { PMCR_PIPELINE_FREEZE_BY_ICACHE_MISS_MODE, "icache" }, { PMCR_PIPELINE_FREEZE_BY_DCACHE_MISS_MODE, "dcache" },
+    { PMCR_PIPELINE_FREEZE_BY_FPU_MODE, "fpu" },            { PMCR_PIPELINE_FREEZE_BY_BRANCH_MODE, "branch" },
+    { PMCR_PIPELINE_FREEZE_BY_CPU_REGISTER_MODE, "reg" },
+};
+static int prof_stall_idx = 0;
+static uint64_t prof_stall_walk = 0;
+#define PROF_NOW() perf_cntr_count(PRFC0)
+#define PROF_US(c) ((unsigned long) ((c) / 200u))
+#define PROF_INC(x) ((x)++)
+#define PROF_ADD(x, n) ((x) += (n))
+#else
+#define PROF_INC(x) ((void) 0)
+#define PROF_ADD(x, n) ((void) 0)
+#endif
+
+// ---- Per-loaded-vertex combiner-eval cache (ported from sf64-dc) ----------------------------
+// pvr_eval_combiner runs per vertex per triangle, and a mesh vertex is shared by ~4-6 tris, so
+// evaluate ONCE per loaded vertex per combiner STATE: the result (argb/oargb, without the
+// per-vertex fog byte, which is OR'd in after) is cached by vertex slot and stamped with the
+// combiner-state stamp; gfx_sp_vertex invalidates the slots it reloads; a state-key change
+// (combine words, prim, env, texenv+textured, cycle type) bumps the stamp. Near-clip/scissor
+// fan temporaries (clip_bufA/B) fall outside the slot range and bypass the cache. Semantically
+// INERT: every input pvr_eval_combiner reads is either in the key or per-vertex-invalidated.
+static struct { uint32_t stamp, argb, oargb; } cc_cache[MAX_VERTICES + 4];
+static uint32_t cc_state_stamp = 1;
+// [0] starts at an impossible value (real combine w0 always carries the 0xFC opcode byte) so
+// the very first triangle is guaranteed to take the key-change path and set up ccp_active.
+static uint32_t cc_last_key[6] = { 0xFFFFFFFFu, 0, 0, 0, 0, 0 };
+static inline void cc_cache_invalidate(int first, int n) {
+    for (int i = 0; i < n && first + i < MAX_VERTICES + 4; i++) cc_cache[first + i].stamp = 0;
+}
+// Recent-state stamp table: MK64 alternates materials constantly (track/kart/track...), and a
+// monotonically-new stamp per change meant a RETURNING state invalidated every cached vertex
+// (28% hit rate measured). A state seen recently reuses its old stamp instead, so vertices
+// evaluated under it (and not reloaded since) hit again. Stamps are never reassigned to a
+// different key, so a stamp match still uniquely identifies (state, vertex-shade) — inert.
+// On 32-bit stamp wrap (~days of play) everything is cleared. Slot stamp 0 = empty (never
+// matches, and vertex-invalidate also writes stamp 0).
+// Prepared combiner (built once per NEW state, ~25/frame): every state-constant part of
+// pvr_eval_combiner — mux bit-decode, term selection, prim/env float conversion, branch
+// classification — resolved ahead of time. Each of the 16 (a-b)*c+d terms becomes either a
+// constant or a shade-channel/shade-alpha select; the per-vertex fast path evaluates the SAME
+// formula in the SAME order with the SAME clamps, so results are bit-identical to the generic
+// evaluator (which stays as-is for the 2D quad path).
+struct ccp_term { uint8_t sel; float k; };   // sel: 0=const k, 1=shade[ch], 2=shade[3]
+struct ccp {
+    uint8_t replace;       // GFX_TEXENV_REPLACE: constant {argb=~0, oargb=0}
+    uint8_t cct;           // color_const_textured: whole colour -> oargb, argb.rgb = 0
+    uint8_t offset;        // additive PRIM/ENV 'd' routed to constant oargb
+    uint8_t pad;
+    uint32_t oargb_const;  // the offset case's oargb (state-constant)
+    struct ccp_term c[3][4];   // per colour channel: a, b, c, d
+    struct ccp_term a[4];      // alpha: aa, ab, ac, ad (only const / shade[3])
+};
+#define CC_STATE_SLOTS 16
+static struct { uint32_t key[6]; uint32_t stamp; struct ccp prep; } cc_states[CC_STATE_SLOTS];
+static uint32_t cc_next_stamp = 1;
+static uint32_t cc_state_rr = 0;
+static const struct ccp* ccp_active = NULL;   // current state's prepared combiner
+static int cc_active_slot = -1;               // its slot: protected from ring eviction
+
+// ---- Triangle state-setup hoist (ported from sf64-dc; its single biggest CPU win) -----------
+// The full per-triangle state derivation (depth/fog/viewport flushes, combiner+shader lookup,
+// OP/PT/TR routing, texture import/bind, texenv, cc-cache key) only changes when a non-TRI DL
+// opcode runs, so it is derived ONCE per rdp_state_gen change (~140/frame) instead of per
+// triangle (~800/frame). gfx_run_dl bumps the gen on every opcode EXCEPT the pure-geometry ones
+// (TRI1/TRI2/QUAD/VTX/MTX/POPMTX/DL/ENDDL) and the 2D rect ops; the 2D quad path mutates backend
+// state directly, so it bumps the gen itself when it finishes. gfx_run bumps once per frame.
+static uint32_t rdp_state_gen = 1, tri_setup_gen = 0;
+static struct {
+    uint8_t depth_test, zmode_decal, use_texture, linear_filter;
+    uint16_t uls, ult;              // texture_tile snapshot for the bake loop's UV math
+    uint32_t texenv;
+    float recip_tex_width, recip_tex_height;
+} ts;
+
 struct ShaderProgram {
 	uint8_t enabled;
 	uint32_t shader_id;
@@ -442,6 +546,45 @@ static dc_fast_t __attribute__((aligned(32))) quad_vbo[2 * 3];           // 2 tr
 static dc_fast_t __attribute__((aligned(32))) op_emit[6 * 3];
 extern void pvr_submit_op(const dc_fast_t *tris, size_t n);
 extern dc_fast_t *pvr_reserve(int kind, size_t n);
+
+// Inline OP submit for the per-triangle path (ported from sf64-dc; the 2D paths still use the
+// backend's pvr_submit_op): the backend call + per-vertex DR loop were out-of-object hops per
+// triangle whose addresses alias the hot front-end code at the linker's whim (8KB direct-mapped
+// I-cache). Same semantics: header re-emit only when dirty, then one SQ bulk ship of n verts —
+// which requires the bake loop to stamp the strip flags at vertex creation (VERTEX/VERTEX_EOL).
+extern uint8_t gfx_pvr_op_dirty;
+extern void pvr_emit_op_header_slow(void);
+// KOS sq_fast_cpy's loop (pair-single fmov.d, one SQ line per iteration), inlined. dst = SQ area
+// address, src 32B-aligned, n = number of 32-byte lines (> 0). fschg is balanced inside the asm.
+static inline void pvr_sq_ship(void *dst, const void *src, size_t n) {
+    void *t;
+    __asm__ __volatile__(
+        "fschg\n"
+        "1:\n\t"
+        "fmov.d @%[s]+, dr0\n\t"
+        "mov    %[d], %[t]\n\t"
+        "fmov.d @%[s]+, dr2\n\t"
+        "add    #32, %[t]\n\t"
+        "fmov.d @%[s]+, dr4\n\t"
+        "fmov.d @%[s]+, dr6\n\t"
+        "pref   @%[s]\n\t"
+        "dt     %[n]\n\t"
+        "fmov.d dr6, @-%[t]\n\t"
+        "fmov.d dr4, @-%[t]\n\t"
+        "fmov.d dr2, @-%[t]\n\t"
+        "fmov.d dr0, @-%[t]\n\t"
+        "add    #32, %[d]\n\t"
+        "bf.s   1b\n\t"
+        "pref   @%[t]\n\t"
+        "fschg"
+        : [d] "+r" (dst), [s] "+r" (src), [n] "+r" (n), [t] "=&r" (t)
+        :
+        : "fr0", "fr1", "fr2", "fr3", "fr4", "fr5", "fr6", "fr7", "memory", "t");
+}
+static inline void pvr_submit_op_inline(const dc_fast_t *tris, size_t n) {
+    if (gfx_pvr_op_dirty) pvr_emit_op_header_slow();
+    pvr_sq_ship(SQ_MASK_DEST(PVR_TA_INPUT), tris, n);
+}
 #endif
 
 static struct GfxWindowManagerAPI* gfx_wapi;
@@ -540,7 +683,15 @@ static  __attribute__((noinline)) struct ColorCombiner* gfx_lookup_or_create_col
 void gfx_clear_texidx(GLuint texidx);
 
 void reset_texcache(void) {
+	// Full wipe (matches sf64-dc), not just pool_pos: nuke_everything / the VRAM watchdog reset
+	// the BACKEND id allocator (gfx_pvr_clear_all_textures: sTexCount=0) right before this runs.
+	// If the node keys survive, reused nodes keep their OLD texture ids while fresh nodes get
+	// RE-ISSUED ids from 1 — two front-end entries then share one backend slot, and every upload
+	// swaps that slot's contents/dims under the other owner: wrong textures everywhere, squashed
+	// UV scales, and free/malloc size flip-flop churn that fragments the PVR heap into the menu
+	// OOM. Clearing the keys makes every node re-request an id, keeping the id spaces aligned.
 	gfx_texture_cache.pool_pos = 0;
+	memset(&gfx_texture_cache, 0, sizeof(gfx_texture_cache));
 }
 
 static inline uint32_t unpack_A(uint64_t key) {
@@ -1167,6 +1318,7 @@ static __attribute__((noinline)) void import_texture_ci8(int tile) {
 }
 
 static void __attribute__((noinline)) import_texture(int tile) {
+	PROF_INC(prof_texup);
 	uint8_t fmt = rdp.texture_tile.fmt;
 	uint8_t siz = rdp.texture_tile.siz;
 
@@ -1265,6 +1417,10 @@ static int matrix_dirty = 0;
 
 extern void *memcpy32(void *restrict dst, const void *restrict src, size_t bytes);
 static __attribute__((noinline)) void gfx_sp_matrix(uint8_t parameters, const int32_t* addr) {
+	PROF_INC(prof_mtx);
+#if GFX_PROF
+	uint64_t prof_t0 = PROF_NOW();
+#endif
 	int32_t* saddr = (int32_t*) segmented_to_virtual((void*) addr);
 	float matrix[4][4] __attribute__((aligned(32)));
 #ifndef GBI_FLOATS
@@ -1317,6 +1473,9 @@ static __attribute__((noinline)) void gfx_sp_matrix(uint8_t parameters, const in
 	}
 	gfx_matrix_mul(rsp.MP_matrix, rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1],
 					rsp.P_matrix);
+#if GFX_PROF
+	prof_t_mtx += PROF_NOW() - prof_t0;
+#endif
 }
 
 static void  __attribute__((noinline)) gfx_sp_pop_matrix(uint32_t count) {
@@ -1345,7 +1504,7 @@ static inline uint8_t gfx_calc_fog(float z, float w) {
     return (uint8_t)f;
 }
 
-static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
+static void __attribute__((noinline)) GFX_HOT gfx_sp_vertex_light(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
     for (size_t i = 0; i < n_vertices; i++, dest_index++) {
         const Vtx_t* v = &vertices[i].v;
         const Vtx_tn* vn = &vertices[i].n;
@@ -1455,7 +1614,7 @@ static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, siz
     }
 }
 
-static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
+static void __attribute__((noinline)) GFX_HOT gfx_sp_vertex_no(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
     for (size_t i = 0; i < n_vertices; i++, dest_index++) {
         const Vtx_t* v = &vertices[i].v;
         struct LoadedVertex* d = &rsp.loaded_vertices[dest_index];
@@ -1496,7 +1655,13 @@ static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t
     }
 }
 
-static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
+static void __attribute__((noinline)) GFX_HOT gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
+	// Reloaded slots carry new shade colours -> their cached combiner results are stale.
+	cc_cache_invalidate((int) dest_index, (int) n_vertices);
+	PROF_ADD(prof_verts, n_vertices);
+#if GFX_PROF
+	uint64_t prof_t0 = PROF_NOW();
+#endif
 	shz_xmtrx_load_4x4(&rsp.MP_matrix);
 
 	if (rsp.geometry_mode & G_LIGHTING) {
@@ -1514,6 +1679,9 @@ static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t de
     } else {
         gfx_sp_vertex_no(n_vertices, dest_index, vertices);
     }
+#if GFX_PROF
+	prof_t_vtx += PROF_NOW() - prof_t0;
+#endif
 }
 
 extern s32 gIsMirrorMode;
@@ -1575,7 +1743,7 @@ static inline float clip_dist(const struct LoadedVertex* v, const float p[5]) {
 	return p[0] * v->_x + p[1] * v->_y + p[2] * v->_z + p[3] * v->_w + p[4];
 }
 
-static int clip_against_plane(const struct LoadedVertex* in, int n, struct LoadedVertex* out, const float p[5]) {
+static int GFX_HOT clip_against_plane(const struct LoadedVertex* in, int n, struct LoadedVertex* out, const float p[5]) {
 	int m = 0;
 	for (int i = 0; i < n; i++) {
 		const struct LoadedVertex* cur = &in[i];
@@ -1603,7 +1771,7 @@ static int clip_against_plane(const struct LoadedVertex* in, int n, struct Loade
 // guarantees clipping a crossed plane can't push verts outside an un-crossed one.
 // The eye (w>eps) plane is mapped to SC_FORCE and clipped FIRST so the scissor
 // passes see w>0.
-static int gfx_build_clipped_fan(const struct LoadedVertex* a, const struct LoadedVertex* b,
+static int GFX_HOT gfx_build_clipped_fan(const struct LoadedVertex* a, const struct LoadedVertex* b,
                                  const struct LoadedVertex* c, struct LoadedVertex* out_tris[][3],
                                  uint8_t clip_mask) {
 	static const uint8_t plane_bit[5] = { SC_FORCE, SC_LEFT, SC_RIGHT, SC_BOTTOM, SC_TOP };
@@ -1819,6 +1987,135 @@ static inline void pvr_eval_combiner(uint32_t w0, uint32_t w1, const struct RGBA
 
 	*out_argb = PACK_ARGB8888(col[0], col[1], col[2], col[3]);
 }
+
+// ---- Prepared-combiner build + fast per-vertex eval (see struct ccp) ------------------------
+// The three resolvers mirror pvr_cc4 / pvr_cc5 / pvr_ca EXACTLY, mapping each mux to a
+// state-constant or a shade select. Any divergence here breaks bit-identity with the generic
+// evaluator — change them only in lockstep.
+static struct ccp_term ccp_res4(int mux, int ch, float texv, const float prim[4], const float env[4]) {
+	struct ccp_term t = { 0, 0.0f };
+	switch (mux) {
+		case 1: case 2: t.k = texv; break;
+		case 3: t.k = prim[ch]; break;
+		case 4: t.sel = 1; break;
+		case 5: t.k = env[ch]; break;
+		case 6: t.k = 1.0f; break;
+		default: break;
+	}
+	return t;
+}
+static struct ccp_term ccp_res5(int mux, int ch, float texv, const float prim[4], const float env[4]) {
+	struct ccp_term t = { 0, 0.0f };
+	switch (mux) {
+		case 1: case 2: case 8: case 9: t.k = texv; break;
+		case 3: t.k = prim[ch]; break;
+		case 4: t.sel = 1; break;
+		case 5: t.k = env[ch]; break;
+		case 6: t.k = 1.0f; break;
+		case 10: t.k = prim[3]; break;
+		case 11: t.sel = 2; break;
+		case 12: t.k = env[3]; break;
+		default: break;
+	}
+	return t;
+}
+static struct ccp_term ccp_resa(int mux, const float prim[4], const float env[4]) {
+	struct ccp_term t = { 0, 0.0f };
+	switch (mux) {
+		case 1: case 2: case 6: t.k = 1.0f; break;
+		case 3: t.k = prim[3]; break;
+		case 4: t.sel = 2; break;
+		case 5: t.k = env[3]; break;
+		default: break;
+	}
+	return t;
+}
+
+// Build the prepared combiner for the CURRENT rdp state (same inputs as the cc key: combine
+// words, prim, env, texenv+textured, cycle type). Mirrors pvr_eval_combiner's classification
+// (has_texel, two_cycle, color_const_textured, offset) verbatim.
+static void __attribute__((noinline)) pvr_cc_prepare(struct ccp* p, uint32_t w0, uint32_t w1,
+                                                     int textured, uint32_t mode) {
+	memset(p, 0, sizeof(*p));
+	if (mode == GFX_TEXENV_REPLACE) { p->replace = 1; return; }
+
+	const float prim[4]  = { rdp.prim_color.r*recip255, rdp.prim_color.g*recip255, rdp.prim_color.b*recip255, rdp.prim_color.a*recip255 };
+	const float env[4]   = { rdp.env_color.r*recip255,  rdp.env_color.g*recip255,  rdp.env_color.b*recip255,  rdp.env_color.a*recip255 };
+	const float texv = (mode == GFX_TEXENV_DECAL) ? 0.0f : 1.0f;
+
+	int a = (w0 >> 20) & 0xF, b = (w1 >> 28) & 0xF, c = (w0 >> 15) & 0x1F, d = (w1 >> 15) & 0x7;
+	int aa = (w0 >> 12) & 0x7, ab = (w1 >> 12) & 0x7, ac = (w0 >> 9) & 0x7, ad = (w1 >> 9) & 0x7;
+
+	int has_texel = (a == 1 || a == 2 || b == 1 || b == 2 ||
+	                 c == 1 || c == 2 || c == 8 || c == 9 ||
+	                 d == 1 || d == 2);
+	int two_cycle = ((rdp.other_mode_h & (3U << G_MDSFT_CYCLETYPE)) == G_CYC_2CYCLE);
+	int cct = textured && !has_texel && !two_cycle;
+	int offset = (mode != GFX_TEXENV_DECAL) && !cct && (d == 3 || d == 5) && has_texel;
+	p->cct = (uint8_t) cct;
+	p->offset = (uint8_t) offset;
+
+	for (int ch = 0; ch < 3; ch++) {
+		p->c[ch][0] = ccp_res4(a, ch, texv, prim, env);
+		p->c[ch][1] = ccp_res4(b, ch, texv, prim, env);
+		p->c[ch][2] = ccp_res5(c, ch, texv, prim, env);
+		// cct evaluates the FULL d; the non-cct path zeroes d when routed to oargb (offset).
+		if (!cct && offset) {
+			p->c[ch][3].sel = 0; p->c[ch][3].k = 0.0f;
+		} else {
+			p->c[ch][3] = ccp_res4(d, ch, texv, prim, env);
+		}
+	}
+	if (offset) {
+		const float* o = (d == 3) ? prim : env;
+		p->oargb_const = PACK_ARGB8888((uint32_t)(o[0]*255.0f), (uint32_t)(o[1]*255.0f), (uint32_t)(o[2]*255.0f), 0);
+	}
+	p->a[0] = ccp_resa(aa, prim, env);
+	p->a[1] = ccp_resa(ab, prim, env);
+	p->a[2] = ccp_resa(ac, prim, env);
+	p->a[3] = ccp_resa(ad, prim, env);
+}
+
+static inline float ccp_term_val(const struct ccp_term* t, float sch, float sa) {
+	return t->sel == 0 ? t->k : (t->sel == 1 ? sch : sa);
+}
+
+// Per-vertex fast path: identical formula/order/clamps to pvr_eval_combiner, minus all the
+// state-constant work. Fog is NOT included (OR'd in by the caller, as with the generic eval).
+static inline void pvr_eval_combiner_fast(const struct ccp* p, const struct RGBA* sh,
+                                          uint32_t* out_argb, uint32_t* out_oargb) {
+	if (p->replace) { *out_argb = 0xFFFFFFFFu; *out_oargb = 0; return; }
+
+	const float shade[4] = { sh->r*recip255, sh->g*recip255, sh->b*recip255, sh->a*recip255 };
+	uint32_t col[4];
+	uint32_t oarr[3] = { 0, 0, 0 };
+	for (int ch = 0; ch < 3; ch++) {
+		float sch = shade[ch];
+		float va = ccp_term_val(&p->c[ch][0], sch, shade[3]);
+		float vb = ccp_term_val(&p->c[ch][1], sch, shade[3]);
+		float vc = ccp_term_val(&p->c[ch][2], sch, shade[3]);
+		float vd = ccp_term_val(&p->c[ch][3], sch, shade[3]);
+		float v = (va - vb) * vc + vd;
+		v = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+		if (p->cct) {
+			oarr[ch] = (uint32_t)(v * 255.0f);
+			col[ch] = 0;
+		} else {
+			col[ch] = (uint32_t)(v * 255.0f);
+		}
+	}
+
+	if (p->cct)          *out_oargb = PACK_ARGB8888(oarr[0], oarr[1], oarr[2], 0);
+	else if (p->offset)  *out_oargb = p->oargb_const;
+	else                 *out_oargb = 0;
+
+	float av = (ccp_term_val(&p->a[0], 0.0f, shade[3]) - ccp_term_val(&p->a[1], 0.0f, shade[3]))
+	           * ccp_term_val(&p->a[2], 0.0f, shade[3]) + ccp_term_val(&p->a[3], 0.0f, shade[3]);
+	av = av < 0.0f ? 0.0f : (av > 1.0f ? 1.0f : av);
+	col[3] = (uint32_t)(av * 255.0f);
+
+	*out_argb = PACK_ARGB8888(col[0], col[1], col[2], col[3]);
+}
 #endif
 
 // Coplanar-decal depth bias (N64 ZMODE_DEC). PVR z = 1/w (GEQUAL, larger == nearer); a decal
@@ -1827,59 +2124,14 @@ static inline void pvr_eval_combiner(uint32_t w0, uint32_t w1, const struct RGBA
 // vs far. Handled here in the front-end bake, so the backend's set_zmode_decal is a no-op. Tunable.
 #define PVR_DECAL_ZBIAS 1.003f
 
-static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx) {
-    struct LoadedVertex* v1 = &rsp.loaded_vertices[vtx1_idx];
-    struct LoadedVertex* v2 = &rsp.loaded_vertices[vtx2_idx];
-    struct LoadedVertex* v3 = &rsp.loaded_vertices[vtx3_idx];
-    struct LoadedVertex* v_arr[3] = { v1, v2, v3 };
-
-	if ((v1->clip_rej | v2->clip_rej | v3->clip_rej) != 0x3f) {
-        // The whole triangle lies outside the visible area
-		return;
-    }
-
-	if ((rsp.geometry_mode & G_CULL_BOTH) != 0) {
-		float rw1 = approx_recip_sign(v1->_w);
-		float rw2 = approx_recip_sign(v2->_w);
-		float rw3 = approx_recip_sign(v3->_w);
-
-        float dx1 = (v1->_x * rw1) - (v2->_x * rw2);
-        float dy1 = (v1->_y * rw1) - (v2->_y * rw2);
-        float dx2 = (v3->_x * rw3) - (v2->_x * rw2);
-        float dy2 = (v3->_y * rw3) - (v2->_y * rw2);
-        float cross = dx1 * dy2 - dy1 * dx2;
-
-        if ((v1->wlt0) ^ (v2->wlt0) ^ (v3->wlt0)) {
-            // If one vertex lies behind the eye, negating cross will give the correct result.
-            // If all vertices lie behind the eye, the triangle will be rejected anyway.
-            cross = -cross;
-        }
-
-        switch (!!gIsMirrorMode) {
-            case 0:
-                switch (rsp.geometry_mode & G_CULL_BOTH) {
-                    case G_CULL_FRONT:
-                        if (cross <= 0) {
-							return;
-                        }
-						break;
-                    case G_CULL_BACK:
-                        if (cross >= 0) {
-							return;
-                        }
-						break;
-                    case G_CULL_BOTH: {
-                        // Why is this even an option?
-                        return;
-						}
-						break;        
-					}
-                break;
-            case 1:
-                break;
-        }
-    }
-
+// Full triangle-state derivation (see the call site in gfx_sp_tri1_impl). Cold relative to
+// the per-triangle path, so NOT in the hot section.
+static void __attribute__((noinline)) gfx_tri_state_setup(void) {
+    tri_setup_gen = rdp_state_gen;
+    PROF_INC(prof_setups);
+#if GFX_PROF
+    uint64_t su_t = PROF_NOW();
+#endif
     uint8_t depth_test = (rsp.geometry_mode & G_ZBUFFER) == G_ZBUFFER;
     if (depth_test != rendering_state.depth_test) {
         gfx_flush();
@@ -1936,6 +2188,9 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         rdp.viewport_or_scissor_changed = 0;
     }
 
+#if GFX_PROF
+    { uint64_t n = PROF_NOW(); prof_su[0] += n - su_t; su_t = n; }
+#endif
     uint32_t cc_id = rdp.combine_mode;
 
     uint8_t use_alpha = (rdp.other_mode_l & (G_BL_A_MEM << 18)) == 0;
@@ -2018,6 +2273,9 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         }
     }
 
+#if GFX_PROF
+    { uint64_t n = PROF_NOW(); prof_su[1] += n - su_t; su_t = n; }
+#endif
     uint8_t num_inputs;
     uint8_t used_textures[2];
     gfx_rapi->shader_get_info(prg, &num_inputs, used_textures);
@@ -2041,6 +2299,9 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         }
     }
 
+#if GFX_PROF
+    { uint64_t n = PROF_NOW(); prof_su[2] += n - su_t; su_t = n; }
+#endif
     uint8_t use_texture = used_textures[0] || used_textures[1];
     uint32_t tex_width = (rdp.texture_tile.lrs - rdp.texture_tile.uls + 4) >> 2;
     uint32_t tex_height = (rdp.texture_tile.lrt - rdp.texture_tile.ult + 4) >> 2;
@@ -2058,6 +2319,154 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         gfx_rapi->set_tex_env(texenv);
         rendering_state.tex_env = texenv;
     }
+
+    // Combiner-eval cache key (see cc_cache): covers every non-per-vertex input of
+    // pvr_eval_combiner — combine words, prim, env, texenv (encodes DECAL's texv=0),
+    // textured, cycle type (the two_cycle read of other_mode_h). Any change -> new stamp
+    // -> each vertex re-evaluates once; unchanged state -> per-vertex cache hits below.
+    {
+        uint32_t k0 = rdp.combine_w0, k1 = rdp.combine_w1;
+        uint32_t k2 = PACK_ARGB8888(rdp.prim_color.r, rdp.prim_color.g, rdp.prim_color.b, rdp.prim_color.a);
+        uint32_t k3 = PACK_ARGB8888(rdp.env_color.r, rdp.env_color.g, rdp.env_color.b, rdp.env_color.a);
+        uint32_t k4 = texenv | ((uint32_t) use_texture << 8);
+        uint32_t k5 = rdp.other_mode_h & (3U << G_MDSFT_CYCLETYPE);
+        if (k0 != cc_last_key[0] || k1 != cc_last_key[1] || k2 != cc_last_key[2] ||
+            k3 != cc_last_key[3] || k4 != cc_last_key[4] || k5 != cc_last_key[5]) {
+            cc_last_key[0] = k0; cc_last_key[1] = k1; cc_last_key[2] = k2;
+            cc_last_key[3] = k3; cc_last_key[4] = k4; cc_last_key[5] = k5;
+            // A recently-seen state reuses its stamp (vertices cached under it hit again);
+            // only a genuinely new state mints a fresh stamp.
+            int found = -1;
+            for (int s = 0; s < CC_STATE_SLOTS; s++) {
+                if (cc_states[s].stamp != 0 &&
+                    cc_states[s].key[0] == k0 && cc_states[s].key[1] == k1 &&
+                    cc_states[s].key[2] == k2 && cc_states[s].key[3] == k3 &&
+                    cc_states[s].key[4] == k4 && cc_states[s].key[5] == k5) {
+                    found = s;
+                    break;
+                }
+            }
+            if (found >= 0) {
+                cc_state_stamp = cc_states[found].stamp;
+                ccp_active = &cc_states[found].prep;
+                cc_active_slot = found;
+            } else {
+                if (++cc_next_stamp == 0) {
+                    // Stamp wrap: a stale vertex entry could otherwise alias a reused stamp
+                    // value under a different key. Nuke all cached results + the state table.
+                    memset(cc_cache, 0, sizeof(cc_cache));
+                    memset(cc_states, 0, sizeof(cc_states));
+                    cc_next_stamp = 1;
+                }
+                cc_state_stamp = cc_next_stamp;
+                int slot = (int) (cc_state_rr++ & (CC_STATE_SLOTS - 1));
+                if (slot == cc_active_slot)   // never evict the slot ccp_active points into
+                    slot = (int) (cc_state_rr++ & (CC_STATE_SLOTS - 1));
+                cc_states[slot].key[0] = k0; cc_states[slot].key[1] = k1;
+                cc_states[slot].key[2] = k2; cc_states[slot].key[3] = k3;
+                cc_states[slot].key[4] = k4; cc_states[slot].key[5] = k5;
+                cc_states[slot].stamp = cc_state_stamp;
+                pvr_cc_prepare(&cc_states[slot].prep, k0, k1, use_texture, texenv);
+                ccp_active = &cc_states[slot].prep;
+                cc_active_slot = slot;
+                PROF_INC(prof_stamps);   // stamps now counts genuinely NEW states only
+            }
+        }
+    }
+    // Snapshot everything the per-triangle path consumes (valid until the next gen bump).
+    ts.depth_test = depth_test; ts.zmode_decal = zmode_decal; ts.use_texture = use_texture;
+    ts.texenv = texenv; ts.recip_tex_width = recip_tex_width; ts.recip_tex_height = recip_tex_height;
+    ts.uls = rdp.texture_tile.uls; ts.ult = rdp.texture_tile.ult;
+    ts.linear_filter = (rdp.other_mode_h & (3U << G_MDSFT_TEXTFILT)) != G_TF_POINT;
+#if GFX_PROF
+    prof_su[3] += PROF_NOW() - su_t;
+#endif
+}
+
+static void __attribute__((noinline)) gfx_sp_tri1_impl(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx);
+static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx) {
+#if GFX_PROF
+    uint64_t t0 = PROF_NOW();
+    gfx_sp_tri1_impl(vtx1_idx, vtx2_idx, vtx3_idx);
+    prof_t_tri += PROF_NOW() - t0;
+#else
+    gfx_sp_tri1_impl(vtx1_idx, vtx2_idx, vtx3_idx);
+#endif
+}
+static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx) {
+    struct LoadedVertex* v1 = &rsp.loaded_vertices[vtx1_idx];
+    struct LoadedVertex* v2 = &rsp.loaded_vertices[vtx2_idx];
+    struct LoadedVertex* v3 = &rsp.loaded_vertices[vtx3_idx];
+    struct LoadedVertex* v_arr[3] = { v1, v2, v3 };
+
+	if ((v1->clip_rej | v2->clip_rej | v3->clip_rej) != 0x3f) {
+        // The whole triangle lies outside the visible area
+		return;
+    }
+
+	if ((rsp.geometry_mode & G_CULL_BOTH) != 0) {
+		float rw1 = approx_recip_sign(v1->_w);
+		float rw2 = approx_recip_sign(v2->_w);
+		float rw3 = approx_recip_sign(v3->_w);
+
+        float dx1 = (v1->_x * rw1) - (v2->_x * rw2);
+        float dy1 = (v1->_y * rw1) - (v2->_y * rw2);
+        float dx2 = (v3->_x * rw3) - (v2->_x * rw2);
+        float dy2 = (v3->_y * rw3) - (v2->_y * rw2);
+        float cross = dx1 * dy2 - dy1 * dx2;
+
+        if ((v1->wlt0) ^ (v2->wlt0) ^ (v3->wlt0)) {
+            // If one vertex lies behind the eye, negating cross will give the correct result.
+            // If all vertices lie behind the eye, the triangle will be rejected anyway.
+            cross = -cross;
+        }
+
+        switch (!!gIsMirrorMode) {
+            case 0:
+                switch (rsp.geometry_mode & G_CULL_BOTH) {
+                    case G_CULL_FRONT:
+                        if (cross <= 0) {
+							return;
+                        }
+						break;
+                    case G_CULL_BACK:
+                        if (cross >= 0) {
+							return;
+                        }
+						break;
+                    case G_CULL_BOTH: {
+                        // Why is this even an option?
+                        return;
+						}
+						break;        
+					}
+                break;
+            case 1:
+                break;
+        }
+    }
+
+    // Past cull/reject: this triangle is real work.
+    PROF_INC(prof_tris);
+#if GFX_PROF
+    uint64_t pt0 = PROF_NOW();
+#endif
+    // Hoisted state derivation: runs only when a non-geometry opcode bumped rdp_state_gen
+    // since the last triangle. Deliberately OUTSIDE the GFX_HOT section: it runs ~240x/frame
+    // vs ~2200 triangle calls, and inside tri1_impl it bloated the hot block past the 8KB
+    // I-cache (12.7KB measured) -> self-aliasing again.
+    if (tri_setup_gen != rdp_state_gen)
+        gfx_tri_state_setup();
+    const uint8_t depth_test = ts.depth_test;
+    const uint8_t zmode_decal = ts.zmode_decal;
+    const uint8_t use_texture = ts.use_texture;
+    const uint32_t texenv = ts.texenv;
+    const float recip_tex_width = ts.recip_tex_width;
+    const float recip_tex_height = ts.recip_tex_height;
+    int i;
+#if GFX_PROF
+    uint64_t pt1 = PROF_NOW(); prof_t_tri_setup += pt1 - pt0;
+#endif
 
     // Software scissor, classified from the three per-vertex scissor outcodes
     // (cheap byte ops, à la clip_rej). Refresh any outcode that went stale since
@@ -2108,6 +2517,9 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
         }
     }
 
+#if GFX_PROF
+    uint64_t pt2 = PROF_NOW(); prof_t_clip += pt2 - pt1;
+#endif
     // Ortho (2D-as-triangles) + Z-on geometry — e.g. the pause-menu glyph text — has
     // constant _w (1/w==1.0), so it would land in the 2D depth slot and get buried by the
     // dimming quad. Lift it into the 2D screen_2d_z scheme instead, advancing the same
@@ -2166,11 +2578,11 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
 										: rz_far;   // far slab, draw-order staggered (see above)
 
 			if (use_texture) {
-				float u = (v_arr[i]->u - (float)(rdp.texture_tile.uls << 3)) * 0.03125f;
+				float u = (v_arr[i]->u - (float)(ts.uls << 3)) * 0.03125f;
 				// / 32.0f;
-				float v = (v_arr[i]->v - (float)(rdp.texture_tile.ult << 3)) * 0.03125f;
+				float v = (v_arr[i]->v - (float)(ts.ult << 3)) * 0.03125f;
 				// / 32.0f;
-				if ((rdp.other_mode_h & (3U << G_MDSFT_TEXTFILT)) != G_TF_POINT) {
+				if (ts.linear_filter) {
 					// Linear filter adds 0.5f to the coordinates
 					u += 0.5f;
 					v += 0.5f;
@@ -2180,24 +2592,47 @@ static void  __attribute__((noinline)) gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx
 			}
 
 			// ---- Per-vertex colour -------------------------------------------------
-			// Raw-PVR: evaluate the N64 colour+alpha combiner directly (replaces the
-			// mat_packed approximation), producing the modulate argb + additive oargb.
+			// Raw-PVR: the N64 colour+alpha combiner result, cached per loaded vertex per
+			// combiner state (cc_cache; key checked once per tri above). Clip-fan temporaries
+			// (clip_bufA/B) fall outside the slot range -> direct eval.
 			{
 				uint32_t _argb, _oargb;
-				pvr_eval_combiner(rdp.combine_w0, rdp.combine_w1, &v_arr[i]->color, use_texture, texenv, &_argb, &_oargb);
+				int vi = (int) (v_arr[i] - rsp.loaded_vertices);
+				int cacheable = vi >= 0 && vi < MAX_VERTICES + 4;
+				if (cacheable && cc_cache[vi].stamp == cc_state_stamp) {
+					_argb = cc_cache[vi].argb; _oargb = cc_cache[vi].oargb;
+					PROF_INC(prof_hits);
+				} else {
+					PROF_INC(prof_evals);
+					pvr_eval_combiner_fast(ccp_active, &v_arr[i]->color, &_argb, &_oargb);
+					if (cacheable) { cc_cache[vi].stamp = cc_state_stamp; cc_cache[vi].argb = _argb; cc_cache[vi].oargb = _oargb; }
+				}
 				// PVR vertex fog reads the fog density from the offset-colour (oargb) ALPHA. The
 				// combiner evaluator leaves that alpha 0 (only RGB carries the additive offset), so
-				// OR in this vertex's fog coefficient; the two share oargb without conflict.
+				// OR in this vertex's fog coefficient (per-vertex, so NOT part of the cached value).
 				_oargb |= (uint32_t)v_arr[i]->fog << 24;
 				bv->color.packed = _argb;
 				bv->pad0.vertindex = _oargb;
 			}
+			// Strip flags stamped at creation (TRIANGLES: EOL every 3rd) so the inline OP
+			// submit can bulk-SQ the whole fan. PT/TR bucket verts get flagged at flush time.
+			if (op_stream) bv->flags = (i == 2) ? VERTEX_EOL : VERTEX;
 			op_n += 1;
 		}
     } // for (ti) clipped-fan triangles
-    // OP baked its whole fan into the scratch — stream it to the live OP list now (one DR submit per
-    // source triangle; pvr_emit_op_header re-emits only on state change, so same-state runs are headerless).
-    if (op_stream && op_n) pvr_submit_op(op_emit, op_n);
+#if GFX_PROF
+    uint64_t pt3 = PROF_NOW(); prof_t_bake += pt3 - pt2;
+#endif
+    // OP baked its whole fan into the scratch — stream it to the live OP list now (one inline SQ
+    // ship per source triangle; the header re-emits only on state change, so same-state runs are
+    // headerless).
+    if (op_stream && op_n) pvr_submit_op_inline(op_emit, op_n);
+#if GFX_PROF
+    prof_t_submit += PROF_NOW() - pt3;
+    if (op_stream) PROF_ADD(prof_op_verts, op_n);
+    else if (pvr_cur_kind == 1) PROF_ADD(prof_pt_verts, op_n);
+    else PROF_ADD(prof_tr_verts, op_n);
+#endif
     // A real 3D (perspective) triangle has now drawn this frame -> subsequent 2D quads are
     // foreground overlays (near), not background. (Ortho 2D-as-tris like glyphs don't count.)
     if (n_tris > 0 && !proj_is_ortho)
@@ -2213,6 +2648,10 @@ extern void gfx_pvr_draw_triangles_2d(void* buf_vbo, size_t buf_vbo_len, size_t 
 #endif
 static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, uint8_t vtx1_idx2, uint8_t vtx2_idx2,
 						   uint8_t vtx3_idx2) {
+	PROF_INC(prof_quads);
+#if GFX_PROF
+	uint64_t prof_t0 = PROF_NOW();
+#endif
 	gfx_flush();
 	dc_fast_t* v1 = &rsp.loaded_vertices_2D[vtx1_idx];
 	dc_fast_t* v2 = &rsp.loaded_vertices_2D[vtx2_idx];
@@ -2509,6 +2948,12 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 	gfx_pvr_draw_triangles_2d((void*) quad_vbo, 0, use_texture);
 #else
 	gfx_opengl_draw_triangles_2d((void*) quad_vbo, 0, use_texture);
+#endif
+	// The 2D path mutates backend state (shader/blend/samplers/texenv/viewport) outside the
+	// hoisted setup's view -> force the next 3D triangle to re-derive.
+	rdp_state_gen++;
+#if GFX_PROF
+	prof_t_quad += PROF_NOW() - prof_t0;
 #endif
 }
 #endif
@@ -3076,12 +3521,26 @@ static inline void* seg_addr(uintptr_t w1) {
 int title_backdrop = 0;
 int use_one_inv = 0;
 int depth_off = 0;
-static void  __attribute__((noinline)) gfx_run_dl(Gfx* cmd) {
+static void  __attribute__((noinline)) GFX_HOT gfx_run_dl(Gfx* cmd) {
 	//printf("starting at %08x\n", cmd);
 
 	cmd = seg_addr((uintptr_t) cmd);
 	for (;;) {
 		uint32_t opcode = cmd->words.w0 >> 24;
+
+		// Any opcode except pure geometry (TRI/QUAD/VTX/MTX/POPMTX/DL/ENDDL) and the 2D rect
+		// ops can change triangle state -> bump the setup generation so the next triangle
+		// re-derives (gfx_tri_state_setup hoist). The 2D quad path bumps for itself (it
+		// mutates backend state directly), so the rect opcodes stay off this list.
+		{
+			uint8_t op8 = (uint8_t) opcode;
+			if (op8 != (uint8_t) G_TRI1 && op8 != (uint8_t) G_TRI2 && op8 != (uint8_t) G_QUAD &&
+			    op8 != (uint8_t) G_VTX && op8 != (uint8_t) G_MTX && op8 != (uint8_t) G_POPMTX &&
+			    op8 != (uint8_t) G_DL && op8 != (uint8_t) G_ENDDL &&
+			    op8 != (uint8_t) G_TEXRECT && op8 != (uint8_t) G_TEXRECTFLIP &&
+			    op8 != (uint8_t) G_FILLRECT && op8 != (uint8_t) G_SETFILLCOLOR)
+				rdp_state_gen++;
+		}
 
 		// custom f3d opcodes, sorry
 		if (cmd->words.w0 == 0x424C4E44) {
@@ -3390,6 +3849,11 @@ void gfx_init(struct GfxWindowManagerAPI* wapi, struct GfxRenderingAPI* rapi, co
 
 	memset(&oops_node, 0, sizeof(oops_node));
 	oops_node.texture_id = oops_texture_id;
+
+#if GFX_PROF
+	perf_cntr_timer_enable();   // PRFC0 elapsed CPU cycles for the GFXPROF timers
+	perf_cntr_start(PRFC1, prof_stall_modes[0].mode, PMCR_COUNT_CPU_CYCLES);
+#endif
 }
 
 struct GfxRenderingAPI* gfx_get_current_rendering_api(void) {
@@ -3412,16 +3876,64 @@ void gfx_run(Gfx* commands) {
 	dropped_frame = 0;
 
 	gfx_rapi->start_frame();
+	rdp_state_gen++;   // per-frame: backend headers reset in start_frame -> re-derive on first tri
+#if GFX_PROF
+	uint64_t t0 = PROF_NOW();
+	uint64_t st0 = perf_cntr_count(PRFC1);
+#endif
 	gfx_run_dl(commands);
+#if GFX_PROF
+	uint64_t t1 = PROF_NOW();
+	prof_stall_walk = perf_cntr_count(PRFC1) - st0;
+#endif
 	gfx_flush();
 	gfx_rapi->end_frame();
+#if GFX_PROF
+	prof_t_walk = t1 - t0; prof_t_flush = PROF_NOW() - t1;
+#endif
 	gfx_wapi->swap_buffers_begin();
 }
 
 void gfx_end_frame(void) {
 	if (!dropped_frame) {
+#if GFX_PROF
+		uint64_t t3 = PROF_NOW();
+#endif
 		gfx_rapi->finish_render();
+#if GFX_PROF
+		prof_t_finish = PROF_NOW() - t3;
+#endif
 		gfx_wapi->swap_buffers_end();
 	}
+#if GFX_PROF
+	prof_frame++;
+	int prof_slow = prof_t_walk > (uint64_t) GFX_PROF_SLOW_US * 200u;
+	if ((prof_frame % 60) == 0 || prof_slow) {
+		printf("GFXPROF f=%lu walk=%luus flush=%luus finish=%luus tris=%lu verts=%lu mtx=%lu texup=%lu "
+		       "op=%lu pt=%lu tr=%lu | vtx=%luus tri=%luus (setup=%luus clip=%luus bake=%luus submit=%luus) "
+		       "evals=%lu hits=%lu stamps=%lu setups=%lu su=%lu/%lu/%lu/%lu quads=%lu q=%luus mtx=%luus\n",
+		       (unsigned long) prof_frame, PROF_US(prof_t_walk), PROF_US(prof_t_flush), PROF_US(prof_t_finish),
+		       (unsigned long) prof_tris, (unsigned long) prof_verts, (unsigned long) prof_mtx,
+		       (unsigned long) prof_texup, (unsigned long) prof_op_verts, (unsigned long) prof_pt_verts,
+		       (unsigned long) prof_tr_verts, PROF_US(prof_t_vtx), PROF_US(prof_t_tri),
+		       PROF_US(prof_t_tri_setup), PROF_US(prof_t_clip), PROF_US(prof_t_bake), PROF_US(prof_t_submit),
+		       (unsigned long) prof_evals, (unsigned long) prof_hits, (unsigned long) prof_stamps,
+		       (unsigned long) prof_setups, PROF_US(prof_su[0]), PROF_US(prof_su[1]), PROF_US(prof_su[2]), PROF_US(prof_su[3]),
+		       (unsigned long) prof_quads, PROF_US(prof_t_quad), PROF_US(prof_t_mtx));
+		printf("GFXPROF   stall %s = %luus of walk\n",
+		       prof_stall_modes[prof_stall_idx].name, PROF_US(prof_stall_walk));
+	}
+	prof_tris = prof_verts = prof_mtx = prof_texup = 0;
+	prof_t_vtx = prof_t_tri = prof_t_tri_setup = prof_t_clip = prof_t_bake = prof_t_submit = 0;
+	prof_evals = prof_hits = prof_stamps = prof_setups = 0;
+	prof_t_quad = prof_t_mtx = 0; prof_quads = 0;
+	prof_op_verts = prof_pt_verts = prof_tr_verts = 0;
+	prof_su[0] = prof_su[1] = prof_su[2] = prof_su[3] = 0;
+	if ((prof_frame % 8) == 0) {   // rotate stall mode every 8 frames: all 5 modes in ~40
+		prof_stall_idx = (prof_stall_idx + 1) % (int) (sizeof(prof_stall_modes) / sizeof(prof_stall_modes[0]));
+		perf_cntr_stop(PRFC1); perf_cntr_clear(PRFC1);
+		perf_cntr_start(PRFC1, prof_stall_modes[prof_stall_idx].mode, PMCR_COUNT_CPU_CYCLES);
+	}
+#endif
 }
 
