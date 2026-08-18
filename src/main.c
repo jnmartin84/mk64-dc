@@ -112,6 +112,7 @@ OSMesg gSIEventMesgBuf[3];
 OSContStatus gControllerStatuses[4];
 OSContPad gControllerPads[4];
 u8 gControllerBits;
+u8 gKeyboardBit;
 // Contains a 32x32 grid of indices into gCollisionIndices containing indices into gCollisionMesh
 CollisionGrid gCollisionGrid[1024];
 u16 gNumActors;
@@ -664,14 +665,26 @@ int sd_x,sd_y;
 
 void init_controllers(void) {
     gControllerBits = 0;
+    gKeyboardBit = 0;
 
     maple_device_t *cont;
+    int detected = 0;
     for (int i=0;i<4;i++) {
         cont = NULL;
         cont = maple_enum_type(i, MAPLE_FUNC_CONTROLLER);
-        if (cont)
+        if (cont) {
             gControllerBits |= (1 << i);
+            ++detected;
+        }
     }
+
+    if(detected < 4) {
+        cont = maple_enum_type(0, MAPLE_FUNC_KEYBOARD);
+        if(cont) {
+            gControllerBits |= gKeyboardBit = (1 << detected);
+        }
+    }
+
     if ((gControllerBits & 1) == 0) {
         sIsController1Unplugged = 1;
     } else {
@@ -769,6 +782,88 @@ void init_controllers(void) {
 extern void __osPfsCloseAllFiles(void);
 u16 ucheld;
 u16 stick;
+
+void update_keyboard(s32 index) {
+	struct Controller* controller = &gControllers[index];
+    maple_device_t *kbd;
+    kbd_state_t *state;
+    ucheld = 0;
+    stick = 0;
+    controller->rawStickX = 0;
+    controller->rawStickY = 0;
+
+    kbd = maple_enum_type(0, MAPLE_FUNC_KEYBOARD);
+    if(!kbd) return;
+
+    state = maple_dev_status(kbd);
+
+    if (strcmp("/pc", fnpre) == 0)
+        if(state->key_states[KBD_KEY_ESCAPE].is_down) {
+            __osPfsCloseAllFiles();
+            exit(0);
+        }
+
+    if (state->key_states[KBD_KEY_SPACE].is_down)
+        ucheld |= 0x8000; //A_BUTTON
+
+    if (state->key_states[KBD_KEY_B].is_down ||
+        state->key_states[KBD_KEY_C].is_down)
+        ucheld |= 0x4000; //B_BUTTON
+
+    if (state->key_states[KBD_KEY_ENTER].is_down)
+       ucheld |= 0x1000; //START_BUTTON
+
+    if (state->key_states[KBD_KEY_Q].is_down)
+        ucheld |= 0x0020; //L_TRIG
+    if (state->key_states[KBD_KEY_Z].is_down)
+        ucheld |= 0x2000; //Z_TRIG
+    if (state->key_states[KBD_KEY_E].is_down ||
+        state->key_states[KBD_KEY_X].is_down)
+        ucheld |= 0x0010; //R_TRIG
+
+    if (state->key_states[KBD_KEY_UP].is_down) {
+        controller->rawStickY = 60;
+        ucheld |= U_JPAD;
+    }
+    if (state->key_states[KBD_KEY_DOWN].is_down) {
+        controller->rawStickY = -60;
+        ucheld |= D_JPAD;
+    }
+    if (state->key_states[KBD_KEY_LEFT].is_down) {
+        controller->rawStickX = -60;
+        ucheld |= L_JPAD;
+    }
+    if (state->key_states[KBD_KEY_RIGHT].is_down) {
+        controller->rawStickX = 60;
+        ucheld |= R_JPAD;
+    }
+
+    controller->buttonPressed = ucheld & (ucheld ^ controller->button);
+    controller->buttonDepressed = controller->button & (ucheld ^ controller->button);
+    controller->button = ucheld;
+
+    if (state->key_states[KBD_KEY_A].is_down) {
+        controller->rawStickX = -60;
+        stick |= L_JPAD;
+    }
+    if (state->key_states[KBD_KEY_D].is_down) {
+        controller->rawStickX = 60;
+        stick |= R_JPAD;
+    }
+    if (state->key_states[KBD_KEY_S].is_down) {
+        stick |= D_JPAD;
+        controller->rawStickY = 60;
+    }
+    if (state->key_states[KBD_KEY_W].is_down) {
+        stick |= U_JPAD;
+        controller->rawStickY = 60;
+    }
+
+    controller->stickPressed = stick & (stick ^ controller->stickDirection);
+    controller->stickDepressed = controller->stickDirection & (stick ^ controller->stickDirection);
+    controller->stickDirection = stick;
+}
+#if 0
 void update_controller(s32 index) {
 	struct Controller* controller = &gControllers[index];
     maple_device_t *cont;
@@ -861,6 +956,106 @@ void update_controller(s32 index) {
     controller->stickDepressed = controller->stickDirection & (stick ^ controller->stickDirection);
     controller->stickDirection = stick;
 }
+#endif
+
+void update_controller(s32 index) {
+    struct Controller* controller = &gControllers[index];
+    maple_device_t *cont;
+    cont_state_t *state;
+    ucheld = 0;
+    stick = 0;
+
+    if (index > 3)
+        return;
+    if((1 << index) == gKeyboardBit) {
+        update_keyboard(index);
+        return;
+    }
+    cont = maple_enum_type(index, MAPLE_FUNC_CONTROLLER);
+    if (!cont)
+        return;
+    state = maple_dev_status(cont);
+
+    if (strcmp("/pc", fnpre) == 0) {
+        if ((state->buttons & CONT_START) && 
+        (state->buttons & CONT_A) &&
+        (state->buttons & CONT_B) &&
+        (state->buttons & CONT_X) &&
+        (state->buttons & CONT_Y)) {
+        //state->ltrig && state->rtrig) {
+            //profiler_stop();
+            //profiler_clean_up();
+            // stop the AICA voice driver cleanly before teardown (the audio
+            // thread is still running AicaSynth_Update on the sound RAM here)
+            extern void AicaSynth_Shutdown(void);
+            AicaSynth_Shutdown();
+            // give vmu a chance to write and close
+            __osPfsCloseAllFiles();
+            exit(0);
+        }
+    }
+
+    const char stickH =state->joyx;
+    const char stickV = 0xff-((uint8_t)(state->joyy));
+    controller->rawStickX = ((float)stickH/127)*80;
+    controller->rawStickY = ((float)stickV/127)*80;
+
+    if (state->buttons & CONT_A)
+        ucheld |= 0x8000; //A_BUTTON
+#if defined(BUTTON_SWAP_X)
+    if (state->buttons & CONT_X)
+        ucheld |= 0x0001; //C_RIGHT
+    if (state->buttons & CONT_B)
+        ucheld |= 0x4000; //B_BUTTON
+#else
+    if (state->buttons & CONT_X)
+        ucheld |= 0x4000; //B_BUTTON
+    if (state->buttons & CONT_B)
+        ucheld |= 0x0001; //C_RIGHT
+#endif
+
+    if (state->ltrig) {
+        if (gGamestate > 3) // DC L is N64 Z in-game
+            ucheld |= 0x2000; //Z_TRIG
+        else // DC L becomes N64 L in-menu
+            ucheld |= 0x0020; //L_TRIG
+    }
+    if (state->buttons & CONT_START)
+       ucheld |= 0x1000; //START_BUTTON
+
+    if (state->buttons & CONT_DPAD_UP)
+        ucheld |= 0x0800; //U_JPAD
+    if (state->buttons & CONT_DPAD_DOWN)
+        ucheld |= 0x0400; //D_JPAD
+    if (state->buttons & CONT_DPAD_LEFT)
+        ucheld |= 0x0200; //L_JPAD
+    if (state->buttons & CONT_DPAD_RIGHT)
+        ucheld |= 0x0100; //R_JPAD
+
+    if (state->rtrig)
+        ucheld |= 0x0010; //R_TRIG
+    if (state->buttons & CONT_Y)
+        ucheld |= 0x0008; //C_UP
+
+    controller->buttonPressed = ucheld & (ucheld ^ controller->button);
+    controller->buttonDepressed = controller->button & (ucheld ^ controller->button);
+    controller->button = ucheld;
+
+    stick = 0;
+    if (controller->rawStickX < -50)
+        stick |= L_JPAD;
+    if (controller->rawStickX > 50)
+        stick |= R_JPAD;
+    if (controller->rawStickY < -50)
+        stick |= D_JPAD;
+    if (controller->rawStickY > 50)
+        stick |= U_JPAD;
+
+    controller->stickPressed = stick & (stick ^ controller->stickDirection);
+    controller->stickDepressed = controller->stickDirection & (stick ^ controller->stickDirection);
+    controller->stickDirection = stick;
+}
+
 
 void read_controllers(void) {
     OSMesg msg;
@@ -1819,6 +2014,13 @@ void race_logic_loop(void) {
                         break;
                 }
             } */
+            // DC: framerate-compensating tick speed in place of the N64's static per-course
+            // table above. sNumVBlanks = 60Hz vblanks since the last logic frame = exactly how
+            // many 60Hz ticks this frame spans: 2 when we hold 30fps, 3 when we drop to 20.
+            // Game speed stays correct at either rate, and frames that reach 30fps
+            // automatically get the smooth 2-tick treatment as renderer perf improves.
+            // Clamped [2,4]: 4 = the N64's own DK-Jungle-in-4P floor, also covers spikes.
+            gTickSpeed = (sNumVBlanks < 2) ? 2 : ((sNumVBlanks > 4) ? 4 : sNumVBlanks);
             if (gIsGamePaused == 0) {
                 for (i = 0; i < gTickSpeed; i++) {
                     if (D_8015011E != 0) {

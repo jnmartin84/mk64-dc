@@ -971,6 +971,32 @@ void func_800C36C4(u8 arg0, u8 arg1, u8 arg2, u8 arg3) {
 void func_800C3724(void) {
     u8 seqPlayerIndex;
     f32 volume = 0.0f;
+
+    // DC: self-healing music un-duck. 0x80000-flagged sounds duck seq player 0 to 0x28 via a
+    // channel bit in D_800EA1C4; the bit is only cleared when the sound is deleted/replaced, and
+    // the replace path skips the clear for status-1 sounds -> an orphaned bit ducks the music
+    // FOREVER. Rare on N64 (and inaudible: no music in 3P/4P), but with 4 players' voice sounds
+    // fighting smaller per-player-count channel budgets it happens routinely. If the mask claims
+    // a duck but no flagged sound exists in any bank, clear it and restore the volume.
+    if (D_800EA1C4 != 0) {
+        u8 wbank, wsi;
+        u8 flagged = 0;
+        for (wbank = 0; wbank < SOUND_BANK_COUNT && !flagged; wbank++) {
+            wsi = sSoundBanks[wbank][0].next;
+            while ((wsi != 0xFF) && (wsi != 0)) {
+                if (sSoundBanks[wbank][wsi].soundBits & 0x80000) {
+                    flagged = 1;
+                    break;
+                }
+                wsi = sSoundBanks[wbank][wsi].next;
+            }
+        }
+        if (!flagged) {
+            D_800EA1C4 = 0;
+            D_801930D0[0].unk_012 = 1;
+            D_801930D0[0].unk_00E[2] = 0x7F;
+        }
+    }
     u8 tempoOp = 0;
     u16 tempoTarget = 0;
     u8 channelIndex = 0;
@@ -2544,6 +2570,11 @@ void func_800C76C0(u8 playerId) {
                             break;
                         case 2: /* switch 2 */
                             if ((D_800EA0EC[0] == 1) && (D_800EA0EC[1] == 1) && (D_800EA0EC[2] == 1)) {
+                                // DC: mute the course-music channels like the 2P case above does.
+                                // N64 had no music in 3P battle so these were omitted; with music
+                                // enabled, the results seq (player 1) played OVER the course music.
+                                func_800C3448(0x100100FF);
+                                func_800C3448(0x110100FF);
                                 func_800C5278(5U);
                                 func_800C9018(playerId, SOUND_ARG_LOAD(0x01, 0x00, 0x80, 0x26));
                                 func_800C8EF8(0x0017U);
@@ -2555,6 +2586,9 @@ void func_800C76C0(u8 playerId) {
                         case 3: /* switch 2 */
                             if ((D_800EA0EC[0] == 1) && (D_800EA0EC[1] == 1) && (D_800EA0EC[2] == 1) &&
                                 (D_800EA0EC[3] == 1)) {
+                                // DC: same as case 2 - silence course music before the results seq.
+                                func_800C3448(0x100100FF);
+                                func_800C3448(0x110100FF);
                                 func_800C5278(5U);
                                 func_800C9018(playerId, SOUND_ARG_LOAD(0x01, 0x00, 0x80, 0x26));
                                 func_800C8EF8(0x0017U);

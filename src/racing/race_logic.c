@@ -406,9 +406,10 @@ void func_8028E678(void) {
 
 void func_8028EC98(s32 arg0) {
 
-    if (gScreenModeSelection == SCREEN_MODE_3P_4P_SPLITSCREEN) {
-        return;
-    }
+    // N64 skipped course music entirely in 3/4P split-screen to save CPU. The DC AICA
+    // driver has the headroom, so let it play. (The audio side still has its own
+    // D_800EA1C0 >= 2 checks that mute the final-lap/star-music TRANSITIONS in 3/4P —
+    // base course music works without touching those.)
 
     func_800029B0();
 

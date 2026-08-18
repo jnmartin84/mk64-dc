@@ -289,12 +289,46 @@ dc_fast_t *pvr_reserve(int kind, size_t n) {
     b->batch[b->cur].count += n;
     // Stamp strip flags now: the front-end bakes vert/uv/colour into this slice but never flags. These
     // are TRIANGLES (n == n_tris*3), so EOL on every 3rd vertex. (2D quads set their own flags.)
+    // movca: each vert is one 32-byte-aligned cache line and this store is its FIRST touch, so
+    // dcache_alloc_block allocates the line without the write-miss memory read — the bake's
+    // following field stores then hit. Every field that matters is overwritten (u/v stay stale
+    // for untextured verts, which the TA ignores — same as before this change).
     for (size_t i = 0; i < n; i++)
-        out[i].flags = ((i % 3) == 2) ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX;
+        dcache_alloc_block(&out[i], ((i % 3) == 2) ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX);
     return out;
 }
 
-// Replay a bucket's batches (header + its verts) to the open list via the DR path.
+// Bulk 32B/iter SQ copy, same loop as the front-end's pvr_sq_ship (sf64-proven; the DR header +
+// SQ verts mix is the same one the live OP path already uses).
+static inline void pvr_sq_ship_bucket(void *dst, const void *src, size_t n) {
+    void *t;
+    __asm__ __volatile__(
+        "fschg\n"
+        "1:\n\t"
+        "fmov.d @%[s]+, dr0\n\t"
+        "mov    %[d], %[t]\n\t"
+        "fmov.d @%[s]+, dr2\n\t"
+        "add    #32, %[t]\n\t"
+        "fmov.d @%[s]+, dr4\n\t"
+        "fmov.d @%[s]+, dr6\n\t"
+        "pref   @%[s]\n\t"
+        "dt     %[n]\n\t"
+        "fmov.d dr6, @-%[t]\n\t"
+        "fmov.d dr4, @-%[t]\n\t"
+        "fmov.d dr2, @-%[t]\n\t"
+        "fmov.d dr0, @-%[t]\n\t"
+        "add    #32, %[d]\n\t"
+        "bf.s   1b\n\t"
+        "pref   @%[t]\n\t"
+        "fschg"
+        : [d] "+r" (dst), [s] "+r" (src), [n] "+r" (n), [t] "=&r" (t)
+        :
+        : "fr0", "fr1", "fr2", "fr3", "fr4", "fr5", "fr6", "fr7", "memory", "t");
+}
+
+// Replay a bucket's batches to the open list: header via DR, verts as one bulk SQ ship per batch
+// (was a per-vertex DR copy; flags are already set in the bucket — pvr_reserve for 3-vert tris,
+// the 2D path for quads — so the whole batch is shippable verbatim).
 static void pvr_flush_bucket(PvrBucket *b) {
     for (int i = 0; i < b->nbatch; i++) {
         PvrBatch *bt = &b->batch[i];
@@ -302,13 +336,7 @@ static void pvr_flush_bucket(PvrBucket *b) {
         pvr_poly_hdr_t *hp = (pvr_poly_hdr_t *) pvr_dr_target(sDrState);
         *hp = bt->hdr;
         pvr_dr_commit(hp);
-        for (uint32_t v = 0; v < bt->count; v++) {
-            pvr_vertex_t *vp = (pvr_vertex_t *) pvr_dr_target(sDrState);
-            *vp = b->verts[bt->start + v];
-            // Flags are already set in the bucket: 3-vert tris by pvr_reserve, 2D quads by the 2D path.
-            // Do NOT re-stamp here — a blanket (v%3) would corrupt any non-3-aligned (e.g. 4-vert) quad.
-            pvr_dr_commit(vp);
-        }
+        pvr_sq_ship_bucket(SQ_MASK_DEST(PVR_TA_INPUT), &b->verts[bt->start], bt->count);
     }
 }
 
@@ -841,9 +869,12 @@ static void gfx_pvr_start_frame(void) {
     sFrameNum++;
     sUpNLast = sUpN; sUpBytesLast = sUpBytes; sUpFailsLast = sUpFails;
     sUpN = sUpBytes = sUpFails = 0;
-    // One greppable VRAM health line per second — plus every frame that had a failed upload,
-    // so a flush->re-OOM loop is visible as a run of consecutive-frame lines.
-    if ((sFrameNum % 60) == 0 || sUpFailsLast) {
+    // One greppable VRAM health line per second (GFX_VRAM_LOG) — plus every frame that had a
+    // failed upload REGARDLESS, so a flush->re-OOM loop is visible as consecutive-frame lines.
+    // (Failure logging stays on even with the periodic line disabled — per-boot/off caps went
+    // silent exactly when the menu OOM finally hit. Never silence the failure path.)
+#define GFX_VRAM_LOG 0   // 1 = periodic once-per-second GFXVRAM health line
+    if ((GFX_VRAM_LOG && (sFrameNum % 60) == 0) || sUpFailsLast) {
         uint32_t nres = 0, bres = 0, nprot = 0, bprot = 0, h[5] = { 0, 0, 0, 0, 0 };
         for (uint32_t i = 1; i < PVR_TEX_MAX; i++) {
             uint32_t a = sTextures[i].alloc_size;

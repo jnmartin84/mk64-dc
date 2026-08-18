@@ -949,8 +949,21 @@ s32 is_visible_between_angle(u16 arg0, u16 arg1, u16 arg2) {
  *                        or -1.0f if it exceeds the render distance.
  */
 
+// DC 4P perf: every actor/effect render site funnels its per-type draw-distance budget through
+// this function, so one gated scale here is a uniform 4P-only content diet (quarter-size
+// viewports hide the shorter distances). maxDistance is SQUARED: 0.44 ~= 2/3 linear distance.
+// 1P/2P/3P render bit-identically. Tune here.
+#define DC_4P_ACTOR_DIST_SCALE 1.0f   // 1.0 = stock draw distance (cut disabled; measured ~nothing
+                                      // anyway - actors are a small share of the 4P frame). 0.44
+                                      // (~2/3 linear) was the tried value if ever wanted again.
+
 f32 is_within_render_distance(Vec3f cameraPos, Vec3f objectPos, u16 orientationY, f32 minDistance, f32 fov,
                               f32 maxDistance) {
+#if 0   // DC 4P actor draw-distance diet, disabled: "default distance everywhere"
+    if ((gPlayerCountSelection1 == 4) && (gActiveScreenMode == 3 /* SCREEN_MODE_3P_4P_SPLITSCREEN */)) {
+        maxDistance *= DC_4P_ACTOR_DIST_SCALE;
+    }
+#endif
     u16 angleObject;
 //    UNUSED u16 pad;
     u16 temp_v0;

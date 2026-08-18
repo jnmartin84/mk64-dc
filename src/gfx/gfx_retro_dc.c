@@ -93,7 +93,7 @@ static float far_pin_z = 0.00001f;
 // frame -> GPU-bound signal). Timer = SH4 PRFC0 elapsed cycles (perf_cntr_timer_enable in
 // gfx_init) — NEVER timer_us_gettime64 in hot loops (~10ms/frame at 5 reads/tri on sf64).
 // PRFC1 rotates through pipeline-freeze (stall) modes, one delta per walk, all 5 in ~40 frames.
-#define GFX_PROF 1
+#define GFX_PROF 0
 #define GFX_PROF_SLOW_US 22000
 
 // Contiguous hot-code section (ported from sf64-dc): the per-frame hot path pinned into one
@@ -102,8 +102,22 @@ static float far_pin_z = 0.00001f;
 // by +/-1.7ms with identical workloads. Section order = symbol CREATION (first declaration)
 // order; the attribute BLOCKS inlining, so never put it on small static-inline helpers.
 #define GFX_HOT __attribute__((section(".text.hot.gfx")))
-#if GFX_PROF
+// GFXLITE: release-config frame meter. NO hot-path instrumentation — two counter reads per
+// frame around the walk plus the frame-to-frame period, one line per second. `late` counts
+// frames whose PERIOD blew the 30Hz deadline (40ms) — a locked-30 game prints late=0/60 with
+// per avg~33333us. Safe to leave enabled in shipping builds.
+#define GFX_PROF_LITE 0   // 1 = always-on GFXLITE frame meter (per avg/max, late=N/60, walk avg/max)
+#if GFX_PROF || GFX_PROF_LITE
 #include <dc/perfctr.h>
+#define PROF_NOW() perf_cntr_count(PRFC0)
+#define PROF_US(c) ((unsigned long) ((c) / 200u))
+#endif
+#if GFX_PROF_LITE && !GFX_PROF
+static uint64_t lite_last = 0, lite_per_sum = 0, lite_per_max = 0;
+static uint64_t lite_walk_sum = 0, lite_walk_max = 0;
+static uint32_t lite_n = 0, lite_late = 0;
+#endif
+#if GFX_PROF
 static uint32_t prof_tris = 0, prof_verts = 0, prof_mtx = 0, prof_texup = 0, prof_frame = 0;
 static uint64_t prof_t_walk = 0, prof_t_flush = 0, prof_t_finish = 0;
 static uint64_t prof_t_vtx = 0, prof_t_tri = 0, prof_t_tri_setup = 0;
@@ -120,8 +134,6 @@ static const struct { int mode; const char* name; } prof_stall_modes[] = {
 };
 static int prof_stall_idx = 0;
 static uint64_t prof_stall_walk = 0;
-#define PROF_NOW() perf_cntr_count(PRFC0)
-#define PROF_US(c) ((unsigned long) ((c) / 200u))
 #define PROF_INC(x) ((x)++)
 #define PROF_ADD(x, n) ((x) += (n))
 #else
@@ -182,6 +194,25 @@ static int cc_active_slot = -1;               // its slot: protected from ring e
 // triangle (~800/frame). gfx_run_dl bumps the gen on every opcode EXCEPT the pure-geometry ones
 // (TRI1/TRI2/QUAD/VTX/MTX/POPMTX/DL/ENDDL) and the 2D rect ops; the 2D quad path mutates backend
 // state directly, so it bumps the gen itself when it finishes. gfx_run bumps once per frame.
+// DC 4P far pull-in: per-frame threshold in view-depth (w) units; 0 = disabled.
+// Per-course scale of gCourseFarPersp (1500-7000, mostly 4500). The section lists already cull to
+// well inside ~0.6*far, so a scale must sit nearer than that to bite. 0 disables for courses where
+// long sight lines ARE the gameplay (or that are too light to be worth the visual cost). Tune here.
+#define DC_4P_FAR_SCALE 0.0f    // 0 = DISABLED everywhere (trying tick-speed compensation alone).
+                                // Tuning notes if re-enabled: useful band is 0.35 (hard, ~800
+                                // tris/frame, -5ms walk) to ~0.55; 0.6+ does nothing (section
+                                // lists cull first). Rainbow Road/Choco/Double Deck should stay 0
+                                // (sight-line gameplay / far plane already 1500), Turnpike gentle
+                                // (oncoming traffic visibility).
+static float dc4p_course_far_scale(int courseId) {
+    (void) courseId;
+    return DC_4P_FAR_SCALE;
+}
+static float dc4p_far_w = 0.0f;
+#if GFX_PROF
+static uint32_t prof_farcull = 0;
+#endif
+
 static uint32_t rdp_state_gen = 1, tri_setup_gen = 0;
 static struct {
     uint8_t depth_test, zmode_decal, use_texture, linear_filter;
@@ -1504,8 +1535,9 @@ static inline uint8_t gfx_calc_fog(float z, float w) {
     return (uint8_t)f;
 }
 
-static void __attribute__((noinline)) GFX_HOT gfx_sp_vertex_light(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
+static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
     for (size_t i = 0; i < n_vertices; i++, dest_index++) {
+        __builtin_prefetch(&vertices[i + 2]);   // 16B/Vtx: next line every other iteration
         const Vtx_t* v = &vertices[i].v;
         const Vtx_tn* vn = &vertices[i].n;
         struct LoadedVertex* d = &rsp.loaded_vertices[dest_index];
@@ -1614,8 +1646,9 @@ static void __attribute__((noinline)) GFX_HOT gfx_sp_vertex_light(size_t n_verti
     }
 }
 
-static void __attribute__((noinline)) GFX_HOT gfx_sp_vertex_no(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
+static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
     for (size_t i = 0; i < n_vertices; i++, dest_index++) {
+        __builtin_prefetch(&vertices[i + 2]);   // 16B/Vtx: next line every other iteration
         const Vtx_t* v = &vertices[i].v;
         struct LoadedVertex* d = &rsp.loaded_vertices[dest_index];
 
@@ -1655,7 +1688,7 @@ static void __attribute__((noinline)) GFX_HOT gfx_sp_vertex_no(size_t n_vertices
     }
 }
 
-static void __attribute__((noinline)) GFX_HOT gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
+static void __attribute__((noinline)) gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
 	// Reloaded slots carry new shade colours -> their cached combiner results are stale.
 	cc_cache_invalidate((int) dest_index, (int) n_vertices);
 	PROF_ADD(prof_verts, n_vertices);
@@ -2458,6 +2491,13 @@ static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx
     if (tri_setup_gen != rdp_state_gen)
         gfx_tri_state_setup();
     const uint8_t depth_test = ts.depth_test;
+    // DC 4P far pull-in (dc4p_far_w == 0 in all other modes): whole tri beyond the reduced
+    // far plane -> drop before scissor/clip/bake. _w is view depth, same units as gCourseFarPersp.
+    if (dc4p_far_w > 0.0f && depth_test &&
+        v1->_w > dc4p_far_w && v2->_w > dc4p_far_w && v3->_w > dc4p_far_w) {
+        PROF_INC(prof_farcull);
+        return;
+    }
     const uint8_t zmode_decal = ts.zmode_decal;
     const uint8_t use_texture = ts.use_texture;
     const uint32_t texenv = ts.texenv;
@@ -3526,6 +3566,9 @@ static void  __attribute__((noinline)) GFX_HOT gfx_run_dl(Gfx* cmd) {
 
 	cmd = seg_addr((uintptr_t) cmd);
 	for (;;) {
+		// DL stream prefetch: commands are consumed sequentially; pull the line 4 cmds
+		// (32B) ahead so the dispatch never waits on a compulsory miss.
+		__builtin_prefetch(cmd + 4);
 		uint32_t opcode = cmd->words.w0 >> 24;
 
 		// Any opcode except pure geometry (TRI/QUAD/VTX/MTX/POPMTX/DL/ENDDL) and the 2D rect
@@ -3850,8 +3893,10 @@ void gfx_init(struct GfxWindowManagerAPI* wapi, struct GfxRenderingAPI* rapi, co
 	memset(&oops_node, 0, sizeof(oops_node));
 	oops_node.texture_id = oops_texture_id;
 
+#if GFX_PROF || GFX_PROF_LITE
+	perf_cntr_timer_enable();   // PRFC0 elapsed CPU cycles for the GFXPROF/GFXLITE timers
+#endif
 #if GFX_PROF
-	perf_cntr_timer_enable();   // PRFC0 elapsed CPU cycles for the GFXPROF timers
 	perf_cntr_start(PRFC1, prof_stall_modes[0].mode, PMCR_COUNT_CPU_CYCLES);
 #endif
 }
@@ -3868,6 +3913,18 @@ void gfx_start_frame(void) {
 void gfx_run(Gfx* commands) {
 	gfx_sp_reset();
 
+	// DC 4P perf: pulled-in far plane. Depth-tested tris with ALL THREE verts beyond
+	// gCourseFarPersp * scale are dropped before clip/bake (see gfx_sp_tri1_impl).
+	// 0 disables (all other modes). Backdrops/Z-off decor are exempt via depth_test.
+	{
+		extern f32 gCourseFarPersp;
+		extern s32 gPlayerCountSelection1;
+		extern s32 gActiveScreenMode;
+		extern s16 gCurrentCourseId;
+		dc4p_far_w = ((gPlayerCountSelection1 == 4) && (gActiveScreenMode == 3 /* 3P/4P split */))
+		                 ? gCourseFarPersp * dc4p_course_far_scale(gCurrentCourseId) : 0.0f;
+	}
+
 	if (!gfx_wapi->start_frame()) {
 		dropped_frame = 1;
 		return;
@@ -3875,13 +3932,42 @@ void gfx_run(Gfx* commands) {
 
 	dropped_frame = 0;
 
+#if GFX_PROF_LITE && !GFX_PROF
+	{
+		uint64_t now = PROF_NOW();
+		if (lite_last) {
+			uint64_t per = now - lite_last;
+			lite_per_sum += per;
+			if (per > lite_per_max) lite_per_max = per;
+			if (per > 40000u * 200u) lite_late++;   // blew the 30Hz deadline
+		}
+		lite_last = now;
+	}
+#endif
 	gfx_rapi->start_frame();
 	rdp_state_gen++;   // per-frame: backend headers reset in start_frame -> re-derive on first tri
 #if GFX_PROF
 	uint64_t t0 = PROF_NOW();
 	uint64_t st0 = perf_cntr_count(PRFC1);
 #endif
+#if GFX_PROF_LITE && !GFX_PROF
+	uint64_t lt0 = PROF_NOW();
+#endif
 	gfx_run_dl(commands);
+#if GFX_PROF_LITE && !GFX_PROF
+	{
+		uint64_t lw = PROF_NOW() - lt0;
+		lite_walk_sum += lw;
+		if (lw > lite_walk_max) lite_walk_max = lw;
+		if (++lite_n >= 60) {
+			printf("GFXLITE per avg=%luus max=%luus late=%lu/60 | walk avg=%luus max=%luus\n",
+			       PROF_US(lite_per_sum / lite_n), PROF_US(lite_per_max), (unsigned long) lite_late,
+			       PROF_US(lite_walk_sum / lite_n), PROF_US(lite_walk_max));
+			lite_per_sum = lite_per_max = lite_walk_sum = lite_walk_max = 0;
+			lite_n = lite_late = 0;
+		}
+	}
+#endif
 #if GFX_PROF
 	uint64_t t1 = PROF_NOW();
 	prof_stall_walk = perf_cntr_count(PRFC1) - st0;
@@ -3911,7 +3997,7 @@ void gfx_end_frame(void) {
 	if ((prof_frame % 60) == 0 || prof_slow) {
 		printf("GFXPROF f=%lu walk=%luus flush=%luus finish=%luus tris=%lu verts=%lu mtx=%lu texup=%lu "
 		       "op=%lu pt=%lu tr=%lu | vtx=%luus tri=%luus (setup=%luus clip=%luus bake=%luus submit=%luus) "
-		       "evals=%lu hits=%lu stamps=%lu setups=%lu su=%lu/%lu/%lu/%lu quads=%lu q=%luus mtx=%luus\n",
+		       "evals=%lu hits=%lu stamps=%lu setups=%lu su=%lu/%lu/%lu/%lu quads=%lu q=%luus mtx=%luus fcull=%lu\n",
 		       (unsigned long) prof_frame, PROF_US(prof_t_walk), PROF_US(prof_t_flush), PROF_US(prof_t_finish),
 		       (unsigned long) prof_tris, (unsigned long) prof_verts, (unsigned long) prof_mtx,
 		       (unsigned long) prof_texup, (unsigned long) prof_op_verts, (unsigned long) prof_pt_verts,
@@ -3919,7 +4005,8 @@ void gfx_end_frame(void) {
 		       PROF_US(prof_t_tri_setup), PROF_US(prof_t_clip), PROF_US(prof_t_bake), PROF_US(prof_t_submit),
 		       (unsigned long) prof_evals, (unsigned long) prof_hits, (unsigned long) prof_stamps,
 		       (unsigned long) prof_setups, PROF_US(prof_su[0]), PROF_US(prof_su[1]), PROF_US(prof_su[2]), PROF_US(prof_su[3]),
-		       (unsigned long) prof_quads, PROF_US(prof_t_quad), PROF_US(prof_t_mtx));
+		       (unsigned long) prof_quads, PROF_US(prof_t_quad), PROF_US(prof_t_mtx),
+		       (unsigned long) prof_farcull);
 		printf("GFXPROF   stall %s = %luus of walk\n",
 		       prof_stall_modes[prof_stall_idx].name, PROF_US(prof_stall_walk));
 	}
@@ -3928,8 +4015,13 @@ void gfx_end_frame(void) {
 	prof_evals = prof_hits = prof_stamps = prof_setups = 0;
 	prof_t_quad = prof_t_mtx = 0; prof_quads = 0;
 	prof_op_verts = prof_pt_verts = prof_tr_verts = 0;
+	prof_farcull = 0;
 	prof_su[0] = prof_su[1] = prof_su[2] = prof_su[3] = 0;
-	if ((prof_frame % 8) == 0) {   // rotate stall mode every 8 frames: all 5 modes in ~40
+	// Rotate the stall mode after every PRINT (1/sec or slow-frame), not on a fixed frame
+	// stride: 60-frame prints x 8-frame rotation sampled only 2 of the 5 modes once walks
+	// stopped crossing the slow threshold. Now each successive print shows the next mode —
+	// full sweep every 5 seconds.
+	if ((prof_frame % 60) == 0 || prof_slow) {
 		prof_stall_idx = (prof_stall_idx + 1) % (int) (sizeof(prof_stall_modes) / sizeof(prof_stall_modes[0]));
 		perf_cntr_stop(PRFC1); perf_cntr_clear(PRFC1);
 		perf_cntr_start(PRFC1, prof_stall_modes[prof_stall_idx].mode, PMCR_COUNT_CPU_CYCLES);
