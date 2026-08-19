@@ -12,8 +12,10 @@
 #define SCR_WIDTH (640)
 #define SCR_HEIGHT (480)
 
-static int force_30fps = 1;   // 0 = uncapped: pacing falls to pvr_wait_ready (real vsync, 60Hz-capable).
-                              // 1 = sleep-to-33ms cap in swap_buffers_end (the old 30fps lock).
+int force_30fps = 1;   // 0 = uncapped (real vsync, 60Hz-capable) — only 1P racing sets this.
+                       // 1 = vblank-locked 30 (menus/split-screen/boot default).
+                       // Owned by game code: update_gamestate() defaults 1 on every state
+                       // change; race_logic_loop re-asserts per mode every frame.
 static unsigned int last_time = 0;
 
 extern void glKosSwapBuffers(void);

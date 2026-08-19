@@ -235,6 +235,8 @@ Mtx D_80183D60;
  **/
 s32 D_80183DA0;
 f32 D_80183DA8[4];
+extern s16 gRun30hz;
+extern void update_boos_track(void);   // main.c: 30Hz gate for N64-30fps-assuming state (see game_loop_one_iteration)
 //! Lakitu?
 s32 gIndexLakituList[4];
 f32 D_80183DC8[4];
@@ -1323,14 +1325,25 @@ void func_80059D00(void) {
                     if (playerHUD[PLAYER_ONE].raceCompleteBool == 0) {
                         func_8005C360((gPlayerOneCopy->speed / 18.0f) * 216.0f);
                     }
-                    func_8005D0FC(PLAYER_ONE);
+                    // 30Hz: HUD slide + lap-split blink state machine. MUST run at the same
+                    // rate as the gated master counter (func_8005C728): its blink edge-detects
+                    // D_80165594 == 0, and at 60Hz vs a 30Hz counter it toggles TWICE per
+                    // counter step -> net nothing -> flash invisible (HW 2026-08-19).
+                    // Verified pure state: no DL/gGfxPool/matrix writes in the whole chain.
+                    if (gRun30hz) {
+                        func_8005D0FC(PLAYER_ONE);
+                    }
                 } else {
                     func_80059820(PLAYER_ONE);
                     course_update_clouds(1);
                     func_80059820(PLAYER_TWO);
                     course_update_clouds(2);
                 }
-                update_object();
+                if (gRun30hz) {   // 30Hz: course critters (pure state, drawn in render path)
+                    update_object();
+                } else if (gCurrentCourseId == COURSE_BANSHEE_BOARDWALK) {
+                    update_boos_track();   // boos are player-anchored: track every frame (see update_objects.c)
+                }
                 break;
             case SCREEN_MODE_2P_SPLITSCREEN_VERTICAL:
                 randomize_seed_from_controller(PLAYER_ONE);
@@ -1349,7 +1362,7 @@ void func_80059D00(void) {
                 }
                 course_update_clouds(2);
                 func_8005D1F4(1);
-                update_object();
+                if (gRun30hz) { update_object(); }   // 30Hz: course critters (pure state, drawn in render path)
                 break;
             case SCREEN_MODE_2P_SPLITSCREEN_HORIZONTAL:
                 randomize_seed_from_controller(PLAYER_ONE);
@@ -1368,7 +1381,7 @@ void func_80059D00(void) {
                 }
                 course_update_clouds(4);
                 func_8005D1F4(1);
-                update_object();
+                if (gRun30hz) { update_object(); }   // 30Hz: course critters (pure state, drawn in render path)
                 break;
             case SCREEN_MODE_3P_4P_SPLITSCREEN:
                 randomize_seed_from_controller(PLAYER_ONE);
@@ -1401,7 +1414,7 @@ void func_80059D00(void) {
                     }
                     func_8005D1F4(3);
                 }
-                update_object();
+                if (gRun30hz) { update_object(); }   // 30Hz: course critters (pure state, drawn in render path)
                 break;
         }
         func_800744CC();
@@ -1414,7 +1427,9 @@ void func_8005A070(void) {
     D_801655C0 = 0;
     func_80041D34();
     if (gIsGamePaused == 0) {
-        func_8005C728();
+        if (gRun30hz) {   // 30Hz: master HUD/effect counter D_8018D400 (flash/rainbow/anim frames)
+            func_8005C728();
+        }
         if (gGamestate == ENDING) {
             func_80086604();
             func_80086D80();
@@ -1423,7 +1438,7 @@ void func_8005A070(void) {
         } else if (gGamestate == CREDITS_SEQUENCE) {
             func_80059820(PLAYER_ONE);
             course_update_clouds(0);
-            update_object();
+            if (gRun30hz) { update_object(); }   // 30Hz: course critters (pure state, drawn in render path)
         } else {
             func_80059D00();
         }
@@ -4252,13 +4267,16 @@ void func_80062C74(Player* player, s16 arg1, UNUSED s32 arg2, UNUSED s32 arg3) {
     f32 sp38;
     s16 thing;
 
+    // DC 60fps split (see gRun30hz): AGE at 30Hz (lifetime/fade/growth/rise are N64 frame
+    // counts), POSITION TRACKING every frame (particle is kart-attached: unk_000 recomputed
+    // from player->pos below — freezing it made puffs snap at the exhaust, HW 2026-08-19).
+    if (gRun30hz) {
     player->unk_258[arg1].unk_01E += 1;
     if (player->unk_258[arg1].unk_01E == 0x000C) {
         player->unk_258[arg1].unk_01C = 0;
         player->unk_258[arg1].unk_01E = 0;
         player->unk_258[arg1].unk_012 = 0;
     }
-    player->unk_258[arg1].unk_018 = 2.0f;
     if (player->unk_258[arg1].unk_040 == 0) {
         player->unk_258[arg1].unk_00C = player->unk_258[arg1].unk_00C + 0.07f;
         player->unk_258[arg1].unk_024 = player->unk_258[arg1].unk_024 + 0.3f;
@@ -4278,18 +4296,22 @@ void func_80062C74(Player* player, s16 arg1, UNUSED s32 arg2, UNUSED s32 arg3) {
             player->unk_258[arg1].unk_03E = 0;
         }
     }
+    }
+    player->unk_258[arg1].unk_018 = 2.0f;
     thing = player->unk_258[arg1].unk_020 - (player->unk_0C0 / 2);
     if (player->unk_258[arg1].unk_040 == 0) {
         var_f6 = -((player->unk_098 * 0.0002f) + 0.1f);
     } else {
         var_f6 = -((player->unk_098 * 0.00016667f) + 0.1f);
     }
-    if (((player->effects & BOOST_EFFECT) == BOOST_EFFECT) && (player->unk_258[arg1].unk_01E >= 6)) {
-        player->unk_258[arg1].unk_00C = player->unk_258[arg1].unk_00C + 0.06f;
-    }
-    player->unk_258[arg1].unk_010++;
-    if (player->unk_258[arg1].unk_010 >= 3) {
-        player->unk_258[arg1].unk_010 = 0;
+    if (gRun30hz) {
+        if (((player->effects & BOOST_EFFECT) == BOOST_EFFECT) && (player->unk_258[arg1].unk_01E >= 6)) {
+            player->unk_258[arg1].unk_00C = player->unk_258[arg1].unk_00C + 0.06f;
+        }
+        player->unk_258[arg1].unk_010++;
+        if (player->unk_258[arg1].unk_010 >= 3) {
+            player->unk_258[arg1].unk_010 = 0;
+        }
     }
     composite_rotation(&sp40, &sp38, &sp3C, 0.0f, sp48[player->characterId], (player->unk_258[arg1].unk_01E * var_f6) + -5.5f,
                   -thing, -player->unk_206 * 2);
@@ -4302,6 +4324,7 @@ void func_80062C74(Player* player, s16 arg1, UNUSED s32 arg2, UNUSED s32 arg3) {
 void func_80062F98(Player* player, s16 arg1, s8 arg2, UNUSED s8 arg3) {
     f32 temp_f0;
 
+    if (!gRun30hz) { return; }   // DC 60fps: pure world-fixed riser, 30Hz whole
     temp_f0 = player->unk_258[10 + arg1].unk_018 * 0.1f;
     ++player->unk_258[10 + arg1].unk_01E;
     player->unk_258[10 + arg1].unk_000[1] += temp_f0;
@@ -4324,12 +4347,12 @@ void func_80062F98(Player* player, s16 arg1, s8 arg2, UNUSED s8 arg3) {
 void func_800630C0(Player* player, s16 arg1, s8 arg2, UNUSED s8 arg3) {
     f32 ts1,tc1;
     scaled_sincoss((u16)(player->unk_258[10 + arg1].unk_020), &ts1, &tc1, -5.8f);
-    ++player->unk_258[arg1].unk_01E;
+    if (gRun30hz) { ++player->unk_258[arg1].unk_01E; }   // DC 60fps: age 30Hz, pos tracks kart
 
     player->unk_258[arg1].unk_000[2] = player->pos[2] + tc1;//coss(player->unk_258[arg1].unk_020) * -5.8;
     player->unk_258[arg1].unk_000[0] = player->pos[0] + ts1;//sins(player->unk_258[arg1].unk_020) * -5.8;
     player->unk_258[arg1].unk_000[1] = D_801652A0[arg2];
-    if (player->unk_258[arg1].unk_01E == 15) {
+    if (gRun30hz && player->unk_258[arg1].unk_01E == 15) {
         player->unk_258[arg1].unk_01C = 0;
         player->unk_258[arg1].unk_01E = 0;
         player->unk_258[arg1].unk_012 = 0;
@@ -4337,6 +4360,7 @@ void func_800630C0(Player* player, s16 arg1, s8 arg2, UNUSED s8 arg3) {
 }
 
 void func_800631A8(Player* player, s16 arg1, UNUSED s8 arg2, UNUSED s8 arg3) {
+    if (!gRun30hz) { return; }   // DC 60fps: whole fn = frame-count flash alternation, 30Hz
     ++player->unk_258[arg1].unk_01E;
     if ((s32) player->unk_258[arg1].unk_01E < 9) {
         if ((player->unk_258[arg1].unk_01E & 1) != 0) {
@@ -4363,32 +4387,36 @@ void func_800631A8(Player* player, s16 arg1, UNUSED s8 arg2, UNUSED s8 arg3) {
 
 void func_80063268(Player* player, s16 arg1, UNUSED s8 arg2, UNUSED s8 arg3) {
     f32 ts1,tc1;
-    if (player->unk_258[arg1].unk_01E >= 0x1E) {
-        player->unk_258[arg1].unk_040 += 0x1FFE;
-    } else {
-        player->unk_258[arg1].unk_040 += 0x1554;
+    if (gRun30hz) {   // DC 60fps: spin/rise at 30Hz; position tracks kart every frame
+        if (player->unk_258[arg1].unk_01E >= 0x1E) {
+            player->unk_258[arg1].unk_040 += 0x1FFE;
+        } else {
+            player->unk_258[arg1].unk_040 += 0x1554;
+        }
+        player->unk_258[arg1].unk_024 += 0.25f;
     }
 
     scaled_sincoss(player->unk_258[arg1].unk_020 + player->unk_258[arg1].unk_040, &ts1, &tc1, 5.5f);
 
-    player->unk_258[arg1].unk_024 += 0.25f;
     player->unk_258[arg1].unk_000[2] =
         player->pos[2] + tc1;//(coss((player->unk_258[arg1].unk_020 + player->unk_258[arg1].unk_040)) * 5.5);
     player->unk_258[arg1].unk_000[0] =
         player->pos[0] + ts1;//(sins((player->unk_258[arg1].unk_020 + player->unk_258[arg1].unk_040)) * 5.5);
     player->unk_258[arg1].unk_000[1] = ((player->pos[1] - 5.0f) + player->unk_258[arg1].unk_024);
-    ++player->unk_258[arg1].unk_01E;
-    player->unk_258[arg1].unk_00C += 0.05f;
-    player->unk_258[arg1].unk_03E -= 5;
+    if (gRun30hz) {
+        ++player->unk_258[arg1].unk_01E;
+        player->unk_258[arg1].unk_00C += 0.05f;
+        player->unk_258[arg1].unk_03E -= 5;
 
-    if ((s32) player->unk_258[arg1].unk_03E <= 0) {
-        player->unk_258[arg1].unk_03E = 0;
-    }
+        if ((s32) player->unk_258[arg1].unk_03E <= 0) {
+            player->unk_258[arg1].unk_03E = 0;
+        }
 
-    if ((s32) player->unk_258[arg1].unk_01E >= 0x28) {
-        player->unk_258[arg1].unk_01C = 0;
-        player->unk_258[arg1].unk_01E = 0;
-        player->unk_258[arg1].unk_012 = 0;
+        if ((s32) player->unk_258[arg1].unk_01E >= 0x28) {
+            player->unk_258[arg1].unk_01C = 0;
+            player->unk_258[arg1].unk_01E = 0;
+            player->unk_258[arg1].unk_012 = 0;
+        }
     }
 }
 
@@ -4412,27 +4440,29 @@ void func_80063408(Player* player, s16 arg1, UNUSED s8 arg2, UNUSED s8 arg3) {
             //(player->unk_258[10 + arg1].unk_01E * -7) * sins(player->unk_258[10 + arg1].unk_020);
     }
 
-    ++player->unk_258[10 + arg1].unk_01E;
-    player->unk_258[10 + arg1].unk_000[1] += 1.0f;
+    if (gRun30hz) {   // DC 60fps: age/rise/fade at 30Hz; tyre tracking above stays per-frame
+        ++player->unk_258[10 + arg1].unk_01E;
+        player->unk_258[10 + arg1].unk_000[1] += 1.0f;
 
-    if (((player->effects & 0x80) != 0) || ((player->effects & 0x40) != 0)) {
-        player->unk_258[10 + arg1].unk_01C = 0;
-        player->unk_258[10 + arg1].unk_01E = 0;
-    }
+        if (((player->effects & 0x80) != 0) || ((player->effects & 0x40) != 0)) {
+            player->unk_258[10 + arg1].unk_01C = 0;
+            player->unk_258[10 + arg1].unk_01E = 0;
+        }
 
-    if (player->unk_258[10 + arg1].unk_01E == 8) {
-        player->unk_258[10 + arg1].unk_01E = 0;
-        player->unk_258[10 + arg1].unk_01C = 0;
-        player->unk_258[10 + arg1].unk_012 = 0;
-    }
+        if (player->unk_258[10 + arg1].unk_01E == 8) {
+            player->unk_258[10 + arg1].unk_01E = 0;
+            player->unk_258[10 + arg1].unk_01C = 0;
+            player->unk_258[10 + arg1].unk_012 = 0;
+        }
 
-    player->unk_258[10 + arg1].unk_00C += 0.08f;
-    if (player->unk_258[10 + arg1].unk_01E >= 4) {
-        player->unk_258[10 + arg1].unk_03E -= 16;
-    }
+        player->unk_258[10 + arg1].unk_00C += 0.08f;
+        if (player->unk_258[10 + arg1].unk_01E >= 4) {
+            player->unk_258[10 + arg1].unk_03E -= 16;
+        }
 
-    if (player->unk_258[10 + arg1].unk_03E <= 0) {
-        player->unk_258[10 + arg1].unk_03E = 0;
+        if (player->unk_258[10 + arg1].unk_03E <= 0) {
+            player->unk_258[10 + arg1].unk_03E = 0;
+        }
     }
 }
 
@@ -4478,6 +4508,7 @@ void func_800635D4(Player* player, s16 arg1, UNUSED s8 arg2, UNUSED s8 arg3) {
             //    sins(player->unk_258[10 + arg1].unk_020);
     }
 
+    if (!gRun30hz) { return; }   // DC 60fps: age/rise/fade at 30Hz; tyre tracking above per-frame
     ++player->unk_258[10 + arg1].unk_01E;
     player->unk_258[10 + arg1].unk_000[1] += 0.2;
     if (((player->effects & 0x80) != 0) || ((player->effects & 0x40) != 0)) {
@@ -4528,6 +4559,7 @@ void func_800639DC(Player* player, s16 arg1, UNUSED s8 arg2, UNUSED s8 arg3) {
             player->tyres[BACK_RIGHT].pos[0] + ts1;
             //(-1.8f * player->unk_258[10 + arg1].unk_01E) * sins(player->unk_258[10 + arg1].unk_020);
     }
+    if (!gRun30hz) { return; }   // DC 60fps: age/rise/fade at 30Hz; tyre tracking above per-frame
     ++player->unk_258[10 + arg1].unk_01E;
     player->unk_258[10 + arg1].unk_000[1] += 0.3f;
     if (player->unk_258[10 + arg1].unk_01E == 8) {
@@ -4575,16 +4607,17 @@ void func_80063BD4(Player* player, s16 arg1, UNUSED s8 arg2, UNUSED s8 arg3) {
             //(-2 * player->unk_258[10 + arg1].unk_01E * sins(player->unk_258[10 + arg1].unk_020));
     }
 
-    ++player->unk_258[10 + arg1].unk_01E;
-    player->unk_258[10 + arg1].unk_000[1] += 0.2f;
-    if (player->unk_258[10 + arg1].unk_01E == 8) {
-        player->unk_258[10 + arg1].unk_01C = 0;
-        player->unk_258[10 + arg1].unk_01E = 0;
-        player->unk_258[10 + arg1].unk_012 = 0;
-    }
-
     player->unk_258[10 + arg1].unk_018 = 2.0f;
-    player->unk_258[10 + arg1].unk_00C -= 0.06f;
+    if (gRun30hz) {   // DC 60fps: age/rise/shrink at 30Hz; tyre tracking above per-frame
+        ++player->unk_258[10 + arg1].unk_01E;
+        player->unk_258[10 + arg1].unk_000[1] += 0.2f;
+        if (player->unk_258[10 + arg1].unk_01E == 8) {
+            player->unk_258[10 + arg1].unk_01C = 0;
+            player->unk_258[10 + arg1].unk_01E = 0;
+            player->unk_258[10 + arg1].unk_012 = 0;
+        }
+        player->unk_258[10 + arg1].unk_00C -= 0.06f;
+    }
 }
 
 void func_80063D58(Player* player, s16 arg1, UNUSED s8 arg2, UNUSED s8 arg3) {
@@ -4611,6 +4644,7 @@ void func_80063D58(Player* player, s16 arg1, UNUSED s8 arg2, UNUSED s8 arg3) {
             //    sins(player->unk_258[10 + arg1].unk_020);
     }
 
+    if (!gRun30hz) { return; }   // DC 60fps: age/rise/fade at 30Hz; tyre tracking above per-frame
     ++player->unk_258[10 + arg1].unk_01E;
     if (player->unk_258[10 + arg1].unk_01E == 8) {
         player->unk_258[10 + arg1].unk_01E = 0;
@@ -4672,21 +4706,23 @@ void func_80064184(Player* player, s16 arg1, s8 arg2, UNUSED s8 arg3) {
     player->unk_258[arg1].unk_000[0] = player->pos[0] + sp44;
     player->unk_258[arg1].unk_000[2] = player->pos[2] + sp3C;
     player->unk_258[arg1].unk_000[1] = player->pos[1] + sp40;
-    ++player->unk_258[arg1].unk_01E;
-    if ((player->unk_258[arg1].unk_01E == 12) || (D_801652A0[arg2] <= (player->pos[1] - player->boundingBoxSize))) {
-        player->unk_258[arg1].unk_01C = 0;
-        player->unk_258[arg1].unk_01E = 0;
-        player->unk_258[arg1].unk_012 = 0;
-    }
     player->unk_258[arg1].unk_018 = 2.0f;
-    player->unk_258[arg1].unk_00C -= 0.35f;
-    if (player->unk_258[arg1].unk_00C < 0.0f) {
-        player->unk_258[arg1].unk_00C = 0.0f;
-    }
+    if (gRun30hz) {   // DC 60fps: age/shrink/fade at 30Hz; position tracks kart above
+        ++player->unk_258[arg1].unk_01E;
+        if ((player->unk_258[arg1].unk_01E == 12) || (D_801652A0[arg2] <= (player->pos[1] - player->boundingBoxSize))) {
+            player->unk_258[arg1].unk_01C = 0;
+            player->unk_258[arg1].unk_01E = 0;
+            player->unk_258[arg1].unk_012 = 0;
+        }
+        player->unk_258[arg1].unk_00C -= 0.35f;
+        if (player->unk_258[arg1].unk_00C < 0.0f) {
+            player->unk_258[arg1].unk_00C = 0.0f;
+        }
 
-    player->unk_258[arg1].unk_03E -= 22;
-    if (player->unk_258[arg1].unk_03E <= 0) {
-        player->unk_258[arg1].unk_03E = 0;
+        player->unk_258[arg1].unk_03E -= 22;
+        if (player->unk_258[arg1].unk_03E <= 0) {
+            player->unk_258[arg1].unk_03E = 0;
+        }
     }
 }
 
@@ -4698,6 +4734,7 @@ void func_800643A8(Player* player, s16 arg1, UNUSED s8 arg2, UNUSED s8 arg3) {
         player->pos[2] + tc1;//(-1.2 * player->unk_258[10 + arg1].unk_01E * coss(player->unk_258[10 + arg1].unk_020));
     player->unk_258[10 + arg1].unk_000[0] =
         player->pos[0] + ts1;//(-1.2 * player->unk_258[10 + arg1].unk_01E * sins(player->unk_258[10 + arg1].unk_020));
+    if (!gRun30hz) { return; }   // DC 60fps: rise/age/fade at 30Hz; kart tracking above per-frame
     player->unk_258[10 + arg1].unk_000[1] = player->unk_258[10 + arg1].unk_000[1] + 0.5f;
 
     ++player->unk_258[10 + arg1].unk_01E;
@@ -4924,6 +4961,7 @@ void func_80064C74(Player* player, s16 arg1, UNUSED s8 arg2, UNUSED s8 arg3) {
 void func_80064DEC(Player* player, UNUSED s8 arg1, UNUSED s8 arg2, s8 arg3) {
 
     player->unk_258[20 + arg3].unk_000[1] = player->pos[1];
+    if (!gRun30hz) { return; }   // DC 60fps: age/size at 30Hz, position tracked above
     ++player->unk_258[20 + arg3].unk_01E;
 
     if (player->unk_258[20 + arg3].unk_01E == 9) {
@@ -4940,6 +4978,7 @@ void func_80064DEC(Player* player, UNUSED s8 arg1, UNUSED s8 arg2, s8 arg3) {
 }
 
 void func_80064EA4(Player* player, UNUSED s8 arg1, UNUSED s8 arg2, s8 arg3) {
+    if (!gRun30hz) { return; }   // DC 60fps: pure frame-count state machine, 30Hz
     ++player->unk_258[20 + arg3].unk_01E;
     if (player->unk_258[20 + arg3].unk_01E < 4) {
         player->unk_258[20 + arg3].unk_00C += 1.2f;
@@ -4958,6 +4997,7 @@ void func_80064EA4(Player* player, UNUSED s8 arg1, UNUSED s8 arg2, s8 arg3) {
 }
 
 void func_80064F88(Player* player, UNUSED s8 arg1, UNUSED s8 arg2, s8 arg3) {
+    if (!gRun30hz) { return; }   // DC 60fps: pure frame-count state machine, 30Hz
     ++player->unk_258[20 + arg3].unk_01E;
     player->unk_258[20 + arg3].unk_00C += 0.15f;
 
@@ -4973,6 +5013,7 @@ void func_80064F88(Player* player, UNUSED s8 arg1, UNUSED s8 arg2, s8 arg3) {
 }
 
 void func_80065030(Player* player, UNUSED s8 arg1, UNUSED s8 arg2, s8 arg3) {
+    if (!gRun30hz) { return; }   // DC 60fps: pure frame-count state machine, 30Hz
     ++player->unk_258[20 + arg3].unk_01E;
 
     player->unk_258[20 + arg3].unk_000[1] += 0.8f;
@@ -4993,6 +5034,7 @@ void func_800650FC(Player* player, UNUSED s8 arg1, UNUSED s8 arg2, s8 arg3) {
     player->unk_258[20 + arg3].unk_000[2] = (f32) player->pos[2];
     player->unk_258[20 + arg3].unk_000[0] = (f32) player->pos[0];
     player->unk_258[20 + arg3].unk_000[1] = (f32) (player->pos[1] + 4.0f);
+    if (!gRun30hz) { return; }   // DC 60fps: spin/size/death at 30Hz, position tracked above
     if ((player->effects & 0x80) == 0x80) {
         player->unk_258[20 + arg3].unk_020 += 4732;
     } else {
@@ -5012,6 +5054,7 @@ void func_800650FC(Player* player, UNUSED s8 arg1, UNUSED s8 arg2, s8 arg3) {
 }
 
 void func_800651F4(Player* player, UNUSED s8 arg1, UNUSED s8 arg2, s8 arg3) {
+    if (!gRun30hz) { return; }   // DC 60fps: pure frame-count state machine, 30Hz
     ++player->unk_258[20 + arg3].unk_01E;
     if (player->unk_258[20 + arg3].unk_01E < 8) {
         player->unk_258[20 + arg3].unk_00C += 0.2f;
@@ -6341,7 +6384,7 @@ void func_8006C6AC(Player* player, s16 arg1, s8 arg2, s8 arg3) {
             default:
                 break;
         }
-    } else {
+    } else if (gRun30hz) {   // DC 60fps: SPAWN at 30Hz (drift/tyre smoke trail density)
         if (player->unk_0DE & 1) {
             func_80060BCC(player, arg1, sp28, arg2_copy, arg3);
         } else if (!(player->effects & 8) && !(player->effects & 2)) {
@@ -6491,7 +6534,7 @@ void func_8006CEC0(Player* arg0, s16 arg1, s8 arg2, s8 arg3) {
                 func_80063268(arg0, arg1, arg2, arg3);
                 break;
         }
-    } else {
+    } else if (gRun30hz) {   // DC 60fps: SPAWN at 30Hz — spawn-per-frame doubled trail density
         if ((arg0->unk_044 & 0x200) && (arg0->type & 0x4000)) {
             func_80061224(arg0, arg1, sp20, arg2, arg3);
             return;

@@ -4475,6 +4475,42 @@ void update_boos(void) {
     }
 }
 
+// DC 60fps: per-frame TRACKING pass for the boos. Boos are PLAYER-ANCHORED (update_boos
+// derives world pos from player->pos + camera yaw every update), so at 60fps with the object
+// system gated to 30Hz their positions froze every other frame while the player/camera moved
+// -> jitter ("flickery", HW 2026-08-19). This runs the position/facing/vertex part EVERY frame
+// on uncapped frames; the state machine (func_8007C684 etc.) stays 30Hz in update_boos.
+// Caller MUST gate by course (indexObjectList3 is reused by other courses' objects).
+void update_boos_track(void) {
+    u16 temp_t4;
+    s32 someIndex;
+    s32 objectIndex;
+    Player* player;
+    Camera* camera;
+    Object* object;
+
+    for (someIndex = 0; someIndex < NUM_BOOS; someIndex++) {
+        objectIndex = indexObjectList3[someIndex];
+        object = &gObjectList[objectIndex];
+        if (object->state != 0) {
+            player = &gPlayerOne[object->unk_0D1];
+            camera = &camera1[object->unk_0D1];
+            temp_t4 = (0x8000 - camera->rot[1]);
+            object->pos[0] = player->pos[0] + (coss(temp_t4) * (object->origin_pos[0] + object->offset[0])) -
+                             (sins(temp_t4) * (object->origin_pos[2] + object->offset[2]));
+            object->pos[1] = 6.5 + player->unk_074 + object->origin_pos[1] + object->offset[1];
+            object->pos[2] = player->pos[2] + (sins(temp_t4) * (object->origin_pos[0] + object->offset[0])) +
+                             (coss(temp_t4) * (object->origin_pos[2] + object->offset[2]));
+            func_8007C550(objectIndex);
+            if (is_obj_flag_status_active(objectIndex, 0x00000080) != 0) {
+                object->vertex = D_800E44B0;
+            } else {
+                object->vertex = D_800E4470;
+            }
+        }
+    }
+}
+
 void func_8007CE0C(s32 objectIndex) {
     Object* object;
 

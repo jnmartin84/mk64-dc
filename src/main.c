@@ -220,9 +220,23 @@ static struct AudioAPI *audio_api = NULL;
 
 static int frameno = 0;
 static int even_frame;
+// 30Hz gate for once-per-rendered-frame game code that assumes the N64's 30fps (HUD flash
+// counters, course critters, kart particles, staff-ghost replay). Vblank ACCUMULATOR, not
+// frame parity: true 30Hz at any frame rate (60fps -> every other frame; a 45fps dip still
+// ~30Hz). At a capped 30fps every frame spans >=2 vblanks so this is 1 every frame = stock.
+// Consumers: race_logic_loop (below) + code_80057C60.c (func_8005C728 / update_object).
+extern volatile uint64_t vblticker;   // 60Hz hardware vblank count (vblfunc, below)
+s16 gRun30hz = 1;
 
 void game_loop_one_iteration(void) {
     even_frame = !((frameno++) & 1);
+    {
+        static uint64_t last_30hz_vbl = 0;
+        gRun30hz = (vblticker - last_30hz_vbl) >= 2;
+        if (gRun30hz) {
+            last_30hz_vbl = vblticker;
+        }
+    }
 
     gfx_start_frame();
 
@@ -1807,7 +1821,7 @@ void game_init_clear_framebuffer(void) {
     gGamestateNext = 0; // = START_MENU_FROM_QUIT?
     clear_framebuffer(0);
 }
-
+extern int force_30fps;
 void race_logic_loop(void) {
     s16 i;
     u16 rotY;
@@ -1830,12 +1844,28 @@ void race_logic_loop(void) {
     }
     func_802A4EF4();
     
-    gTickSpeed = 2;
+    gTickSpeed = 1;
 
     switch (gActiveScreenMode) {
         case SCREEN_MODE_1P:
             //gTickSpeed = 2;
-            staff_ghosts_loop();
+            force_30fps = 0;
+            gTickSpeed = sNumVBlanks;//(sNumVBlanks < 2) ? 1 : 2;//((sNumVBlanks > 3) ? 4 : sNumVBlanks);
+            // 60fps 30Hz gate (gRun30hz, see game_loop_one_iteration): ghost replay is a
+            // frame-count-addressed input stream (2x at 60fps would desync).
+            // DO NOT top-gate func_8005A070 OR func_80022744 — both strobe on HW:
+            // 5A070 rebuilds HUD matrices in the double-buffered gGfxPool (Lakitu/HUD
+            // flickered against 2-frame-old matrices), and the kart particle system
+            // (exhaust smoke / boost flames) has a state->draw handshake (draw pass in
+            // render_kart_particle_on_screen_one keys off per-frame state the update
+            // pass refreshes), so gating updates starves draws every other frame (awful
+            // flicker, HW 2026-08-19). Particles therefore run per-frame (cosmetically
+            // 2x fast at 60); a real fix needs the state/draw split done INSIDE that
+            // system. 5A070's safe leaves are gated inside code_80057C60.c
+            // (func_8005C728 counters, update_object critters).
+            if (gRun30hz) {
+                staff_ghosts_loop();
+            }
             if (gIsGamePaused == 0) {
                 for (i = 0; i < gTickSpeed; i++) {
                     if (D_8015011E) {
@@ -1893,6 +1923,7 @@ void race_logic_loop(void) {
             break;
 
         case SCREEN_MODE_2P_SPLITSCREEN_VERTICAL:
+            force_30fps = 1;
             /* if (gCurrentCourseId == COURSE_DK_JUNGLE) {
                 gTickSpeed = 3;
             } else {
@@ -1945,6 +1976,7 @@ void race_logic_loop(void) {
             break;
 
         case SCREEN_MODE_2P_SPLITSCREEN_HORIZONTAL:
+            force_30fps = 1;
 
              /* if (gCurrentCourseId == COURSE_DK_JUNGLE ||
                 gCurrentCourseId == COURSE_TOADS_TURNPIKE) {
@@ -2001,6 +2033,8 @@ void race_logic_loop(void) {
             break;
 
         case SCREEN_MODE_3P_4P_SPLITSCREEN:
+                    force_30fps = 1;
+
             /* if (gPlayerCountSelection1 == 3) {
                 switch (gCurrentCourseId) {
                     case COURSE_BOWSER_CASTLE:
@@ -2393,6 +2427,11 @@ void func_80002658(void) {
 int credits_started = 0;
 
 void update_gamestate(void) {
+    // Default EVERY gamestate to the 30fps vblank cap: menus/logos/ceremony/credits all
+    // assume 30Hz ticking (hardcoded gTickSpeed, per-frame anim counters). Racing is the
+    // only state that may uncap — race_logic_loop re-asserts force_30fps per mode EVERY
+    // frame (1P=0, split-screen=1), so this default cleanly covers entering AND leaving it.
+    force_30fps = 1;
     switch (gGamestate) {
         case START_MENU_FROM_QUIT:
             func_80002658();
