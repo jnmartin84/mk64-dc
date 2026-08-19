@@ -203,7 +203,10 @@ struct ccp {
                            // (modulate-class states, e.g. G_CC_MODULATEIA — see classifier)
     uint32_t oargb_const;  // the offset case's oargb (state-constant)
     uint8_t const_out;     // no term references shade: whole output is a state constant,
-    uint8_t cpad[3];       // evaluated once at prepare into c_argb/c_oargb (bit-exact by identity)
+                           // evaluated once at prepare into c_argb/c_oargb (bit-exact by identity)
+    uint8_t fast;          // replace|shade_pass|const_out: eval is a few instructions, so the
+                           // tri1 site SKIPS the cc_cache probe/fill entirely for these states
+    uint8_t cpad[2];
     uint32_t c_argb, c_oargb;
     struct ccp_term c[3][4];   // per colour channel: a, b, c, d
     struct ccp_term a[4];      // alpha: aa, ab, ac, ad (only const / shade[3])
@@ -2126,7 +2129,7 @@ static inline void pvr_eval_combiner_terms(const struct ccp* p, const struct RGB
 static void __attribute__((noinline)) pvr_cc_prepare(struct ccp* p, uint32_t w0, uint32_t w1,
                                                      int textured, uint32_t mode) {
 	memset(p, 0, sizeof(*p));
-	if (mode == GFX_TEXENV_REPLACE) { p->replace = 1; return; }
+	if (mode == GFX_TEXENV_REPLACE) { p->replace = 1; p->fast = 1; return; }
 
 	const float prim[4]  = { rdp.prim_color.r*recip255, rdp.prim_color.g*recip255, rdp.prim_color.b*recip255, rdp.prim_color.a*recip255 };
 	const float env[4]   = { rdp.env_color.r*recip255,  rdp.env_color.g*recip255,  rdp.env_color.b*recip255,  rdp.env_color.a*recip255 };
@@ -2199,6 +2202,7 @@ static void __attribute__((noinline)) pvr_cc_prepare(struct ccp* p, uint32_t w0,
 			pvr_eval_combiner_terms(p, &dummy, &p->c_argb, &p->c_oargb);
 		}
 	}
+	p->fast = (uint8_t) (p->shade_pass | p->const_out);
 }
 
 static inline float ccp_term_val(const struct ccp_term* t, float sch, float sa) {
@@ -2778,6 +2782,27 @@ static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx
 			// (clip_bufA/B) fall outside the slot range -> direct eval.
 			{
 				uint32_t _argb, _oargb;
+				if (ccp_active->fast) {
+					// Fast-class state (replace / shade_pass / const_out — ~87% of evals,
+					// 2026-08-18): the eval is 2-5 instructions, CHEAPER than the cc_cache
+					// probe itself (index calc + stamp load/compare, 2 loads on hit, 3 stores
+					// on miss). Skip the cache entirely; nothing is stored, so returning
+					// general states still find their own cached entries intact.
+					PROF_INC(prof_evals);
+					pvr_eval_combiner_fast(ccp_active, &v_arr[i]->color, &_argb, &_oargb);
+#if GFX_PROF
+					if (cc_active_slot >= 0) cc_states[cc_active_slot].prof_ev++;
+					prof_cc_pass++;
+					// Self-check (sampled): the general term eval must agree BIT-EXACTLY
+					// with the class shortcut on live vertex data. Any mismatch is
+					// counted and screamed about in the print block.
+					if (bk_sample && !ccp_active->replace) {
+						uint32_t chk_a, chk_o;
+						pvr_eval_combiner_terms(ccp_active, &v_arr[i]->color, &chk_a, &chk_o);
+						if (chk_a != _argb || chk_o != _oargb) prof_cc_mism++;
+					}
+#endif
+				} else {
 				int vi = (int) (v_arr[i] - rsp.loaded_vertices);
 				int cacheable = vi >= 0 && vi < MAX_VERTICES + 4;
 				if (cacheable && cc_cache[vi].stamp == cc_state_stamp) {
@@ -2788,19 +2813,9 @@ static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx
 					pvr_eval_combiner_fast(ccp_active, &v_arr[i]->color, &_argb, &_oargb);
 #if GFX_PROF
 					if (cc_active_slot >= 0) cc_states[cc_active_slot].prof_ev++;
-					if (ccp_active->shade_pass || ccp_active->const_out) {
-						prof_cc_pass++;
-						// Self-check (sampled): the general term eval must agree BIT-EXACTLY
-						// with the shade-pass shortcut on live vertex data. Any mismatch is
-						// counted and screamed about in the print block.
-						if (bk_sample) {
-							uint32_t chk_a, chk_o;
-							pvr_eval_combiner_terms(ccp_active, &v_arr[i]->color, &chk_a, &chk_o);
-							if (chk_a != _argb || chk_o != _oargb) prof_cc_mism++;
-						}
-					}
 #endif
 					if (cacheable) { cc_cache[vi].stamp = cc_state_stamp; cc_cache[vi].argb = _argb; cc_cache[vi].oargb = _oargb; }
+				}
 				}
 				// PVR vertex fog reads the fog density from the offset-colour (oargb) ALPHA. The
 				// combiner evaluator leaves that alpha 0 (only RGB carries the additive offset), so
