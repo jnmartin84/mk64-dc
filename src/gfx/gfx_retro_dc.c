@@ -93,7 +93,7 @@ static float far_pin_z = 0.00001f;
 // frame -> GPU-bound signal). Timer = SH4 PRFC0 elapsed cycles (perf_cntr_timer_enable in
 // gfx_init) — NEVER timer_us_gettime64 in hot loops (~10ms/frame at 5 reads/tri on sf64).
 // PRFC1 rotates through pipeline-freeze (stall) modes, one delta per walk, all 5 in ~40 frames.
-#define GFX_PROF 0
+#define GFX_PROF 0   // 1 = measurement session (full profiler incl. scissor scoc/scfan split; costs 4-6ms/frame)
 #define GFX_PROF_SLOW_US 22000
 
 // Contiguous hot-code section (ported from sf64-dc): the per-frame hot path pinned into one
@@ -101,12 +101,21 @@ static float far_pin_z = 0.00001f;
 // -fno-toplevel-reorder, unpinned layout shifts on any size change swung sf64's icache stall
 // by +/-1.7ms with identical workloads. Section order = symbol CREATION (first declaration)
 // order; the attribute BLOCKS inlining, so never put it on small static-inline helpers.
-#define GFX_HOT __attribute__((section(".text.hot.gfx")))
+// optimize("O2") on the hot members trades -O3 loop unrolling for code size: the block had grown
+// to 9388B, past the 8KB direct-mapped I-cache (tail wraps onto head, ~1.2KB self-aliasing); at O2
+// it measures 5888B — fully fitting, 2.3KB headroom. NB: optimize("Os") is IMPOSSIBLE here — the
+// SH backend disables fsrra/fsca under optimize_size, and the sh4zam always_inline helpers then
+// hard-error with "target specific option mismatch" (no flag incantation fixes it; SH has no
+// per-function target attribute). GCC >= 12 merges this attribute with command-line flags (older
+// GCCs reset them — do not copy this pattern to an old-toolchain tree). Whole-file -O2 was tried
+// and reverted in sf64 for perf; THIS is different (hot members only, rest of file stays -O3).
+// Judge with GFXLITE on HW, not by eye.
+#define GFX_HOT __attribute__((section(".text.hot.gfx"), optimize("O2")))
 // GFXLITE: release-config frame meter. NO hot-path instrumentation — two counter reads per
 // frame around the walk plus the frame-to-frame period, one line per second. `late` counts
 // frames whose PERIOD blew the 30Hz deadline (40ms) — a locked-30 game prints late=0/60 with
 // per avg~33333us. Safe to leave enabled in shipping builds.
-#define GFX_PROF_LITE 0   // 1 = always-on GFXLITE frame meter (per avg/max, late=N/60, walk avg/max)
+#define GFX_PROF_LITE 1   // 1 = always-on GFXLITE frame meter (per avg/max, late=N/60, walk avg/max)
 #if GFX_PROF || GFX_PROF_LITE
 #include <dc/perfctr.h>
 #define PROF_NOW() perf_cntr_count(PRFC0)
@@ -122,6 +131,12 @@ static uint32_t prof_tris = 0, prof_verts = 0, prof_mtx = 0, prof_texup = 0, pro
 static uint64_t prof_t_walk = 0, prof_t_flush = 0, prof_t_finish = 0;
 static uint64_t prof_t_vtx = 0, prof_t_tri = 0, prof_t_tri_setup = 0;
 static uint64_t prof_t_clip = 0, prof_t_bake = 0, prof_t_submit = 0;
+// Software-scissor split (the 4P question: how much of the walk is pane clipping?):
+// sc_oc = outcode refresh + classify, paid by EVERY tri in split-screen (sc_is_fullscreen never
+// applies there); sc_fan = Sutherland-Hodgman + fan emit, paid only by pane-crossing tris.
+// Counters: asis = emitted unclipped, rej = dropped off-pane, clip = fan calls, fanout = tris out.
+static uint64_t prof_t_sc_oc = 0, prof_t_sc_fan = 0;
+static uint32_t prof_sc_asis = 0, prof_sc_rej = 0, prof_sc_clip = 0, prof_sc_fanout = 0;
 static uint32_t prof_evals = 0, prof_hits = 0, prof_stamps = 0, prof_setups = 0;
 static uint64_t prof_t_quad = 0, prof_t_mtx = 0;
 static uint32_t prof_quads = 0;
@@ -2525,21 +2540,29 @@ static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx
             n_tris = gfx_build_clipped_fan(v1, v2, v3, fan_tris, SC_FORCE);
         }
     } else {
+#if GFX_PROF
+        uint64_t psc0 = PROF_NOW();
+#endif
         if (v1->scissor_gen != cur_scissor_gen) { v1->scissor_oc = compute_scissor_outcode(v1->_x, v1->_y, v1->_w); v1->scissor_gen = cur_scissor_gen; }
         if (v2->scissor_gen != cur_scissor_gen) { v2->scissor_oc = compute_scissor_outcode(v2->_x, v2->_y, v2->_w); v2->scissor_gen = cur_scissor_gen; }
         if (v3->scissor_gen != cur_scissor_gen) { v3->scissor_oc = compute_scissor_outcode(v3->_x, v3->_y, v3->_w); v3->scissor_gen = cur_scissor_gen; }
 
         uint8_t oc_or  = v1->scissor_oc | v2->scissor_oc | v3->scissor_oc;
         uint8_t oc_and = v1->scissor_oc & v2->scissor_oc & v3->scissor_oc;
+#if GFX_PROF
+        prof_t_sc_oc += PROF_NOW() - psc0;   // outcode refresh + classify (every split-screen tri)
+#endif
 
         if (oc_or == 0) {
             // fully inside every edge, none behind the eye -> emit unclipped
             fan_tris[0][0] = v1; fan_tris[0][1] = v2; fan_tris[0][2] = v3;
             n_tris = 1;
+            PROF_INC(prof_sc_asis);
         } else if (oc_and & SC_EDGE_MASK) {
             // all three share an outside edge -> whole triangle is off-pane (incl.
             // off-screen past a redundant border edge: still a correct trivial reject)
             n_tris = 0;
+            PROF_INC(prof_sc_rej);
         } else {
             // A behind-eye vertex's edge bits are meaningless, so when SC_FORCE is
             // present clip every plane; otherwise clip only the CROSSED, NON-REDUNDANT
@@ -2551,8 +2574,17 @@ static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx
                 // only redundant border edges were crossed -> emit as-is, PVR guard-bands it
                 fan_tris[0][0] = v1; fan_tris[0][1] = v2; fan_tris[0][2] = v3;
                 n_tris = 1;
+                PROF_INC(prof_sc_asis);
             } else {
+#if GFX_PROF
+                uint64_t psc1 = PROF_NOW();
                 n_tris = gfx_build_clipped_fan(v1, v2, v3, fan_tris, clip_mask);
+                prof_t_sc_fan += PROF_NOW() - psc1;   // SH plane passes + fan build
+                prof_sc_clip += 1;
+                prof_sc_fanout += (uint32_t) n_tris;
+#else
+                n_tris = gfx_build_clipped_fan(v1, v2, v3, fan_tris, clip_mask);
+#endif
             }
         }
     }
@@ -3041,7 +3073,7 @@ static void gfx_calc_and_set_viewport(const Vp_t* viewport) {
 	rdp.viewport_or_scissor_changed = 1;
 }
 
-static void  gfx_sp_movemem(uint8_t index, UNUSED uint8_t offset, const void* data) {
+static void  gfx_sp_movemem(uint8_t index, const void* data) {
 	switch (index) {
 		case G_MV_VIEWPORT:
 			gfx_calc_and_set_viewport((const Vp_t*) data);
@@ -3084,7 +3116,7 @@ static void  gfx_sp_movemem(uint8_t index, UNUSED uint8_t offset, const void* da
 }
 int16_t fog_mul;
 int16_t fog_ofs;
-static void  gfx_sp_moveword(uint8_t index, UNUSED uint16_t offset, uint32_t data) {
+static void  gfx_sp_moveword(uint8_t index, uint32_t data) {
 	switch (index) {
 		case G_MW_NUMLIGHT:
 			// Ambient light is included
@@ -3103,13 +3135,15 @@ static void  gfx_sp_moveword(uint8_t index, UNUSED uint16_t offset, uint32_t dat
 	}
 }
 
-static void gfx_sp_texture(uint16_t sc, uint16_t tc, UNUSED uint8_t level, UNUSED uint8_t tile, UNUSED uint8_t on) {
+// SH4 ABI: only r4-r7 carry integer args; the 5th+ go through the stack. Handlers below are
+// trimmed to the arguments they actually read (sf64-dc shape) so no gfx_run_dl dispatch call
+// spills to the stack, and the C0/C1 field extraction happens in the (non-hot) handlers.
+static void gfx_sp_texture(uint16_t sc, uint16_t tc) {
 	rsp.texture_scaling_factor.s = sc;
 	rsp.texture_scaling_factor.t = tc;
 }
 
-static void gfx_dp_set_scissor(UNUSED uint32_t mode, uint32_t ulx, uint32_t uly, uint32_t lrx,
-							   uint32_t lry) {
+static void gfx_dp_set_scissor(uint32_t ulx, uint32_t uly, uint32_t lrx, uint32_t lry) {
 //	float x = ulx / 4.0f * RATIO_X;
 //	float y = (SCREEN_HEIGHT - lry / 4.0f) * RATIO_Y;
 //	float width = (lrx - ulx) / 4.0f * RATIO_X;
@@ -3137,16 +3171,29 @@ static void gfx_dp_set_scissor(UNUSED uint32_t mode, uint32_t ulx, uint32_t uly,
 	rdp.viewport_or_scissor_changed = 1;
 }
 
-static void gfx_dp_set_texture_image(UNUSED uint32_t format, uint32_t size, UNUSED uint32_t width,
-									 UNUSED const void* addr) {
+static void gfx_dp_set_texture_image(uint32_t size, uint32_t width, const void* addr) {
 	rdp.texture_to_load.addr = segmented_to_virtual((void*)addr);
 	rdp.texture_to_load.siz = size;
 	last_set_texture_image_width = width;
 }
 
-static void  gfx_dp_set_tile(uint8_t fmt, uint32_t siz, uint32_t line, uint32_t tmem, uint8_t tile,
-							UNUSED uint32_t palette, uint32_t cmt, UNUSED uint32_t maskt, UNUSED uint32_t shiftt,
-							uint32_t cms, UNUSED uint32_t masks, UNUSED uint32_t shifts) {
+// G_SETTILE handler takes the two raw command words (12 extracted args would put 8 on the
+// stack per call — texture-load triplets are among the most frequent DL opcodes). Field
+// extraction happens here, out of the GFX_HOT dispatch loop. (sf64-dc's gfx_dp_set_tile2 shape;
+// body semantics unchanged — MK64 keys loaded_texture by tmem BLOCK, see comment below.)
+#define C0alt(pos, width) ((w0 >> (pos)) & ((1U << width) - 1))
+#define C1alt(pos, width) ((w1 >> (pos)) & ((1U << width) - 1))
+static void  gfx_dp_set_tile(uint32_t w0, uint32_t w1) {
+	uint8_t  fmt   = C0alt(21, 3);
+	uint32_t siz   = C0alt(19, 2);
+	uint32_t line  = C0alt(9, 9);
+	uint32_t tmem  = C0alt(0, 9);
+	uint8_t  tile  = C1alt(24, 3);
+	uint32_t cmt   = C1alt(18, 2);
+	uint32_t maskt = C1alt(14, 4);
+	uint32_t cms   = C1alt(8, 2);
+	uint32_t masks = C1alt(4, 4);
+	// palette (C1(20,4)), shiftt (C1(10,4)), shifts (C1(0,4)) are not consumed by this port.
 	if (tile == G_TX_RENDERTILE) {
 		//SUPPORT_CHECK(palette == 0); // palette should set upper 4 bits of color index in 4b mode
 		rdp.texture_tile.fmt = fmt;
@@ -3174,21 +3221,20 @@ static void  gfx_dp_set_tile(uint8_t fmt, uint32_t siz, uint32_t line, uint32_t 
 	rdp.texture_to_load.tmem = tmem;
 }
 
-static void  gfx_dp_set_tile_size(uint8_t tile, uint16_t uls, uint16_t ult, uint16_t lrs, uint16_t lrt) {
-	if (tile == G_TX_RENDERTILE) {
-		rdp.texture_tile.uls = uls;
-		rdp.texture_tile.ult = ult;
-		rdp.texture_tile.lrs = lrs;
-		rdp.texture_tile.lrt = lrt;
-		rdp.textures_changed[0] = 1;
-		rdp.textures_changed[1] = 1;
-	}
+// Render-tile check lives at the call site (sf64-dc shape): 4 args, all in registers.
+static void  gfx_dp_set_tile_size(uint16_t uls, uint16_t ult, uint16_t lrs, uint16_t lrt) {
+	rdp.texture_tile.uls = uls;
+	rdp.texture_tile.ult = ult;
+	rdp.texture_tile.lrs = lrs;
+	rdp.texture_tile.lrt = lrt;
+	rdp.textures_changed[0] = 1;
+	rdp.textures_changed[1] = 1;
 }
 
 
 extern uint16_t common_tlut_hud_type_C_rank_font[];
 extern uint16_t common_tlut_finish_line_banner[];
-static void  __attribute__((noinline)) gfx_dp_load_tlut(UNUSED uint8_t tile, UNUSED uint32_t high_index) {
+static void  __attribute__((noinline)) gfx_dp_load_tlut(UNUSED uint32_t high_index) {
 	rdp.palette = rdp.texture_to_load.addr;
 	uint32_t* srcp = (uint32_t *)segmented_to_virtual((void*)rdp.texture_to_load.addr);
 	uint16_t clearcolor;
@@ -3230,8 +3276,7 @@ static void  __attribute__((noinline)) gfx_dp_load_tlut(UNUSED uint8_t tile, UNU
 	}
 }
 
-static void  gfx_dp_load_block(UNUSED uint8_t tile, UNUSED uint32_t uls, UNUSED uint32_t ult, uint32_t lrs,
-							  UNUSED uint32_t dxt) {
+static void  gfx_dp_load_block(uint32_t lrs) {
 	// The lrs field rather seems to be number of pixels to load
 	uint32_t word_size_shift = 0;
 	switch (rdp.texture_to_load.siz) {
@@ -3256,7 +3301,7 @@ static void  gfx_dp_load_block(UNUSED uint8_t tile, UNUSED uint32_t uls, UNUSED 
 	rdp.textures_changed[rdp.texture_to_load.tile_number] = 1;
 }
 
-static void gfx_dp_load_tile(UNUSED uint8_t tile, uint32_t uls, uint32_t ult, uint32_t lrs, uint32_t lrt) {
+static void gfx_dp_load_tile(uint32_t uls, uint32_t ult, uint32_t lrs, uint32_t lrt) {
 	uint32_t word_size_shift = 0;
 	switch (rdp.texture_to_load.siz) {
 		case G_IM_SIZ_4b:
@@ -3451,7 +3496,7 @@ static void  __attribute__((noinline)) gfx_draw_rectangle(int32_t ulx, int32_t u
 	}
 }
 
-static void  __attribute__((noinline)) gfx_dp_texture_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry, UNUSED uint8_t tile,
+static void  __attribute__((noinline)) gfx_dp_texture_rectangle2(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry,
 									 int16_t uls, int16_t ult, int16_t dsdx, int16_t dtdy, uint8_t flip) {
 	uint32_t saved_combine_mode = rdp.combine_mode;
 	if ((rdp.other_mode_h & (3U << G_MDSFT_CYCLETYPE)) == G_CYC_COPY) {
@@ -3558,6 +3603,25 @@ static inline void* seg_addr(uintptr_t w1) {
 #define C0(pos, width) ((cmd->words.w0 >> (pos)) & ((1U << width) - 1))
 #define C1(pos, width) ((cmd->words.w1 >> (pos)) & ((1U << width) - 1))
 
+// G_TEXRECT front half (sf64-dc shape): takes the raw 3-word command and parses it here, out of
+// the GFX_HOT dispatch loop, then calls the 9-arg body — the only remaining stack-spilling call,
+// once per rect instead of extraction code bloating gfx_run_dl. `cmd` param shadows the macro use.
+static void __attribute__((noinline)) gfx_dp_texture_rectangle(Gfx* cmd, uint8_t flip) {
+	int32_t lrx, lry, ulx, uly;
+	int16_t uls, ult, dsdx, dtdy;
+	lrx = C0(12, 12);
+	lry = C0(0, 12);
+	ulx = C1(12, 12);
+	uly = C1(0, 12);
+	++cmd;
+	uls = C1(16, 16);
+	ult = C1(0, 16);
+	++cmd;
+	dsdx = C1(16, 16);
+	dtdy = C1(0, 16);
+	gfx_dp_texture_rectangle2(ulx, uly, lrx, lry, uls, ult, dsdx, dtdy, flip);
+}
+
 int title_backdrop = 0;
 int use_one_inv = 0;
 int depth_off = 0;
@@ -3627,25 +3691,25 @@ static void  __attribute__((noinline)) GFX_HOT gfx_run_dl(Gfx* cmd) {
 
 			case G_MOVEMEM:
 #ifdef F3DEX_GBI_2
-				gfx_sp_movemem(C0(0, 8), C0(8, 8) * 8, seg_addr(cmd->words.w1));
+				gfx_sp_movemem(C0(0, 8), seg_addr(cmd->words.w1));
 #else
-				gfx_sp_movemem(C0(16, 8), 0, seg_addr(cmd->words.w1));
+				gfx_sp_movemem(C0(16, 8), seg_addr(cmd->words.w1));
 #endif
 				break;
 
 			case (uint8_t) G_MOVEWORD:
 #ifdef F3DEX_GBI_2
-				gfx_sp_moveword(C0(16, 8), C0(0, 16), cmd->words.w1);
+				gfx_sp_moveword(C0(16, 8), cmd->words.w1);
 #else
-				gfx_sp_moveword(C0(0, 8), C0(8, 16), cmd->words.w1);
+				gfx_sp_moveword(C0(0, 8), cmd->words.w1);
 #endif
 				break;
 
 			case (uint8_t) G_TEXTURE:
 #ifdef F3DEX_GBI_2
-				gfx_sp_texture(C1(16, 16), C1(0, 16), C0(11, 3), C0(8, 3), C0(1, 7));
+				gfx_sp_texture(C1(16, 16), C1(0, 16));
 #else
-				gfx_sp_texture(C1(16, 16), C1(0, 16), C0(11, 3), C0(8, 3), C0(0, 8));
+				gfx_sp_texture(C1(16, 16), C1(0, 16));
 #endif
 				break;
 
@@ -3733,28 +3797,28 @@ static void  __attribute__((noinline)) GFX_HOT gfx_run_dl(Gfx* cmd) {
 
 			// RDP Commands:
 			case G_SETTIMG:
-				gfx_dp_set_texture_image(C0(21, 3), C0(19, 2), C0(0, 10), cmd->words.w1);
+				gfx_dp_set_texture_image(C0(19, 2), C0(0, 10), cmd->words.w1);
 				break;
 
 			case G_LOADBLOCK:
-				gfx_dp_load_block(C1(24, 3), C0(12, 12), C0(0, 12), C1(12, 12), C1(0, 12));
+				gfx_dp_load_block(C1(12, 12));
 				break;
 
 			case G_LOADTILE:
-				gfx_dp_load_tile(C1(24, 3), C0(12, 12), C0(0, 12), C1(12, 12), C1(0, 12));
+				gfx_dp_load_tile(C0(12, 12), C0(0, 12), C1(12, 12), C1(0, 12));
 				break;
 
 			case G_SETTILE:
-				gfx_dp_set_tile(C0(21, 3), C0(19, 2), C0(9, 9), C0(0, 9), C1(24, 3), C1(20, 4), C1(18, 2), C1(14, 4),
-								C1(10, 4), C1(8, 2), C1(4, 4), C1(0, 4));
+				gfx_dp_set_tile(cmd->words.w0, cmd->words.w1);
 				break;
 
 			case G_SETTILESIZE:
-				gfx_dp_set_tile_size(C1(24, 3), C0(12, 12), C0(0, 12), C1(12, 12), C1(0, 12));
+				if (C1(24, 3) == G_TX_RENDERTILE)
+					gfx_dp_set_tile_size(C0(12, 12), C0(0, 12), C1(12, 12), C1(0, 12));
 				break;
 
 			case G_LOADTLUT:
-				gfx_dp_load_tlut(C1(24, 3), C1(14, 10));
+				gfx_dp_load_tlut(C1(14, 10));
 				break;
 
 			case G_SETENVCOLOR:
@@ -3789,33 +3853,12 @@ static void  __attribute__((noinline)) GFX_HOT gfx_run_dl(Gfx* cmd) {
 
 			case G_TEXRECT:
 			case G_TEXRECTFLIP: {
-				int32_t lrx, lry, tile, ulx, uly;
-				uint32_t uls, ult, dsdx, dtdy;
-#ifdef F3DEX_GBI_2E
-				lrx = (int32_t) (C0(0, 24) << 8) >> 8;
-				lry = (int32_t) (C1(0, 24) << 8) >> 8;
+				// Raw 3-word command parsed inside the noinline wrapper (out of the hot block).
+				// (Old F3DEX_GBI_2E parsing branch dropped — never defined in this build.)
+				Gfx* texrectCmd = cmd;
 				++cmd;
-				ulx = (int32_t) (C0(0, 24) << 8) >> 8;
-				uly = (int32_t) (C1(0, 24) << 8) >> 8;
 				++cmd;
-				uls = C0(16, 16);
-				ult = C0(0, 16);
-				dsdx = C1(16, 16);
-				dtdy = C1(0, 16);
-#else
-				lrx = C0(12, 12);
-				lry = C0(0, 12);
-				tile = C1(24, 3);
-				ulx = C1(12, 12);
-				uly = C1(0, 12);
-				++cmd;
-				uls = C1(16, 16);
-				ult = C1(0, 16);
-				++cmd;
-				dsdx = C1(16, 16);
-				dtdy = C1(0, 16);
-#endif
-				gfx_dp_texture_rectangle(ulx, uly, lrx, lry, tile, uls, ult, dsdx, dtdy, opcode == G_TEXRECTFLIP);
+				gfx_dp_texture_rectangle(texrectCmd, opcode == G_TEXRECTFLIP);
 				break;
 			}
 
@@ -3836,7 +3879,7 @@ static void  __attribute__((noinline)) GFX_HOT gfx_run_dl(Gfx* cmd) {
 				break;
 #endif
 			case G_SETSCISSOR:
-				gfx_dp_set_scissor(C1(24, 2), C0(12, 12), C0(0, 12), C1(12, 12), C1(0, 12));
+				gfx_dp_set_scissor(C0(12, 12), C0(0, 12), C1(12, 12), C1(0, 12));
 				break;
 
 			case G_SETZIMG:
@@ -4009,6 +4052,12 @@ void gfx_end_frame(void) {
 		       (unsigned long) prof_farcull);
 		printf("GFXPROF   stall %s = %luus of walk\n",
 		       prof_stall_modes[prof_stall_idx].name, PROF_US(prof_stall_walk));
+		// Software-scissor split: scoc (outcode+classify, every split tri) + scfan (SH clip+fan)
+		// should ~= the clip= bucket in split-screen; n = asis/rej/clip/fanout tri outcomes.
+		printf("GFXPROF   scissor oc=%luus fan=%luus n=%lu/%lu/%lu/%lu (asis/rej/clip/fanout)\n",
+		       PROF_US(prof_t_sc_oc), PROF_US(prof_t_sc_fan),
+		       (unsigned long) prof_sc_asis, (unsigned long) prof_sc_rej,
+		       (unsigned long) prof_sc_clip, (unsigned long) prof_sc_fanout);
 	}
 	prof_tris = prof_verts = prof_mtx = prof_texup = 0;
 	prof_t_vtx = prof_t_tri = prof_t_tri_setup = prof_t_clip = prof_t_bake = prof_t_submit = 0;
@@ -4016,6 +4065,8 @@ void gfx_end_frame(void) {
 	prof_t_quad = prof_t_mtx = 0; prof_quads = 0;
 	prof_op_verts = prof_pt_verts = prof_tr_verts = 0;
 	prof_farcull = 0;
+	prof_t_sc_oc = prof_t_sc_fan = 0;
+	prof_sc_asis = prof_sc_rej = prof_sc_clip = prof_sc_fanout = 0;
 	prof_su[0] = prof_su[1] = prof_su[2] = prof_su[3] = 0;
 	// Rotate the stall mode after every PRINT (1/sec or slow-frame), not on a fixed frame
 	// stride: 60-frame prints x 8-frame rotation sampled only 2 of the 5 modes once walks
