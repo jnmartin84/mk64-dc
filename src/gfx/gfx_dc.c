@@ -12,7 +12,8 @@
 #define SCR_WIDTH (640)
 #define SCR_HEIGHT (480)
 
-static int force_30fps = 1;
+static int force_30fps = 1;   // 0 = uncapped: pacing falls to pvr_wait_ready (real vsync, 60Hz-capable).
+                              // 1 = sleep-to-33ms cap in swap_buffers_end (the old 30fps lock).
 static unsigned int last_time = 0;
 
 extern void glKosSwapBuffers(void);
@@ -63,28 +64,39 @@ uint8_t skip_debounce = 0;
 const unsigned int FRAME_TIME_MS = 33; // hopefully get right on target @ 33.3
 
 static uint8_t gfx_dc_start_frame(void) {
-    const unsigned int cur_time = GetSystemTimeLow();
-    const unsigned int elapsed = cur_time - last_time;
-
-    if (skip_debounce) {
-        skip_debounce--;
-        return 1;
-    }
-    // skip if frame took longer than 1 / 30 = 33.3 ms
-    if (elapsed > FRAME_TIME_MS) {
-        skip_debounce = 1; // skip a max of once every 4 frames
-        last_time = cur_time;
-        return 0;
-    }
+    // The old ms-based frame-skip is GONE (2026-08-18). It depended on last_time being
+    // refreshed by the old sleep-cap in swap_buffers_end; with that replaced by vblank
+    // pacing, last_time froze at boot, elapsed was always > 33ms, and every OTHER frame
+    // "skipped": logic still ran, render didn't, and the skipped frame bypassed the pacer
+    // (dropped_frame skips swap_buffers_end) -> two logic frames per 2-vblank beat =
+    // DOUBLE GAME SPEED at a correct-looking 30fps. With vblank pacing a slow frame
+    // self-paces (the +2 target resyncs), so skipping is unnecessary — always render.
     return 1;
 }
 
 static void gfx_dc_swap_buffers_begin(void) {
 }
 
+extern volatile uint64_t vblticker;
+static uint64_t last_ticker = 0;
 static void gfx_dc_swap_buffers_end(void) {
+
+    // 30fps pacing on the real 60Hz vblank: hold each frame to a CONSTANT 2-vblank beat.
+    // NEVER pace on gTickSpeed/sNumVBlanks — those MEASURE the frame we're pacing, so a
+    // one-frame hiccup ratchets the wait up permanently (wait 3 -> measures 3 -> wait 3...).
+    // A slow frame (vblticker already past target) resyncs instead of running a debt.
+    // NB: vblfunc must genwait_wake_ALL — the audio thread sleeps on this channel too, and
+    // wake_one only ever woke one of us per vblank (starving the other).
+    if (force_30fps) {
+        const uint64_t target = last_ticker + 2;
+        while (vblticker < target)
+            genwait_wait((void*)&vblticker, NULL, 0, NULL);
+        last_ticker = (vblticker > target) ? vblticker : target;
+    }
+
+
     // Number of microseconds a frame should take (30 fps)
-    const unsigned int cur_time = GetSystemTimeLow();
+/*    const unsigned int cur_time = GetSystemTimeLow();
     const unsigned int elapsed = cur_time - last_time;
     last_time = cur_time;
 
@@ -94,7 +106,7 @@ static void gfx_dc_swap_buffers_end(void) {
 #endif
         DelayThread(FRAME_TIME_MS - elapsed);
         last_time += (FRAME_TIME_MS - elapsed);
-    }
+    }*/
 
     /* Lets us yield to other threads*/
 #ifndef GFX_BACKEND_PVR

@@ -117,7 +117,7 @@ u8 gKeyboardBit;
 CollisionGrid gCollisionGrid[1024];
 u16 gNumActors;
 u16 gMatrixObjectCount;
-s32 gTickSpeed;
+s32 gTickSpeed = 2;
 f32 D_80150118;
 
 u16 wasSoftReset;
@@ -1898,6 +1898,14 @@ void race_logic_loop(void) {
             } else {
                 gTickSpeed = 2;
             } */
+            // DC: framerate-compensating tick speed in place of the N64's static per-course
+            // table above. sNumVBlanks = 60Hz vblanks since the last logic frame = exactly how
+            // many 60Hz ticks this frame spans: 2 when we hold 30fps, 3 when we drop to 20.
+            // Game speed stays correct at either rate, and frames that reach 30fps
+            // automatically get the smooth 2-tick treatment as renderer perf improves.
+            // Clamped [2,4]: 4 = the N64's own DK-Jungle-in-4P floor, also covers spikes.
+            gTickSpeed = (sNumVBlanks < 2) ? 2 : ((sNumVBlanks > 4) ? 4 : sNumVBlanks);
+
             if (gIsGamePaused == 0) {
                 for (i = 0; i < gTickSpeed; i++) {
                     if (D_8015011E != 0) {
@@ -1945,6 +1953,13 @@ void race_logic_loop(void) {
                 gTickSpeed = 2;
             } */
 //            gTickSpeed = 3;
+            // DC: framerate-compensating tick speed in place of the N64's static per-course
+            // table above. sNumVBlanks = 60Hz vblanks since the last logic frame = exactly how
+            // many 60Hz ticks this frame spans: 2 when we hold 30fps, 3 when we drop to 20.
+            // Game speed stays correct at either rate, and frames that reach 30fps
+            // automatically get the smooth 2-tick treatment as renderer perf improves.
+            // Clamped [2,4]: 4 = the N64's own DK-Jungle-in-4P floor, also covers spikes.
+            gTickSpeed = (sNumVBlanks < 2) ? 2 : ((sNumVBlanks > 4) ? 4 : sNumVBlanks);
 
             if (gIsGamePaused == 0) {
                 for (i = 0; i < gTickSpeed; i++) {
@@ -2021,6 +2036,7 @@ void race_logic_loop(void) {
             // automatically get the smooth 2-tick treatment as renderer perf improves.
             // Clamped [2,4]: 4 = the N64's own DK-Jungle-in-4P floor, also covers spikes.
             gTickSpeed = (sNumVBlanks < 2) ? 2 : ((sNumVBlanks > 4) ? 4 : sNumVBlanks);
+
             if (gIsGamePaused == 0) {
                 for (i = 0; i < gTickSpeed; i++) {
                     if (D_8015011E != 0) {
@@ -2411,7 +2427,7 @@ void update_gamestate(void) {
 
 void SPINNING_THREAD(UNUSED void *arg);
 
-static volatile uint64_t vblticker=0;
+/* static */ volatile uint64_t vblticker=0;
 
 void vblfunc(uint32_t c, void *d) {
 	(void)c;
@@ -2422,7 +2438,7 @@ void vblfunc(uint32_t c, void *d) {
        which is dead on DC (#if 0 thread3_video), so they were stuck. */
     gVBlankTimer += V_BlANK_TIMER_ITER;
     sNumVBlanks++;
-    genwait_wake_one((void *)&vblticker);
+    genwait_wake_all((void *)&vblticker);
 }
 
 void thread5_game_loop(UNUSED void* arg) {
