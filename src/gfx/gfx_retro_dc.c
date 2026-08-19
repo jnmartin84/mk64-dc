@@ -111,6 +111,17 @@ static float far_pin_z = 0.00001f;
 // and reverted in sf64 for perf; THIS is different (hot members only, rest of file stays -O3).
 // Judge with GFXLITE on HW, not by eye.
 #define GFX_HOT __attribute__((section(".text.hot.gfx"), optimize("O2")))
+// Final-link placement (2026-08-18 findings): the KOS ldscript's .text swallows *(.text.*),
+// and LTO ltrans partitions SCATTER the members of this named section across the image — so
+// the attribute does NOT guarantee contiguity in the linked ELF, only in the .o. Measured
+// truth: that's fine. In the natural layout tri1_impl+run_dl (the per-frame pair) land
+// near-adjacent (~0x1730 span < 8KB, cannot self-alias) and the build HW-measures best.
+// Gathering the section contiguous AND pinning it to I-cache index 0 via hotlink.ld (repo
+// root, dormant — see instructions there) was TRIED AND REVERTED: 4P Turnpike late spiked to
+// 30-57/60, walk +2-4ms. Pinning at index 0 aliased the block against the first bytes of
+// EVERY 8KB page of code (.text start, KOS ISRs...) — the natural layout is a measured-lucky
+// ticket; don't re-roll it without HW A/B. Check placement after size changes with:
+//   sh-elf-nm build/mario-kart.elf | grep -E "tri1_impl|_gfx_run_dl$"
 // GFXLITE: release-config frame meter. NO hot-path instrumentation — two counter reads per
 // frame around the walk plus the frame-to-frame period, one line per second. `late` counts
 // frames whose PERIOD blew the 30Hz deadline (40ms) — a locked-30 game prints late=0/60 with
@@ -1557,18 +1568,22 @@ static void  __attribute__((noinline)) gfx_sp_pop_matrix(uint32_t count) {
 }
 
 // N64 per-vertex fog coefficient from clip z/w (matches OoT's raw-PVR path and the RSP
-// G_MWO_FOG math): fog = clamp(fog_mul*(z/w) + fog_offset, 0..255). Returns 0 when fog is
-// off (G_FOG clear) or the vertex is behind the near plane, so non-fogged frames pay nothing.
-static inline uint8_t gfx_calc_fog(float z, float w) {
-    if (!(rsp.geometry_mode & G_FOG)) return 0;
+// G_MWO_FOG math): fog = clamp(fog_mul*(z/w) + fog_offset, 0..255). Returns 0 when the
+// vertex is behind the near plane. The G_FOG gate and the fog_mul/fog_offset int->float
+// conversions are HOISTED to the callers (once per G_VTX command, not per vertex): the
+// sh4zam inline asm in the vertex loops stops GCC from hoisting the rsp.* global reloads
+// itself, and none of these inputs can change mid-command.
+static inline uint8_t gfx_calc_fog(float z, float w, float fog_mul, float fog_ofs) {
     if (z < -w) return 0;
-    float f = (float)rsp.fog_mul * (z * shz_fast_invf(w)) + (float)rsp.fog_offset;
+    float f = fog_mul * (z * shz_fast_invf(w)) + fog_ofs;
     if (f > 255.0f) f = 255.0f;
     else if (f < 0.0f) f = 0.0f;
     return (uint8_t)f;
 }
 
 static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
+    const int fog_on = (rsp.geometry_mode & G_FOG) != 0;   // hoisted: see gfx_calc_fog
+    const float fog_mul = (float) rsp.fog_mul, fog_ofs = (float) rsp.fog_offset;
     for (size_t i = 0; i < n_vertices; i++, dest_index++) {
         __builtin_prefetch(&vertices[i + 2]);   // 16B/Vtx: next line every other iteration
         const Vtx_t* v = &vertices[i].v;
@@ -1675,11 +1690,13 @@ static void __attribute__((noinline)) gfx_sp_vertex_light(size_t n_vertices, siz
         d->_z = z;
         d->_w = w;
 
-        d->fog = gfx_calc_fog(z, w);
+        d->fog = fog_on ? gfx_calc_fog(z, w, fog_mul, fog_ofs) : 0;
     }
 }
 
 static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
+    const int fog_on = (rsp.geometry_mode & G_FOG) != 0;   // hoisted: see gfx_calc_fog
+    const float fog_mul = (float) rsp.fog_mul, fog_ofs = (float) rsp.fog_offset;
     for (size_t i = 0; i < n_vertices; i++, dest_index++) {
         __builtin_prefetch(&vertices[i + 2]);   // 16B/Vtx: next line every other iteration
         const Vtx_t* v = &vertices[i].v;
@@ -1717,7 +1734,7 @@ static void __attribute__((noinline)) gfx_sp_vertex_no(size_t n_vertices, size_t
 
         d->lit = 0; // unlit path: shade is the raw vertex colour, no light mix
 
-        d->fog = gfx_calc_fog(d->_z, d->_w);
+        d->fog = fog_on ? gfx_calc_fog(d->_z, d->_w, fog_mul, fog_ofs) : 0;
     }
 }
 
@@ -2268,7 +2285,10 @@ static inline void pvr_eval_combiner_fast(const struct ccp* p, const struct RGBA
 #define PVR_DECAL_ZBIAS 1.003f
 
 // Full triangle-state derivation (see the call site in gfx_sp_tri1_impl). Cold relative to
-// the per-triangle path, so NOT in the hot section.
+// the per-triangle path, so NOT in the hot section. (2026-08-18: pulling this into GFX_HOT was
+// TRIED AND REVERTED — the block fit at 8036B, but 4P Turnpike walk rose ~1-2ms and late spiked
+// to 15-26/60. The extra ~1.7KB of hot footprint evicts more of the rest of the frame's code
+// than setup's ~280 calls/frame win back. Don't retry without a new layout idea.)
 static void __attribute__((noinline)) gfx_tri_state_setup(void) {
     tri_setup_gen = rdp_state_gen;
     PROF_INC(prof_setups);
@@ -2598,7 +2618,8 @@ static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx
     // Hoisted state derivation: runs only when a non-geometry opcode bumped rdp_state_gen
     // since the last triangle. Deliberately OUTSIDE the GFX_HOT section: it runs ~240x/frame
     // vs ~2200 triangle calls, and inside tri1_impl it bloated the hot block past the 8KB
-    // I-cache (12.7KB measured) -> self-aliasing again.
+    // I-cache (12.7KB measured) -> self-aliasing again. (Hot membership as a separate O2
+    // member was ALSO tried 2026-08-18 and reverted — see note at the function.)
     if (tri_setup_gen != rdp_state_gen)
         gfx_tri_state_setup();
     const uint8_t depth_test = ts.depth_test;
