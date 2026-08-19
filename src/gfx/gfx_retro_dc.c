@@ -93,7 +93,7 @@ static float far_pin_z = 0.00001f;
 // frame -> GPU-bound signal). Timer = SH4 PRFC0 elapsed cycles (perf_cntr_timer_enable in
 // gfx_init) — NEVER timer_us_gettime64 in hot loops (~10ms/frame at 5 reads/tri on sf64).
 // PRFC1 rotates through pipeline-freeze (stall) modes, one delta per walk, all 5 in ~40 frames.
-#define GFX_PROF 0   // 1 = measurement session (full profiler incl. scissor scoc/scfan split; costs 4-6ms/frame)
+#define GFX_PROF 0   // 1 = measurement session (bake split, scissor split, cc histogram; costs 4-6ms/frame)
 #define GFX_PROF_SLOW_US 22000
 
 // Contiguous hot-code section (ported from sf64-dc): the per-frame hot path pinned into one
@@ -137,6 +137,15 @@ static uint64_t prof_t_clip = 0, prof_t_bake = 0, prof_t_submit = 0;
 // Counters: asis = emitted unclipped, rej = dropped off-pane, clip = fan calls, fanout = tris out.
 static uint64_t prof_t_sc_oc = 0, prof_t_sc_fan = 0;
 static uint32_t prof_sc_asis = 0, prof_sc_rej = 0, prof_sc_clip = 0, prof_sc_fanout = 0;
+// Bake-bucket split (where do the 13-17ms go?): SAMPLED — every 8th source triangle gets
+// per-vertex sub-timers (full per-vertex timing would swamp the measurement). Printed x8 as an
+// estimate. res = pvr_reserve (PT/TR flag-stamp), sm = 1/w + screen map + z, uv = UV transform,
+// cc = combiner cache/eval + fog + colour stores. bake minus the scaled sum = loop/store overhead.
+static uint64_t prof_t_bk_res = 0, prof_t_bk_sm = 0, prof_t_bk_uv = 0, prof_t_bk_cc = 0;
+static uint32_t prof_bk_samples = 0;
+// Shade-pass combiner fast path: evals taking the shortcut, and sampled self-check mismatches
+// (general term eval vs shortcut on live verts — MUST stay 0; nonzero = classifier bug).
+static uint32_t prof_cc_pass = 0, prof_cc_mism = 0;
 static uint32_t prof_evals = 0, prof_hits = 0, prof_stamps = 0, prof_setups = 0;
 static uint64_t prof_t_quad = 0, prof_t_mtx = 0;
 static uint32_t prof_quads = 0;
@@ -190,13 +199,19 @@ struct ccp {
     uint8_t replace;       // GFX_TEXENV_REPLACE: constant {argb=~0, oargb=0}
     uint8_t cct;           // color_const_textured: whole colour -> oargb, argb.rgb = 0
     uint8_t offset;        // additive PRIM/ENV 'd' routed to constant oargb
-    uint8_t pad;
+    uint8_t shade_pass;    // whole eval == shade passthrough: argb = pack(shade bytes), oargb = 0
+                           // (modulate-class states, e.g. G_CC_MODULATEIA — see classifier)
     uint32_t oargb_const;  // the offset case's oargb (state-constant)
+    uint8_t const_out;     // no term references shade: whole output is a state constant,
+    uint8_t cpad[3];       // evaluated once at prepare into c_argb/c_oargb (bit-exact by identity)
+    uint32_t c_argb, c_oargb;
     struct ccp_term c[3][4];   // per colour channel: a, b, c, d
     struct ccp_term a[4];      // alpha: aa, ab, ac, ad (only const / shade[3])
 };
 #define CC_STATE_SLOTS 16
-static struct { uint32_t key[6]; uint32_t stamp; struct ccp prep; } cc_states[CC_STATE_SLOTS];
+// prof_ev: GFX_PROF-only per-state eval counter for the combiner-state histogram (top states by
+// eval count printed once per second — the data that tells us which mux words deserve fast paths).
+static struct { uint32_t key[6]; uint32_t stamp; uint32_t prof_ev; struct ccp prep; } cc_states[CC_STATE_SLOTS];
 static uint32_t cc_next_stamp = 1;
 static uint32_t cc_state_rr = 0;
 static const struct ccp* ccp_active = NULL;   // current state's prepared combiner
@@ -2082,6 +2097,32 @@ static struct ccp_term ccp_resa(int mux, const float prim[4], const float env[4]
 // Build the prepared combiner for the CURRENT rdp state (same inputs as the cc key: combine
 // words, prim, env, texenv+textured, cycle type). Mirrors pvr_eval_combiner's classification
 // (has_texel, two_cycle, color_const_textured, offset) verbatim.
+// Does (t[0]-t[1])*t[2]+t[3] reduce EXACTLY to the shade selector `ssel`? True for the two
+// modulate arrangements (shade,0,1,0) and (1,0,shade,0). Float equality on the consts is
+// deliberate: texv/zero terms are exact 0.0f/1.0f; a prim/env of 255 resolves to 1.00000035
+// (255*recip255) and correctly fails the match — conservative misses stay on the general path.
+static int ccp_terms_passthrough(const struct ccp_term t[4], uint8_t ssel) {
+	// d-slot passthrough: (0-0)*0 + s == s exactly (0-0 = +0, +0*0 = +0, +0+s = s). This is
+	// the STANDARD N64 idiom for shade alpha (G_ACMUX 0,0,0,SHADE — e.g. G_CC_MODULATERGB's
+	// alpha) and for untextured shade colour (G_CC_SHADE). Histogram 2026-08-18: Turnpike's
+	// dominant course state is modulate colour + exactly this alpha shape — the first
+	// classifier version missed it (only knew the a/c-slot arrangements) and covered <7%.
+	if (t[0].sel == 0 && t[0].k == 0.0f &&
+	    t[1].sel == 0 && t[1].k == 0.0f &&
+	    t[2].sel == 0 && t[2].k == 0.0f &&
+	    t[3].sel == ssel) return 1;
+	if (t[1].sel != 0 || t[1].k != 0.0f) return 0;
+	if (t[3].sel != 0 || t[3].k != 0.0f) return 0;
+	int a_is_s = (t[0].sel == ssel);
+	int a_is_1 = (t[0].sel == 0 && t[0].k == 1.0f);
+	int c_is_s = (t[2].sel == ssel);
+	int c_is_1 = (t[2].sel == 0 && t[2].k == 1.0f);
+	return (a_is_s && c_is_1) || (a_is_1 && c_is_s);
+}
+
+static inline void pvr_eval_combiner_terms(const struct ccp* p, const struct RGBA* sh,
+                                           uint32_t* out_argb, uint32_t* out_oargb);
+
 static void __attribute__((noinline)) pvr_cc_prepare(struct ccp* p, uint32_t w0, uint32_t w1,
                                                      int textured, uint32_t mode) {
 	memset(p, 0, sizeof(*p));
@@ -2122,18 +2163,52 @@ static void __attribute__((noinline)) pvr_cc_prepare(struct ccp* p, uint32_t w0,
 	p->a[1] = ccp_resa(ab, prim, env);
 	p->a[2] = ccp_resa(ac, prim, env);
 	p->a[3] = ccp_resa(ad, prim, env);
+
+	// Shade-passthrough classification (measured 2026-08-18: cc = ~60% of bake = ~20% of the 4P
+	// walk, and most course states are plain modulate). The eval collapses to argb=pack(shade),
+	// oargb=0 when every channel's (va-vb)*vc+vd is EXACTLY the shade channel: term tuples
+	// (s,0,1,0) or (1,0,s,0). Both are IEEE-exact identities ((s-0)*1+0 == s; (1-0)*s+0 == s;
+	// s in [0,1]), and byte->float->*255->trunc roundtrips for 0..255 (recip255*255 = 1+4e-7,
+	// clamp catches 255) — so the fast path is bit-identical to the term eval. Verified on HW by
+	// the GFX_PROF self-check (ccpass mism counter). Conservative: any other shape stays general.
+	{
+		int sp = !p->replace && !p->cct && !p->offset;
+		for (int ch = 0; sp && ch < 3; ch++)
+			sp = ccp_terms_passthrough(p->c[ch], 1);   // sel 1 = shade[ch]
+		if (sp)
+			sp = ccp_terms_passthrough(p->a, 2);       // sel 2 = shade[3] (alpha)
+		p->shade_pass = (uint8_t) sp;
+	}
+
+	// Constant-output classification (histogram 2026-08-18: the next ~8% after shade-pass —
+	// texel-passthrough states whose texenv didn't map to REPLACE, const PRIM/ENV fills): if NO
+	// term references shade, the whole result is a state constant. Evaluate the terms ONCE here
+	// (the shade input is unread, so any value yields identical bits) and serve two stores per
+	// vertex. Bit-exact by identity — it IS the term eval, hoisted.
+	{
+		int cst = !p->replace && !p->shade_pass;
+		for (int ch = 0; cst && ch < 3; ch++)
+			for (int j = 0; j < 4; j++)
+				if (p->c[ch][j].sel != 0) { cst = 0; break; }
+		if (cst)
+			for (int j = 0; j < 4; j++)
+				if (p->a[j].sel != 0) { cst = 0; break; }
+		p->const_out = (uint8_t) cst;
+		if (cst) {
+			const struct RGBA dummy = { 0, 0, 0, 0 };
+			pvr_eval_combiner_terms(p, &dummy, &p->c_argb, &p->c_oargb);
+		}
+	}
 }
 
 static inline float ccp_term_val(const struct ccp_term* t, float sch, float sa) {
 	return t->sel == 0 ? t->k : (t->sel == 1 ? sch : sa);
 }
 
-// Per-vertex fast path: identical formula/order/clamps to pvr_eval_combiner, minus all the
-// state-constant work. Fog is NOT included (OR'd in by the caller, as with the generic eval).
-static inline void pvr_eval_combiner_fast(const struct ccp* p, const struct RGBA* sh,
-                                          uint32_t* out_argb, uint32_t* out_oargb) {
-	if (p->replace) { *out_argb = 0xFFFFFFFFu; *out_oargb = 0; return; }
-
+// Full term evaluation (the general prepared path). Split out so the GFX_PROF self-check can
+// run it against the shade-pass fast path on live vertices.
+static inline void pvr_eval_combiner_terms(const struct ccp* p, const struct RGBA* sh,
+                                           uint32_t* out_argb, uint32_t* out_oargb) {
 	const float shade[4] = { sh->r*recip255, sh->g*recip255, sh->b*recip255, sh->a*recip255 };
 	uint32_t col[4];
 	uint32_t oarr[3] = { 0, 0, 0 };
@@ -2163,6 +2238,22 @@ static inline void pvr_eval_combiner_fast(const struct ccp* p, const struct RGBA
 	col[3] = (uint32_t)(av * 255.0f);
 
 	*out_argb = PACK_ARGB8888(col[0], col[1], col[2], col[3]);
+}
+
+// Per-vertex fast path: identical formula/order/clamps to pvr_eval_combiner, minus all the
+// state-constant work. Fog is NOT included (OR'd in by the caller, as with the generic eval).
+// shade_pass states (modulate class — the bulk of course geometry) skip the term eval entirely:
+// argb is just the shade bytes packed (bit-exact, see the classifier note in pvr_cc_prepare).
+static inline void pvr_eval_combiner_fast(const struct ccp* p, const struct RGBA* sh,
+                                          uint32_t* out_argb, uint32_t* out_oargb) {
+	if (p->replace) { *out_argb = 0xFFFFFFFFu; *out_oargb = 0; return; }
+	if (p->shade_pass) {
+		*out_argb = PACK_ARGB8888((uint32_t) sh->r, (uint32_t) sh->g, (uint32_t) sh->b, (uint32_t) sh->a);
+		*out_oargb = 0;
+		return;
+	}
+	if (p->const_out) { *out_argb = p->c_argb; *out_oargb = p->c_oargb; return; }
+	pvr_eval_combiner_terms(p, sh, out_argb, out_oargb);
 }
 #endif
 
@@ -2414,6 +2505,7 @@ static void __attribute__((noinline)) gfx_tri_state_setup(void) {
                 cc_states[slot].key[2] = k2; cc_states[slot].key[3] = k3;
                 cc_states[slot].key[4] = k4; cc_states[slot].key[5] = k5;
                 cc_states[slot].stamp = cc_state_stamp;
+                cc_states[slot].prof_ev = 0;   // slot reused by a new state: histogram count restarts
                 pvr_cc_prepare(&cc_states[slot].prep, k0, k1, use_texture, texenv);
                 ccp_active = &cc_states[slot].prep;
                 cc_active_slot = slot;
@@ -2623,7 +2715,15 @@ static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx
     // here (n_tris*3 verts). `emit` is this fan's destination; op_n is the per-fan vertex counter.
     const int op_stream = (pvr_cur_kind == 0);
     size_t op_n = 0;
+#if GFX_PROF
+    const int bk_sample = ((prof_tris & 7) == 0);   // 1-in-8 source tris get bake sub-timing
+    uint64_t bkt = 0;
+    if (bk_sample) bkt = PROF_NOW();
+#endif
     dc_fast_t *emit = op_stream ? op_emit : pvr_reserve(pvr_cur_kind, (size_t) n_tris * 3);
+#if GFX_PROF
+    if (bk_sample) prof_t_bk_res += PROF_NOW() - bkt;
+#endif
     if (!emit) n_tris = 0;   // bucket overflow -> drop this source triangle (pvr_reserve already logged)
     for (int ti = 0; ti < n_tris; ti++) {
         v1 = fan_tris[ti][0];
@@ -2634,6 +2734,9 @@ static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx
 
 		for (i = 0; i < 3; i++) {
 			dc_fast_t * const bv = &emit[op_n];
+#if GFX_PROF
+			if (bk_sample) bkt = PROF_NOW();
+#endif
 			// Raw-PVR backend: bake final screen coords + inverse-w here (post-clip;
 			// the divide can't be carried across a clip edge). _w > eps guaranteed.
 			float invw = shz_inverse_posf(v_arr[i]->_w);
@@ -2648,6 +2751,9 @@ static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx
 			bv->vert.z = ortho_overlay ? z2d
 										: depth_test    ? (zmode_decal ? invw * PVR_DECAL_ZBIAS : invw)
 										: rz_far;   // far slab, draw-order staggered (see above)
+#if GFX_PROF
+			if (bk_sample) { uint64_t t = PROF_NOW(); prof_t_bk_sm += t - bkt; bkt = t; }
+#endif
 
 			if (use_texture) {
 				float u = (v_arr[i]->u - (float)(ts.uls << 3)) * 0.03125f;
@@ -2662,6 +2768,9 @@ static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx
 				bv->texture.u = u * recip_tex_width;
 				bv->texture.v = v * recip_tex_height;
 			}
+#if GFX_PROF
+			if (bk_sample) { uint64_t t = PROF_NOW(); prof_t_bk_uv += t - bkt; bkt = t; }
+#endif
 
 			// ---- Per-vertex colour -------------------------------------------------
 			// Raw-PVR: the N64 colour+alpha combiner result, cached per loaded vertex per
@@ -2677,6 +2786,20 @@ static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx
 				} else {
 					PROF_INC(prof_evals);
 					pvr_eval_combiner_fast(ccp_active, &v_arr[i]->color, &_argb, &_oargb);
+#if GFX_PROF
+					if (cc_active_slot >= 0) cc_states[cc_active_slot].prof_ev++;
+					if (ccp_active->shade_pass || ccp_active->const_out) {
+						prof_cc_pass++;
+						// Self-check (sampled): the general term eval must agree BIT-EXACTLY
+						// with the shade-pass shortcut on live vertex data. Any mismatch is
+						// counted and screamed about in the print block.
+						if (bk_sample) {
+							uint32_t chk_a, chk_o;
+							pvr_eval_combiner_terms(ccp_active, &v_arr[i]->color, &chk_a, &chk_o);
+							if (chk_a != _argb || chk_o != _oargb) prof_cc_mism++;
+						}
+					}
+#endif
 					if (cacheable) { cc_cache[vi].stamp = cc_state_stamp; cc_cache[vi].argb = _argb; cc_cache[vi].oargb = _oargb; }
 				}
 				// PVR vertex fog reads the fog density from the offset-colour (oargb) ALPHA. The
@@ -2686,6 +2809,9 @@ static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx
 				bv->color.packed = _argb;
 				bv->pad0.vertindex = _oargb;
 			}
+#if GFX_PROF
+			if (bk_sample) { prof_t_bk_cc += PROF_NOW() - bkt; prof_bk_samples++; }
+#endif
 			// Strip flags stamped at creation (TRIANGLES: EOL every 3rd) so the inline OP
 			// submit can bulk-SQ the whole fan. PT/TR bucket verts get flagged at flush time.
 			if (op_stream) bv->flags = (i == 2) ? VERTEX_EOL : VERTEX;
@@ -4058,6 +4184,34 @@ void gfx_end_frame(void) {
 		       PROF_US(prof_t_sc_oc), PROF_US(prof_t_sc_fan),
 		       (unsigned long) prof_sc_asis, (unsigned long) prof_sc_rej,
 		       (unsigned long) prof_sc_clip, (unsigned long) prof_sc_fanout);
+		// Bake split, 1-in-8 sampled, printed x8 (estimate of the full bucket's composition).
+		// bake= minus (res+sm+uv+cc) = loop/flag/store overhead + sampling error.
+		printf("GFXPROF   bake~ res=%luus sm=%luus uv=%luus cc=%luus (x8 est, n=%lu sampled verts) "
+		       "ccpass=%lu/%lu\n",
+		       PROF_US(prof_t_bk_res * 8), PROF_US(prof_t_bk_sm * 8),
+		       PROF_US(prof_t_bk_uv * 8), PROF_US(prof_t_bk_cc * 8),
+		       (unsigned long) prof_bk_samples,
+		       (unsigned long) prof_cc_pass, (unsigned long) prof_evals);
+		if (prof_cc_mism)
+			printf("GFXPROF   !!! ccpass SELF-CHECK MISMATCH n=%lu — shade-pass classifier is WRONG\n",
+			       (unsigned long) prof_cc_mism);
+		// Combiner-state histogram: the top states by eval count this period, with the raw
+		// G_SETCOMBINE words and packed prim/env — the ground truth for designing eval fast
+		// paths (the shade-pass guess measured <7% coverage; these words say what dominates).
+		for (int t = 0; t < 4; t++) {
+			int best = -1; uint32_t bn = 0;
+			for (int s = 0; s < CC_STATE_SLOTS; s++)
+				if (cc_states[s].prof_ev > bn) { bn = cc_states[s].prof_ev; best = s; }
+			if (best < 0) break;
+			printf("GFXPROF   ccstate w0=%08lx w1=%08lx prim=%08lx env=%08lx evals=%lu pass=%d k4=%03lx\n",
+			       (unsigned long) cc_states[best].key[0], (unsigned long) cc_states[best].key[1],
+			       (unsigned long) cc_states[best].key[2], (unsigned long) cc_states[best].key[3],
+			       (unsigned long) bn,
+			       (int) (cc_states[best].prep.shade_pass | (cc_states[best].prep.const_out << 1)),
+			       (unsigned long) cc_states[best].key[4]);
+			cc_states[best].prof_ev = 0;   // exclude from the next pick
+		}
+		for (int s = 0; s < CC_STATE_SLOTS; s++) cc_states[s].prof_ev = 0;
 	}
 	prof_tris = prof_verts = prof_mtx = prof_texup = 0;
 	prof_t_vtx = prof_t_tri = prof_t_tri_setup = prof_t_clip = prof_t_bake = prof_t_submit = 0;
@@ -4067,6 +4221,9 @@ void gfx_end_frame(void) {
 	prof_farcull = 0;
 	prof_t_sc_oc = prof_t_sc_fan = 0;
 	prof_sc_asis = prof_sc_rej = prof_sc_clip = prof_sc_fanout = 0;
+	prof_t_bk_res = prof_t_bk_sm = prof_t_bk_uv = prof_t_bk_cc = 0;
+	prof_bk_samples = 0;
+	prof_cc_pass = prof_cc_mism = 0;
 	prof_su[0] = prof_su[1] = prof_su[2] = prof_su[3] = 0;
 	// Rotate the stall mode after every PRINT (1/sec or slow-frame), not on a fixed frame
 	// stride: 60-frame prints x 8-frame rotation sampled only 2 of the 5 modes once walks
