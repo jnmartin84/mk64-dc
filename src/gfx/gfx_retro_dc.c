@@ -63,6 +63,13 @@ void* segmented_to_virtual(void* addr);
 #define MAX_VERTICES 64
 
 int blend_fuck=0;
+// Pane depth-bias (battle/VS winner-pane enlargement): while the winner's viewport grows over
+// the other panes, ALL its emitted z gets +PANE_ZBIAS so it wins the GEQUAL depth test against
+// every other pane (whose z stays in the normal <~2.0 range: invw <= ~1, screen_2d_z 1.0-2.0).
+// Additive, so within-pane depth order is preserved exactly. Driven by the "PAN1"/"PAN0"
+// custom DL words emitted at each pane's start by set_the_scissor (skybox_and_splitscreen.c).
+#define PANE_ZBIAS 64.0f
+static float pane_zbias = 0.0f;
 
 // Set when a G_MTX_PROJECTION load is an ORTHO matrix (guOrtho: [3][3]==1; guPerspective:
 // [3][3]==0). Ortho geometry is "2D drawn as triangles" (constant _w), so on the PVR
@@ -2773,9 +2780,9 @@ static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx
 			// the course far-plane ~1/30000; tunable if any course geometry is farther.)
 			// Overlay-ortho -> 2D z scheme (near). Otherwise perspective 1/w, or far-pin when
 			// Z is off (skybox AND the over-skybox clouds, which are Z-off ortho in a 3D frame).
-			bv->vert.z = ortho_overlay ? z2d
+			bv->vert.z = pane_zbias + (ortho_overlay ? z2d
 										: depth_test    ? (zmode_decal ? invw * PVR_DECAL_ZBIAS : invw)
-										: rz_far;   // far slab, draw-order staggered (see above)
+										: rz_far);   // far slab, draw-order staggered (see above)
 #if GFX_PROF
 			if (bk_sample) { uint64_t t = PROF_NOW(); prof_t_bk_sm += t - bkt; bkt = t; }
 #endif
@@ -3305,7 +3312,15 @@ static void gfx_sp_texture(uint16_t sc, uint16_t tc) {
 	rsp.texture_scaling_factor.t = tc;
 }
 
+// Raw N64-space scissor rect (U10.2), for clipping the 2D rect paths. The RDP scissors
+// texrects/fills like any primitive; our 2D path bypassed it entirely, so e.g. the GP race
+// intro letterbox (a shrunken scissor window — the bars are simply OUTSIDE it) had the HUD
+// painting over the bars (HW 2026-08-19). Init = full screen.
+static int32_t sc_q2_ulx = 0, sc_q2_uly = 0, sc_q2_lrx = 320 << 2, sc_q2_lry = 240 << 2;
+
 static void gfx_dp_set_scissor(uint32_t ulx, uint32_t uly, uint32_t lrx, uint32_t lry) {
+	sc_q2_ulx = (int32_t) ulx; sc_q2_uly = (int32_t) uly;
+	sc_q2_lrx = (int32_t) lrx; sc_q2_lry = (int32_t) lry;
 //	float x = ulx / 4.0f * RATIO_X;
 //	float y = (SCREEN_HEIGHT - lry / 4.0f) * RATIO_Y;
 //	float width = (lrx - ulx) / 4.0f * RATIO_X;
@@ -3621,6 +3636,7 @@ static void  __attribute__((noinline)) gfx_draw_rectangle(int32_t ulx, int32_t u
 	if (prev_frame_had_persp && !has_done_3d && !do_fill_rect)
 		rz = 0.00001f;
 	do_fill_rect = 0;   // consume per-rect (it isn't reliably reset elsewhere)
+	rz += pane_zbias;   // winner-pane enlargement: 2D (HUD/fills, even far-pinned backdrops) lifts too
 #endif
 	ul->vert.x = ulxf;
 	ul->vert.y = ulyf;
@@ -3678,6 +3694,25 @@ static void  __attribute__((noinline)) gfx_dp_texture_rectangle2(int32_t ulx, in
 	// dsdx and dtdy are S5.10
 	// lrx, lry, ulx, uly are U10.2
 	// lrs, lrt are S10.5
+
+	// Scissor the texrect (N64 RDP semantics; see sc_q2_* above). UV correction for a
+	// clipped upper-left edge: d(S10.5) = d(U10.2) * step(S5.10) / 128. FLIP swaps the
+	// axes' UV roles: s steps along Y (dsdx), t along X (dtdy). Lower-right UVs need no
+	// correction — they're derived from the clipped width/height below.
+	if (!flip) {
+		if (ulx < sc_q2_ulx) { uls += (int32_t)(sc_q2_ulx - ulx) * dsdx / 128; ulx = sc_q2_ulx; }
+		if (uly < sc_q2_uly) { ult += (int32_t)(sc_q2_uly - uly) * dtdy / 128; uly = sc_q2_uly; }
+	} else {
+		if (ulx < sc_q2_ulx) { ult += (int32_t)(sc_q2_ulx - ulx) * dtdy / 128; ulx = sc_q2_ulx; }
+		if (uly < sc_q2_uly) { uls += (int32_t)(sc_q2_uly - uly) * dsdx / 128; uly = sc_q2_uly; }
+	}
+	if (lrx > sc_q2_lrx) { lrx = sc_q2_lrx; }
+	if (lry > sc_q2_lry) { lry = sc_q2_lry; }
+	if ((ulx >= lrx) || (uly >= lry)) {
+		rdp.combine_mode = saved_combine_mode;
+		return;   // fully outside the scissor (e.g. HUD under the letterbox bars)
+	}
+
 	if (flip) {
 		dsdx = -dsdx;
 		dtdy = -dtdy;
@@ -3728,6 +3763,16 @@ static void  __attribute__((noinline)) gfx_dp_fill_rectangle(int32_t ulx, int32_
 		// Per documentation one extra pixel is added in this modes to each edge
 		lrx += 1 << 2;
 		lry += 1 << 2;
+	}
+
+	// Scissor the fill (N64 RDP semantics; see sc_q2_* above gfx_dp_set_scissor).
+	if (ulx < sc_q2_ulx) { ulx = sc_q2_ulx; }
+	if (uly < sc_q2_uly) { uly = sc_q2_uly; }
+	if (lrx > sc_q2_lrx) { lrx = sc_q2_lrx; }
+	if (lry > sc_q2_lry) { lry = sc_q2_lry; }
+	if ((ulx >= lrx) || (uly >= lry)) {
+		do_fill_rect = 0;   // never reaches gfx_draw_rectangle's consume — don't leak the flag
+		return;
 	}
 
 	for (i = 0; i < 4; i++) {
@@ -3825,6 +3870,10 @@ static void  __attribute__((noinline)) GFX_HOT gfx_run_dl(Gfx* cmd) {
 				title_backdrop ^= 1;
 			} else if (cmd->words.w1 == 0xA6A7A8A9) {
 				fix_flash ^= 1;
+			} else if (cmd->words.w1 == 0x50414E31) {
+				pane_zbias = PANE_ZBIAS;   // "PAN1": winner-pane depth bias ON
+			} else if (cmd->words.w1 == 0x50414E30) {
+				pane_zbias = 0.0f;         // "PAN0": OFF (every other pane)
 			}
 			++cmd;
 			continue;
@@ -4117,6 +4166,7 @@ void gfx_start_frame(void) {
 
 void gfx_run(Gfx* commands) {
 	gfx_sp_reset();
+	pane_zbias = 0.0f;   // per-frame safety: a pane's PAN1 must never leak across frames
 
 	// DC 4P perf: pulled-in far plane. Depth-tested tris with ALL THREE verts beyond
 	// gCourseFarPersp * scale are dropped before clip/bake (see gfx_sp_tri1_impl).

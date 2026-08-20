@@ -305,6 +305,7 @@ void func_800CA330(u8);
 void func_800CA388(u8);
 void func_800CA414(u16, u16);
 void func_800CA49C(u8);
+void func_800CA49C_cue(u8);   // DC: 3/4P per-player final-lap cue (see external.c)
 void func_800CA59C(u8);
 void func_800CA984(u8);
 void func_800CAACC(u8);

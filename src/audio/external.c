@@ -2508,35 +2508,39 @@ void func_800C76C0(u8 playerId) {
                             func_800C9A88(playerId);
                             func_800CA414(0x000DU, 0x0017U);
                             break;
+                        // DC 3P/4P VS redesign (2026-08-19, user decision): the (sped-up)
+                        // course music KEEPS PLAYING while remaining humans race. N64's
+                        // per-finisher chain below stopped the music (a no-op there: 3/4P had
+                        // none) and played the results seqs 0xD/0xE into the silence. With
+                        // real music running that chain killed it at the FIRST finisher.
+                        // Now: finishers keep their goal cue (0x1900F103, played above);
+                        // results music fires ONCE at race resolution — race_logic marks the
+                        // auto-CPU'd last player via func_800CA118 in the same frame as the
+                        // N-1th finisher, so the all-EA0EC condition is true exactly when the
+                        // results overlay appears. D_800EA104=3 is the once-guard (reset at
+                        // race start, external.c:563); 0xD+0x17 = the 2P race-end pairing.
                         case 2: /* switch 1 */
-                            if ((D_800EA104 == 0) && (D_800EA0EC[playerId] == 1)) {
+                            if ((D_800EA104 == 0) && (D_800EA0EC[0] == 1) && (D_800EA0EC[1] == 1) &&
+                                (D_800EA0EC[2] == 1)) {
                                 func_800C3448(0x100100FF);
                                 func_800C3448(0x110100FF);
-#ifdef VERSION_EU
-                                func_800C8EF8(0x000DU);
-#else
-                                func_800CA414(0x000DU, 0x0017U);
-#endif
-                                D_800EA104 = 1;
-                            } else if ((D_800EA104 == 1) && (D_800EA0EC[playerId] == 1)) {
                                 func_800C5278(5U);
-#ifndef VERSION_EU
-                                if (func_800C3508(1) != 0x000D)
-#endif
-                                {
-                                    D_800EA104 = 0;
-                                    func_800CA414(0x000EU, 0x0017U);
-                                }
-                                D_800EA104 = 2;
+                                func_800CA414(0x000DU, 0x0017U);
+                                D_800EA104 = 3;
                             }
                             break;
                         case 3: /* switch 1 */
-                            if ((D_800EA104 == 0) && (D_800EA0EC[playerId] == 1)) {
+                            if ((D_800EA104 == 0) && (D_800EA0EC[0] == 1) && (D_800EA0EC[1] == 1) &&
+                                (D_800EA0EC[2] == 1) && (D_800EA0EC[3] == 1)) {
                                 func_800C3448(0x100100FF);
                                 func_800C3448(0x110100FF);
-                                func_800C8EF8(0x000DU);
-                                D_800EA104 = 1;
-                            } else if ((D_800EA104 == 1) && (D_800EA0EC[playerId] == 1)) {
+                                func_800C5278(5U);
+                                func_800CA414(0x000DU, 0x0017U);
+                                D_800EA104 = 3;
+                            }
+                            break;
+                        case 99: /* DC: dead original 4P chain below, kept for reference */
+                            if ((D_800EA104 == 1) && (D_800EA0EC[playerId] == 1)) {
                                 if (func_800C3508(1) != 0x000D) {
                                     D_800EA104 = 0;
                                     func_800C8EF8(0x000EU);
@@ -3356,10 +3360,25 @@ void func_800CA414(u16 arg0, u16 arg1) {
     D_800EA104 = 1;
 }
 
+// DC 3P/4P VS (2026-08-19): final-lap cue for players entering lap 3 AFTER the first player
+// already triggered the full music transition (func_800CA49C). Plays the bare per-player
+// "final lap" cue N64 used in 3/4P (0x1900FF3A) without touching the sped-up music.
+// Gated to 3/4P here (D_800EA1C0 >= 2) so 1P/2P behavior stays N64-authentic (no cue).
+void func_800CA49C_cue(u8 arg0) {
+    if ((D_800EA108 == 0) && ((s32) D_800EA1C0 >= 2)) {
+        func_800C9060(arg0, 0x1900FF3A);
+    }
+}
+
 void func_800CA49C(u8 arg0) {
     //printf("%s(%02x)\n", __func__, arg0);
     if (D_800EA108 == 0) {
-        if (D_800EA1C0 >= 2) {
+        // DC: 3/4P split-screen now plays course music (see func_8028EC98), so take the FULL
+        // final-lap transition there too: sting (seq 0xC) + course music restarted sped up.
+        // The N64 `D_800EA1C0 >= 2` branch played only a bare cue sound
+        // (func_800C9060(arg0, 0x1900FF3A)) because 3/4P had no music to speed up.
+        // Star-music transitions (func_800CA59C) intentionally KEEP their lighter 3/4P path.
+        if (0 && D_800EA1C0 >= 2) {
             func_800C9060(arg0, 0x1900FF3A);
         } else if (D_800EA164 != 0) {
             func_800C3448(0x100100FF); // 0x19000000

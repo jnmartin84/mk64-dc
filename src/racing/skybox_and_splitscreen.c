@@ -75,6 +75,19 @@ void set_the_scissor(struct UnkStruct_800DC5EC* arg0) {
     s32 lrx;
     s32 lry;
     s32 screenWidth = arg0->screenWidth * 2;
+
+    // DC: battle/VS end — the winner's pane enlarges OVER the other panes (func_8028E438,
+    // D_8015F894==1). All panes share one depth-tested PVR scene, so overlapping panes
+    // z-fight (N64 painted panes sequentially with per-region Z clears). Tell the renderer
+    // to depth-bias everything this pane emits while the animation runs: every pane section
+    // begins here, so each pane gets an explicit ON/OFF word ("PAN1"/"PAN0").
+    {
+        extern struct UnkStruct_800DC5EC D_8015F480[];
+        int bias_on = (D_8015F894 == 1) && (arg0 == &D_8015F480[gPlayerWinningIndex]);
+        gDisplayListHead->words.w0 = 0x424C4E44;
+        gDisplayListHead->words.w1 = bias_on ? 0x50414E31 : 0x50414E30;
+        gDisplayListHead++;
+    }
     s32 screenHeight = arg0->screenHeight * 2;
     s32 screenStartX = arg0->screenStartX * 4;
     s32 screenStartY = arg0->screenStartY * 4;

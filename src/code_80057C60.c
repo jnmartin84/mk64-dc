@@ -1307,7 +1307,15 @@ void func_80059C50(void) {
 
 void func_80059D00(void) {
 
-    func_8005A99C();
+    // 30Hz: func_8005A99C runs the ORIGINAL HUD-reveal countdown (D_8018D178, e.g. 150
+    // frames = 5s in 1P GP, set in code_8006E9C0.c) that flips gIsHUDVisible when the race
+    // intro (fly-around + window open + camera settle) is done. It's a per-rendered-frame
+    // counter, so at uncapped 60fps it expired in HALF the time -> HUD appeared over the
+    // intro bars/course name (HW 2026-08-19). Everything HUD hangs off gIsHUDVisible
+    // (func_80058F78 / func_800591B4 interiors), so this one gate restores N64 timing.
+    if (gRun30hz) {
+        func_8005A99C();
+    }
     func_8005A3C0();
     func_8005A380();
 

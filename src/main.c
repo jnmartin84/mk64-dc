@@ -1844,13 +1844,19 @@ void race_logic_loop(void) {
     }
     func_802A4EF4();
     
+    //gTickSpeed = 2;
     gTickSpeed = 1;
 
     switch (gActiveScreenMode) {
         case SCREEN_MODE_1P:
-            //gTickSpeed = 2;
-            force_30fps = 0;
-            gTickSpeed = sNumVBlanks;//(sNumVBlanks < 2) ? 1 : 2;//((sNumVBlanks > 3) ? 4 : sNumVBlanks);
+            // Uncap (60fps) ONLY for TRUE single-player. When a 3/4P battle/VS winner-pane
+            // zoom completes, func_8028E438 flips gActiveScreenMode to SCREEN_MODE_1P for
+            // the fullscreen RANKING screen while gamestate is still RACING — that pseudo-1P
+            // must stay capped, or its flashing text (per-frame counters) runs at whatever
+            // rate frames arrive (HW 2026-08-19). gPlayerCountSelection1 survives the switch.
+            force_30fps = (gPlayerCountSelection1 == 1) ? 0 : 1;
+            gTickSpeed = sNumVBlanks;
+
             // 60fps 30Hz gate (gRun30hz, see game_loop_one_iteration): ghost replay is a
             // frame-count-addressed input stream (2x at 60fps would desync).
             // DO NOT top-gate func_8005A070 OR func_80022744 — both strobe on HW:
@@ -1866,6 +1872,7 @@ void race_logic_loop(void) {
             if (gRun30hz) {
                 staff_ghosts_loop();
             }
+
             if (gIsGamePaused == 0) {
                 for (i = 0; i < gTickSpeed; i++) {
                     if (D_8015011E) {
@@ -1924,11 +1931,13 @@ void race_logic_loop(void) {
 
         case SCREEN_MODE_2P_SPLITSCREEN_VERTICAL:
             force_30fps = 1;
+
             /* if (gCurrentCourseId == COURSE_DK_JUNGLE) {
                 gTickSpeed = 3;
             } else {
                 gTickSpeed = 2;
             } */
+
             // DC: framerate-compensating tick speed in place of the N64's static per-course
             // table above. sNumVBlanks = 60Hz vblanks since the last logic frame = exactly how
             // many 60Hz ticks this frame spans: 2 when we hold 30fps, 3 when we drop to 20.
@@ -1984,7 +1993,7 @@ void race_logic_loop(void) {
             } else {
                 gTickSpeed = 2;
             } */
-//            gTickSpeed = 3;
+
             // DC: framerate-compensating tick speed in place of the N64's static per-course
             // table above. sNumVBlanks = 60Hz vblanks since the last logic frame = exactly how
             // many 60Hz ticks this frame spans: 2 when we hold 30fps, 3 when we drop to 20.
@@ -2033,7 +2042,7 @@ void race_logic_loop(void) {
             break;
 
         case SCREEN_MODE_3P_4P_SPLITSCREEN:
-                    force_30fps = 1;
+            force_30fps = 1;
 
             /* if (gPlayerCountSelection1 == 3) {
                 switch (gCurrentCourseId) {
@@ -2063,6 +2072,7 @@ void race_logic_loop(void) {
                         break;
                 }
             } */
+
             // DC: framerate-compensating tick speed in place of the N64's static per-course
             // table above. sNumVBlanks = 60Hz vblanks since the last logic frame = exactly how
             // many 60Hz ticks this frame spans: 2 when we hold 30fps, 3 when we drop to 20.

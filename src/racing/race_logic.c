@@ -605,6 +605,9 @@ void func_8028EF28(void) {
                     if ((D_802BA032 & 0x4000) == 0) {
                         D_802BA032 |= 0x4000;
                         func_800CA49C((u8) i);
+                    } else {
+                        // DC 3/4P: later players get the per-player final-lap cue (no-op in 1P/2P)
+                        func_800CA49C_cue((u8) i);
                     }
                 }
             } else if (gPlayers[i].lapCount == 3) {
