@@ -2,16 +2,6 @@
 
 Latest update: fixed some graphical issues including the lightning flash and the flat banana peel.
 
-Previously on Mario Kart 64 for Dreamcast...
-
-Early xmas present for everyone. 
-
-# You don't have to know how to build a toolchain, or compile anymore.
-# You can upload a ROM and download a CDI.
-# Find more details here: https://colab.research.google.com/drive/1WtQ6xyXHqNNhn5Yx74Aa8uY5Fjnnv4PF
-
-Now for business as usual.
-
 This is a Sega Dreamcast port of the Mario Kart 64 decompilation [ https://github.com/n64decomp/mk64 ] .
 
 Do not ask for a CDI or ISO. Learn how to build it or don't play it.
