@@ -499,9 +499,6 @@ static int gfx_pvr_evict_one_lru(void) {
     return 1;
 }
 
-// GL_UNSIGNED_SHORT_1_5_5_5_REV == 0x8366 (front-end's 1555 tag); anything else is 4444.
-#define PVR_TYPE_ARGB1555 0x8366
-
 // Stable-allocation floor (in padded PVR bytes), set by the front-end per import to the FULL loaded
 // texture's size. Menu squish effects re-upload the SAME texture at varying (often growing) tile
 // dims every frame; without a floor, each growth does free+bigger-malloc, fragmenting VRAM until
@@ -529,8 +526,7 @@ static void gfx_pvr_upload_texture(const uint8_t *buf16, int width, int height, 
     struct PvrTex *t = &sTextures[sCurBound];
     // NON-twiddled on purpose: twiddling is a CPU reorder on every upload, and MK64
     // invalidates/re-uploads textures heavily — twiddling caused a major slowdown
-    int fmt = ((type == PVR_TYPE_ARGB1555) ? PVR_TXRFMT_ARGB1555 : PVR_TXRFMT_ARGB4444)
-              | PVR_TXRFMT_NONTWIDDLED;
+    int fmt = type | PVR_TXRFMT_NONTWIDDLED;
 
     const uint16_t *src = (const uint16_t *) buf16;
     uint32_t fw = width, fh = height;

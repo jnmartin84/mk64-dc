@@ -749,7 +749,6 @@ static  __attribute__((noinline)) struct ColorCombiner* gfx_lookup_or_create_col
 	gfx_generate_cc(comb, cc_id);
 	return prev_combiner = comb;
 }
-void gfx_clear_texidx(GLuint texidx);
 
 void reset_texcache(void) {
 	// Full wipe (matches sf64-dc), not just pool_pos: nuke_everything / the VRAM watchdog reset
@@ -1032,7 +1031,7 @@ static void import_texture_rgba16(int tile) {
 		width = up_w;
 	}
 
-	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_1_5_5_5_REV);
+	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, PVR_TXRFMT_ARGB1555);
 }
 
 static void import_texture_rgba32(int tile) {
@@ -1050,7 +1049,7 @@ static void import_texture_rgba32(int tile) {
 		rgba16_buf[i] = (a << 15) | (r << 10) | (g << 5) | (b);
 	}
 
-	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_1_5_5_5_REV);
+	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, PVR_TXRFMT_ARGB1555);
 }
 
 static void import_texture_ia4(int tile) {
@@ -1102,7 +1101,7 @@ static void import_texture_ia4(int tile) {
 		}
 	}
 
-	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_1_5_5_5_REV);
+	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, PVR_TXRFMT_ARGB1555);
 }
 
 static void import_texture_ia8(int tile) {
@@ -1133,7 +1132,7 @@ static void import_texture_ia8(int tile) {
 		tex16 += src_width;
 	}
 
-	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_4_4_4_4_REV);
+	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, PVR_TXRFMT_ARGB4444);
 }
 
 static void import_texture_ia16(int tile) {
@@ -1196,7 +1195,7 @@ static void import_texture_ia16(int tile) {
 		width = up_w;
 	}
 
-	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_4_4_4_4_REV);
+	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, PVR_TXRFMT_ARGB4444);
 }
 
 static void import_texture_i4(int tile) {
@@ -1251,7 +1250,7 @@ static void import_texture_i4(int tile) {
 		}
 	}
 
-	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_4_4_4_4_REV);
+	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, PVR_TXRFMT_ARGB4444);
 }
 
 static void import_texture_i8(int tile) {
@@ -1282,7 +1281,7 @@ static void import_texture_i8(int tile) {
 		rgba16_buf[i] = (in << 12) | (in << 8) | (in << 4) | in;
 	}
 
-	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_4_4_4_4_REV);
+	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, PVR_TXRFMT_ARGB4444);
 }
 
 static __attribute__((noinline)) void import_texture_ci8(int tile) {
@@ -1372,7 +1371,7 @@ static __attribute__((noinline)) void import_texture_ci8(int tile) {
 		}
 	}
 
-	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, GL_UNSIGNED_SHORT_1_5_5_5_REV);
+	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, width, height, PVR_TXRFMT_ARGB1555);
 }
 
 static void __attribute__((noinline)) import_texture(int tile) {
@@ -3986,7 +3985,7 @@ void gfx_init(struct GfxWindowManagerAPI* wapi, struct GfxRenderingAPI* rapi, co
 
 	oops_texture_id = gfx_rapi->new_texture();
 	gfx_rapi->select_texture(0, oops_texture_id);
-	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, 64, 64, GL_UNSIGNED_SHORT_4_4_4_4_REV);
+	gfx_rapi->upload_texture((uint8_t*) rgba16_buf, 64, 64, PVR_TXRFMT_ARGB4444);
 
 	memset(&oops_node, 0, sizeof(oops_node));
 	oops_node.texture_id = oops_texture_id;
