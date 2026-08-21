@@ -16,10 +16,6 @@
 #include "gfx_screen_config.h"
 #include "macros.h"
 
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <GL/glext.h>
-#include <GL/glkos.h>
 #include "gl_fast_vert.h"
 
 #include "sh4zam.h"

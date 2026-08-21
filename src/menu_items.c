@@ -5836,7 +5836,7 @@ void add_menu_item(s32 type, s32 column, s32 row, s8 priority) {
 
 extern int in_intro;
 extern void nuke_everything(void);
-#include <GL/gl.h>
+
 void render_menus(MenuItem* arg0) {
     s32 var_a1 = 0;
     s32 var_v1 = 0;
