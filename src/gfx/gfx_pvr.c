@@ -647,10 +647,10 @@ void gfx_pvr_clear_all_textures(void) {
             sTextures[i].alloc_size = 0;
         }
     }
-    // Every call logged (course loads + watchdog flushes are both rare enough): what was
+/*     // Every call logged (course loads + watchdog flushes are both rare enough): what was
     // resident going in, and what the allocator reports free coming out.
     printf("PVR_NUKE f=%u freed=%u/%uKB free_now=%u\n", (unsigned) sFrameNum,
-           (unsigned) nuked, (unsigned) (nuked_bytes >> 10), (unsigned) pvr_mem_available());
+           (unsigned) nuked, (unsigned) (nuked_bytes >> 10), (unsigned) pvr_mem_available()); */
     sTexCount = 0;        // realign with reset_texcache() (front-end), which runs right after
     sBoundTex[0] = 0;
     sBoundTex[1] = 0;
@@ -865,6 +865,8 @@ static void gfx_pvr_init(void) {
 
 static void gfx_pvr_on_resize(void) { }
 
+extern void reset_texcache(void);
+
 static void gfx_pvr_start_frame(void) {
     pvr_wait_ready();
     sFrameNum++;
@@ -899,7 +901,6 @@ static void gfx_pvr_start_frame(void) {
     // purpose: a threshold would false-trigger and flush every frame on a course that legitimately
     // runs VRAM tight, tanking gameplay; an actual alloc failure only happens when truly out.
     if (sCacheFlushPending) {
-        extern void reset_texcache(void);
         gfx_pvr_clear_all_textures();   // free all texture VRAM + reset the id allocator
         reset_texcache();               // reset the front-end hashmap/pool
         sCacheFlushPending = 0;
@@ -907,8 +908,8 @@ static void gfx_pvr_start_frame(void) {
         // Uncapped (max once/frame by construction): how much a full flush actually reclaims.
         // If this is multi-MB but OOM still recurs next frame, the per-frame working set ~= the
         // whole heap (over-budget). If it stays tiny, the flush isn't really freeing.
-        printf("PVR_CACHE_FLUSH #%u f=%u recovered free=%u bytes\n",
-               (unsigned) sStatFlushes, (unsigned) sFrameNum, (unsigned) pvr_mem_available());
+        /* printf("PVR_CACHE_FLUSH #%u f=%u recovered free=%u bytes\n",
+               (unsigned) sStatFlushes, (unsigned) sFrameNum, (unsigned) pvr_mem_available()); */
     }
     pvr_scene_begin();
     // OP list open + live for the whole frame (guaranteed-opaque geometry only).
