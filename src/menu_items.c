@@ -3393,20 +3393,17 @@ Gfx* func_80098FC8(Gfx* displayListHead, s32 ulx, s32 uly, s32 lrx, s32 lry) {
     return draw_box_fill(displayListHead, ulx, uly, lrx, lry, 0, 0, 0, 0xFF);
 }
 
+extern void gfx_pvr_request_cache_flush(void);
+
 void clear_menu_textures(void) {
     sMenuTextureBufferIndex = 0;
     sMenuTextureEntries = 0;
-#ifdef GFX_BACKEND_PVR
     // Resetting the map re-packs gMenuTextureBuffer, so the same textures reappear at
     // DIFFERENT addresses on the next screen — the address-keyed renderer cache then leaks
     // last screen's VRAM entries (~200KB per menu transition, only reclaimed at the next
     // course load). Ask the backend to drop the whole texture cache at the next frame
     // start (the safe point, after pvr_wait_ready) — one frame's re-upload burst, no leak.
-    {
-        extern void gfx_pvr_request_cache_flush(void);
-        gfx_pvr_request_cache_flush();
-    }
-#endif
+    gfx_pvr_request_cache_flush();
 }
 
 

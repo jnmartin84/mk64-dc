@@ -971,8 +971,7 @@ static void gfx_pvr_end_frame(void) {
 }
 
 static void gfx_pvr_finish_render(void) {
-    // Submits the scene to the GPU and flips. (Replaces glKosSwapBuffers, which
-    // gfx_dc.c skips under -DGFX_BACKEND_PVR.)
+    // Submits the scene to the GPU and flips.
     pvr_scene_finish();
 }
 

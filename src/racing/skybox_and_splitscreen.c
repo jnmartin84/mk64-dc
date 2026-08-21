@@ -518,7 +518,6 @@ void func_802A487C(Vtx* arg0, UNUSED struct UnkStruct_800DC5EC* arg1, UNUSED s32
     }
 }
 
-#ifdef GFX_BACKEND_PVR
 // Lightning-item flash (raw-PVR): instead of a full-screen overlay box — which can't be cheaply
 // occluded by the course and has no unique render-state marker — tint the actual SKYBOX vertices
 // toward the flash colour. The skybox is real geometry already correctly depth-occluded by the
@@ -552,7 +551,6 @@ static void apply_skybox_lightning_flash(Vtx* skybox, s32 cameraId) {
         skybox[i].v.cn[2] += ((s32) fc->blue  - skybox[i].v.cn[2]) * a / 255;
     }
 }
-#endif
 
 void func_802A4A0C(Vtx* vtx, struct UnkStruct_800DC5EC* arg1, UNUSED s32 arg2, UNUSED s32 arg3, UNUSED f32* arg4) {
     // jnmartin84 - possible bug-fix from Spaghetti dudes
@@ -571,9 +569,7 @@ void func_802A4A0C(Vtx* vtx, struct UnkStruct_800DC5EC* arg1, UNUSED s32 arg2, U
     f32 sp58;
 
     course_set_skybox_colours(vtx);
-#ifdef GFX_BACKEND_PVR
     apply_skybox_lightning_flash(vtx, id);   // tint the sky during a lightning-item flash
-#endif
     sp5C[0] = 0.0f;
     sp5C[1] = 0.0f;
     sp5C[2] = 30000.0f;
