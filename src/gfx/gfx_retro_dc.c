@@ -126,7 +126,7 @@ static float far_pin_z = 0.00001f;
 // frame around the walk plus the frame-to-frame period, one line per second. `late` counts
 // frames whose PERIOD blew the 30Hz deadline (40ms) — a locked-30 game prints late=0/60 with
 // per avg~33333us. Safe to leave enabled in shipping builds.
-#define GFX_PROF_LITE 1   // 1 = always-on GFXLITE frame meter (per avg/max, late=N/60, walk avg/max)
+#define GFX_PROF_LITE 0   // 1 = always-on GFXLITE frame meter (per avg/max, late=N/60, walk avg/max)
 #if GFX_PROF || GFX_PROF_LITE
 #include <dc/perfctr.h>
 #define PROF_NOW() perf_cntr_count(PRFC0)
