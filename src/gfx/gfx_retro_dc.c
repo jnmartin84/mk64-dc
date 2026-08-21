@@ -876,6 +876,20 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, int
 	                ^ ((uint32_t) rdp.texture_tile.line_size_bytes << 20)
 	                ^ ((uint32_t) rdp.loaded_texture[dslot].size_bytes * 2654435761u);
 
+	/* CI textures are baked to RGBA at import time using the live TLUT, but the
+	   pack_key omits the palette. The SAME pixel-index address can be re-drawn with
+	   a mutated palette every frame -- MK64 spins the kart wheels by rewriting the
+	   wheel sub-range of the kart TLUT in place while the CI8 sprite is unchanged.
+	   Fold a hash of the current TLUT into the dim discriminator so a palette change
+	   re-decodes into the SAME texture_id (return 2), just like squish/scale; a
+	   stationary palette hashes identically and stays a plain cache hit. */
+	if (fmt == G_IM_FMT_CI) {
+		const uint32_t* tp = (const uint32_t*) tlut;
+		uint32_t ph = 0x811c9dc5u;
+		for (int i = 0; i < 128; i++) ph = (ph ^ tp[i]) * 16777619u;
+		dimkey ^= ph;
+	}
+
 	struct TextureHashmapNode** node = &gfx_texture_cache.hashmap[hash];
 	if ((uintptr_t)rdp.loaded_texture[dslot].addr < 0x8c010000u) {
 		gfx_rapi->select_texture(tile, oops_texture_id);
