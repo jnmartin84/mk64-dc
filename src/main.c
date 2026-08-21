@@ -191,20 +191,14 @@ f32 gCourseTimer = 0.0f;
 int inited = 0;
 
 #include "gfx/gfx_pc.h"
-#include "gfx/gfx_opengl.h"
 #include "gfx/gfx_dc.h"
 
 int ever_loaded_save_yet = 0;
 
 extern struct GfxWindowManagerAPI gfx_glx;
-extern struct GfxRenderingAPI gfx_opengl_api;
 extern struct GfxRenderingAPI gfx_pvr_api;
 static struct GfxWindowManagerAPI *wm_api = &gfx_dc;
-#ifdef GFX_BACKEND_PVR
 static struct GfxRenderingAPI *rendering_api = &gfx_pvr_api;   // make GFX_BACKEND=pvr
-#else
-static struct GfxRenderingAPI *rendering_api = &gfx_opengl_api;
-#endif
 
 extern void gfx_run(Gfx *commands);
 

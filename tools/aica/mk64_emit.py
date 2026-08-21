@@ -12,6 +12,7 @@ from multiprocessing import Pool
 from pathlib import Path
 
 from mk64_albank_parse import parse_all
+import ya2beam_c
 from transcode import transcode_sample, FORCE_PCM_KEYS, FMT_PCM16, FMT_PCM8, FMT_ADPCM
 
 ALIGN = 32
@@ -36,6 +37,10 @@ def main(audiobanks, audiotables, outdir, incdir, pool_path):
 
     # Beam encode is CPU-heavy + independent -> fan out across cores. Pool.map keeps
     # order; pool_offset assigned serially after, then re-sorted by key. Deterministic.
+    # Build the C encoder .so once here so forked workers inherit it (no per-worker
+    # compile race); falls back to pure-Python if no C compiler is present.
+    if not ya2beam_c.prebuild():
+        print("mk64_emit: C beam encoder unavailable; using pure-Python (slow)")
     with Pool(os.cpu_count()) as pool:
         descs = pool.map(_transcode_one, list(samples.values()))
 

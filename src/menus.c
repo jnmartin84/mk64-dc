@@ -165,7 +165,7 @@ const union GameModePack sSoundMenuPack = { { SOUND_STEREO, SOUND_HEADPHONES, SO
 
 /**************************/
 
-extern int in_intro;
+int in_intro = 0;
 
 /**
  * General menu main handler

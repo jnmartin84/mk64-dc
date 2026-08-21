@@ -8,7 +8,7 @@
 #include <dc/video.h>
 #include <assert.h>
 
-#define GFX_API_NAME "Dreamcast GLdc"
+#define GFX_API_NAME "Dreamcast PVR"
 #define SCR_WIDTH (640)
 #define SCR_HEIGHT (480)
 
@@ -18,7 +18,6 @@ int force_30fps = 1;   // 0 = uncapped (real vsync, 60Hz-capable) — only 1P ra
                        // change; race_logic_loop re-asserts per mode every frame.
 static unsigned int last_time = 0;
 
-extern void glKosSwapBuffers(void);
 extern uint64_t timer_ms_gettime64(void);
 
 unsigned int GetSystemTimeLow(void) {
@@ -82,7 +81,6 @@ static void gfx_dc_swap_buffers_begin(void) {
 extern volatile uint64_t vblticker;
 static uint64_t last_ticker = 0;
 static void gfx_dc_swap_buffers_end(void) {
-
     // 30fps pacing on the real 60Hz vblank: hold each frame to a CONSTANT 2-vblank beat.
     // NEVER pace on gTickSpeed/sNumVBlanks — those MEASURE the frame we're pacing, so a
     // one-frame hiccup ratchets the wait up permanently (wait 3 -> measures 3 -> wait 3...).
@@ -95,26 +93,6 @@ static void gfx_dc_swap_buffers_end(void) {
             genwait_wait((void*)&vblticker, NULL, 0, NULL);
         last_ticker = (vblticker > target) ? vblticker : target;
     }
-
-
-    // Number of microseconds a frame should take (30 fps)
-/*    const unsigned int cur_time = GetSystemTimeLow();
-    const unsigned int elapsed = cur_time - last_time;
-    last_time = cur_time;
-
-    if (force_30fps && elapsed < FRAME_TIME_MS) {
-#ifdef DEBUG
-        printf("elapsed %d ms fps %f delay %d \n", elapsed, 1000.0f / elapsed, FRAME_TIME_MS - elapsed);
-#endif
-        DelayThread(FRAME_TIME_MS - elapsed);
-        last_time += (FRAME_TIME_MS - elapsed);
-    }*/
-
-    /* Lets us yield to other threads*/
-#ifndef GFX_BACKEND_PVR
-    glKosSwapBuffers();
-#endif
-    /* PVR backend (gfx_pvr.c) flips inside pvr_scene_finish (finish_render). */
 }
 
 /* Idk what this is for? */

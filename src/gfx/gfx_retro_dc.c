@@ -25,8 +25,6 @@
 #include "sh4zam.h"
 #include <kos.h>
 
-extern int in_intro;
-
 int fix_flash = 0;
 
 uint32_t last_set_texture_image_width;
@@ -62,7 +60,6 @@ void* segmented_to_virtual(void* addr);
 #define MAX_LIGHTS 2
 #define MAX_VERTICES 64
 
-int blend_fuck=0;
 // Pane depth-bias (battle/VS winner-pane enlargement): while the winner's viewport grows over
 // the other panes, ALL its emitted z gets +PANE_ZBIAS so it wins the GEQUAL depth test against
 // every other pane (whose z stays in the normal <~2.0 range: invw <= ~1, screen_2d_z 1.0-2.0).
@@ -425,12 +422,10 @@ static struct RDP {
 
 	uint32_t other_mode_l, other_mode_h;
 	uint32_t combine_mode;
-#ifdef GFX_BACKEND_PVR
 	// Raw G_SETCOMBINE words, kept for the PVR combiner evaluator: the compressed
 	// combine_mode (cc_id) drops the N64 G_CCMUX_1 constant + the true alpha mux, so
 	// the faithful (a-b)*c+d eval reads these instead. (See pvr_eval_combiner.)
 	uint32_t combine_w0, combine_w1;
-#endif
 
 	struct RGBA env_color, prim_color, fog_color, fill_color;
 	struct XYWidthHeight viewport, scissor;
@@ -506,8 +501,7 @@ static uint8_t cur_scissor_gen = 1;
 // the rdp fields. Init to a full 640x480 screen.
 static float vpf_x = 0.0f,   vpf_y = 0.0f,   vpf_w = 640.0f, vpf_h = 480.0f;
 static float scf_x = 0.0f,   scf_y = 0.0f,   scf_w = 640.0f, scf_h = 480.0f;
-#define GFX_BACKEND_PVR
-#ifdef GFX_BACKEND_PVR
+
 // NDC -> PVR window (pixel) mapping coefficients. The raw-PVR backend does NO
 // transform, so gfx_retro_dc owns the full object->screen path: MVP at vertex-load
 // (clip-space _x/_y/_z/_w), then perspective divide + viewport map at emit:
@@ -527,7 +521,6 @@ static void gfx_recompute_screen_map(void) {
 	sm_yscale = -(vh * 0.5f);
 	sm_ybias  = fb_h - vpf_y - vh * 0.5f;
 }
-#endif
 
 // Recompute the scissor NDC bounds from the current viewport + scissor rects.
 // Called whenever either changes (both live in the same lower-left window space).
@@ -620,7 +613,6 @@ static inline uint8_t compute_scissor_outcode(float x, float y, float w) {
 
 static dc_fast_t __attribute__((aligned(32))) quad_vbo[2 * 3];           // 2 tris make a quad (2D path, both backends)
 
-#ifdef GFX_BACKEND_PVR
 // PVR streams ALL 3D geometry with NO buf_vbo: OP (kind 0) bakes into op_emit then DR-submits per
 // source-triangle (pvr_submit_op); PT/TR (kind 1/2) bake DIRECTLY into their deferred bucket
 // (pvr_reserve). op_emit holds ONE source triangle's worst-case clipped fan: 3 verts + 5 clip planes
@@ -667,7 +659,6 @@ static inline void pvr_submit_op_inline(const dc_fast_t *tris, size_t n) {
     if (gfx_pvr_op_dirty) pvr_emit_op_header_slow();
     pvr_sq_ship(SQ_MASK_DEST(PVR_TA_INPUT), tris, n);
 }
-#endif
 
 static struct GfxWindowManagerAPI* gfx_wapi;
 static struct GfxRenderingAPI* gfx_rapi;
@@ -812,16 +803,10 @@ void gfx_texture_cache_invalidate(void* orig_addr) {
 	}
 }
 
-void gfx_opengl_replace_texture(const uint8_t* rgba32_buf, int width, int height, unsigned int type);
-
-extern void gfx_opengl_set_tile_addr(int tile, GLuint addr);
-
-/* Per-texture UV correction for the PoT padding done in gfx_opengl_upload_texture
-   (real size / padded size). Multiplied into the texel->[0,1] normalization so the
-   padded region is never sampled. */
+/* Per-texture UV correction for the PoT padding (real size / padded size).
+   Multiplied into the texel->[0,1] normalization so the padded region is never sampled. */
 extern float get_current_u_scale(void);
 extern float get_current_v_scale(void);
-#ifdef GFX_BACKEND_PVR
 extern float gfx_pvr_get_u_scale(void);
 extern float gfx_pvr_get_v_scale(void);
 #define get_current_u_scale gfx_pvr_get_u_scale
@@ -874,7 +859,6 @@ static void pvr_derive_blend(uint32_t oml, uint32_t omh, uint8_t *src, uint8_t *
          : (b == G_BL_1)     ? GFX_BLENDF_ONE
          :                     GFX_BLENDF_ZERO;
 }
-#endif
 
 // `tile` = backend texture UNIT (0/1, drives select_texture + the cache node). `dslot` = the
 // loaded_texture DATA slot = render tile's tmem block (0/1); decoupled so a render tile re-pointed
@@ -913,14 +897,12 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, int
 			/* (*node)->texture_addr == segaddr && (*node)->ult == ult && (*node)->uls == uls &&
 			(*node)->fmt == fmt && (*node)->siz == siz */) {
 			gfx_rapi->select_texture(tile, (*node)->texture_id);
-			gfx_opengl_set_tile_addr(tile, segaddr);
 
 			int evicted = 0;
-#ifdef GFX_BACKEND_PVR
 			/* The backend may have freed this texture's VRAM under memory pressure (LRU
 			   eviction). A hit on an evicted texture must re-upload, not draw a freed block. */
 			evicted = !gfx_pvr_texture_resident((*node)->texture_id);
-#endif
+
 			/* dirty (explicit invalidate) OR the dims changed (squish/scale) OR the VRAM
 			   was evicted -> re-upload into this same texture_id. */
 			if ((*node)->dirty || (*node)->pad2 != dimkey || evicted) {
@@ -939,9 +921,8 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, int
 		// Front-end node pool is full (1024 distinct textures since the last flush). Rather than
 		// crash, draw this one frame with the placeholder and ask the backend to drop the whole
 		// cache at the next frame start (VRAM/pool watchdog) — it rebuilds from scratch.
-#ifdef GFX_BACKEND_PVR
 		gfx_pvr_request_cache_flush();
-#endif
+
 		gfx_rapi->select_texture(tile, oops_texture_id);
 		*node = &oops_node;
 		return 1;
@@ -952,7 +933,6 @@ static  __attribute__((noinline)) uint8_t gfx_texture_cache_lookup(int tile, int
 		(*node)->texture_id = gfx_rapi->new_texture();
 	}
 	gfx_rapi->select_texture(tile, (*node)->texture_id);
-	gfx_opengl_set_tile_addr(tile, segaddr);
 
 	gfx_rapi->set_sampler_parameters(tile, 0, 0, 0);
 	(*node)->key = pack_key(segaddr,uls,ult,fmt,siz);
@@ -1417,7 +1397,7 @@ static void __attribute__((noinline)) import_texture(int tile) {
 	}
 
 	last_cl_rv = cl_rv;
-#ifdef GFX_BACKEND_PVR
+
 	// Size the VRAM buffer to the FULL loaded texture (from the LOAD: line_size_bytes/size_bytes),
 	// not the possibly-squished tile, so menu squish re-uploads reshape into a fixed buffer instead
 	// of free/bigger-malloc churn (which fragments VRAM -> OOM). The full dims are stable while the
@@ -1433,7 +1413,7 @@ static void __attribute__((noinline)) import_texture(int tile) {
 			gfx_pvr_set_alloc_floor(full_w, full_h);
 		}
 	}
-#endif
+
 	// Importers read rdp.loaded_texture[<arg>] for the source data -> pass the DATA slot (dslot).
 	if (fmt == G_IM_FMT_RGBA) {
 		if (siz == G_IM_SIZ_16b) {
@@ -1897,7 +1877,6 @@ static int GFX_HOT gfx_build_clipped_fan(const struct LoadedVertex* a, const str
 	return nt;
 }
 
-#ifdef GFX_BACKEND_PVR
 // ---- Raw-PVR colour combiner evaluator (OoT-style, raw N64 mux) -------------
 // Evaluate cycle-0 (a-b)*c+d for colour AND alpha from the RAW G_SETCOMBINE words
 // (rdp.combine_w0/w1) — NOT the compressed cc_id, which drops G_CCMUX_1 and the true
@@ -2283,7 +2262,6 @@ static inline void pvr_eval_combiner_fast(const struct ccp* p, const struct RGBA
 	if (p->const_out) { *out_argb = p->c_argb; *out_oargb = p->c_oargb; return; }
 	pvr_eval_combiner_terms(p, sh, out_argb, out_oargb);
 }
-#endif
 
 // Coplanar-decal depth bias (N64 ZMODE_DEC). PVR z = 1/w (GEQUAL, larger == nearer); a decal
 // shares its base surface's z and would z-fight on the tie. Scale 1/w slightly NEARER so the
@@ -2323,7 +2301,6 @@ static void __attribute__((noinline)) gfx_tri_state_setup(void) {
         rendering_state.decal_mode = zmode_decal;
     }
 
-#ifdef GFX_BACKEND_PVR
     // PVR hardware vertex fog: on when the RSP G_FOG geometry mode is set (the same signal
     // that makes gfx_calc_fog produce per-vertex coefficients). The fog-colour register is
     // global/per-frame (like OoT), so per-object fog colours can't differ within a frame —
@@ -2342,7 +2319,6 @@ static void __attribute__((noinline)) gfx_tri_state_setup(void) {
             rendering_state.fog_color = fc;
         }
     }
-#endif
 
     if (rdp.viewport_or_scissor_changed) {
         if (memcmp(&rdp.viewport, &rendering_state.viewport, sizeof(rdp.viewport)) != 0) {
@@ -2880,13 +2856,7 @@ static void  __attribute__((noinline)) GFX_HOT gfx_sp_tri1_impl(uint8_t vtx1_idx
         has_done_3d = 1;
 }
 
-#if 1
-extern int first_2d;
-extern void gfx_opengl_reset_frame(int r, int g, int b);
-extern void gfx_opengl_draw_triangles_2d(void* buf_vbo, size_t buf_vbo_len, size_t buf_vbo_num_tris);
-#ifdef GFX_BACKEND_PVR
 extern void gfx_pvr_draw_triangles_2d(void* buf_vbo, size_t buf_vbo_len, size_t buf_vbo_num_tris);
-#endif
 static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, uint8_t vtx1_idx2, uint8_t vtx2_idx2,
 						   uint8_t vtx3_idx2) {
 	PROF_INC(prof_quads);
@@ -2904,7 +2874,6 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 
 	dc_fast_t* v_arr[6] = { v1, v2, v3, v12, v22, v32 };
 
-#ifdef GFX_BACKEND_PVR
 	// Guaranteed-opaque 2D (same test as the q_tr classifier below) lands on the live OP
 	// list, which renders BEFORE TR. For an opaque 2D overlay to cover TR geometry it must
 	// WRITE DEPTH at its near screen z — otherwise TR paints right over it. Concretely: the
@@ -2921,7 +2890,7 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 		uint8_t aut = (aa==1||aa==2||ab==1||ab==2||ac==1||ac==2||ad==1||ad==2);
 		opaque_2d = !(ua || aut);
 	}
-#endif
+
 	uint8_t depth_test = (rsp.geometry_mode & G_ZBUFFER) == G_ZBUFFER;
 	// NOTE: do NOT force depth_test for opaque_2d here. Forcing GEQUAL made opaque 2D *test*
 	// depth and get rejected by nearer world geometry (split-screen HUD obscured; intro fade
@@ -2934,9 +2903,7 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 	}
 
 	uint8_t z_upd = (rdp.other_mode_l & Z_UPD) == Z_UPD;
-#ifdef GFX_BACKEND_PVR
 	if (opaque_2d) z_upd = 1;        // write depth at the near 2D z so TR can't paint over it
-#endif
 	if (z_upd != rendering_state.depth_mask) {
 		gfx_flush();
 		gfx_rapi->set_depth_mask(z_upd);
@@ -3034,7 +3001,6 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 	float recip_tex_width = shz_inverse_posf((float) tex_width) * get_current_u_scale();
 	float recip_tex_height = shz_inverse_posf((float) tex_height) * get_current_v_scale();
 
-#ifdef GFX_BACKEND_PVR
 	// Same combiner-derived texel<->colour combine as the 3D path, for 2D texrects/quads.
 	uint32_t texenv = use_texture ? derive_pvr_texenv(rdp.combine_mode) : GFX_TEXENV_MODULATE;
 	if (texenv != rendering_state.tex_env) {
@@ -3042,7 +3008,6 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 		gfx_rapi->set_tex_env(texenv);
 		rendering_state.tex_env = texenv;
 	}
-#endif
 
 	int tri_num_vert = 0;
 	for (tri_num_vert = 0; tri_num_vert < 6; tri_num_vert++) {
@@ -3062,7 +3027,6 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 			quad_vbo[tri_num_vert].texture.v = v * recip_tex_height;
 		}
 
-#ifdef GFX_BACKEND_PVR
 		// 2D uses the SAME raw-mux combiner evaluator as 3D — replacing the old
 		// white-defaulting material hack. The portrait DECAL background now resolves to
 		// the combiner's real colour (e.g. black) instead of white, so no vertex-colour
@@ -3073,87 +3037,8 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 			quad_vbo[tri_num_vert].color.packed = _argb;
 			quad_vbo[tri_num_vert].pad0.vertindex = _oargb;
 		}
-#else
-		struct RGBA white = (struct RGBA) { 0xff, 0xff, 0xff, 0xff };
-		struct RGBA* color = &white;
-		int j, k;
-
-		uint32_t color_r = 0;
-		uint32_t color_g = 0;
-		uint32_t color_b = 0;
-		uint32_t color_a = 0;
-
-		if ((num_inputs == 2) && 
-		((comb->shader_input_mapping[0][0] == CC_ENV) && 
-		(comb->shader_input_mapping[0][1] == CC_PRIM))) {		
-			color_r = 255 - rdp.env_color.r;
-			color_r *= ((rdp.prim_color.r + 255));
-			color_r >>= 8;
-
-			color_g = 255 - rdp.env_color.g;
-			color_g *= ((rdp.prim_color.g + 255));
-			color_g >>= 8;
-
-			color_b = 255 - rdp.env_color.b;
-			color_b *= ((rdp.prim_color.b + 255));
-			color_b >>= 8;
-
-			color_a = rdp.prim_color.a;
-
-			uint32_t max_c = 255;
-			if (color_r > max_c)
-				max_c = color_r;
-			if (color_g > max_c)
-				max_c = color_g;
-			if (color_b > max_c)
-				max_c = color_b;
-
-			float rn, gn, bn;
-			rn = (float) color_r;
-			gn = (float) color_g;
-			bn = (float) color_b;
-			float maxc = 255.0f * shz_inverse_posf((float) max_c);
-			rn *= maxc;
-			gn *= maxc;
-			bn *= maxc;
-
-			color_r = (uint32_t) rn;
-			color_g = (uint32_t) gn;
-			color_b = (uint32_t) bn;
-			quad_vbo[tri_num_vert].color.array.r = color_r;
-			quad_vbo[tri_num_vert].color.array.g = color_g;
-			quad_vbo[tri_num_vert].color.array.b = color_b;
-			quad_vbo[tri_num_vert].color.array.a = color_a;
-		} else {
-			for (j = 0; j < num_inputs; j++) {
-				/*@Note: use_alpha ? 1 : 0 */
-				for (k = 0; k < 1 + (use_alpha ? 0 : 0); k++) {
-					switch (comb->shader_input_mapping[k][j]) {
-						case CC_PRIM:
-							color = &rdp.prim_color;
-							break;
-						case CC_SHADE:
-							color = &v_arr[i]->color;
-							break;
-						case CC_ENV:
-							color = &rdp.env_color;
-							break;
-						default:
-							color = &white;
-							break;
-					}
-				}
-			}
-
-			quad_vbo[tri_num_vert].color.array.r = color->r;
-			quad_vbo[tri_num_vert].color.array.g = color->g;
-			quad_vbo[tri_num_vert].color.array.b = color->b;
-			quad_vbo[tri_num_vert].color.array.a = color->a;
-		}
-#endif
 	}
 
-#ifdef GFX_BACKEND_PVR
 	// Classify the 2D quad with the same 3-way split as the 3D path (0=OP,1=PT,2=TR):
 	// FORCE_BL (real translucent) -> TR; else alpha-test CUTOUT (coverage edge or texture-
 	// driven alpha, e.g. glyphs) -> PT; else fully opaque -> OP. Alpha mux (3b): 1=TEXEL0,2=TEXEL1.
@@ -3187,9 +3072,6 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 		pvr_cur_kind = q_kind;
 	}
 	gfx_pvr_draw_triangles_2d((void*) quad_vbo, 0, use_texture);
-#else
-	gfx_opengl_draw_triangles_2d((void*) quad_vbo, 0, use_texture);
-#endif
 	// The 2D path mutates backend state (shader/blend/samplers/texenv/viewport) outside the
 	// hoisted setup's view -> force the next 3D triangle to re-derive.
 	rdp_state_gen++;
@@ -3197,7 +3079,6 @@ static void  __attribute__((noinline)) gfx_sp_quad_2d(uint8_t vtx1_idx, uint8_t 
 	prof_t_quad += PROF_NOW() - prof_t0;
 #endif
 }
-#endif
 
 static void gfx_sp_geometry_mode(uint32_t clear, uint32_t set) {
 	rsp.geometry_mode &= ~clear;
@@ -3234,9 +3115,7 @@ static void gfx_calc_and_set_viewport(const Vp_t* viewport) {
 	// GLdc applies this viewport via glViewport; recompute the software-scissor NDC
 	// bounds, which are expressed relative to the viewport mapping. The PVR backend
 	// additionally maps NDC->pixels itself, so refresh those coefficients too.
-#ifdef GFX_BACKEND_PVR
 	gfx_recompute_screen_map();
-#endif
 	gfx_recompute_scissor_planes();
 
 	rdp.viewport_or_scissor_changed = 1;
@@ -3573,27 +3452,6 @@ static void  gfx_dp_set_fill_color(uint32_t packed_color) {
 	rdp.fill_color.a = a * 255;
 }
 
-#if 1
-void  __attribute__((noinline)) gfx_opengl_2d_projection(void) {
-#ifndef GFX_BACKEND_PVR
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(0, 640, 480, 0, -1, 1);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-#endif
-}
-
-void  __attribute__((noinline)) gfx_opengl_reset_projection(void) {
-#ifndef GFX_BACKEND_PVR
-	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf((const float*) rsp.P_matrix);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf((const float*) rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1]);
-#endif
-}
-#endif
-
 float screen_2d_z;
 
 static void  __attribute__((noinline)) gfx_draw_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry) {
@@ -3627,7 +3485,7 @@ static void  __attribute__((noinline)) gfx_draw_rectangle(int32_t ulx, int32_t u
 	dc_fast_t* ur = &rsp.loaded_vertices_2D[3];
 	screen_2d_z += 0.0005f;
 	float rz = screen_2d_z;
-#ifdef GFX_BACKEND_PVR
+
 	// A TEXTURED 2D quad drawn BEFORE any 3D, in a frame that HAS a 3D scene, is a backdrop
 	// (the title bg strips behind the perspective checkered flag) -> far-pin it. Excludes
 	// FILLRECTS (do_fill_rect): a solid-colour fill drawn before 3D is an OVERLAY/effect (the
@@ -3637,7 +3495,7 @@ static void  __attribute__((noinline)) gfx_draw_rectangle(int32_t ulx, int32_t u
 		rz = 0.00001f;
 	do_fill_rect = 0;   // consume per-rect (it isn't reliably reset elsewhere)
 	rz += pane_zbias;   // winner-pane enlargement: 2D (HUD/fills, even far-pinned backdrops) lifts too
-#endif
+
 	ul->vert.x = ulxf;
 	ul->vert.y = ulyf;
 	ul->vert.z = rz;
@@ -3831,7 +3689,7 @@ static void __attribute__((noinline)) gfx_dp_texture_rectangle(Gfx* cmd, uint8_t
 
 int title_backdrop = 0;
 int use_one_inv = 0;
-int depth_off = 0;
+
 static void  __attribute__((noinline)) GFX_HOT gfx_run_dl(Gfx* cmd) {
 	//printf("starting at %08x\n", cmd);
 
@@ -3858,15 +3716,7 @@ static void  __attribute__((noinline)) GFX_HOT gfx_run_dl(Gfx* cmd) {
 
 		// custom f3d opcodes, sorry
 		if (cmd->words.w0 == 0x424C4E44) {
-			if (cmd->words.w1 == 0x4655434B) {
-				// gSPSignaling
-				blend_fuck ^= 1;
-			} else if(cmd->words.w1 == 0x4655434C) {
-				// gSPBlendOneInv
-				use_one_inv ^= 1;
-			} else if(cmd->words.w1 == 0x4655434D) {
-				depth_off ^= 1;
-			} else if(cmd->words.w1 == 0x46554360) {
+			if(cmd->words.w1 == 0x46554360) {
 				title_backdrop ^= 1;
 			} else if (cmd->words.w1 == 0xA6A7A8A9) {
 				fix_flash ^= 1;
@@ -4049,10 +3899,8 @@ static void  __attribute__((noinline)) GFX_HOT gfx_run_dl(Gfx* cmd) {
 				break;
 
 			case G_SETCOMBINE:
-#ifdef GFX_BACKEND_PVR
 				rdp.combine_w0 = cmd->words.w0;   // raw mux for the faithful PVR eval
 				rdp.combine_w1 = cmd->words.w1;
-#endif
 				gfx_dp_set_combine_mode(color_comb(C0(20, 4), C1(28, 4), C0(15, 5), C1(15, 3)),
 										color_comb(C0(12, 3), C1(12, 3), C0(9, 3), C1(9, 3)));
 				/*color_comb(C0(5, 4), C1(24, 4), C0(0, 5), C1(6, 3)),

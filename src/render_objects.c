@@ -37,14 +37,6 @@
 #include "data/some_data.h"
 #include <stdio.h>
 
-#define gSPBlendOneInv(pkt)                                       \
-    {                                                                                   \
-        Gfx* _g = (Gfx*) (pkt);                                                         \
-                                                                                        \
-        _g->words.w0 = 0x424C4E44; \
-        _g->words.w1 = 0x4655434C;                                           \
-    }
-
 void gfx_texture_cache_invalidate(void *orig_addr);
 
 void func_800431B0(Vec3f pos, Vec3su orientation, f32 scale, Vtx* vtx) {
@@ -2505,23 +2497,11 @@ void func_8004EB38(s32 playerId) {
     }
 }
 
-#define gSPBlendOneInv(pkt)                                       \
-    {                                                                                   \
-        Gfx* _g = (Gfx*) (pkt);                                                         \
-                                                                                        \
-        _g->words.w0 = 0x424C4E44; \
-        _g->words.w1 = 0x4655434C;                                           \
-    }
-
 void func_8004ED40(s32 arg0) {
-    gSPBlendOneInv(gDisplayListHead++);
     func_8004A2F4(playerHUD[arg0].speedometerX, playerHUD[arg0].speedometerY, 0U, 1.0f, D_8018D300, D_8018D308,
                   D_8018D310, 0xFF, common_texture_speedometer, D_0D0064B0, 64, 96, 64, 48);
-    gSPBlendOneInv(gDisplayListHead++);
-    gSPBlendOneInv(gDisplayListHead++);
     func_8004A258(D_8018CFEC, D_8018CFF4, D_8016579E, 1.0f, common_texture_speedometer_needle, D_0D005FF0, 0x40, 0x20,
                   0x40, 0x20);
-    gSPBlendOneInv(gDisplayListHead++);
 }
 
 void func_8004EE54(s32 arg0) {
@@ -2540,14 +2520,11 @@ void func_8004EE54(s32 arg0) {
 void func_8004EF9C(s32 arg0) {
     s16 temp_t0;
     s16 temp_v0;
-    gSPBlendOneInv(gDisplayListHead++);
 
     temp_v0 = D_800E5548[arg0 * 2];
     temp_t0 = D_800E5548[arg0 * 2 + 1];
     func_8004D37C(0x00000104, 0x0000003C, D_8018D248[arg0], 0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF, temp_v0,
                   temp_t0, temp_v0, temp_t0);
-    gSPBlendOneInv(gDisplayListHead++);
-
 }
 
 void render_mini_map_finish_line(s32 arg0) {
@@ -2786,15 +2763,6 @@ void draw_lap_count(s16 lapX, s16 lapY, s8 lap) {
     func_8004BA98(lapX + 16, lapY, 8, 8, 16, 0, 0); // display the 3
     gSPDisplayList(gDisplayListHead++, D_0D007EB8);
 }
-
-#define gSPForceDepthOff(pkt)                                       \
-    {                                                                                   \
-        Gfx* _g = (Gfx*) (pkt);                                                         \
-                                                                                        \
-        _g->words.w0 = 0x424C4E44; \
-        _g->words.w1 = 0x4655434D;                                           \
-    }
-
 
 void func_8004FDB4(f32 arg0, f32 arg1, s16 arg2, s16 arg3, s16 characterId, s32 arg5, s32 arg6, s32 arg7, s32 arg8) {
     if ((gCurrentCourseId == COURSE_YOSHI_VALLEY) && (arg3 < 3) && (arg8 == 0)) {
@@ -3087,7 +3055,6 @@ void func_80050E34(s32 playerId, s32 arg1) {
     } else {
         spB8 = 0;
     }
-        gSPForceDepthOff(gDisplayListHead++);
 
     if ((gCurrentCourseId == COURSE_YOSHI_VALLEY) && (lapCount < 3)) {
         gSPDisplayList(gDisplayListHead++, D_0D007DB8);
@@ -3136,8 +3103,6 @@ void func_80050E34(s32 playerId, s32 arg1) {
             gSPDisplayList(gDisplayListHead++, D_0D0069E0);
         }
     }
-            gSPForceDepthOff(gDisplayListHead++);
-
 }
 
 void func_800514BC(void) {

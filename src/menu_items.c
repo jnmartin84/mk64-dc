@@ -5343,27 +5343,7 @@ void func_8009E2F0(s32 arg0) {
     temp_t7 = D_800F0B28[D_8018E840[arg0]];
     // The raw-PVR backend renders this flash by tinting the SKYBOX vertices (see
     // apply_skybox_lightning_flash in skybox_and_splitscreen.c) so only the visible sky flashes,
-    // occluded by the course — no full-screen overlay box. So the overlay draw is GLdc-only; the
-    // timer advance + reset below stay unconditional (the skybox tint reads that timer).
-#ifndef GFX_BACKEND_PVR
-    if (temp_t7 != 0) {
-        temp_t1 = &D_8018E7E8[arg0];
-        temp_t0 = &D_8018E810[arg0];
-        temp_v0 = &D_800E7AC8[temp_t7];
-	gSPSkybox(gDisplayListHead++);
-        if ((u32) D_8018E840[arg0] < 0x1BU) {
-            gDisplayListHead = draw_box(gDisplayListHead, temp_t1->x - (temp_t0->x / 2), temp_t1->y - (temp_t0->y / 2),
-                                        temp_t1->x + (temp_t0->x / 2), temp_t1->y + (temp_t0->y / 2), temp_v0->red,
-                                        temp_v0->green, temp_v0->blue, temp_v0->alpha);
-        } else {
-            temp_t7_2 = ((u32) (38 - D_8018E840[arg0])) / 11.0;
-            gDisplayListHead = draw_box(gDisplayListHead, temp_t1->x - (temp_t0->x / 2), temp_t1->y - (temp_t0->y / 2),
-                                        temp_t1->x + (temp_t0->x / 2), temp_t1->y + (temp_t0->y / 2), temp_v0->red,
-                                        temp_v0->green, temp_v0->blue, (u32) (temp_v0->alpha * temp_t7_2));
-        }
-	gSPSkybox(gDisplayListHead++);
-    }
-#endif
+    // occluded by the course — no full-screen overlay box.
     D_8018E840[arg0]++;
     if ((u32) D_8018E840[arg0] >= 0x26U) {
         for (someIndex = 0; someIndex < 4; someIndex++) {

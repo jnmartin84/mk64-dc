@@ -2,25 +2,7 @@
 //
 // Drop-in alternative to the GLdc backend (gfx_gldc.c): implements the same
 // struct GfxRenderingAPI, but submits geometry straight to the PVR via the
-// direct-render (store-queue) path instead of going through OpenGL. The
-// gfx_retro_dc.c front-end (command interpreter, combiner, SW clip/cull/scissor,
-// split-screen) is shared and unchanged; only this backend differs.
-//
-// Selected at build time with `make GFX_BACKEND=pvr` (-DGFX_BACKEND_PVR), which
-// also wires main.c to pick gfx_pvr_api and tells gfx_dc.c to skip
-// glKosSwapBuffers (the PVR flips inside pvr_scene_finish here).
-//
-// PHASE 0 (this file, current): full API surface present; shader/texture
-// BOOKKEEPING is real so the front-end runs end-to-end, but draws are no-ops and
-// textures aren't uploaded yet. pvr_init + scene lifecycle run, so the screen
-// clears to the background colour — that alone proves the backend is live.
-//
-// Roadmap (see memory project_mk64_raw_pvr_migration):
-//   P1 PT flat triangles (bake screen_x/screen_y/inv_w, DR submit to PT)
-//   P2 textures (POT-PADDED upload — NOT resampled; prefer gfx_retro_dc converters)
-//   P3 PT/TR classifier + blend (bucket TR, flush at frame end)
-//   P4 2D paths + split-screen viewport bake
-//   P5 parity polish, then flip default
+// direct-render (store-queue) path instead of going through OpenGL.
 
 #include <PR/gbi.h>
 #include <stdlib.h>
@@ -44,8 +26,8 @@ _Static_assert(sizeof(dc_fast_t) == sizeof(pvr_vertex_t), "dc_fast_t must match 
 _Static_assert(sizeof(pvr_poly_hdr_t) == 32, "pvr_poly_hdr_t must be one 32-byte SQ slot");
 
 // ---------------------------------------------------------------------------
-// Shader bookkeeping — identical bookkeeping to the GLdc backend. The front-end
-// treats ShaderProgram opaquely (only via shader_get_info), so this layout is
+// Shader bookkeeping — The front-end treats ShaderProgram opaquely
+// (only via shader_get_info), so this layout is
 // private to the backend. "Shaders" here will resolve to a small set of
 // pvr_poly_cxt configs in P3; for now we only need the CC feature flags.
 // ---------------------------------------------------------------------------
@@ -348,7 +330,7 @@ static inline uint32_t pvr_next_pot(uint32_t v) {
 }
 static inline int pvr_is_pot(uint32_t v) { return (v & (v - 1)) == 0; }
 
-// Pad-copy with clamp-to-edge (mirrors GLdc's resample_tex): real image at top-left,
+// Pad-copy with clamp-to-edge: real image at top-left,
 // pad columns/rows replicate the edge so bilinear at the border samples real texels.
 static void pvr_pad16(const uint16_t *in, int iw, int ih, uint16_t *out, int ow, int oh) {
     int y;
@@ -390,8 +372,7 @@ static pvr_init_params_t sPvrParams = {
 // ===========================================================================
 
 static uint8_t gfx_pvr_z_is_from_0_to_1(void) {
-    // TODO(P1): confirm this matches the GLdc backend's value; with no geometry
-    // submitted in P0 it has no effect. PVR uses 1/w depth regardless.
+    // PVR uses 1/w depth regardless.
     return 0;
 }
 
@@ -473,7 +454,7 @@ static void gfx_pvr_select_texture(int tile, uint32_t texture_id) {
     // headers only on real change" was one of its biggest CPU wins.)
     uint8_t changed = (sBoundTex[tile] != texture_id);
     sBoundTex[tile] = texture_id;
-    sCurBound = texture_id;   // upload target follows the most recent bind (à la GLdc)
+    sCurBound = texture_id;   // upload target follows the most recent bind
     sTextures[texture_id].lru = ++sLruClock;   // mark most-recently-used for LRU eviction
     if (changed)
         pvr_mark_dirty();
@@ -547,9 +528,7 @@ void gfx_pvr_set_alloc_floor(uint32_t full_w, uint32_t full_h) {
 static void gfx_pvr_upload_texture(const uint8_t *buf16, int width, int height, unsigned int type) {
     struct PvrTex *t = &sTextures[sCurBound];
     // NON-twiddled on purpose: twiddling is a CPU reorder on every upload, and MK64
-    // invalidates/re-uploads textures heavily — twiddling there caused a major slowdown
-    // (GLdc stayed non-twiddled for the same reason). Trade-off: non-twiddled/stride
-    // textures only point-sample, so bilinear-wanting textures (speedometer) look crusty.
+    // invalidates/re-uploads textures heavily — twiddling caused a major slowdown
     int fmt = ((type == PVR_TYPE_ARGB1555) ? PVR_TXRFMT_ARGB1555 : PVR_TXRFMT_ARGB4444)
               | PVR_TXRFMT_NONTWIDDLED;
 
@@ -645,10 +624,8 @@ static void gfx_pvr_set_sampler_parameters(int tile, uint8_t linear_filter, uint
     pvr_mark_dirty();
 }
 
-// Free ALL cached texture VRAM. Mirrors GLdc's glDeleteTextures sweep in
-// gfx_clear_all_textures (called from nuke_everything at course/memory resets) — the
-// point where the texture cache's VRAM (including reuse bloat) is reclaimed. The cache
-// then re-uploads on demand (addr==NULL -> fresh pvr_mem_malloc).
+// Free ALL cached texture VRAM. The cache then re-uploads on demand
+// (addr==NULL -> fresh pvr_mem_malloc).
 //
 // CRITICAL: also RESET the id allocator. nuke_everything calls this and then
 // reset_texcache() (front-end cache wipe), after which the front-end re-requests a fresh
@@ -656,7 +633,7 @@ static void gfx_pvr_set_sampler_parameters(int tile, uint8_t linear_filter, uint
 // reset here, it climbs monotonically across course/memory resets; once cumulative unique
 // textures exceed PVR_TEX_MAX, new_texture clamps EVERY further id to slot 1023 and the
 // whole scene draws with the last-uploaded texture (the "same texture everywhere" wedge,
-// never recovers without restart). GLdc never hit this — its id space isn't capped.
+// never recovers without restart).
 void gfx_pvr_clear_all_textures(void) {
     // Free by what is actually allocated, NOT `i <= sTexCount`. The front-end only calls
     // new_texture() (which bumps sTexCount) the FIRST time each pool node is used; once every
@@ -684,32 +661,56 @@ void gfx_pvr_clear_all_textures(void) {
     sCurBound = 0;
 }
 
+extern void reset_texcache(void);
+void nuke_everything(void) {
+    gfx_pvr_clear_all_textures();
+    reset_texcache();
+}
+
 // PoT-padding UV correction (real/padded), consumed by the front-end's recip_tex_*
-// in place of GLdc's get_current_*_scale (PVR build routes to these).
-float gfx_pvr_get_u_scale(void) { return sTextures[sBoundTex[0]].u_scale; }
-float gfx_pvr_get_v_scale(void) { return sTextures[sBoundTex[0]].v_scale; }
+float gfx_pvr_get_u_scale(void) {
+    return sTextures[sBoundTex[0]].u_scale;
+}
+
+float gfx_pvr_get_v_scale(void) {
+    return sTextures[sBoundTex[0]].v_scale;
+}
 
 static void gfx_pvr_set_depth_test(uint8_t depth_test) {
-    if (sDepthTest != depth_test) { sDepthTest = depth_test; pvr_mark_dirty(); }
+    if (sDepthTest != depth_test) {
+        sDepthTest = depth_test;
+        pvr_mark_dirty();
+    }
 }
 static void gfx_pvr_set_depth_mask(uint8_t z_upd) {
-    if (sDepthWrite != z_upd) { sDepthWrite = z_upd; pvr_mark_dirty(); }
+    if (sDepthWrite != z_upd) {
+        sDepthWrite = z_upd;
+        pvr_mark_dirty();
+    }
 }
+
 static void gfx_pvr_set_zmode_decal(UNUSED uint8_t zmode_decal) {
     // N64 ZMODE_DEC decal z-fighting is handled entirely in the front-end bake (gfx_sp_tri1): a
     // decal vert's z (1/w) is nudged nearer by PVR_DECAL_ZBIAS so it wins the GEQUAL depth test
     // against its coplanar base. No PVR poly-header change is needed, so this is a no-op — which
     // also avoids recompiling the header every time decal mode toggles (frequent).
 }
+
 static void gfx_pvr_set_tex_env(uint32_t mode) {
     // enum gfx_tex_env (front-end) == pvr_txr_shading_mode order, so store straight through.
-    if (sTexEnv != (uint8_t) mode) { sTexEnv = (uint8_t) mode; pvr_mark_dirty(); }
+    if (sTexEnv != (uint8_t) mode) {
+        sTexEnv = (uint8_t) mode;
+        pvr_mark_dirty();
+    }
 }
 
 // PVR vertex fog enable/disable — baked into the poly header, so a change dirties all lists.
 void gfx_pvr_set_fog(uint8_t enabled) {
     enabled = enabled ? 1 : 0;
-    if (sFogEnabled != enabled) { sFogEnabled = enabled; pvr_mark_dirty(); }
+    if (sFogEnabled != enabled) {
+        sFogEnabled = enabled;
+        pvr_mark_dirty();
+    }
 }
 
 // Vertex fog colour register (0x00b4). Global, read at render time — write it directly
@@ -719,9 +720,18 @@ void gfx_pvr_set_fog_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
             PVR_PACK_COLOR(a * (1.0f / 255.0f), r * (1.0f / 255.0f),
                            g * (1.0f / 255.0f), b * (1.0f / 255.0f)));
 }
-static void gfx_pvr_set_viewport(UNUSED int x, UNUSED int y, UNUSED int w, UNUSED int h) { /* P4 */ }
-static void gfx_pvr_set_scissor(UNUSED int x, UNUSED int y, UNUSED int w, UNUSED int h)  { /* P4 */ }
-static void gfx_pvr_set_use_alpha(UNUSED uint8_t use_alpha)        { /* OP/PT/TR routing comes via gfx_pvr_set_blend */ }
+
+static void gfx_pvr_set_viewport(UNUSED int x, UNUSED int y, UNUSED int w, UNUSED int h) { 
+    ;
+}
+
+static void gfx_pvr_set_scissor(UNUSED int x, UNUSED int y, UNUSED int w, UNUSED int h) { 
+    ;
+}
+
+static void gfx_pvr_set_use_alpha(UNUSED uint8_t use_alpha) { 
+    /* OP/PT/TR routing comes via gfx_pvr_set_blend */
+}
 
 // Front-end list classifier, called directly (not via rapi) from gfx_sp_tri1/gfx_sp_quad_2d:
 // kind 0 = OP (fully opaque -> live list), 1 = PT (alpha-test cutout -> sPunch bucket),
@@ -788,8 +798,7 @@ void pvr_submit_op(const dc_fast_t *tris, size_t n) {
 }
 
 // 2D quad depth counter owned by the front-end (gfx_draw_rectangle increments it).
-// GLdc's start_frame reset it each frame; the PVR backend must too, or it grows
-// unbounded. Positive base because PVR z is inverse-depth (negative would clip).
+// Positive base because PVR z is inverse-depth (negative would clip).
 extern float screen_2d_z;
 static void gfx_pvr_draw_triangles(float buf_vbo[], UNUSED size_t buf_vbo_len,
                                    size_t buf_vbo_num_tris) {
@@ -817,7 +826,7 @@ void gfx_pvr_draw_triangles_2d(void *buf_vbo, UNUSED size_t buf_vbo_len, UNUSED 
     // each vertex like 3D — carry pad0 (oargb) through rather than zeroing it.
     dc_fast_t *v = (dc_fast_t *) buf_vbo;
 
-    // Portrait/face black background (== old GLdc blend_fuck): for this one shader_id the
+    // Portrait/face black background: for this one shader_id the
     // combiner genuinely evaluates to white, but the N64 look wants black showing through
     // the transparent texels (DECAL, set in pvr_compile_header). Force the vertex colour
     // black so the decal background is black. Authored override — not derivable from the mux.
@@ -855,11 +864,7 @@ static void gfx_pvr_init(void) {
     // so this cleanly drops the transparent bit; ARGB4444 keeps alpha >= ~8.)
     *(volatile uint32_t *) 0xA05F811C = 0x80 + 0x40;
 
-    // Distinctive non-black clear so the backend is visibly live (GLdc clears to
-    // black). Geometry that draws over it confirms the P1 pipeline.
     pvr_set_bg_color(0.0f, 0.0f, 0.0f);
-
-    // Headers are compiled lazily per depth/texture/list state at draw time.
 }
 
 static void gfx_pvr_on_resize(void) { }

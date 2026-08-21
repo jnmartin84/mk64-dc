@@ -125,3 +125,4 @@ loader.elf
 
 # AICA beam-encode cache
 tools/aica/.encode_cache/
+tools/aica/_ya2beam.so
