@@ -5956,42 +5956,8 @@ void render_menus(MenuItem* arg0) {
             case MAIN_MENU_BACKGROUND:
             case CHARACTER_SELECT_BACKGROUND:
             case COURSE_SELECT_BACKGROUND:
-#if 0
-    glClearDepth(0.00004);                          // Enables Clearing Of The Depth Buffer
-//    glDepthFunc(GL_LESS);                               // The Type Of Depth Test To Do
-  //  glEnable(GL_DEPTH_TEST);                    // Enables Depth Testing
-glDisable(GL_DEPTH_TEST);
-glDepthMask(0);
-glMatrixMode(GL_MODELVIEW);
-glPushMatrix();
-glLoadIdentity();
-
-glMatrixMode(GL_PROJECTION);
-glPushMatrix();
-glLoadIdentity();
-glBegin(GL_QUADS);
-glColor3f(1.0f,1.0f,1.0f);
-
-    glTexCoord2f(0.0f, 0.0f); glVertex3f( 0.0f, 0.0f,  1.0f);  // Bottom Right Of The Texture and Quad
-glColor3f(1.0f,1.0f,1.0f);
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f,  479.0f,  1.0f);  // Top Left Of The Texture and Quad
-
-glColor3f(1.0f,1.0f,1.0f);
-    glTexCoord2f(1.0f, 1.0f); glVertex3f( 639.0f,  479.0f,  1.0f);  // Top Right Of The Texture and Quad
-    glColor3f(1.0f,1.0f,1.0f);
-  glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f, 479.0f,  1.0f);  // Bottom Left Of The Texture and Quad
-
-
-    glEnd();
-glPopMatrix();
-glMatrixMode(GL_MODELVIEW);
-glPopMatrix();
-glDepthMask(1);
-glEnable(GL_DEPTH_TEST);
-#else
             gDisplayListHead = func_8009BC9C(gDisplayListHead, gMenuTexturesBackground[has_unlocked_extra_mode()],
                                                  arg0->column, arg0->row, 3, 0);
-#endif
                 break;
             case MENU_ITEM_UI_GAME_SELECT:
                 gDisplayListHead =

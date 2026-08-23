@@ -965,6 +965,8 @@ void update_controller(s32 index) {
     controller->stickDirection = stick;
 }
 #endif
+#include <arch/arch.h>
+extern void AicaSynth_Shutdown(void);
 
 void update_controller(s32 index) {
     struct Controller* controller = &gControllers[index];
@@ -995,7 +997,6 @@ void update_controller(s32 index) {
             //profiler_clean_up();
             // stop the AICA voice driver cleanly before teardown (the audio
             // thread is still running AicaSynth_Update on the sound RAM here)
-            extern void AicaSynth_Shutdown(void);
             AicaSynth_Shutdown();
             // give vmu a chance to write and close
             __osPfsCloseAllFiles();
@@ -1848,8 +1849,8 @@ void race_logic_loop(void) {
             // the fullscreen RANKING screen while gamestate is still RACING — that pseudo-1P
             // must stay capped, or its flashing text (per-frame counters) runs at whatever
             // rate frames arrive (HW 2026-08-19). gPlayerCountSelection1 survives the switch.
-            force_30fps = (gPlayerCountSelection1 == 1) ? 0 : 1;
-            gTickSpeed = sNumVBlanks;
+            force_30fps = 1;//(gPlayerCountSelection1 == 1) ? 0 : 1;
+            gTickSpeed = 2;//sNumVBlanks;
 
             // 60fps 30Hz gate (gRun30hz, see game_loop_one_iteration): ghost replay is a
             // frame-count-addressed input stream (2x at 60fps would desync).
