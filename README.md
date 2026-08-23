@@ -1,40 +1,23 @@
-## Mario Kart 64 for Dreamcast (updated 2026/01/04)
+## Mario Kart 64 for Dreamcast (updated 2026/08/23)
 
-Latest update: fixed some graphical issues including the lightning flash and the flat banana peel.
+New and improved MK64-DC with hardware-mixed audio, raw PowerVR Fast3d backend, 30 fps 4 player with music and more.
 
-Previously on Mario Kart 64 for Dreamcast...
-
-Early xmas present for everyone. 
-
-# You don't have to know how to build a toolchain, or compile anymore.
 # You can upload a ROM and download a CDI.
-# Find more details here: https://colab.research.google.com/drive/1WtQ6xyXHqNNhn5Yx74Aa8uY5Fjnnv4PF
+# Find more details here: https://colab.research.google.com/drive/1IhNVeiFJxnn5oVLLG_Esrb_bZZ5Nl8Rs
 
 Now for business as usual.
 
 This is a Sega Dreamcast port of the Mario Kart 64 decompilation [ https://github.com/n64decomp/mk64 ] .
 
+![Rainbow Road](/media/screenshot3.png)
+![Koopa Troopa Beach](/media/screenshot2.png)
+![DK's Jungle Parkway](/media/screenshot1.png)
+
 Do not ask for a CDI or ISO. Learn how to build it or don't play it.
 
-We are not getting sued by Nintendo to make your lives easy.
+I am not getting sued by Nintendo to make your lives easy.
 
-**A quick note about the in-game sound**
-
-
-"The game sounds bad."
-
-This is true but the blame is in the wrong place. The game sounds fine. Dreamcasts sound terrible. 
-
-Let this comment from Yuzo Koshiro convince you:
-
-![Dreamcast sound quality](/media/sound.jpg)
-
-
-Anyway, here's how to build it yourself. Deviate from these instructions at your own risk, but follow them *precisely* and you shall be rewarded for your efforts:
-
-![DK's Jungle Parkway](/media/screenshot1.png)
-![Koopa Troopa Beach](/media/screenshot2.png)
-![Rainbow Road](/media/screenshot3.png)
+Anyway, here's how to build it yourself.
 
 NOTE: This game has been tested and works properly on ***physical hardware***. Emulation is already known to have many issues with this release, so do not open up a ticket unless you've confirmed that it is an actual bug on real hardware.
 
